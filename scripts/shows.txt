@@ -1,0 +1,375 @@
+series_id;sid;title;poster;episode_length;added_at;user_id
+24;894;Archer;https://pictures.betaseries.com/fonds/poster/9798e10f8f97c102de8027779395c047.jpg;25;2022-06-26 12:34:58.422803+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+5;5010;Arrow;https://pictures.betaseries.com/fonds/poster/437bdd5ded4467c0e7c8573fffb886fb.jpg;42;2022-06-21 00:39:59.655903+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+371;27701;Mercredi;https://pictures.betaseries.com/fonds/poster/b5dc9ae24c0763d09c791041f4db677c.jpg;46;2022-12-04 22:26:58.070429+00;90a0e292-14af-437c-a959-00805336fabf
+6;8339;Flash (2014);https://pictures.betaseries.com/fonds/poster/3a12bf4373e7cec1955c17ceb940efc9.jpg;42;2022-06-21 00:43:35.152083+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+7;31672;Sans un mot;https://pictures.betaseries.com/fonds/poster/ab58740183568cc57bc6875ff574008f.jpg;42;2022-06-21 00:45:01.046089+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+8;23168;Vikings : Valhalla;https://pictures.betaseries.com/fonds/poster/56222c69d5e94f21652fed6402f66d24.jpg;45;2022-06-21 00:45:31.802972+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+9;31880;Bienvenidos a Edén;https://pictures.betaseries.com/fonds/poster/9dd6c8d51a35a14e6583f5a7c727e7c6.jpg;46;2022-06-21 00:46:16.469978+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+10;27776;All of Us Are Dead;https://pictures.betaseries.com/fonds/poster/af67ed7ef9300a4347aa3f183edb31ac.jpg;66;2022-06-21 00:46:48.976112+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+372;27701;Mercredi;https://pictures.betaseries.com/fonds/poster/b5dc9ae24c0763d09c791041f4db677c.jpg;46;2022-12-04 23:20:32.911339+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+375;28433;Chainsaw Man;https://pictures.betaseries.com/fonds/poster/3b61cc0a0875495e0f7f898308f252af.jpg;24;2022-12-07 22:19:44.766613+00;90a0e292-14af-437c-a959-00805336fabf
+376;24409;Jujutsu Kaisen;https://pictures.betaseries.com/fonds/poster/48d4716cbee941cd2ddcf7f386d779d5.jpg;24;2022-12-09 13:37:51.333472+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+19;15063;Zone blanche;https://pictures.betaseries.com/fonds/poster/52f1f611651c5ccd37aebf4aa8f7edd1.jpg;55;2022-06-23 23:36:04.345137+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+20;25936;Le jeune Wallander;https://pictures.betaseries.com/fonds/poster/0f3d0c7f1c88cc7a9d21658825c8b8af.jpg;41;2022-06-23 23:37:06.520232+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+22;29349;Octobre;https://pictures.betaseries.com/fonds/poster/60b101bef66b347268629133cab42551.jpg;52;2022-06-23 23:44:18.440237+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+40;9437;Parasite: La Maxime;https://pictures.betaseries.com/fonds/poster/5683768af27bda63ac354d9e8a2597b4.jpg;23;2022-06-26 14:43:50.494906+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+25;12846;My Hero Academia;https://pictures.betaseries.com/fonds/poster/5b0e923129cb823883ac70423b903997.jpg;23;2022-06-26 13:55:06.390586+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+28;1275;The Walking Dead;https://pictures.betaseries.com/fonds/poster/d338e649f57a342598ec430862798ad3.jpg;43;2022-06-26 13:56:00.420915+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+29;16081;La casa de papel;https://pictures.betaseries.com/fonds/poster/dc8f4bf5c841b91fd4df3f524221bd47.jpg;65;2022-06-26 13:56:11.642136+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+30;6786;Rick et Morty;https://pictures.betaseries.com/fonds/poster/1da3378b7fb9cf2c6152618bf5d8d10d.jpg;22;2022-06-26 13:56:29.342325+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+31;16326;Big Mouth;https://pictures.betaseries.com/fonds/poster/f202d70e508012aa832ff364b9f0c3da.jpg;27;2022-06-26 13:56:38.790394+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+35;10300;F is for Family;https://pictures.betaseries.com/fonds/poster/f90fe7576b724834777f2f599650864d.jpg;28;2022-06-26 14:41:09.211416+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+39;10693;One-Punch Man;https://pictures.betaseries.com/fonds/poster/4ccc82b99a2c0f5585d1540dc336ddac.jpg;25;2022-06-26 14:43:40.77009+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+291;16982;DARLING in the FRANXX;;25;2022-06-29 11:50:26.47909+00;90a0e292-14af-437c-a959-00805336fabf
+292;29654;Spy x Family;https://pictures.betaseries.com/fonds/poster/825cf977639e529842dd9235d0b03157.jpg;24;2022-06-29 11:50:51.670234+00;90a0e292-14af-437c-a959-00805336fabf
+293;31880;Bienvenidos a Edén;https://pictures.betaseries.com/fonds/poster/9dd6c8d51a35a14e6583f5a7c727e7c6.jpg;46;2022-06-29 11:51:32.633129+00;90a0e292-14af-437c-a959-00805336fabf
+38;16648;The End of the F***ing World;https://pictures.betaseries.com/fonds/poster/3251262f4a6bb7908f6c145a38bf177a.jpg;21;2022-06-26 14:43:28.165861+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+37;11812;Marseille;https://pictures.betaseries.com/fonds/poster/ac5f0634f0d61838c8d65a7f740e2631.jpg;40;2022-06-26 14:42:56.129306+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+36;17288;The Rain;https://pictures.betaseries.com/fonds/poster/1b20982c0a9a7ca1da56c8af9759e11b.jpg;40;2022-06-26 14:41:19.354212+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+34;9185;Zoo;https://pictures.betaseries.com/fonds/poster/edfd05f0e75b6d6fa1871df3a5903f99.jpg;45;2022-06-26 14:40:59.326078+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+33;1161;Game of Thrones;https://pictures.betaseries.com/fonds/poster/4d09984be7bf0c385b21e2974bc12e8b.jpg;52;2022-06-26 14:40:44.881155+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+32;6622;Les 100;https://pictures.betaseries.com/fonds/poster/9e1bbfaf0db3bf274129907331affa81.jpg;41;2022-06-26 13:56:58.709975+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+15;19579;Umbrella Academy;https://pictures.betaseries.com/fonds/poster/978b8f6be385a41d68959327f9d54fca.jpg;60;2022-06-22 06:28:17.279752+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+378;29875;Vampire in the Garden;https://pictures.betaseries.com/fonds/poster/46de0a3ede88d69955383b837e5c5308.jpg;25;2022-12-14 21:27:57.77385+00;90a0e292-14af-437c-a959-00805336fabf
+21;16021;Marvel's The Punisher;https://pictures.betaseries.com/fonds/poster/3f336a597b88c57cc5a2d8b65637bc05.jpg;57;2022-06-23 23:37:28.974705+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+17;7099;Peaky Blinders;https://pictures.betaseries.com/fonds/poster/dec158fbcca5455763a9f8c5a650db34.jpg;58;2022-06-23 21:41:59.490856+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+14;7942;Gotham;https://pictures.betaseries.com/fonds/poster/3dd64c118ee0565d79884126e9e4fea4.jpg;45;2022-06-21 15:52:32.673789+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+13;15643;Ozark;https://pictures.betaseries.com/fonds/poster/271c2bd20a62327c6cf00744d4449a3c.jpg;60;2022-06-21 00:48:36.028781+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+2;570;Naruto;https://pictures.betaseries.com/fonds/poster/fd4641d88e35ee44f10bb41231c195a0.jpg;25;2022-06-21 00:28:56.801392+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+27;5517;Vikings;https://pictures.betaseries.com/fonds/poster/4c508877342713606486f5bafae12d50.jpg;45;2022-06-26 13:55:42.618185+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+377;15612;Fate/Apocrypha;https://pictures.betaseries.com/fonds/show/15612_1216255.jpg;25;2022-12-10 16:38:35.832129+00;90a0e292-14af-437c-a959-00805336fabf
+43;18374;Baki (2018);https://pictures.betaseries.com/fonds/poster/e47b42b0ffef1aba142fee81f2819ddc.jpg;25;2022-06-26 14:44:51.021597+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+49;12742;Stranger Things;https://pictures.betaseries.com/fonds/poster/296076ac6295bd60005737858fd0476c.jpg;52;2022-06-26 14:46:07.265978+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+50;20466;How to Sell Drugs Online (Fast);https://pictures.betaseries.com/fonds/poster/d0e4a22137bf4b498c3441b9a4d92f8a.jpg;35;2022-06-26 14:46:17.67366+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+51;18652;Paradise Police;https://pictures.betaseries.com/fonds/poster/bcdbae0a8e537a0d581ab845281ca680.jpg;27;2022-06-26 14:46:44.335838+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+52;17901;Élite;https://pictures.betaseries.com/fonds/poster/00ef3a490e75ebdc66716656235b0cfd.jpg;50;2022-06-26 14:47:00.87829+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+56;16472;Dark;https://pictures.betaseries.com/fonds/poster/c47135385da176a87d0dd9177c5f6a41.jpg;51;2022-06-26 14:48:48.632078+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+57;21071;Family Business;https://pictures.betaseries.com/fonds/poster/8c7bca34879d4ed8b3ba29861ad985d0.jpg;31;2022-06-26 14:48:59.583081+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+54;16207;Happy!;https://pictures.betaseries.com/fonds/poster/193171f2d14d14a57b6e312265d0a2d8.jpg;45;2022-06-26 14:47:20.245297+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+45;575;Death Note;https://pictures.betaseries.com/fonds/poster/1a66b0e43dede0ddec971866ed14b808.jpg;22;2022-06-26 14:45:13.38367+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+41;9669;Assassination Classroom;https://pictures.betaseries.com/fonds/poster/1298e263243d8cd837d8cda93d41c0bd.jpg;23;2022-06-26 14:44:02.601296+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+55;9311;The Seven Deadly Sins;https://pictures.betaseries.com/fonds/poster/da0e3b45c37d1e8df5bdb262978f0c2f.jpg;24;2022-06-26 14:48:37.435885+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+373;23210;Périphériques, les mondes de Flynne;https://pictures.betaseries.com/fonds/poster/6b69ae8357691686a757fcd688b5dd83.jpg;72;2022-12-04 23:22:50.493495+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+374;25664;1899;https://pictures.betaseries.com/fonds/poster/cb977cf6d0573a79e233055ee30f4a79.jpg;50;2022-12-04 23:22:59.514016+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+379;9437;Parasite: La Maxime;https://pictures.betaseries.com/fonds/poster/5683768af27bda63ac354d9e8a2597b4.jpg;23;2022-12-15 21:09:36.1041+00;90a0e292-14af-437c-a959-00805336fabf
+381;26106;HPI;https://pictures.betaseries.com/fonds/poster/a028a15bc1989ad034dbd66ddcc2dd13.jpg;52;2022-12-29 10:44:46.795803+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+384;16719;Borderliner;https://pictures.betaseries.com/fonds/poster/d16ee315e3b51cf89c47f376d6ef148d.jpg;45;2023-01-08 10:48:14.944389+00;90a0e292-14af-437c-a959-00805336fabf
+385;25802;The Witcher : L'héritage du sang;https://pictures.betaseries.com/fonds/poster/8e631710965d9035fb2fa9e4c4e2ecc7.jpg;51;2023-01-11 08:07:28.033135+00;90a0e292-14af-437c-a959-00805336fabf
+386;30164;Kaleidoscope;https://pictures.betaseries.com/fonds/poster/59e49a5dfcee2af7b8e46614f8387b7e.jpg;47;2023-01-11 12:15:02.734065+00;90a0e292-14af-437c-a959-00805336fabf
+387;27701;Mercredi;https://pictures.betaseries.com/fonds/poster/b5dc9ae24c0763d09c791041f4db677c.jpg;50;2023-01-19 08:13:02.622028+00;eebe2292-2071-465f-be3b-c60e6967c797
+388;24976;The Dropout;https://pictures.betaseries.com/fonds/poster/95e32264fa55fc2a3d0472223d421b6a.jpg;50;2023-01-19 08:13:55.88813+00;eebe2292-2071-465f-be3b-c60e6967c797
+390;45;Ugly Betty;https://pictures.betaseries.com/fonds/poster/ba02ba5f6b9138c44dba9800492a1592.jpg;45;2023-01-19 12:16:47.383511+00;eebe2292-2071-465f-be3b-c60e6967c797
+391;3277;Winx Club;https://pictures.betaseries.com/fonds/poster/5745b2616828c86e2a3c3eeb8730dc29.jpg;25;2023-01-19 12:20:07.965594+00;eebe2292-2071-465f-be3b-c60e6967c797
+394;22045;She-Hulk: Avocate;https://pictures.betaseries.com/fonds/poster/ec52c0b0397ac1f1383223016f835430.jpg;36;2023-01-19 17:56:41.491832+00;eebe2292-2071-465f-be3b-c60e6967c797
+395;10051;Mr. Robot;https://pictures.betaseries.com/fonds/poster/73a187c21b3e8b2f8eabfb069c9fd1ac.jpg;50;2023-01-19 17:57:15.403212+00;eebe2292-2071-465f-be3b-c60e6967c797
+380;5374;Sword Art Online;https://pictures.betaseries.com/fonds/poster/0a0117ac9b5601fe11175894c74c1122.jpg;25;2022-12-20 20:08:02.263739+00;90a0e292-14af-437c-a959-00805336fabf
+396;32803;Maniac par Junji Ito : Anthologie macabre;https://pictures.betaseries.com/fonds/poster/61b40a1de7b1967ee39fc447e52554a0.jpg;25;2023-02-08 17:35:33.981856+00;90a0e292-14af-437c-a959-00805336fabf
+397;17643;Wotakoi : L'Amour, c'est compliqué pour un otaku;https://pictures.betaseries.com/fonds/show/17643_1262199.jpg;23;2023-02-09 13:57:32.675998+00;90a0e292-14af-437c-a959-00805336fabf
+398;19485;Iroduku : Le Monde en couleur;https://pictures.betaseries.com/fonds/poster/52cc347aa386a66586d9ef6334ac12f7.jpg;25;2023-02-10 13:25:34.336273+00;90a0e292-14af-437c-a959-00805336fabf
+399;33796;La Crue;https://pictures.betaseries.com/fonds/poster/db85c5241cb91f7a38a57f2dece1b060.jpg;44;2023-02-11 08:56:09.953117+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+400;33796;La Crue;https://pictures.betaseries.com/fonds/poster/db85c5241cb91f7a38a57f2dece1b060.jpg;44;2023-02-11 18:56:36.616781+00;90a0e292-14af-437c-a959-00805336fabf
+44;19961;Sex Education;https://pictures.betaseries.com/fonds/poster/39f7596eb2fa50ba17f32b165c9a7f5d.jpg;54;2022-06-26 14:44:59.5758+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+47;20221;The Order;https://pictures.betaseries.com/fonds/poster/9d7b0c1c958317aec1b14cd0a07feb5b.jpg;51;2022-06-26 14:45:36.318276+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+48;3930;Hunter x Hunter (2011);https://pictures.betaseries.com/fonds/poster/d94a0d771a209766a9c11dd917df07ab.jpg;25;2022-06-26 14:45:58.538112+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+53;20777;The Society;https://pictures.betaseries.com/fonds/poster/1cb0a3e2418ebdbb3e16c156a4b528fc.jpg;53;2022-06-26 14:47:10.705087+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+58;17291;Titans (2018);https://pictures.betaseries.com/fonds/poster/63b037000418f4c3ef0bdeee9fc6967c.jpg;44;2022-06-26 14:49:14.374518+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+59;6563;L'Attaque des Titans;https://pictures.betaseries.com/fonds/poster/0183f272b2f972d358be9d2267fe6f1a.jpg;24;2022-06-26 14:49:27.780972+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+60;20301;Ultraman (2019);https://pictures.betaseries.com/fonds/poster/3697a072f5fb40ad56c3156161e57dfd.jpg;23;2022-06-26 14:49:50.909235+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+61;15638;Castlevania;https://pictures.betaseries.com/fonds/poster/33c6dd0b03279a34d31ade74562c0bf8.jpg;25;2022-06-26 14:50:11.625703+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+382;16719;Borderliner;https://pictures.betaseries.com/fonds/poster/d16ee315e3b51cf89c47f376d6ef148d.jpg;45;2023-01-02 11:12:01.601916+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+65;20961;Kengan Ashura;https://pictures.betaseries.com/fonds/poster/bbd80f7528d75e12d5462f08152968f5.jpg;25;2022-06-26 15:19:55.31043+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+67;20460;Chernobyl;https://pictures.betaseries.com/fonds/poster/1fc45abf0d2ba0e77bba36b1451a0e03.jpg;60;2022-06-26 15:20:19.7311+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+68;20036;Demon Slayer: Kimetsu no Yaiba;https://pictures.betaseries.com/fonds/poster/a1fae3679678431e83d009217ee06933.jpg;24;2022-06-26 15:20:31.175806+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+69;16590;Comment élever un super-héros;https://pictures.betaseries.com/fonds/poster/3d725da4d5602edefc299e019a90228e.jpg;39;2022-06-26 15:20:40.527354+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+70;19521;Baby;https://pictures.betaseries.com/fonds/poster/564490785d5c6b35b4002c5821e1a4b8.jpg;49;2022-06-26 15:20:55.118769+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+72;22025;Nous, La vague;https://pictures.betaseries.com/fonds/poster/a4376723b45585512fa0e4f9ee5fc9ba.jpg;45;2022-06-26 15:22:04.902805+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+73;21420;Levius;https://pictures.betaseries.com/fonds/poster/652069f360c04ce30de0b69cd73b4d26.jpg;25;2022-06-26 15:22:14.872325+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+74;20094;Dr. Stone;https://pictures.betaseries.com/fonds/poster/5444a12c66046dc0012c8668c5748e98.jpg;24;2022-06-26 15:22:25.177702+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+77;22820;Mortel;https://pictures.betaseries.com/fonds/poster/c9c6449c205e638ac23c59ff64d3bb54.jpg;50;2022-06-26 15:23:06.814785+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+78;20999;The Witcher;https://pictures.betaseries.com/fonds/poster/bc2dbf6560de1d6c322636631f546c4e.jpg;60;2022-06-26 15:23:16.186947+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+79;18151;Désenchantée;https://pictures.betaseries.com/fonds/poster/0494da28f4fefbce576be899d55fcf08.jpg;29;2022-06-26 15:23:24.995741+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+80;21411;Another Life;https://pictures.betaseries.com/fonds/poster/c18c5b49d95e73ce56f439260742d555.jpg;45;2022-06-26 15:23:44.028711+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+83;16994;You;https://pictures.betaseries.com/fonds/poster/81a5713a7ee35e5372fb3387c5afb176.jpg;50;2022-06-26 15:24:35.749707+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+86;22267;Into the Night;https://pictures.betaseries.com/fonds/poster/6ae37e33c50429ae095090cacd7ae4c4.jpg;37;2022-06-26 15:25:03.02283+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+87;23858;Stalk;https://pictures.betaseries.com/fonds/poster/6124b7436e15e143fbbb4086164c56bb.jpg;20;2022-06-26 15:25:18.959937+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+88;21135;Daybreak;https://pictures.betaseries.com/fonds/poster/b2297714e8fba1f9400a8376ed613e6b.jpg;45;2022-06-26 15:25:27.59083+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+92;22058;Ragnarök;https://pictures.betaseries.com/fonds/poster/45cc647a82782a69f875335d1c5827fa.jpg;46;2022-06-26 15:26:28.215919+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+93;17655;Nightflyers;https://pictures.betaseries.com/fonds/poster/bcca6b8bf279415de7fbbe6817bd13d9.jpg;45;2022-06-26 15:26:41.671893+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+42;8948;Tokyo Ghoul;https://pictures.betaseries.com/fonds/poster/f1e1299a586941b243cf063615061718.jpg;25;2022-06-26 14:44:32.168671+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+91;15576;MINDHUNTER;https://pictures.betaseries.com/fonds/poster/6afc4ceca27ec4f58d2d8cd5a9403b4d.jpg;53;2022-06-26 15:26:19.60786+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+90;8095;Une Nuit en enfer;https://pictures.betaseries.com/fonds/poster/3c8ef3f2ae6947cb39a2a668df6e654d.jpg;45;2022-06-26 15:26:07.200971+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+85;9328;Marvel's Luke Cage;https://pictures.betaseries.com/fonds/poster/5dd89ebfee09d0d783c96e54dcb5571e.jpg;55;2022-06-26 15:24:54.02516+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+84;9329;Marvel's Iron Fist;https://pictures.betaseries.com/fonds/poster/91fc0e048b5cf8ceb442e17ee28dfd1e.jpg;56;2022-06-26 15:24:46.968896+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+82;16149;Altered Carbon;https://pictures.betaseries.com/fonds/poster/9f6e75e28d4b537ea837ef82de05196b.jpg;50;2022-06-26 15:24:20.901981+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+81;17443;Perdus dans l'espace (2018);https://pictures.betaseries.com/fonds/poster/8389da8134db9aed85e4b738536f8134.jpg;55;2022-06-26 15:24:08.95233+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+76;4839;Kuroko's Basket;https://pictures.betaseries.com/fonds/poster/92aca617983b8af945a181b40c74318d.jpg;25;2022-06-26 15:22:56.521097+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+75;3187;Blue Exorcist;https://pictures.betaseries.com/fonds/poster/55d51be8e49364eb9ca0ed2fdf489833.jpg;25;2022-06-26 15:22:39.173822+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+66;481;Breaking Bad;https://pictures.betaseries.com/fonds/poster/287956ed96886a8debc1b42c82a0a828.jpg;47;2022-06-26 15:20:07.656978+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+64;9279;BoJack Horseman;https://pictures.betaseries.com/fonds/poster/6c76decf04ae04ff298675df4f804217.jpg;25;2022-06-26 15:19:43.51634+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+46;18020;Bodyguard;https://pictures.betaseries.com/fonds/poster/e0c663caddf55d5387f4877223f32b34.jpg;60;2022-06-26 14:45:22.963784+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+71;25;South Park;https://pictures.betaseries.com/fonds/poster/de642048b11c0c32e20061322fc749a5.jpg;22;2022-06-26 15:21:14.662199+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+95;25774;Biohackers;https://pictures.betaseries.com/fonds/poster/6551bc7086b0265d9a7265950ed70371.jpg;45;2022-06-26 15:27:11.274904+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+96;25784;Hoops;https://pictures.betaseries.com/fonds/poster/93426ddaac65327c242a4b8d01bcef30.jpg;25;2022-06-26 15:27:19.057873+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+105;22028;La Chronique des Bridgerton;https://pictures.betaseries.com/fonds/poster/4ae72657a60c537027e4bcf772713615.jpg;61;2022-06-26 15:29:12.795821+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+108;23439;Lupin;https://pictures.betaseries.com/fonds/poster/c449a907a8fe53736342cb3ea4d67df5.jpg;48;2022-06-26 15:30:30.039346+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+111;24625;Sweet Home;https://pictures.betaseries.com/fonds/poster/e25b6a96327c8a776b60fe7dc176b10c.jpg;45;2022-06-26 15:31:05.268586+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+115;9327;Marvel's Jessica Jones;https://pictures.betaseries.com/fonds/poster/f27d5906a52ab0766e41c7e5d6081e21.jpg;55;2022-06-26 15:32:01.98624+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+116;15824;Gambling School;https://pictures.betaseries.com/fonds/poster/8710498b2e1445ed888f51f56b751aa9.jpg;25;2022-06-26 15:32:11.589921+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+117;20218;Love, Death & Robots;https://pictures.betaseries.com/fonds/poster/2cd524bf4928bb2b261395991209ff03.jpg;17;2022-06-26 15:32:20.212142+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+120;26029;Perdida;https://pictures.betaseries.com/fonds/poster/77978ff760b21658a561fd67e11652fa.jpg;50;2022-06-26 15:33:13.366723+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+122;9364;Colony;https://pictures.betaseries.com/fonds/poster/271b9f8a804a288c6df795ee9791fe3b.jpg;45;2022-06-26 15:33:33.675767+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+129;27777;Squid Game;https://pictures.betaseries.com/fonds/poster/79bdd9ecbc3b0b0888c7d0fb1b20a9f9.jpg;54;2022-06-26 15:36:16.946851+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+130;29763;Braqueurs : La série;https://pictures.betaseries.com/fonds/poster/266a37aea2a135a3eb4c81e61b0234d2.jpg;45;2022-06-26 15:36:31.467856+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+132;28824;Inside Job;https://pictures.betaseries.com/fonds/poster/e45e2c4b489c9018da3adb8d5ebb39b3.jpg;28;2022-06-26 15:36:59.482837+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+133;25764;Katla;https://pictures.betaseries.com/fonds/poster/57796ff3634fd9b676b415a16423e721.jpg;43;2022-06-26 15:37:07.137521+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+136;23582;Les Meurtres de Valhalla;https://pictures.betaseries.com/fonds/poster/eb0eee4740169169eab53a88a91d596d.jpg;45;2022-06-26 15:37:35.379042+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+138;32159;Les 7 vies de Léa;https://pictures.betaseries.com/fonds/poster/d15554f0dfeaab769539289cc7e04bbb.jpg;42;2022-06-26 15:39:05.466709+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+125;28059;Qui a tué Sara ?;https://pictures.betaseries.com/fonds/poster/05f798da8fa476814ed6a8a68d7d84d9.jpg;40;2022-06-26 15:34:35.417587+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+104;19453;FIGHTWORLD;https://pictures.betaseries.com/fonds/poster/a5e6db0d2916317670d90955016c4786.jpg;40;2022-06-26 15:28:48.628809+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+383;5803;Psycho-Pass;https://pictures.betaseries.com/fonds/poster/12bb2d6d7722063a20f374486673b1c6.jpg;25;2023-01-04 21:31:03.613381+00;90a0e292-14af-437c-a959-00805336fabf
+94;19224;Dogs of Berlin;https://pictures.betaseries.com/fonds/poster/274129acb81e796c97cbc295a45afd99.jpg;50;2022-06-26 15:27:02.021072+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+389;14503;The Handmaid's Tale : La Servante écarlate;https://pictures.betaseries.com/fonds/poster/60165477869340a61467d8870d723e1c.jpg;55;2023-01-19 08:15:13.021132+00;eebe2292-2071-465f-be3b-c60e6967c797
+393;31610;Reboot;https://pictures.betaseries.com/fonds/poster/20b73ff7ce3a0e88d4dabe8ca0d92860.jpg;26;2023-01-19 17:53:05.813387+00;eebe2292-2071-465f-be3b-c60e6967c797
+97;16749;Unité 42;https://pictures.betaseries.com/fonds/poster/234694ce02c04c972d1a91a9f00190c2.jpg;50;2022-06-26 15:27:28.106742+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+123;24404;La Unidad : Unité anti-terroriste;https://pictures.betaseries.com/fonds/poster/456326a726da4ced7e88ad20d0d476e3.jpg;50;2022-06-26 15:34:05.047912+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+98;20575;Black Summer;https://pictures.betaseries.com/fonds/poster/5843eaf07fd77c2f3e6823499f07f2a4.jpg;44;2022-06-26 15:27:38.367535+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+100;20472;To the Lake;https://pictures.betaseries.com/fonds/poster/43c3a842522ad0e241376038ba6d9b83.jpg;45;2022-06-26 15:28:12.866376+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+101;26214;Barbares;https://pictures.betaseries.com/fonds/poster/d5685ab01dae72e25d3c3997fc2a644d.jpg;52;2022-06-26 15:28:22.383867+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+107;26491;Alice in Borderland;https://pictures.betaseries.com/fonds/poster/f78eb78b64924c45426d78f4e96ccf90.jpg;48;2022-06-26 15:30:22.046455+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+109;14312;Lastman;https://pictures.betaseries.com/fonds/poster/9be14f53567477de5e27967d1b21a605.jpg;15;2022-06-26 15:30:38.582493+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+112;27414;Sky Rojo;https://pictures.betaseries.com/fonds/poster/de6fe0f886ab53ad2275879af7cc0fd0.jpg;23;2022-06-26 15:31:23.174874+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+113;27755;Les Irréguliers de Baker Street;https://pictures.betaseries.com/fonds/poster/9c41e36c9dbbc3814ea66813763468c6.jpg;49;2022-06-26 15:31:35.513381+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+114;27113;Tribes of Europa;https://pictures.betaseries.com/fonds/poster/c9bc5c1232087510a3bb518e0895af91.jpg;50;2022-06-26 15:31:48.900905+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+119;22619;Shadow and Bone : La saga Grisha;https://pictures.betaseries.com/fonds/poster/cc2715a8541236940fac1c706d9e4d22.jpg;52;2022-06-26 15:32:47.3507+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+121;13284;StartUp;https://pictures.betaseries.com/fonds/poster/f7e500133f668dc518e7007828cc03ff.jpg;55;2022-06-26 15:33:25.767229+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+124;18507;The Purge : American Nightmare;https://pictures.betaseries.com/fonds/poster/c6a80eb7f5ea39e64ac9bdac758c5c2b.jpg;45;2022-06-26 15:34:23.187505+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+126;22423;Sweet Tooth;https://pictures.betaseries.com/fonds/poster/75221e8c57e920aae23657d1564632ff.jpg;53;2022-06-26 15:35:50.715686+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+131;19242;Vinland Saga;https://pictures.betaseries.com/fonds/poster/365170d68ff2bb866684510b952fa0a6.jpg;25;2022-06-26 15:36:46.486472+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+134;27782;Hellbound;https://pictures.betaseries.com/fonds/poster/9abae065211fb3df805d3972cedba98f.jpg;53;2022-06-26 15:37:15.629684+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+137;28229;Valkyrie Apocalypse;https://pictures.betaseries.com/fonds/poster/07391abf74a3d68fed7dd512c160e3cc.jpg;25;2022-06-26 15:38:29.812804+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+140;17134;Final Space;https://pictures.betaseries.com/fonds/poster/1e5b6dd0c6a4964ce0ca236b12b81264.jpg;20;2022-06-26 16:24:52.52649+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+144;571;One Piece;https://pictures.betaseries.com/fonds/poster/c4e3c83340471a04dc601593b03af464.jpg;25;2022-06-26 17:05:32.676932+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+146;1203;Clannad;https://pictures.betaseries.com/fonds/poster/b82753ea6dd4a25b3333d48ee27d39ed.jpg;25;2022-06-26 21:14:04.077747+00;90a0e292-14af-437c-a959-00805336fabf
+147;25919;Invincible;https://pictures.betaseries.com/fonds/poster/2e70d6f0893a6026a7e840eae5b2faf6.jpg;44;2022-06-26 21:19:06.56494+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+149;10791;Yamada-kun and the Seven Witches;https://pictures.betaseries.com/fonds/poster/67d36ad5f975e736564052703778127a.jpg;25;2022-06-27 16:45:00.420527+00;90a0e292-14af-437c-a959-00805336fabf
+150;10770;Charlotte;https://pictures.betaseries.com/fonds/poster/66924fbdfbca126de840ad487b93621a.jpg;25;2022-06-27 16:46:09.367717+00;90a0e292-14af-437c-a959-00805336fabf
+151;9669;Assassination Classroom;https://pictures.betaseries.com/fonds/poster/1298e263243d8cd837d8cda93d41c0bd.jpg;23;2022-06-27 16:47:31.433286+00;90a0e292-14af-437c-a959-00805336fabf
+152;9554;Le Fruit De La Grisaia;https://pictures.betaseries.com/fonds/poster/4bec338afe9073ff983a250c9b9beeee.jpg;25;2022-06-27 16:49:28.341831+00;90a0e292-14af-437c-a959-00805336fabf
+153;9474;Celestial Method;https://pictures.betaseries.com/fonds/poster/33fa69398775d8ecea1a081ba9231f4d.jpg;25;2022-06-27 16:56:59.919882+00;90a0e292-14af-437c-a959-00805336fabf
+154;9095;Your Lie in April;https://pictures.betaseries.com/fonds/poster/3bfcbb436fd7ff40d20a2a5b09a8549b.jpg;25;2022-06-27 16:58:12.418166+00;90a0e292-14af-437c-a959-00805336fabf
+155;8570;Isshuukan Friends;https://pictures.betaseries.com/fonds/poster/0e592205d9a6a8bb585b65896f1809cb.jpg;25;2022-06-27 17:00:05.463369+00;90a0e292-14af-437c-a959-00805336fabf
+156;8563;No Game No Life;https://pictures.betaseries.com/fonds/poster/9174ff0b3c836c20556b4d6060b1c86f.jpg;25;2022-06-27 17:01:34.772311+00;90a0e292-14af-437c-a959-00805336fabf
+157;8072;Nisekoi;https://pictures.betaseries.com/fonds/poster/d74a139b1e30db032ab42b1cd9989bf3.jpg;25;2022-06-27 17:04:01.238627+00;90a0e292-14af-437c-a959-00805336fabf
+142;299;Un village français;https://pictures.betaseries.com/fonds/poster/e31fa2797d046ad166c52d7fb2b99dc3.jpg;55;2022-06-26 16:46:21.205708+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+139;3764;American Horror Story;https://pictures.betaseries.com/fonds/poster/a5d17a5df3af1289dcaf993a26326835.jpg;41;2022-06-26 16:01:00.772647+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+128;23447;Le Serpent;https://pictures.betaseries.com/fonds/poster/f4813624921aecc21f15b3039b133bcc.jpg;58;2022-06-26 15:36:09.86268+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+118;512;Sons of Anarchy;https://pictures.betaseries.com/fonds/poster/fc6bb86a65db9ad28f6a7335684ebd7b.jpg;42;2022-06-26 15:32:36.832704+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+106;8251;Narcos;https://pictures.betaseries.com/fonds/poster/46f5447633263bae37566f02fb10d397.jpg;51;2022-06-26 15:29:22.202032+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+103;26009;Le Jeu de la dame;https://pictures.betaseries.com/fonds/poster/ce0184548678df6f8d967353fdb0f5a5.jpg;59;2022-06-26 15:28:40.710914+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+99;6242;Marco Polo : La collision des mondes;https://pictures.betaseries.com/fonds/poster/0d1c68fa8f8efeeb97986e3422ab6ada.jpg;55;2022-06-26 15:27:47.988218+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+135;28734;Black Space;https://pictures.betaseries.com/fonds/poster/0142316ce9a7fc515b6c736a66fe9db1.jpg;46;2022-06-26 15:37:24.995833+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+110;27446;Mon amie Adèle;https://pictures.betaseries.com/fonds/poster/49bc8d2ff465ef0855227a5657443f06.jpg;50;2022-06-26 15:30:54.920259+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+102;8851;Marvel's Daredevil;https://pictures.betaseries.com/fonds/poster/ed14204840fb655d448b5d1ea6e01736.jpg;55;2022-06-26 15:28:30.865417+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+158;5793;Sakurasou no Pet na Kanojo;https://pictures.betaseries.com/fonds/poster/a8563d9b7c4e30ea68af945f049c3f2d.jpg;25;2022-06-27 17:05:51.335538+00;90a0e292-14af-437c-a959-00805336fabf
+159;5782;Love, Chunibyo, and Other Delusions!;https://pictures.betaseries.com/fonds/poster/934aec9403d7c0394df7e56cdfcb2eba.jpg;25;2022-06-27 17:07:44.907072+00;90a0e292-14af-437c-a959-00805336fabf
+160;5386;Kokoro Connect;https://pictures.betaseries.com/fonds/poster/4a2a67d23efdd621ff31f3f164ab5933.jpg;25;2022-06-27 17:08:31.297117+00;90a0e292-14af-437c-a959-00805336fabf
+161;4868;Hyouka;https://pictures.betaseries.com/fonds/poster/3e457c5f78d435cfc35878a5c48e11b4.jpg;25;2022-06-27 17:09:28.340119+00;90a0e292-14af-437c-a959-00805336fabf
+162;4067;Boku wa Tomodachi ga Sukunai;https://pictures.betaseries.com/fonds/poster/9f8bf37f4011984636a55419ddb1a775.jpg;25;2022-06-27 17:10:22.892907+00;90a0e292-14af-437c-a959-00805336fabf
+163;3187;Blue Exorcist;https://pictures.betaseries.com/fonds/poster/55d51be8e49364eb9ca0ed2fdf489833.jpg;25;2022-06-27 17:24:36.292452+00;90a0e292-14af-437c-a959-00805336fabf
+164;3132;Ano Hi Mita Hana no Namae o Bokutachi wa Mada Shiranai (AnoHana);https://pictures.betaseries.com/fonds/poster/d1a8e4904c516c7b2096049d7af7a211.jpg;25;2022-06-27 17:28:08.611577+00;90a0e292-14af-437c-a959-00805336fabf
+165;1586;High School of the Dead;https://pictures.betaseries.com/fonds/poster/c3690e6b46809645ff84065a865b1c84.jpg;25;2022-06-27 17:29:56.619821+00;90a0e292-14af-437c-a959-00805336fabf
+166;1335;Angel Beats!;https://pictures.betaseries.com/fonds/poster/eaae0341fb7b98826b08cb12cfd4a2c3.jpg;25;2022-06-27 17:30:42.232748+00;90a0e292-14af-437c-a959-00805336fabf
+167;1170;Kimi ni Todoke;https://pictures.betaseries.com/fonds/poster/a1646165094ea87464fd58e5760b0bae.jpg;25;2022-06-27 17:31:33.400213+00;90a0e292-14af-437c-a959-00805336fabf
+168;1256;Toradora!;https://pictures.betaseries.com/fonds/poster/d3a8a0c0b5233ad7fcb4227d72afabaa.jpg;25;2022-06-27 17:39:16.938681+00;90a0e292-14af-437c-a959-00805336fabf
+170;12916;Orange;https://pictures.betaseries.com/fonds/poster/1125703001ea754b832a5426ab98d01f.jpg;30;2022-06-27 17:41:32.77266+00;90a0e292-14af-437c-a959-00805336fabf
+171;12496;Erased;https://pictures.betaseries.com/fonds/poster/dd0f6adb4f316291f03eafe6ead45edf.jpg;23;2022-06-27 17:42:15.996563+00;90a0e292-14af-437c-a959-00805336fabf
+172;19833;Notre Planète;https://pictures.betaseries.com/fonds/poster/e33e48e15d529a70a1fdfe9a6e6ba489.jpg;50;2022-06-27 17:42:57.363874+00;90a0e292-14af-437c-a959-00805336fabf
+173;17017;Devilman Crybaby;;30;2022-06-27 17:44:06.908768+00;90a0e292-14af-437c-a959-00805336fabf
+174;16648;The End of the F***ing World;https://pictures.betaseries.com/fonds/poster/3251262f4a6bb7908f6c145a38bf177a.jpg;21;2022-06-27 17:45:07.151711+00;90a0e292-14af-437c-a959-00805336fabf
+175;16457;Les Enfants De La Baleine;https://pictures.betaseries.com/fonds/poster/7d8000e78590f55819ad534e646440a2.jpg;25;2022-06-28 16:19:31.205402+00;90a0e292-14af-437c-a959-00805336fabf
+176;15857;Violet Evergarden;https://pictures.betaseries.com/fonds/poster/dda94209ae45054b04678ac195ed7e9f.jpg;25;2022-06-28 16:20:54.624769+00;90a0e292-14af-437c-a959-00805336fabf
+177;4075;Mirai Nikki;https://pictures.betaseries.com/fonds/poster/7bb860992d7f42c6eda3c51c0d62ba79.jpg;25;2022-06-28 16:21:52.745358+00;90a0e292-14af-437c-a959-00805336fabf
+178;15824;Gambling School;https://pictures.betaseries.com/fonds/poster/8710498b2e1445ed888f51f56b751aa9.jpg;25;2022-06-28 16:22:49.652776+00;90a0e292-14af-437c-a959-00805336fabf
+179;15830;Classroom of the Elite;https://pictures.betaseries.com/fonds/poster/b3058c503e900aa45eaa98154c8a8260.jpg;24;2022-06-28 16:23:37.639586+00;90a0e292-14af-437c-a959-00805336fabf
+180;860;High School D×D;https://pictures.betaseries.com/fonds/poster/ccf31428505c1e6853f5b1e98441c71b.jpg;25;2022-06-28 16:24:31.761902+00;90a0e292-14af-437c-a959-00805336fabf
+181;5777;Le garçon d'à côté;https://pictures.betaseries.com/fonds/poster/7c050b33fcea9a4ebe31112a2c118e74.jpg;25;2022-06-28 16:25:26.858041+00;90a0e292-14af-437c-a959-00805336fabf
+182;8948;Tokyo Ghoul;https://pictures.betaseries.com/fonds/poster/f1e1299a586941b243cf063615061718.jpg;25;2022-06-28 16:26:21.710588+00;90a0e292-14af-437c-a959-00805336fabf
+183;4052;Guilty Crown;https://pictures.betaseries.com/fonds/poster/a97c40cfc2157af1a463f3805f039bdf.jpg;25;2022-06-28 16:28:52.219811+00;90a0e292-14af-437c-a959-00805336fabf
+184;4839;Kuroko's Basket;https://pictures.betaseries.com/fonds/poster/92aca617983b8af945a181b40c74318d.jpg;25;2022-06-28 16:30:13.860326+00;90a0e292-14af-437c-a959-00805336fabf
+185;20036;Demon Slayer: Kimetsu no Yaiba;https://pictures.betaseries.com/fonds/poster/a1fae3679678431e83d009217ee06933.jpg;24;2022-06-28 16:30:48.920233+00;90a0e292-14af-437c-a959-00805336fabf
+186;16207;Happy!;https://pictures.betaseries.com/fonds/poster/193171f2d14d14a57b6e312265d0a2d8.jpg;45;2022-06-28 16:31:20.127208+00;90a0e292-14af-437c-a959-00805336fabf
+187;19960;Hero Mask;https://pictures.betaseries.com/fonds/poster/59136e589433854f322e1a9c04f8a2bd.jpg;25;2022-06-28 16:32:10.318497+00;90a0e292-14af-437c-a959-00805336fabf
+188;21135;Daybreak;https://pictures.betaseries.com/fonds/poster/b2297714e8fba1f9400a8376ed613e6b.jpg;45;2022-06-28 16:32:45.306114+00;90a0e292-14af-437c-a959-00805336fabf
+189;8018;Witchcraft Works;https://pictures.betaseries.com/fonds/poster/174f7d4f4f95fb920a7a8ca33dbf5224.jpg;25;2022-06-28 16:33:25.698962+00;90a0e292-14af-437c-a959-00805336fabf
+190;17524;Sword Gai: The Animation;;25;2022-06-28 16:34:31.039397+00;90a0e292-14af-437c-a959-00805336fabf
+191;16021;Marvel's The Punisher;https://pictures.betaseries.com/fonds/poster/3f336a597b88c57cc5a2d8b65637bc05.jpg;57;2022-06-28 16:35:23.330529+00;90a0e292-14af-437c-a959-00805336fabf
+192;22579;Japan Sinks: 2020;https://pictures.betaseries.com/fonds/poster/40499724dd6ac47bc39eb257fe15cba3.jpg;26;2022-06-28 16:36:03.923626+00;90a0e292-14af-437c-a959-00805336fabf
+193;22058;Ragnarök;https://pictures.betaseries.com/fonds/poster/45cc647a82782a69f875335d1c5827fa.jpg;46;2022-06-28 16:36:37.347072+00;90a0e292-14af-437c-a959-00805336fabf
+194;10980;Lucifer;https://pictures.betaseries.com/fonds/poster/888fafe956a77ef254c14075be70c5ce.jpg;43;2022-06-28 16:37:18.793974+00;90a0e292-14af-437c-a959-00805336fabf
+195;12742;Stranger Things;https://pictures.betaseries.com/fonds/poster/296076ac6295bd60005737858fd0476c.jpg;52;2022-06-28 16:38:05.507277+00;90a0e292-14af-437c-a959-00805336fabf
+196;19961;Sex Education;https://pictures.betaseries.com/fonds/poster/39f7596eb2fa50ba17f32b165c9a7f5d.jpg;54;2022-06-28 16:39:24.038091+00;90a0e292-14af-437c-a959-00805336fabf
+197;17901;Élite;https://pictures.betaseries.com/fonds/poster/00ef3a490e75ebdc66716656235b0cfd.jpg;50;2022-06-28 16:40:11.813311+00;90a0e292-14af-437c-a959-00805336fabf
+198;16081;La casa de papel;https://pictures.betaseries.com/fonds/poster/dc8f4bf5c841b91fd4df3f524221bd47.jpg;65;2022-06-28 16:40:51.344895+00;90a0e292-14af-437c-a959-00805336fabf
+199;19521;Baby;https://pictures.betaseries.com/fonds/poster/564490785d5c6b35b4002c5821e1a4b8.jpg;49;2022-06-28 16:43:15.546426+00;90a0e292-14af-437c-a959-00805336fabf
+200;6563;L'Attaque des Titans;https://pictures.betaseries.com/fonds/poster/0183f272b2f972d358be9d2267fe6f1a.jpg;24;2022-06-28 16:44:07.920328+00;90a0e292-14af-437c-a959-00805336fabf
+201;21348;Beastars;https://pictures.betaseries.com/fonds/poster/fc3a3afde75b851c3cad4b6aecbdeaf2.jpg;23;2022-06-28 16:44:54.074965+00;90a0e292-14af-437c-a959-00805336fabf
+203;17443;Perdus dans l'espace (2018);https://pictures.betaseries.com/fonds/poster/8389da8134db9aed85e4b738536f8134.jpg;55;2022-06-28 16:46:05.358014+00;90a0e292-14af-437c-a959-00805336fabf
+204;22267;Into the Night;https://pictures.betaseries.com/fonds/poster/6ae37e33c50429ae095090cacd7ae4c4.jpg;37;2022-06-28 16:46:35.343764+00;90a0e292-14af-437c-a959-00805336fabf
+205;16149;Altered Carbon;https://pictures.betaseries.com/fonds/poster/9f6e75e28d4b537ea837ef82de05196b.jpg;50;2022-06-28 16:47:17.033179+00;90a0e292-14af-437c-a959-00805336fabf
+206;17392;B: The Beginning;https://pictures.betaseries.com/fonds/poster/0079afbc6c3701659192d207652d8b29.jpg;25;2022-06-28 16:47:57.217304+00;90a0e292-14af-437c-a959-00805336fabf
+207;19579;Umbrella Academy;https://pictures.betaseries.com/fonds/poster/978b8f6be385a41d68959327f9d54fca.jpg;49;2022-06-28 16:48:28.003891+00;90a0e292-14af-437c-a959-00805336fabf
+208;13597;Saiki Kusuo no Psi Nan;https://pictures.betaseries.com/fonds/poster/0f21da255837da0e1a5048255b3e54d0.jpg;25;2022-06-28 16:49:08.986957+00;90a0e292-14af-437c-a959-00805336fabf
+209;1113;Wakfu;https://pictures.betaseries.com/fonds/poster/0257896d485d860ed44214fd1ba5594b.jpg;25;2022-06-28 16:50:08.211517+00;90a0e292-14af-437c-a959-00805336fabf
+210;5517;Vikings;https://pictures.betaseries.com/fonds/poster/4c508877342713606486f5bafae12d50.jpg;45;2022-06-28 16:50:44.503697+00;90a0e292-14af-437c-a959-00805336fabf
+211;9311;The Seven Deadly Sins;https://pictures.betaseries.com/fonds/poster/da0e3b45c37d1e8df5bdb262978f0c2f.jpg;24;2022-06-28 16:51:21.550062+00;90a0e292-14af-437c-a959-00805336fabf
+212;25774;Biohackers;https://pictures.betaseries.com/fonds/poster/6551bc7086b0265d9a7265950ed70371.jpg;45;2022-06-28 16:52:56.998377+00;90a0e292-14af-437c-a959-00805336fabf
+213;20466;How to Sell Drugs Online (Fast);https://pictures.betaseries.com/fonds/poster/d0e4a22137bf4b498c3441b9a4d92f8a.jpg;35;2022-06-28 16:53:36.91744+00;90a0e292-14af-437c-a959-00805336fabf
+214;3930;Hunter x Hunter (2011);https://pictures.betaseries.com/fonds/poster/d94a0d771a209766a9c11dd917df07ab.jpg;25;2022-06-28 16:54:19.061034+00;90a0e292-14af-437c-a959-00805336fabf
+215;8851;Marvel's Daredevil;https://pictures.betaseries.com/fonds/poster/ed14204840fb655d448b5d1ea6e01736.jpg;55;2022-06-28 16:54:59.574479+00;90a0e292-14af-437c-a959-00805336fabf
+217;20218;Love, Death & Robots;https://pictures.betaseries.com/fonds/poster/2cd524bf4928bb2b261395991209ff03.jpg;17;2022-06-28 16:56:38.066199+00;90a0e292-14af-437c-a959-00805336fabf
+218;20472;To the Lake;https://pictures.betaseries.com/fonds/poster/43c3a842522ad0e241376038ba6d9b83.jpg;45;2022-06-28 16:57:35.931038+00;90a0e292-14af-437c-a959-00805336fabf
+219;750;Samurai Champloo;https://pictures.betaseries.com/fonds/poster/4c618ecabb188cbe0d98512ecbe7f0f0.jpg;25;2022-06-28 17:00:14.521339+00;90a0e292-14af-437c-a959-00805336fabf
+220;20999;The Witcher;https://pictures.betaseries.com/fonds/poster/bc2dbf6560de1d6c322636631f546c4e.jpg;60;2022-06-28 17:01:00.956255+00;90a0e292-14af-437c-a959-00805336fabf
+221;26214;Barbares;https://pictures.betaseries.com/fonds/poster/d5685ab01dae72e25d3c3997fc2a644d.jpg;52;2022-06-28 17:02:27.510406+00;90a0e292-14af-437c-a959-00805336fabf
+222;8572;Black Bullet;https://pictures.betaseries.com/fonds/poster/cd898ee255d2806f1bbb7dc37944767f.jpg;25;2022-06-28 17:05:16.442477+00;90a0e292-14af-437c-a959-00805336fabf
+223;15638;Castlevania;https://pictures.betaseries.com/fonds/poster/33c6dd0b03279a34d31ade74562c0bf8.jpg;25;2022-06-28 17:06:00.058267+00;90a0e292-14af-437c-a959-00805336fabf
+224;16472;Dark;https://pictures.betaseries.com/fonds/poster/c47135385da176a87d0dd9177c5f6a41.jpg;51;2022-06-28 17:06:48.256474+00;90a0e292-14af-437c-a959-00805336fabf
+225;11310;Gate;https://pictures.betaseries.com/fonds/poster/f4ae018f31a73cf11b4efd60922bfbb5.jpg;25;2022-06-28 17:07:22.166101+00;90a0e292-14af-437c-a959-00805336fabf
+226;7099;Peaky Blinders;https://pictures.betaseries.com/fonds/poster/dec158fbcca5455763a9f8c5a650db34.jpg;58;2022-06-28 17:08:10.883581+00;90a0e292-14af-437c-a959-00805336fabf
+227;26009;Le Jeu de la dame;https://pictures.betaseries.com/fonds/poster/ce0184548678df6f8d967353fdb0f5a5.jpg;59;2022-06-28 17:09:04.459345+00;90a0e292-14af-437c-a959-00805336fabf
+228;25719;La Révolution;https://pictures.betaseries.com/fonds/poster/98f7eb1507b0fe3983f12184d061c2c1.jpg;42;2022-06-28 17:09:52.984892+00;90a0e292-14af-437c-a959-00805336fabf
+229;12846;My Hero Academia;https://pictures.betaseries.com/fonds/poster/5b0e923129cb823883ac70423b903997.jpg;23;2022-06-28 17:10:25.157731+00;90a0e292-14af-437c-a959-00805336fabf
+230;18375;Sirius the Jaeger;;25;2022-06-28 17:11:34.340292+00;90a0e292-14af-437c-a959-00805336fabf
+231;19453;FIGHTWORLD;https://pictures.betaseries.com/fonds/poster/a5e6db0d2916317670d90955016c4786.jpg;40;2022-06-28 17:12:29.341744+00;90a0e292-14af-437c-a959-00805336fabf
+232;8251;Narcos;https://pictures.betaseries.com/fonds/poster/46f5447633263bae37566f02fb10d397.jpg;51;2022-06-28 17:13:03.178748+00;90a0e292-14af-437c-a959-00805336fabf
+233;22603;Destin : La saga Winx;https://pictures.betaseries.com/fonds/poster/3fb331ef95ea62eb505c4f2d74bd9358.jpg;53;2022-06-28 17:14:36.489982+00;90a0e292-14af-437c-a959-00805336fabf
+234;22262;Emily in Paris;https://pictures.betaseries.com/fonds/poster/6a1c9cbd6c2d2b8171f63aa0a732a2f8.jpg;29;2022-06-28 17:15:14.074186+00;90a0e292-14af-437c-a959-00805336fabf
+236;23439;Lupin;https://pictures.betaseries.com/fonds/poster/c449a907a8fe53736342cb3ea4d67df5.jpg;48;2022-06-28 17:17:46.401626+00;90a0e292-14af-437c-a959-00805336fabf
+237;22028;La Chronique des Bridgerton;https://pictures.betaseries.com/fonds/poster/4ae72657a60c537027e4bcf772713615.jpg;61;2022-06-28 17:19:08.158378+00;90a0e292-14af-437c-a959-00805336fabf
+238;24039;Outer Banks;https://pictures.betaseries.com/fonds/poster/d2b647100cdfb3650aaaca84482d9038.jpg;47;2022-06-28 17:19:49.294253+00;90a0e292-14af-437c-a959-00805336fabf
+235;13704;3-gatsu no Lion;https://pictures.betaseries.com/fonds/poster/362e8d009acf6606700a3371a6fe397f.jpg;25;2022-06-28 17:16:32.58715+00;90a0e292-14af-437c-a959-00805336fabf
+202;16994;You;https://pictures.betaseries.com/fonds/poster/81a5713a7ee35e5372fb3387c5afb176.jpg;50;2022-06-28 16:45:28.294718+00;90a0e292-14af-437c-a959-00805336fabf
+239;26491;Alice in Borderland;https://pictures.betaseries.com/fonds/poster/f78eb78b64924c45426d78f4e96ccf90.jpg;48;2022-06-28 17:21:06.619822+00;90a0e292-14af-437c-a959-00805336fabf
+253;10051;Mr. Robot;https://pictures.betaseries.com/fonds/poster/73a187c21b3e8b2f8eabfb069c9fd1ac.jpg;50;2022-06-28 17:50:38.030972+00;90a0e292-14af-437c-a959-00805336fabf
+254;22423;Sweet Tooth;https://pictures.betaseries.com/fonds/poster/75221e8c57e920aae23657d1564632ff.jpg;53;2022-06-28 17:51:11.46556+00;90a0e292-14af-437c-a959-00805336fabf
+255;19699;The A List;https://pictures.betaseries.com/fonds/poster/f392bca22e9fe8b5f71b1d7563210c9e.jpg;25;2022-06-28 17:51:44.478067+00;90a0e292-14af-437c-a959-00805336fabf
+256;23447;Le Serpent;https://pictures.betaseries.com/fonds/poster/f4813624921aecc21f15b3039b133bcc.jpg;58;2022-06-28 17:52:10.981294+00;90a0e292-14af-437c-a959-00805336fabf
+257;27777;Squid Game;https://pictures.betaseries.com/fonds/poster/79bdd9ecbc3b0b0888c7d0fb1b20a9f9.jpg;54;2022-06-28 17:52:39.939231+00;90a0e292-14af-437c-a959-00805336fabf
+258;24236;Blood & Water;https://pictures.betaseries.com/fonds/poster/6951705a84ed359fa52a8059aa9b382a.jpg;43;2022-06-28 17:53:15.576782+00;90a0e292-14af-437c-a959-00805336fabf
+266;23765;Unorthodox;https://pictures.betaseries.com/fonds/poster/ca05ada9d75880eea37e8e095493f937.jpg;53;2022-06-28 18:01:38.922743+00;90a0e292-14af-437c-a959-00805336fabf
+276;29078;Komi cherche ses mots;https://pictures.betaseries.com/fonds/poster/cd9657ec6ba353a2846651fbe19880c1.jpg;24;2022-06-28 18:08:03.439294+00;90a0e292-14af-437c-a959-00805336fabf
+240;27113;Tribes of Europa;https://pictures.betaseries.com/fonds/poster/c9bc5c1232087510a3bb518e0895af91.jpg;50;2022-06-28 17:22:29.439508+00;90a0e292-14af-437c-a959-00805336fabf
+242;27414;Sky Rojo;https://pictures.betaseries.com/fonds/poster/de6fe0f886ab53ad2275879af7cc0fd0.jpg;23;2022-06-28 17:23:52.372481+00;90a0e292-14af-437c-a959-00805336fabf
+243;570;Naruto;https://pictures.betaseries.com/fonds/poster/fd4641d88e35ee44f10bb41231c195a0.jpg;25;2022-06-28 17:25:04.741208+00;90a0e292-14af-437c-a959-00805336fabf
+244;27755;Les Irréguliers de Baker Street;https://pictures.betaseries.com/fonds/poster/9c41e36c9dbbc3814ea66813763468c6.jpg;49;2022-06-28 17:25:46.752902+00;90a0e292-14af-437c-a959-00805336fabf
+245;745;Black Lagoon;;25;2022-06-28 17:26:34.668725+00;90a0e292-14af-437c-a959-00805336fabf
+246;28059;Qui a tué Sara ?;https://pictures.betaseries.com/fonds/poster/05f798da8fa476814ed6a8a68d7d84d9.jpg;40;2022-06-28 17:28:25.016562+00;90a0e292-14af-437c-a959-00805336fabf
+247;17288;The Rain;https://pictures.betaseries.com/fonds/poster/1b20982c0a9a7ca1da56c8af9759e11b.jpg;40;2022-06-28 17:29:08.666225+00;90a0e292-14af-437c-a959-00805336fabf
+248;27918;Zéro;https://pictures.betaseries.com/fonds/poster/e1c9fba173a1d4fba0fd1c7b8868c0c0.jpg;27;2022-06-28 17:29:30.189227+00;90a0e292-14af-437c-a959-00805336fabf
+249;25936;Le jeune Wallander;https://pictures.betaseries.com/fonds/poster/0f3d0c7f1c88cc7a9d21658825c8b8af.jpg;41;2022-06-28 17:30:10.171898+00;90a0e292-14af-437c-a959-00805336fabf
+250;15063;Zone blanche;https://pictures.betaseries.com/fonds/poster/52f1f611651c5ccd37aebf4aa8f7edd1.jpg;55;2022-06-28 17:30:50.801456+00;90a0e292-14af-437c-a959-00805336fabf
+251;543;Naruto Shippuden;https://pictures.betaseries.com/fonds/poster/8ab481234b40b86d232c296eb472677f.jpg;23;2022-06-28 17:31:25.130798+00;90a0e292-14af-437c-a959-00805336fabf
+252;22619;Shadow and Bone : La saga Grisha;https://pictures.betaseries.com/fonds/poster/cc2715a8541236940fac1c706d9e4d22.jpg;52;2022-06-28 17:32:15.940365+00;90a0e292-14af-437c-a959-00805336fabf
+259;26538;Innocent;https://pictures.betaseries.com/fonds/poster/4e54ee5ea486a88d6338bd7224e0117a.jpg;58;2022-06-28 17:53:48.409726+00;90a0e292-14af-437c-a959-00805336fabf
+260;29627;Clickbait;https://pictures.betaseries.com/fonds/poster/71237ccb50e6b00ba3d09080410b9a2a.jpg;42;2022-06-28 17:54:51.18189+00;90a0e292-14af-437c-a959-00805336fabf
+261;29763;Braqueurs : La série;https://pictures.betaseries.com/fonds/poster/266a37aea2a135a3eb4c81e61b0234d2.jpg;45;2022-06-28 17:55:47.363106+00;90a0e292-14af-437c-a959-00805336fabf
+262;29349;Octobre;https://pictures.betaseries.com/fonds/poster/60b101bef66b347268629133cab42551.jpg;52;2022-06-28 17:57:07.982465+00;90a0e292-14af-437c-a959-00805336fabf
+263;26029;Perdida;https://pictures.betaseries.com/fonds/poster/77978ff760b21658a561fd67e11652fa.jpg;50;2022-06-28 17:57:52.762313+00;90a0e292-14af-437c-a959-00805336fabf
+264;26640;Sky-High Survival;https://pictures.betaseries.com/fonds/poster/502c72659c10f1025b26fc9b1133a6b1.jpg;25;2022-06-28 17:59:12.710567+00;90a0e292-14af-437c-a959-00805336fabf
+265;27780;My Name;https://pictures.betaseries.com/fonds/poster/8d895fb398edcc08abe76ba1423268aa.jpg;47;2022-06-28 18:00:06.193399+00;90a0e292-14af-437c-a959-00805336fabf
+267;19242;Vinland Saga;https://pictures.betaseries.com/fonds/poster/365170d68ff2bb866684510b952fa0a6.jpg;25;2022-06-28 18:02:13.102146+00;90a0e292-14af-437c-a959-00805336fabf
+268;9328;Marvel's Luke Cage;https://pictures.betaseries.com/fonds/poster/5dd89ebfee09d0d783c96e54dcb5571e.jpg;55;2022-06-28 18:02:45.018032+00;90a0e292-14af-437c-a959-00805336fabf
+269;28996;The Aquatope on White Sand;https://pictures.betaseries.com/fonds/poster/e394c6e677f75659549ddfee2b9870a9.jpg;24;2022-06-28 18:03:42.866974+00;90a0e292-14af-437c-a959-00805336fabf
+270;27782;Hellbound;https://pictures.betaseries.com/fonds/poster/9abae065211fb3df805d3972cedba98f.jpg;53;2022-06-28 18:04:11.697654+00;90a0e292-14af-437c-a959-00805336fabf
+271;25764;Katla;https://pictures.betaseries.com/fonds/poster/57796ff3634fd9b676b415a16423e721.jpg;43;2022-06-28 18:04:39.25785+00;90a0e292-14af-437c-a959-00805336fabf
+272;28734;Black Space;https://pictures.betaseries.com/fonds/poster/0142316ce9a7fc515b6c736a66fe9db1.jpg;46;2022-06-28 18:05:08.570632+00;90a0e292-14af-437c-a959-00805336fabf
+273;28449;Blue Period;https://pictures.betaseries.com/fonds/poster/90ae0de6a704739ea876445ec5dece3c.jpg;24;2022-06-28 18:05:38.24339+00;90a0e292-14af-437c-a959-00805336fabf
+274;575;Death Note;https://pictures.betaseries.com/fonds/poster/1a66b0e43dede0ddec971866ed14b808.jpg;22;2022-06-28 18:06:25.669602+00;90a0e292-14af-437c-a959-00805336fabf
+275;23582;Les Meurtres de Valhalla;https://pictures.betaseries.com/fonds/poster/eb0eee4740169169eab53a88a91d596d.jpg;45;2022-06-28 18:07:31.866657+00;90a0e292-14af-437c-a959-00805336fabf
+277;19883;Revisions;https://pictures.betaseries.com/fonds/poster/9f6eddac9328478a6683eb7391bd06a9.jpg;25;2022-06-28 18:08:31.486664+00;90a0e292-14af-437c-a959-00805336fabf
+278;23684;Mushikago no Cagaster;https://pictures.betaseries.com/fonds/poster/47f4ad074aa1b08896b96d6b2b348d73.jpg;25;2022-06-29 11:40:19.010478+00;90a0e292-14af-437c-a959-00805336fabf
+279;23755;Le Quotidien du roi immortel;https://pictures.betaseries.com/fonds/poster/c5b12dbc06438b94398f25764b86d58e.jpg;18;2022-06-29 11:41:11.11126+00;90a0e292-14af-437c-a959-00805336fabf
+280;17287;A.I.C.O. -Incarnation-;;25;2022-06-29 11:41:42.132486+00;90a0e292-14af-437c-a959-00805336fabf
+281;12230;Ajin;https://pictures.betaseries.com/fonds/poster/03736f5875af9c82a34946ab7f8f1838.jpg;25;2022-06-29 11:42:05.317581+00;90a0e292-14af-437c-a959-00805336fabf
+282;31189;Notre jeunesse en orbite;https://pictures.betaseries.com/fonds/poster/ef78b3fe44e7d8682c4d784b9a42ac1e.jpg;31;2022-06-29 11:42:36.505685+00;90a0e292-14af-437c-a959-00805336fabf
+283;26824;Archive 81;https://pictures.betaseries.com/fonds/poster/c9e25e6f2de613a684ae9afe10535e42.jpg;57;2022-06-29 11:43:01.669892+00;90a0e292-14af-437c-a959-00805336fabf
+284;25966;Qui ment ?;https://pictures.betaseries.com/fonds/poster/15a7a8368f8519af328f31905583b868.jpg;49;2022-06-29 11:43:23.419546+00;90a0e292-14af-437c-a959-00805336fabf
+285;25922;Inventing Anna;https://pictures.betaseries.com/fonds/poster/53aa17bfc5a43149bc891b4c975390cc.jpg;65;2022-06-29 11:44:38.90033+00;90a0e292-14af-437c-a959-00805336fabf
+286;14999;Boruto - Naruto Next Generations;https://pictures.betaseries.com/fonds/poster/3119e6f40f0fa91fb520431156b6fab1.jpg;25;2022-06-29 11:45:08.066591+00;90a0e292-14af-437c-a959-00805336fabf
+287;23168;Vikings : Valhalla;https://pictures.betaseries.com/fonds/poster/56222c69d5e94f21652fed6402f66d24.jpg;45;2022-06-29 11:46:11.753464+00;90a0e292-14af-437c-a959-00805336fabf
+288;31672;Sans un mot;https://pictures.betaseries.com/fonds/poster/ab58740183568cc57bc6875ff574008f.jpg;42;2022-06-29 11:46:33.849563+00;90a0e292-14af-437c-a959-00805336fabf
+289;28229;Valkyrie Apocalypse;https://pictures.betaseries.com/fonds/poster/07391abf74a3d68fed7dd512c160e3cc.jpg;25;2022-06-29 11:49:30.999375+00;90a0e292-14af-437c-a959-00805336fabf
+290;32159;Les 7 vies de Léa;https://pictures.betaseries.com/fonds/poster/d15554f0dfeaab769539289cc7e04bbb.jpg;42;2022-06-29 11:50:00.37097+00;90a0e292-14af-437c-a959-00805336fabf
+303;8643;Z Nation;https://pictures.betaseries.com/fonds/poster/4d2395a45ac7117a0faa60a795f20c87.jpg;43;2022-06-29 22:22:20.425698+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+305;1091;Bob l'éponge;https://pictures.betaseries.com/fonds/poster/6aea1de125ea25a24ae6d4adffb08c3d.jpg;10;2022-06-29 22:26:50.108249+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+309;17017;Devilman Crybaby;https://pictures.betaseries.com/fonds/show/17017_1259746.jpg;30;2022-07-01 01:06:30.24553+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+311;11456;Glitch;https://pictures.betaseries.com/fonds/poster/a4a9da95c1d47708c891929f85950f31.jpg;60;2022-07-04 00:19:18.395557+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+308;18375;Sirius the Jaeger;https://pictures.betaseries.com/fonds/show/18375_1288751.jpg;25;2022-07-01 00:52:11.281889+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+307;16147;Ghost Wars;https://pictures.betaseries.com/fonds/show/16147_1500998056.jpg;45;2022-07-01 00:50:05.648886+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+306;2214;Fullmetal Alchemist;https://pictures.betaseries.com/fonds/show/2214_362391.jpg;25;2022-07-01 00:44:01.631831+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+304;17831;Vermin;https://pictures.betaseries.com/fonds/poster/671903020569c02deaf7d3ae531a2d74.jpg;10;2022-06-29 22:23:39.905706+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+302;12546;Van Helsing;https://pictures.betaseries.com/fonds/poster/65f62ed1c2aa20e3befa823b20c00552.jpg;43;2022-06-29 22:21:40.552324+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+301;26824;Archive 81;https://pictures.betaseries.com/fonds/poster/c9e25e6f2de613a684ae9afe10535e42.jpg;57;2022-06-29 22:10:31.575515+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+299;17613;Undercover (2019);https://pictures.betaseries.com/fonds/poster/64aa4f2e9ff66e8abeda374662607622.jpg;50;2022-06-29 22:02:18.896037+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+298;20757;Trailer Park Boys: The Animated Series;https://pictures.betaseries.com/fonds/poster/1c884c89c9f123f3cd61461369d1330a.jpg;25;2022-06-29 21:58:45.927897+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+297;543;Naruto Shippuden;https://pictures.betaseries.com/fonds/poster/8ab481234b40b86d232c296eb472677f.jpg;23;2022-06-29 21:52:12.1031+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+296;10051;Mr. Robot;https://pictures.betaseries.com/fonds/poster/73a187c21b3e8b2f8eabfb069c9fd1ac.jpg;50;2022-06-29 21:45:22.557079+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+241;9852;The Crown;https://pictures.betaseries.com/fonds/poster/210a39c5f499256173c1e35e3879a792.jpg;57;2022-06-28 17:23:04.710573+00;90a0e292-14af-437c-a959-00805336fabf
+313;22044;Moon Knight;https://pictures.betaseries.com/fonds/poster/a04c65471dff2acb69811803cc12aa6d.jpg;53;2022-07-07 07:18:40.58428+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+324;23405;Intimidation;https://pictures.betaseries.com/fonds/poster/0219c3eee1a7cb62413157c4c6dd6dd8.jpg;50;2022-07-24 16:44:01.718728+00;90a0e292-14af-437c-a959-00805336fabf
+314;2214;Fullmetal Alchemist;https://pictures.betaseries.com/fonds/show/2214_362391.jpg;25;2022-07-09 12:02:14.054808+00;90a0e292-14af-437c-a959-00805336fabf
+216;10;Prison Break;https://pictures.betaseries.com/fonds/poster/22f656f16ce7935bbc31197d861b086b.jpg;45;2022-06-28 16:55:39.260729+00;90a0e292-14af-437c-a959-00805336fabf
+169;6520;Date a Live;https://pictures.betaseries.com/fonds/poster/8ae16327bb48edc63f93249b92678dc2.jpg;25;2022-06-27 17:40:17.277382+00;90a0e292-14af-437c-a959-00805336fabf
+317;29420;Shikimori n'est pas juste mignonne;https://pictures.betaseries.com/fonds/poster/b4a0998e0660bd92311561a452da27b6.jpg;23;2022-07-10 19:57:40.187808+00;90a0e292-14af-437c-a959-00805336fabf
+318;29538;Spriggan;https://pictures.betaseries.com/fonds/poster/8e7d853f6816db0680e1de6a82090cab.jpg;45;2022-07-10 20:34:02.108879+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+319;29538;Spriggan;https://pictures.betaseries.com/fonds/poster/8e7d853f6816db0680e1de6a82090cab.jpg;45;2022-07-12 10:20:56.013215+00;90a0e292-14af-437c-a959-00805336fabf
+320;23199;Don't F**k with Cats : Un tueur trop viral;https://pictures.betaseries.com/fonds/poster/6ddc78c5509fd48faad2af7a0aae298f.jpg;65;2022-07-20 21:10:44.303135+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+321;23199;Don't F**k with Cats : Un tueur trop viral;https://pictures.betaseries.com/fonds/poster/6ddc78c5509fd48faad2af7a0aae298f.jpg;65;2022-07-20 21:34:47.318528+00;90a0e292-14af-437c-a959-00805336fabf
+323;26097;Resident Evil;https://pictures.betaseries.com/fonds/poster/bd42040063bdc5cd95ce914fcc533f1d.jpg;49;2022-07-23 22:10:06.151007+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+322;23405;Intimidation;https://pictures.betaseries.com/fonds/poster/0219c3eee1a7cb62413157c4c6dd6dd8.jpg;50;2022-07-22 15:30:53.558454+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+328;21569;Unbelievable;https://pictures.betaseries.com/fonds/poster/cb081625f271887217e97b06b53b8cbe.jpg;45;2022-07-31 16:45:25.585683+00;90a0e292-14af-437c-a959-00805336fabf
+325;21569;Unbelievable;https://pictures.betaseries.com/fonds/poster/cb081625f271887217e97b06b53b8cbe.jpg;45;2022-07-26 08:46:49.811125+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+329;26097;Resident Evil;https://pictures.betaseries.com/fonds/poster/bd42040063bdc5cd95ce914fcc533f1d.jpg;49;2022-07-31 21:14:59.171146+00;90a0e292-14af-437c-a959-00805336fabf
+326;23511;Great Pretender;https://pictures.betaseries.com/fonds/poster/7da01c2dea3eed934ef6c056bb167392.jpg;25;2022-07-28 20:03:29.564071+00;90a0e292-14af-437c-a959-00805336fabf
+316;16590;Comment élever un super-héros;https://pictures.betaseries.com/fonds/poster/3d725da4d5602edefc299e019a90228e.jpg;39;2022-07-09 12:13:57.913373+00;90a0e292-14af-437c-a959-00805336fabf
+330;22044;Moon Knight;https://pictures.betaseries.com/fonds/poster/a04c65471dff2acb69811803cc12aa6d.jpg;53;2022-08-04 19:42:22.30644+00;90a0e292-14af-437c-a959-00805336fabf
+331;24223;Au service du passé;https://pictures.betaseries.com/fonds/poster/d39b20f441dd8efe9e879cd102c52abc.jpg;51;2022-08-06 07:01:16.801354+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+332;24223;Au service du passé;https://pictures.betaseries.com/fonds/poster/d39b20f441dd8efe9e879cd102c52abc.jpg;51;2022-08-08 21:00:25.465665+00;90a0e292-14af-437c-a959-00805336fabf
+333;21497;Sandman;https://pictures.betaseries.com/fonds/poster/0945856ac08782dc836d7c2520d8f22e.jpg;54;2022-08-09 19:19:00.785899+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+312;18760;Deadwind;https://pictures.betaseries.com/fonds/poster/012ae0a5e56728c712d13a063b1c3785.jpg;45;2022-07-05 21:45:59.212768+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+334;21497;Sandman;https://pictures.betaseries.com/fonds/poster/0945856ac08782dc836d7c2520d8f22e.jpg;54;2022-08-09 19:20:05.060702+00;90a0e292-14af-437c-a959-00805336fabf
+336;31245;Feria : L'éclat des ténèbres;https://pictures.betaseries.com/fonds/poster/9531ab3b3f356e483b0f87c9245e39aa.jpg;57;2022-08-18 17:32:14.608665+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+338;15201;Manhunt;https://pictures.betaseries.com/fonds/poster/56ec15cba5b53fd1822d48d3acac29c4.jpg;42;2022-08-23 08:06:43.547113+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+339;31644;Bastard!! Heavy Metal, Dark Fantasy;https://pictures.betaseries.com/fonds/poster/b767591918dd49692bfea3a0212afb10.jpg;25;2022-08-23 15:59:02.681789+00;90a0e292-14af-437c-a959-00805336fabf
+340;30306;Totems;https://pictures.betaseries.com/fonds/poster/9793272f43fee7d07df34e8c2d938635.jpg;52;2022-08-23 21:21:16.071052+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+341;14923;Case (2015);https://pictures.betaseries.com/fonds/poster/515bb5cb1c963d5be5cebd261dc1d8ef.jpg;45;2022-08-23 21:48:51.769825+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+342;14923;Case (2015);https://pictures.betaseries.com/fonds/poster/515bb5cb1c963d5be5cebd261dc1d8ef.jpg;45;2022-08-24 07:43:00.067425+00;90a0e292-14af-437c-a959-00805336fabf
+343;27601;Capitani;https://pictures.betaseries.com/fonds/poster/a3169d8e87e8896774971866b7caa17b.jpg;27;2022-08-29 15:15:02.729491+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+344;27601;Capitani;https://pictures.betaseries.com/fonds/poster/a3169d8e87e8896774971866b7caa17b.jpg;27;2022-08-29 15:16:17.887068+00;90a0e292-14af-437c-a959-00805336fabf
+337;262;Malcolm;https://pictures.betaseries.com/fonds/poster/5c3547cbae868ca895e5c5ed17cad1ed.jpg;25;2022-08-18 17:33:03.781977+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+370;33437;Romantic Killer;https://pictures.betaseries.com/fonds/poster/d440e2f395cba106f0319e16ff41cf3c.jpg;26;2022-11-16 20:30:16.160187+00;90a0e292-14af-437c-a959-00805336fabf
+346;33163;Indian Predator : Le boucher de Delhi;https://pictures.betaseries.com/fonds/poster/16bb5fcdfd4f5cc6b079e3a872065dc9.jpg;43;2022-09-06 19:17:43.386807+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+348;30806;Gambling School : Twin;https://pictures.betaseries.com/fonds/poster/2532f0deb84e8f38490b14236ae50c00.jpg;28;2022-09-11 15:00:18.516946+00;90a0e292-14af-437c-a959-00805336fabf
+351;1071;Les aventures de Tintin;https://pictures.betaseries.com/fonds/poster/92a5a943dee081b419dd756604bb3ca5.jpg;25;2022-09-14 13:55:38.622212+00;90a0e292-14af-437c-a959-00805336fabf
+353;5757;Btooom !;https://pictures.betaseries.com/fonds/poster/fb4ad90d60bb69d0fb2df5dc42d565c3.jpg;25;2022-09-15 21:12:33.384746+00;90a0e292-14af-437c-a959-00805336fabf
+360;28096;DAHMER - Monstre : L'histoire de Jeffrey Dahmer;https://pictures.betaseries.com/fonds/poster/3e11218d324a12143c39bff3c0c8e9bd.jpg;50;2022-10-08 19:59:44.437867+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+361;25017;American Horror Stories;https://pictures.betaseries.com/fonds/poster/fb2d45138aa6b5cfc473104703aad552.jpg;40;2022-10-10 15:16:21.470639+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+362;10171;Owari no Seraph;https://pictures.betaseries.com/fonds/poster/c51b4e39f43f864cdefaf972f6c5a1aa.jpg;25;2022-10-15 15:45:16.932842+00;90a0e292-14af-437c-a959-00805336fabf
+354;280;Ma famille d'abord;https://pictures.betaseries.com/fonds/poster/110539181642521b611f3952fb5b77be.jpg;25;2022-09-17 16:09:51.169186+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+355;21954;Le Seigneur des anneaux : Les Anneaux de pouvoir;https://pictures.betaseries.com/fonds/poster/c75463cd02a6176af2cf74da550a03fc.jpg;66;2022-09-28 23:55:48.238707+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+349;22047;Locke & Key;https://pictures.betaseries.com/fonds/poster/87e066c57b950ca0e5522a6472f1993d.jpg;50;2022-09-11 18:06:48.624994+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+356;21954;Le Seigneur des anneaux : Les Anneaux de pouvoir;https://pictures.betaseries.com/fonds/poster/c75463cd02a6176af2cf74da550a03fc.jpg;69;2022-10-01 12:02:55.438366+00;90a0e292-14af-437c-a959-00805336fabf
+350;22047;Locke & Key;https://pictures.betaseries.com/fonds/poster/87e066c57b950ca0e5522a6472f1993d.jpg;50;2022-09-11 18:26:07.368455+00;90a0e292-14af-437c-a959-00805336fabf
+357;12;Les Simpson;https://pictures.betaseries.com/fonds/poster/f205cecd578b4d95b246f0b33ebbaa5c.jpg;25;2022-10-02 13:53:20.759373+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+358;25563;Cyberpunk: Edgerunners;https://pictures.betaseries.com/fonds/poster/1192e196c0d2a2618b4aed625fee7f5f.jpg;24;2022-10-03 15:28:19.893511+00;90a0e292-14af-437c-a959-00805336fabf
+359;14505;Grimoire Of Zero;https://pictures.betaseries.com/fonds/poster/8b594a3a9e891e52621168368de0c555.jpg;25;2022-10-04 15:02:13.212018+00;90a0e292-14af-437c-a959-00805336fabf
+315;8339;Flash (2014);https://pictures.betaseries.com/fonds/poster/3a12bf4373e7cec1955c17ceb940efc9.jpg;42;2022-07-09 12:12:57.917231+00;90a0e292-14af-437c-a959-00805336fabf
+347;33163;Indian Predator : Le boucher de Delhi;https://pictures.betaseries.com/fonds/poster/16bb5fcdfd4f5cc6b079e3a872065dc9.jpg;43;2022-09-06 19:22:39.71103+00;90a0e292-14af-437c-a959-00805336fabf
+363;23948;BNA;https://pictures.betaseries.com/fonds/poster/a89710dee03955dbaeb0cdcdae570a57.jpg;23;2022-10-20 18:00:45.887862+00;90a0e292-14af-437c-a959-00805336fabf
+364;571;One Piece;https://pictures.betaseries.com/fonds/poster/c4e3c83340471a04dc601593b03af464.jpg;25;2022-10-29 19:25:50.045415+00;90a0e292-14af-437c-a959-00805336fabf
+366;30229;Le Cabinet de curiosités de Guillermo del Toro;https://pictures.betaseries.com/fonds/poster/3d6ae44b391fe7bc18a6eadb244e620e.jpg;64;2022-10-31 21:57:47.710339+00;90a0e292-14af-437c-a959-00805336fabf
+367;28433;Chainsaw Man;https://pictures.betaseries.com/fonds/poster/3b61cc0a0875495e0f7f898308f252af.jpg;24;2022-11-08 12:03:52.561056+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+368;14303;Little Witch Academia;https://pictures.betaseries.com/fonds/poster/448310599976bfbbc54f2f7587ae1b48.jpg;25;2022-11-10 13:27:16.248388+00;90a0e292-14af-437c-a959-00805336fabf
+369;25563;Cyberpunk: Edgerunners;https://pictures.betaseries.com/fonds/poster/1192e196c0d2a2618b4aed625fee7f5f.jpg;24;2022-11-15 21:57:05.519046+00;e317b547-38d5-4e46-97b7-6eefaf65175d
+365;30229;Le Cabinet de curiosités de Guillermo del Toro;https://pictures.betaseries.com/fonds/poster/3d6ae44b391fe7bc18a6eadb244e620e.jpg;64;2022-10-31 21:56:30.00002+00;e317b547-38d5-4e46-97b7-6eefaf65175d

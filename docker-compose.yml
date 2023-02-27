@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  api:
+    build: .
+    container_name: api
+    ports: 
+      - "8080:8080"
+    restart: always
+    networks:
+      - net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres
+    container_name: db
+    networks:
+      - net
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_HOST: localhost
+      POSTGRES_DB: anothapp
+    volumes: 
+      - ./pgdata:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: pg_isready -d anothapp
+      retries: 10
+    
+networks:
+  net:
