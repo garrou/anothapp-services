@@ -7,14 +7,14 @@ const showRepository = require('../repositories/showRepository');
 const addShow = async (req, res) => {
     try {
         const { id, title, images } = req.body;
-        const result = await userShowRepository.getByUserIdByShowId(req.user.id, id);
+        let result = await userShowRepository.getByUserIdByShowId(req.user.id, id);
 
         if (result.rowCount === 1) {
             return res.status(409).json({ 'message': 'Cette série est déjà dans votre collection' });
         }
-        const nbShow = await showRepository.countById(id)['rows'][0].nb;
+        result = await showRepository.getById(id);
 
-        if (nbShow === 0) {
+        if (result.rowCount === 0) {
             await showRepository.create(id, title, getImageUrl(images));
         }
         await userShowRepository.create(req.user.id, id);
@@ -38,11 +38,11 @@ const deleteByShowId = async (req, res) => {
 
 const getShows = async (req, res) => {
     try {
-        const resp = await userShowRepository.getShows(req.user.id);
+        const resp = await userShowRepository.getShowsByUserId(req.user.id);
         
         console.log(resp['rows']);
 
-        res.status(200).json({});
+        res.status(200).json(resp['rows']);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -50,8 +50,7 @@ const getShows = async (req, res) => {
 
 const getByShowId = async (req, res) => {
     try {
-        const id = Number(req.params.id);
-        const resp = await userSeasonRepository.getByUserIdByShowId(req.user.id, id);
+        const resp = await userSeasonRepository.getByUserIdByShowId(req.user.id, req.params.id);
 
         console.log(resp['rows']);
         res.status(200).json({});
@@ -74,15 +73,14 @@ const getByTitle = async (req, res) => {
 
 const addSeasonByShowId = async (req, res) => {
     try {
-        const id = Number(req.params.id);
         const { number, episode, image, duration } = req.body;
-        const nbSeason = await seasonRepository.getByShowIdByNumber(id, number)['rows'][0].nb;
+        const result = await seasonRepository.getByShowIdByNumber(req.params.id, number);
         let created = null;
 
-        if (nbSeason === 0) {
-            created = await seasonRepository.create(episode, number, image, id, duration);
+        if (result.rowCount === 0) {
+            created = await seasonRepository.create(episode, number, image, req.params.id, duration);
         }
-        await userSeasonRepository.create(req.user.id, id, number);
+        await userSeasonRepository.create(req.user.id, req.params.id, number);
 
         res.status(201).json(exists ? exists : created);
     } catch (_) {
@@ -92,12 +90,8 @@ const addSeasonByShowId = async (req, res) => {
 
 const getSeasonsByShowId = async (req, res) => {
     try {
-        const { id } = req.params;
-        const resp = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
-        
-        console.log(resp['rows']);
-
-        res.status(200).json({});
+        const resp = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, req.params.id);
+        res.status(200).json(resp['rows']);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -105,12 +99,8 @@ const getSeasonsByShowId = async (req, res) => {
 
 const getSeasonInfosByShowIdBySeason = async (req, res) => {
     try {
-        const { id, num } = req.params;
-        const resp = await userSeasonRepository.getInfos(req.user.id, id, num);
-
-        console.log(resp['rows']);
-
-        res.status(200).json({});
+        const resp = await userSeasonRepository.getInfosByUserIdByShowId(req.user.id, req.params.id, req.params.num);
+        res.status(200).json(resp['rows']);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -119,9 +109,7 @@ const getSeasonInfosByShowIdBySeason = async (req, res) => {
 const getViewingTimeByShowId = async (req, res) => {
     try {
         const resp = await userSeasonRepository.getViewingTimeByUserIdByShowId(req.user.id, req.params.id);
-
-        console.log(resp['rows']);
-        res.status(200).json({});
+        res.status(200).json(resp['rows'][0]['time'] ?? 0);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -130,10 +118,7 @@ const getViewingTimeByShowId = async (req, res) => {
 const getViewingTimeByShowIdBySeason = async (req, res) => {
     try {
         const resp = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(req.user.id, req.params.id, req.params.num);
-        
-        console.log(resp['rows']);
-
-        res.status(200).json({});
+        res.status(200).json(resp['rows'][0]['time'] ?? 0);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }

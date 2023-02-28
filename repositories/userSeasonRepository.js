@@ -46,17 +46,18 @@ const getDistinctByUserIdByShowId = async (userId, showId) => {
     try {
         const client = await pool.connect();
         const res = await client.query(`
-            SELECT * 
+            SELECT DISTINCT ON (users_seasons.number) users_seasons.number, * 
             FROM users_seasons
-            JOIN seasons ON seasons.show_id = show_id 
-            AND seasons.number = number
-            WHERE user_id = $1 AND show_id = $2
-            ORDER BY number
+            JOIN seasons ON seasons.show_id = users_seasons.show_id 
+            AND seasons.number = users_seasons.number
+            WHERE users_seasons.user_id = $1 AND users_seasons.show_id = $2
+            ORDER BY users_seasons.number
         `, [userId, showId]);
         client.release();
 
         return res;
     } catch (err) {
+        console.log(err);
         throw err;
     }
 }
@@ -99,12 +100,13 @@ const getViewingTimeByUserIdByShowId = async (userId, showId) => {
             JOIN seasons ON users_seasons.show_id = seasons.show_id
             AND users_seasons.number = seasons.number
             WHERE user_id = $1
-            AND show_id = $2
+            AND users_seasons.show_id = $2
         `, [userId, showId]);
         client.release();
 
         return res;
     } catch (err) {
+        console.log(err);
         throw err;
     }
 }
@@ -123,9 +125,9 @@ const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) =>
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id
             AND users_seasons.number = seasons.number
-            WHERE user_id = $1
-            AND show_id = $2
-            AND number = $3
+            WHERE users_seasons.user_id = $1
+            AND users_seasons.show_id = $2
+            AND users_seasons.number = $3
         `, [userId, showId, number]);
         client.release();
 

@@ -15,7 +15,7 @@ CREATE TABLE shows (
 
 CREATE TABLE users_shows (
     continue BOOLEAN DEFAULT TRUE,
-    added_at DATE DEFAULT NOW(),
+    added_at TIMESTAMP DEFAULT NOW(),
     user_id VARCHAR(50),
     show_id INTEGER,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -35,7 +35,7 @@ CREATE TABLE seasons (
 
 CREATE TABLE users_seasons (
     id SERIAL PRIMARY KEY,
-    added_at DATE DEFAULT NOW(),
+    added_at TIMESTAMP DEFAULT NOW(),
     user_id VARCHAR(50),
     show_id INTEGER,
     number INTEGER,

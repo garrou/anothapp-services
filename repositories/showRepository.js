@@ -4,11 +4,11 @@ const pool = require('../helpers/db');
  * @param {number} id 
  * @returns QueryResult 
  */
-const countById = async (id) => {
+const getById = async (id) => {
     try {
         const client = await pool.connect();
         const res = await client.query(`
-            SELECT COUNT(*) AS nb
+            SELECT *
             FROM shows
             WHERE id = $1
         `, [id]);
@@ -39,6 +39,6 @@ const create = async (id, title, poster) => {
 }
 
 module.exports = {
-    countById,
+    getById,
     create
 }

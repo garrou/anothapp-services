@@ -54,7 +54,7 @@ const deleteByUserIdShowId = async (userId, showId) => {
  * @param {string} userId 
  * @returns QueryResult
  */
-const getShows = async (userId) => {
+const getShowsByUserId = async (userId) => {
     try {
         const client = await pool.connect();
         const res = await client.query(`
@@ -62,7 +62,7 @@ const getShows = async (userId) => {
             FROM users_shows
             JOIN shows ON id = show_id
             WHERE user_id = $1
-            ORDER BY added_at DESC
+            ORDER BY users_shows.added_at DESC
         `, [userId]);
 
         return res;
@@ -119,6 +119,6 @@ module.exports = {
     getByUserIdByShowId,
     create,
     deleteByUserIdShowId,
-    getShows,
+    getShowsByUserId,
     getShowsByUserIdByTitle
 }

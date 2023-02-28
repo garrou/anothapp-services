@@ -7,7 +7,7 @@ const deleteById = async (id) => {
     try {
         const client = await pool.connect();
         await client.query(`
-            DELETE FROM users_seaons
+            DELETE FROM users_seasons
             WHERE id = $1
         `, [id]);
         client.release();
@@ -21,14 +21,15 @@ const getByShowIdByNumber = async (showId, number) => {
     try {
         const client = await pool.connect();
         const res = await client.query(`
-            SELECT COUNT(*) AS nb
-            FROM season
+            SELECT *
+            FROM seasons
             WHERE show_id = $1 AND number = $2
         `, [showId, number]);
         client.release();
 
         return res;
     } catch (err) {
+        console.log(err);
         throw err;
     }
 }
@@ -42,6 +43,7 @@ const create = async (episode, number, image, showId, epDuration) => {
         `, [episode, number, image, showId, epDuration]);
         client.release();
     } catch (err) {
+        console.log(err)
         throw err;
     }
 }

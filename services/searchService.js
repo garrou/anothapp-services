@@ -41,7 +41,7 @@ const getByShowId = async (req, res) => {
         const resp = await axios.get(`${betaseries}/shows/display?id=${showId}&key=${key}`);
         const { show: { id, title, description, seasons, episodes, length, network, notes, images, status, creation } } = await resp.data;
         const details = new DetailsShowDto(id, title, description, seasons, episodes, length, network, notes.mean, images, status, creation);
-
+        console.log(details);
         res.status(200).json(details);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });

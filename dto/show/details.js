@@ -23,7 +23,7 @@ class DetailsShowDto {
         this.duration = duration;
         this.network = network;
         this.note = note;
-        this.images = new ImageShowDto(images);
+        this.images = images;
         this.status = status;
         this.creation = creation;
     }
