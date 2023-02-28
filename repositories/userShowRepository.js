@@ -84,7 +84,7 @@ const getShowsByUserIdByTitle = async (userId, title) => {
             FROM users_shows
             JOIN shows ON id = show_id
             WHERE user_id = $1
-            AND title LIKE $2
+            AND UPPER(title) LIKE UPPER($2)
             ORDER BY added_at DESC
         `, [userId, `%${title}%`]);
 
