@@ -3,6 +3,23 @@ const pool = require('../helpers/db');
 /**
  * @param {string} userId 
  * @param {number} showId 
+ * @returns QueryResult
+ */
+const getShowByUserIdByShowId = async (userId, showId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT show_id
+        FROM users_shows
+        WHERE user_id = $1 AND show_id = $2
+    `, [userId, showId]);
+    client.release();
+
+    return res;
+}
+
+/**
+ * @param {string} userId 
+ * @param {number} showId 
  */
 const create = async (userId, showId) => {
     const client = await pool.connect();
@@ -66,7 +83,7 @@ const getShowsByUserIdByTitle = async (userId, title) => {
  * @param {string} userId 
  * @returns QueryResult
  */
-const getByUserId = async (userId) => { 
+const getByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
         SELECT show_id
@@ -104,5 +121,6 @@ module.exports = {
     create,
     deleteByUserIdShowId,
     getShowsByUserId,
+    getShowByUserIdByShowId,
     getShowsByUserIdByTitle
 }

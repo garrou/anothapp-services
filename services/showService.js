@@ -12,7 +12,7 @@ const key = config.BETASERIES_KEY;
 const addShow = async (req, res) => {
     try {
         const { id, title, images } = req.body;
-        let result = await userShowRepository.getByUserIdByShowId(req.user.id, id);
+        let result = await userShowRepository.getShowByUserIdByShowId(req.user.id, id);
 
         if (result.rowCount === 1) {
             return res.status(409).json({ 'message': 'Cette série est déjà dans votre collection' });
