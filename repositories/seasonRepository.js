@@ -29,7 +29,6 @@ const getByShowIdByNumber = async (showId, number) => {
 
         return res;
     } catch (err) {
-        console.log(err);
         throw err;
     }
 }
@@ -43,7 +42,6 @@ const create = async (episode, number, image, showId, epDuration) => {
         `, [episode, number, image, showId, epDuration]);
         client.release();
     } catch (err) {
-        console.log(err)
         throw err;
     }
 }

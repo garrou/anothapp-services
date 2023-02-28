@@ -54,12 +54,7 @@ const getUser = async (req, res) => {
         const resp = await userRepository.getById(req.user.id);
 
         if (resp.rowCount === 1) {
-            res.status(200).json(new User(
-                resp['rows'][0].id,
-                resp['rows'][0].email,
-                resp['rows'][0].name,
-                resp['rows'][0].picture,
-            ));
+            res.status(200).json(resp['rows'][0]);
         } else {
             res.sendStatus(400);
         }

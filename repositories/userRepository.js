@@ -54,7 +54,6 @@ const create = async (id, email, name) => {
         `, [id, email, name]);
         client.release();
     } catch (err) {
-        console.log(err);
         throw err;
     }
 }

@@ -57,7 +57,6 @@ const getDistinctByUserIdByShowId = async (userId, showId) => {
 
         return res;
     } catch (err) {
-        console.log(err);
         throw err;
     }
 }
@@ -106,7 +105,6 @@ const getViewingTimeByUserIdByShowId = async (userId, showId) => {
 
         return res;
     } catch (err) {
-        console.log(err);
         throw err;
     }
 }
@@ -187,7 +185,7 @@ const getTimeHourByUserIdGroupByYear = async (userId) => {
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id
             AND users_seasons.number = seasons.number
-            WHERE users_seasons."userId" = $1
+            WHERE users_seasons.user_id = $1
             GROUP BY label
             ORDER BY label
         `, [userId]);
@@ -203,7 +201,7 @@ const getTimeCurrentMonthByUserId = async (userId) => {
     try {
         const client = await pool.connect();
         const res = await client.query(`
-            SELECT SUM(ep_duration * episode) AS value
+            SELECT SUM(ep_duration * episode) AS time
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id
             AND users_seasons.number = seasons.number
@@ -261,7 +259,7 @@ const getTotalEpisodesByUserId = async (userId) => {
     try {   
         const client = await pool.connect();
         const res = await client.query(`
-            SELECT SUM(episode) AS nb
+            SELECT SUM(episode) AS total
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id
             AND users_seasons.number = seasons.number

@@ -19,7 +19,11 @@ const addShow = async (req, res) => {
         }
         await userShowRepository.create(req.user.id, id);
         
-        res.sendStatus(201);
+        res.status(201).json({
+            'id': id,
+            'title': title,
+            'poster': getImageUrl(images),
+        });
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -39,9 +43,6 @@ const deleteByShowId = async (req, res) => {
 const getShows = async (req, res) => {
     try {
         const resp = await userShowRepository.getShowsByUserId(req.user.id);
-        
-        console.log(resp['rows']);
-
         res.status(200).json(resp['rows']);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
@@ -51,9 +52,7 @@ const getShows = async (req, res) => {
 const getByShowId = async (req, res) => {
     try {
         const resp = await userSeasonRepository.getByUserIdByShowId(req.user.id, req.params.id);
-
-        console.log(resp['rows']);
-        res.status(200).json({});
+        res.status(200).json(resp['rows'][0]);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -63,9 +62,7 @@ const getByTitle = async (req, res) => {
     try {
         const { title } = req.params;
         const resp = await userShowRepository.getShowsByUserIdByTitle(req.user.id, title);
-        
-        console.log(resp['rows']);
-        res.status(200).json({});
+        res.status(200).json(resp['rows']);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -82,7 +79,7 @@ const addSeasonByShowId = async (req, res) => {
         }
         await userSeasonRepository.create(req.user.id, req.params.id, number);
 
-        res.status(201).json(exists ? exists : created);
+        res.status(201).json(result.rowCount === 1 ? result['rows'][0] : created);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -109,7 +106,7 @@ const getSeasonInfosByShowIdBySeason = async (req, res) => {
 const getViewingTimeByShowId = async (req, res) => {
     try {
         const resp = await userSeasonRepository.getViewingTimeByUserIdByShowId(req.user.id, req.params.id);
-        res.status(200).json(resp['rows'][0]['time'] ?? 0);
+        res.status(200).json(resp['rows'][0].time ?? 0);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -118,7 +115,7 @@ const getViewingTimeByShowId = async (req, res) => {
 const getViewingTimeByShowIdBySeason = async (req, res) => {
     try {
         const resp = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(req.user.id, req.params.id, req.params.num);
-        res.status(200).json(resp['rows'][0]['time'] ?? 0);
+        res.status(200).json(resp['rows'][0].time ?? 0);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
