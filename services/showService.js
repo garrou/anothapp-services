@@ -1,8 +1,12 @@
 const { getImageUrl } = require('../dto/show/image');
+const axios = require('axios');
 const userSeasonRepository = require('../repositories/userSeasonRepository');
 const userShowRepository = require('../repositories/userShowRepository');
 const seasonRepository = require('../repositories/seasonRepository');
 const showRepository = require('../repositories/showRepository');
+
+const betaseries = 'https://api.betaseries.com';
+const key = process.env.BETASERIES_KEY;
 
 const addShow = async (req, res) => {
     try {
@@ -12,10 +16,10 @@ const addShow = async (req, res) => {
         if (result.rowCount === 1) {
             return res.status(409).json({ 'message': 'Cette série est déjà dans votre collection' });
         }
-        result = await showRepository.getById(id);
+        result = await showRepository.getShowById(id);
 
         if (result.rowCount === 0) {
-            await showRepository.create(id, title, getImageUrl(images));
+            await showRepository.createShow(id, title, getImageUrl(images));
         }
         await userShowRepository.create(req.user.id, id);
         
@@ -49,15 +53,6 @@ const getShows = async (req, res) => {
     }
 }
 
-const getByShowId = async (req, res) => {
-    try {
-        const resp = await userSeasonRepository.getByUserIdByShowId(req.user.id, req.params.id);
-        res.status(200).json(resp['rows'][0]);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
-}
-
 const getByTitle = async (req, res) => {
     try {
         const { title } = req.params;
@@ -71,11 +66,11 @@ const getByTitle = async (req, res) => {
 const addSeasonByShowId = async (req, res) => {
     try {
         const { number, episode, image, duration } = req.body;
-        const result = await seasonRepository.getByShowIdByNumber(req.params.id, number);
+        const result = await seasonRepository.getSeasonByShowIdByNumber(req.params.id, number);
         let created = null;
 
         if (result.rowCount === 0) {
-            created = await seasonRepository.create(episode, number, image, req.params.id, duration);
+            created = await seasonRepository.createSeason(episode, number, image, req.params.id, duration);
         }
         await userSeasonRepository.create(req.user.id, req.params.id, number);
 
@@ -85,7 +80,7 @@ const addSeasonByShowId = async (req, res) => {
     }
 }
 
-const getSeasonsByShowId = async (req, res) => {
+const getDistinctByShowId = async (req, res) => {
     try {
         const resp = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, req.params.id);
         res.status(200).json(resp['rows']);
@@ -121,15 +116,45 @@ const getViewingTimeByShowIdBySeason = async (req, res) => {
     }
 }
 
+const getToWatch = async (req, res) => {
+    try {
+        const result = await userShowRepository.getByUserIdByContinue(req.user.id, true);
+        const showsToWatch = [];
+
+        for (let obj of result['rows']) {
+            let resp = await axios.get(`${betaseries}/shows/seasons?id=${obj.id}&key=${key}`);
+            const { seasons } = await resp.data;
+            
+            if (seasons.length > obj.number) {
+                showsToWatch.push(obj);
+            }
+        }
+
+        res.status(200).json(showsToWatch);
+    } catch (_) {
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
+    }
+}
+
+const getViewedCurrentMonth = async (req, res) => {
+    try {
+        const resp = await userSeasonRepository.getViewedCurrentMonth(req.user.id);
+        res.status(200).json(resp['rows']);
+    } catch (_) {
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
+    }
+}
+
 module.exports = {
     addSeasonByShowId,
     addShow,
     deleteByShowId,
+    getToWatch,
+    getViewedCurrentMonth,
     getViewingTimeByShowId,
     getViewingTimeByShowIdBySeason,
     getSeasonInfosByShowIdBySeason,
-    getSeasonsByShowId,
-    getByShowId,
+    getDistinctByShowId,
     getByTitle,
     getShows
 };

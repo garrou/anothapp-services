@@ -3,7 +3,7 @@ const seasonRepository = require('../repositories/seasonRepository');
 const deleteBySeasonId = async (req, res) => {
     try {
         const { id } = req.params;
-        await seasonRepository.deleteById(id);
+        await seasonRepository.deleteSeasonById(id);
 
         res.sendStatus(204);
     } catch (_) {

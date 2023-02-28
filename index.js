@@ -3,6 +3,7 @@ require('dotenv').config();
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const express = require('express');
+const app = express();
 
 const authController = require('./controllers/authController');
 const homeController = require('./controllers/homeController');
@@ -13,8 +14,6 @@ const showController = require('./controllers/showController');
 const statController = require('./controllers/statController');
 
 const { checkJwt } = require( './middlewares/guard');
-
-const app = express();
 
 app.use(cors({
     credentials: true,

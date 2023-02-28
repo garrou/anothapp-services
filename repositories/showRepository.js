@@ -4,20 +4,16 @@ const pool = require('../helpers/db');
  * @param {number} id 
  * @returns QueryResult 
  */
-const getById = async (id) => {
-    try {
-        const client = await pool.connect();
-        const res = await client.query(`
-            SELECT *
-            FROM shows
-            WHERE id = $1
-        `, [id]);
-        client.release();
+const getShowById = async (id) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT *
+        FROM shows
+        WHERE id = $1
+    `, [id]);
+    client.release();
         
-        return res;
-    } catch (err) {
-        throw err;
-    }
+    return res;
 }
 
 /**
@@ -25,20 +21,16 @@ const getById = async (id) => {
  * @param {string} title 
  * @param {string} poster 
  */
-const create = async (id, title, poster) => {
-    try {
-        const client = await pool.connect();
-        await client.query(`
-            INSERT INTO shows (id, title, poster)
-            VALUES ($1, $2, $3)
-        `, [id, title, poster]);
-        client.release();
-    } catch (err) {
-        throw err;
-    }
+const createShow = async (id, title, poster) => {
+    const client = await pool.connect();
+    await client.query(`
+        INSERT INTO shows (id, title, poster)
+        VALUES ($1, $2, $3)
+    `, [id, title, poster]);
+    client.release();
 }
 
 module.exports = {
-    getById,
-    create
+    getShowById,
+    createShow
 }

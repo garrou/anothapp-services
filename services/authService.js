@@ -1,7 +1,6 @@
 const axios = require('axios');
 const { getGoogleAuthUrl, getTokens, signJwt } = require('../helpers/security');
 const userRepository = require('../repositories/userRepository');
-const { User } = require('../models/user');
 
 const googleAuthentication = (_, res) => {
     try {
@@ -31,10 +30,10 @@ const googleAuthenticationCallback = async (req, res) => {
             }
         );
         const googleUser = await resp.data;
-        const result = await userRepository.getByEmail(googleUser.email);
+        const result = await userRepository.getUserByEmail(googleUser.email);
 
         if (result.rowCount === 0) {
-            await userRepository.create(
+            await userRepository.createUser(
                 googleUser.id,
                 googleUser.email,
                 googleUser.name
@@ -51,7 +50,7 @@ const googleAuthenticationCallback = async (req, res) => {
 
 const getUser = async (req, res) => {
     try {
-        const resp = await userRepository.getById(req.user.id);
+        const resp = await userRepository.getUserById(req.user.id);
 
         if (resp.rowCount === 1) {
             res.status(200).json(resp['rows'][0]);
