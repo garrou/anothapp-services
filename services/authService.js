@@ -42,8 +42,7 @@ const googleAuthenticationCallback = async (req, res) => {
         }
         const token = signJwt(googleUser, config.JWT_SECRET);
 
-        res.cookie(config.COOKIE, token);
-        res.redirect(`${config.ORIGIN}/series`);
+        res.redirect(`${config.ORIGIN}?token=${token}`);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }

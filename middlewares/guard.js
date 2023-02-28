@@ -2,8 +2,9 @@ const { verifyJwt } = require('../helpers/security');
 const config = require('../config/config.json');
 
 const checkJwt = (req, res, next) => {
-    const token = req.cookies[config.COOKIE];
-   
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
     if (token === null) {
         return res.status(401).json({ 'message': 'Utilisateur non connecté' });
     }

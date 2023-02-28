@@ -1,4 +1,3 @@
-const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const express = require('express');
 const app = express();
@@ -15,11 +14,10 @@ const statController = require('./controllers/statController');
 const { checkJwt } = require( './middlewares/guard');
 
 app.use(cors({
-    credentials: true,
-    origin: config.ORIGIN
+    origin: config.ORIGIN,
+    allowedHeaders: ['Authorization', 'Content-Type']
 }));
 app.use(express.json());
-app.use(cookieParser());
 
 app.use('/api/intro', homeController);
 app.use('/api/auth', authController);
