@@ -1,4 +1,5 @@
 const axios = require('axios');
+const config = require('../config/config.json');
 const jwt = require('jsonwebtoken');
 
 /**
@@ -23,8 +24,8 @@ const verifyJwt = (token, secret) => jwt.verify(token, secret);
 const getGoogleAuthUrl = () => {
     const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
     const options = {
-        redirect_uri: `${process.env.HOST}/api/auth/google/callback`,
-        client_id: process.env.GOOGLE_CLIENT,
+        redirect_uri: `${config.HOST}/api/auth/google/callback`,
+        client_id: config.GOOGLE_CLIENT,
         access_type: 'offline',
         response_type: 'code',
         prompt: 'consent',

@@ -1,4 +1,5 @@
 const axios = require('axios');
+const config = require('../config/config.json');
 const { PreviewShowDto } = require('../dto/show/preview');
 const { DetailsShowDto } = require('../dto/show/details');
 const { PreviewSeasonDto } = require('../dto/season/preview');
@@ -8,7 +9,7 @@ const { PreviewEpisodeDto } = require('../dto/episode/preview');
 const { SimpleShowDto } = require('../dto/show/simple');
 
 const betaseries = 'https://api.betaseries.com';
-const key = process.env.BETASERIES_KEY;
+const key = config.BETASERIES_KEY;
 
 const discover = async (_, res) => {
     try {

@@ -1,10 +1,9 @@
-require('dotenv').config();
-
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const express = require('express');
 const app = express();
 
+const config = require('./config/config.json');
 const authController = require('./controllers/authController');
 const homeController = require('./controllers/homeController');
 const profileController  = require('./controllers/profileController');
@@ -17,7 +16,7 @@ const { checkJwt } = require( './middlewares/guard');
 
 app.use(cors({
     credentials: true,
-    origin: process.env.ORIGIN
+    origin: config.ORIGIN
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -30,4 +29,4 @@ app.use('/api/shows', checkJwt, showController);
 app.use('/api/seasons', checkJwt, seasonController);
 app.use('/api/stats', checkJwt, statController);
 
-app.listen(process.env.PORT);
+app.listen(config.PORT);
