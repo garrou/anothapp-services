@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { checkJwt } = require('../middlewares/guard');
-const authService = require('../services/authenticationService');
+const authService = require('../services/authService');
 
 const router = Router();
 

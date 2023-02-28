@@ -1,16 +1,11 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const userSeasonRepository = require('../repositories/userSeasonRepository');
+const userShowRepository = require('../repositories/userShowRepository');
 
 const getNbShows = async (req, res) => {
     try {
-        const nbShows = await prisma.userShow.count({
-            where: {
-                userId: req.user.id
-            }
-        });
+        const result = await userShowRepository.getByUserId(req.user.id);
 
-        res.status(200).json(nbShows);
+        res.status(200).json(result.rowCount);
     } catch (_) {
         res.status(500).json({ 'message' : 'Une erreur est survenue '});
     }
@@ -18,12 +13,7 @@ const getNbShows = async (req, res) => {
 
 const getTotalTime = async (req, res) => {
     try {
-        const seasons = await prisma.userSeason.findMany({
-            where: { userId: req.user.id },
-            include: { season: true }
-        });
-        const viewingTime = seasons
-            .reduce((acc, s) => s.season.episode * s.season.epDuration + acc, 0);
+        const viewingTime = await userSeasonRepository.getTotalTimeByUserId(req.user.id)['rows'][0].time;
 
         res.status(200).json(viewingTime);
     } catch (_) {
@@ -33,16 +23,10 @@ const getTotalTime = async (req, res) => {
 
 const getSeasonsByYears = async (req, res) => {
     try {
-        const nbSeasonsByYears = await prisma.$queryRaw`
-            SELECT EXTRACT(YEAR FROM "addedAt") AS label, COUNT(*)::INT AS value
-            FROM "UserSeason"
-            JOIN "Season" ON "UserSeason"."showId" = "Season"."showId"
-            AND "UserSeason"."number" = "Season"."number"
-            WHERE "UserSeason"."userId" = ${req.user.id}
-            GROUP BY label
-            ORDER BY label`;
+        const resp = await userSeasonRepository.getNbSeasonsByUserIdGroupByYear(req.user.id);
 
-        res.status(200).json(nbSeasonsByYears);
+        console.log(resp['rows']);
+        res.status(200).json({});
     } catch (err) {
         console.log(err);
         res.status(500).json({ 'message': 'Une erreur est survenue' });
@@ -51,16 +35,10 @@ const getSeasonsByYears = async (req, res) => {
 
 const getTimeByYears = async (req, res) => {
     try {
-        const timeByYears = await prisma.$queryRaw`
-            SELECT EXTRACT(YEAR FROM "addedAt") AS label, (SUM("epDuration" * "episode") / 60)::INT AS value
-            FROM "UserSeason"
-            JOIN "Season" ON "UserSeason"."showId" = "Season"."showId"
-            AND "UserSeason"."number" = "Season"."number"
-            WHERE "UserSeason"."userId" = ${req.user.id}
-            GROUP BY label
-            ORDER BY label`;
+        const resp = await userSeasonRepository.getTimeHourByUserIdGroupByYear(req.user.id);
 
-        res.status(200).json(timeByYears);
+        console.log(resp['rows']);
+        res.status(200).json({});
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -68,15 +46,9 @@ const getTimeByYears = async (req, res) => {
 
 const getTimeCurrentMonth = async (req, res) => {
     try {
-        const timeCurrentMonth = await prisma.$queryRaw`
-            SELECT SUM("epDuration" * "episode")::INT AS value
-            FROM "UserSeason"
-            JOIN "Season" ON "UserSeason"."showId" = "Season"."showId"
-            AND "UserSeason"."number" = "Season"."number"
-            WHERE "UserSeason"."userId" = ${req.user.id}
-            AND "addedAt" >= DATE_TRUNC('month', CURRENT_DATE)`;
-
-        res.status(200).json(timeCurrentMonth ? timeCurrentMonth[0].value : 0);
+        const resp = await userSeasonRepository.getTimeCurrentMonthByUserId(req.user.id);
+        console.log(resp['rows']);
+        res.status(200).json({});
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue '});
     }
@@ -84,14 +56,9 @@ const getTimeCurrentMonth = async (req, res) => {
 
 const getNbSeasonsByMonth = async (req, res) => {
     try {
-        const seasonsByMonths = await prisma.$queryRaw`
-            SELECT EXTRACT(MONTH FROM "addedAt") AS num, TO_CHAR("addedAt", 'Mon') AS label, COUNT(*)::INT AS value
-            FROM "UserSeason"
-            WHERE "UserSeason"."userId" = ${req.user.id}
-            GROUP BY num, label
-            ORDER BY num`;
-
-        res.status(200).json(seasonsByMonths);
+        const resp = await userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(req.user.id);
+        console.log(resp['rows']);
+        res.status(200).json({});
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue '});
     }
@@ -99,16 +66,10 @@ const getNbSeasonsByMonth = async (req, res) => {
 
 const getNbEpisodesByYear = async (req, res) => {
     try {
-        const episodesByYear = await prisma.$queryRaw`
-            SELECT EXTRACT(YEAR FROM "addedAt") AS label, SUM("episode")::INT AS value
-            FROM "UserSeason"
-            JOIN "Season" ON "UserSeason"."showId" = "Season"."showId"
-            WHERE "UserSeason"."number" = "Season"."number"
-            AND "UserSeason"."userId" = ${req.user.id}
-            GROUP BY label
-            ORDER BY label`;
+        const resp = await userSeasonRepository.getNbEpisodesByUserIdGroupByYear(req.user.id);
+        console.log(resp['rows']);
 
-        res.status(200).json(episodesByYear);
+        res.status(200).json({});
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue '});
     }
@@ -116,14 +77,10 @@ const getNbEpisodesByYear = async (req, res) => {
 
 const getNbEpisodes = async (req, res) => {
     try {
-        const seasons = await prisma.userSeason.findMany({
-            where: { userId: req.user.id },
-            include: { season: true }
-        });
-        const nbEpisodes = seasons
-            .reduce((acc, s) => s.season.episode + acc, 0);
+        const resp = await userSeasonRepository.getTotalEpisodesByUserId(req.user.id);
+        console.log(resp['rows']);
 
-        res.status(200).json(nbEpisodes);
+        res.status(200).json({});
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }

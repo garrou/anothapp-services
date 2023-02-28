@@ -1,10 +1,10 @@
 const pool = require('../helpers/db');
 
-const countByUserIdByShowId = async (userId, showId) => {
+const getByUserIdByShowId = async (userId, showId) => {
     try {
         const client = await pool.connect();
         const res = await client.query(`
-            SELECT COUNT(*) AS nb
+            SELECT *
             FROM users_shows
             WHERE user_id = $1 AND show_id = $2
         `, [userId, showId]);
@@ -94,8 +94,29 @@ const getShowsByUserIdByTitle = async (userId, title) => {
     }
 }
 
+/**
+ * @param {string} userId 
+ * @returns QueryResult
+ */
+const getByUserId = async (userId) => {
+    try {   
+        const client = await pool.connect();
+        const res = await client.query(`
+            SELECT show_id
+            FROM users_shows
+            WHERE user_id = $1
+        `, [userId]);
+        client.release();
+
+        return res;
+    } catch (err) {
+        throw err;
+    }
+}
+
 module.exports = {
-    countByUserIdByShowId,
+    getByUserId,
+    getByUserIdByShowId,
     create,
     deleteByUserIdShowId,
     getShows,

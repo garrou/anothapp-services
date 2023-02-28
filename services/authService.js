@@ -28,11 +28,12 @@ const googleAuthenticationCallback = async (req, res) => {
                 headers: {
                     Authorization: `Bearer ${id_token}`,
                 },
-            });
+            }
+        );
         const googleUser = await resp.data;
-        const users = await userRepository.countByEmail(googleUser.email);
+        const result = await userRepository.getByEmail(googleUser.email);
 
-        if (users['rows'][0].nb === 0) {
+        if (result.rowCount === 0) {
             await userRepository.create(
                 googleUser.id,
                 googleUser.email,

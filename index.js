@@ -4,7 +4,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const express = require('express');
 
-const authController = require('./controllers/authenticationController');
+const authController = require('./controllers/authController');
 const homeController = require('./controllers/homeController');
 const profileController  = require('./controllers/profileController');
 const searchController = require('./controllers/searchController');
