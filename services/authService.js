@@ -1,48 +1,46 @@
-const axios = require('axios');
 const config = require('../config/config.json');
-const { getGoogleAuthUrl, getTokens, signJwt } = require('../helpers/security');
 const userRepository = require('../repositories/userRepository');
+const { comparePassword, createHash, uuid, signJwt } = require('../helpers/security');
 
-const googleAuthentication = (_, res) => {
+const register = async (req, res) => {
     try {
-        res.redirect(getGoogleAuthUrl());
+        const { email, password, confirm } = req.body;
+
+        if (password != confirm) {
+            return res.status(400).json({ 'message': 'Les mots de passe sont différents' });
+        }
+        if (password.length < 8) {
+            return res.status(400).json({ 'message': 'Le mot de passe doit faire au moins 8 caractères' });
+        }
+        const resp = await userRepository.getUserByEmail(email);
+
+        if (resp.rowCount === 1) {
+            return res.status(409).json({ 'message': 'Un compte est déjà associé à cet email' });
+        }
+        const hash = await createHash(password);
+        await userRepository.createUser(uuid(), email, hash);
+
+        res.status(201).json({ 'message': 'Compte créé' });
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
 }
 
-const googleAuthenticationCallback = async (req, res) => {
+const login = async (req, res) => {
     try {
-        const code = req.query.code;
+        const { email, password } = req.body;
+        const resp = await userRepository.getUserByEmail(email);
 
-        const { id_token, access_token } = await getTokens(
-            code,
-            config.GOOGLE_CLIENT,
-            config.GOOGLE_SECRET,
-            `${config.HOST}/api/auth/google/callback`,
-        );
-
-        const resp = await axios.get(
-            `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${access_token}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${id_token}`,
-                },
-            }
-        );
-        const googleUser = await resp.data;
-        const result = await userRepository.getUserByEmail(googleUser.email);
-
-        if (result.rowCount === 0) {
-            await userRepository.createUser(
-                googleUser.id,
-                googleUser.email,
-                googleUser.name
-            );
+        if (resp.rowCount === 0) {
+            return res.status(400).json({ 'message': 'Email ou mot de passe incorrect' });
         }
-        const token = signJwt(googleUser, config.JWT_SECRET);
+        const same = await comparePassword(password, resp['rows'][0].password);
 
-        res.redirect(`${config.ORIGIN}/series?token=${token}`);
+        if (!same) {
+            return res.status(400).json({ 'message': 'Email ou mot de passe incorrect' });
+        }
+        const token = signJwt(resp['rows'][0].id, config.JWT_SECRET);
+        res.status(200).json({ 'token': token });
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -62,4 +60,8 @@ const getUser = async (req, res) => {
     }
 }
 
-module.exports = { googleAuthentication, googleAuthenticationCallback, getUser };
+module.exports = { 
+    register, 
+    login, 
+    getUser 
+};

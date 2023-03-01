@@ -1,7 +1,7 @@
 CREATE TABLE users (
     id VARCHAR(50),
     email VARCHAR(255) UNIQUE NOT NULL,
-    name VARCHAR(255),
+    password VARCHAR(255) NOT NULL,
     picture VARCHAR(255),
     PRIMARY KEY(id)
 );
@@ -34,11 +34,12 @@ CREATE TABLE seasons (
 );
 
 CREATE TABLE users_seasons (
-    id SERIAL PRIMARY KEY,
+    id SERIAL,
     added_at TIMESTAMP DEFAULT NOW(),
     user_id VARCHAR(50),
     show_id INTEGER,
     number INTEGER,
+    PRIMARY KEY(id),
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(show_id, number) REFERENCES seasons(show_id, number) ON DELETE CASCADE,
     FOREIGN KEY(user_id, show_id) REFERENCES users_shows(user_id, show_id) ON DELETE CASCADE

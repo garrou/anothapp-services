@@ -3,15 +3,14 @@ const config = require('../config/config.json');
 
 const checkJwt = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const [type, token] = authHeader && authHeader.split(' ');
     
-    if (token === null) {
+    if (type !== 'Bearer' || token === null) {
         return res.status(401).json({ 'message': 'Utilisateur non connecté' });
     }
 
     try {
-        const json = verifyJwt(token, config.JWT_SECRET);
-        req.user = { id: json.id, email: json.email, name: json.name };
+        req.user = { id: verifyJwt(token, config.JWT_SECRET) };
     } catch (_) {
         return res.status(403).json({ 'message': 'Utilisateur non autorisé' });
     }

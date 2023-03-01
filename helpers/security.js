@@ -1,14 +1,13 @@
-const axios = require('axios');
-const config = require('../config/config.json');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
 
 /**
- * 
- * @param {any} data 
+ * @param {string} userId 
  * @param {string} secret 
  * @returns string
  */
-const signJwt = (data, secret) => jwt.sign(data, secret);
+const signJwt = (userId, secret) => jwt.sign(userId, secret);
 
 /**
  * 
@@ -21,46 +20,22 @@ const verifyJwt = (token, secret) => jwt.verify(token, secret);
 /**
  * @returns string
  */
-const getGoogleAuthUrl = () => {
-    const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
-    const options = {
-        redirect_uri: `${config.HOST}/api/auth/google/callback`,
-        client_id: config.GOOGLE_CLIENT,
-        access_type: 'offline',
-        response_type: 'code',
-        prompt: 'consent',
-        scope: [
-            'https://www.googleapis.com/auth/userinfo.profile',
-            'https://www.googleapis.com/auth/userinfo.email'
-        ].join(' ')
-    };
+const uuid = () => uuidv4();
 
-    return `${rootUrl}?${new URLSearchParams(options).toString()}`;
+/**
+ * @param {string} password 
+ * @returns Promise<string>
+ */
+const createHash = async (password) => {
+    const salt = await bcrypt.genSalt();
+    return bcrypt.hash(password, salt);
 }
 
 /**
- * 
- * @param {string} code 
- * @param {string} clientId 
- * @param {string} clientSecret 
- * @param {string} redirectUri 
- * @returns any
+ * @param {string} password 
+ * @param {string} hash 
+ * @returns Promise<boolean>
  */
-const getTokens = async (code, clientId, clientSecret, redirectUri) => {
-    const values = {
-        code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-    };
-    const url = `https://oauth2.googleapis.com/token?${new URLSearchParams(values).toString()}`;
-    const resp = await axios.post(url, {
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
-    });
-    return await resp.data;
-}
+const comparePassword = (password, hash) => bcrypt.compare(password, hash);
 
-module.exports = { getGoogleAuthUrl, getTokens, signJwt, verifyJwt };
+module.exports = { signJwt, verifyJwt, uuid, createHash, comparePassword };

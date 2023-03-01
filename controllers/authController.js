@@ -4,9 +4,9 @@ const authService = require('../services/authService');
 
 const router = Router();
 
-router.get('/google', authService.googleAuthentication);
+router.post('/register', authService.register);
 
-router.get('/google/callback', authService.googleAuthenticationCallback);
+router.post('/login', authService.login);
 
 router.get('/me', checkJwt, authService.getUser);
 
