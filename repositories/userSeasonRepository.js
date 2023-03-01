@@ -223,7 +223,7 @@ const getTotalEpisodesByUserId = async (userId) => {
 const getViewedCurrentMonth = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT shows.id, shows.title, seasons.image, users_seasons.number AS num
+        SELECT shows.id, shows.title, seasons.image, shows.poster, users_seasons.number
         FROM users_seasons
         JOIN seasons ON seasons.show_id = users_seasons.show_id
         JOIN shows ON shows.id = seasons.show_id

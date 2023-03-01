@@ -19,7 +19,7 @@ const register = async (req, res) => {
         const hash = await createHash(password);
         await userRepository.createUser(uuid(), email, hash);
 
-        res.status(201).json({ 'message': 'Compte créé' });
+        res.sendStatus(201);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
