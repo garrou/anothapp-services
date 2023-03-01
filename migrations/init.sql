@@ -1,3 +1,5 @@
+SET client_encoding = 'UTF8';
+
 CREATE TABLE users (
     id VARCHAR(50),
     email VARCHAR(255) UNIQUE NOT NULL,

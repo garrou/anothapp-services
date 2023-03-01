@@ -1,4 +1,3 @@
-const config = require('../config/config.json');
 const userRepository = require('../repositories/userRepository');
 const { comparePassword, createHash, uuid, signJwt } = require('../helpers/security');
 
@@ -39,7 +38,7 @@ const login = async (req, res) => {
         if (!same) {
             return res.status(400).json({ 'message': 'Email ou mot de passe incorrect' });
         }
-        const token = signJwt(resp['rows'][0].id, config.JWT_SECRET);
+        const token = signJwt(resp['rows'][0].id, process.env.JWT_SECRET);
         res.status(200).json({ 'token': token });
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });

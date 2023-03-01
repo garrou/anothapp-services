@@ -14,17 +14,17 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres
+    image: postgres:15.2-alpine
     container_name: db
     networks:
       - net
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
-      POSTGRES_HOST: localhost
-      POSTGRES_DB: anothapp
+      POSTGRES_DB: anothapp_db
     volumes: 
       - ./pgdata:/var/lib/postgresql/data
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: always
     healthcheck:
       test: pg_isready -d anothapp

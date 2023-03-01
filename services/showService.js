@@ -1,13 +1,12 @@
 const { getImageUrl } = require('../dto/show/image');
 const axios = require('axios');
-const config = require('../config/config.json');
 const userSeasonRepository = require('../repositories/userSeasonRepository');
 const userShowRepository = require('../repositories/userShowRepository');
 const seasonRepository = require('../repositories/seasonRepository');
 const showRepository = require('../repositories/showRepository');
 
 const betaseries = 'https://api.betaseries.com';
-const key = config.BETASERIES_KEY;
+const key = process.env.BETASERIES_KEY;
 
 const addShow = async (req, res) => {
     try {

@@ -1,5 +1,4 @@
 const { verifyJwt } = require('../helpers/security');
-const config = require('../config/config.json');
 
 const checkJwt = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -10,7 +9,7 @@ const checkJwt = (req, res, next) => {
     }
 
     try {
-        req.user = { id: verifyJwt(token, config.JWT_SECRET) };
+        req.user = { id: verifyJwt(token, process.env.JWT_SECRET) };
     } catch (_) {
         return res.status(403).json({ 'message': 'Utilisateur non autorisé' });
     }
