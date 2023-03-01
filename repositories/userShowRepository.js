@@ -58,6 +58,7 @@ const getShowsByUserId = async (userId, limit) => {
         ORDER BY users_shows.added_at DESC
         LIMIT $2
     `, [userId, limit]);
+    client.release();
 
     return res;
 }
@@ -77,6 +78,7 @@ const getShowsByUserIdByTitle = async (userId, title) => {
         AND UPPER(title) LIKE UPPER($2)
         ORDER BY added_at DESC
     `, [userId, `%${title}%`]);
+    client.release();
 
     return res;
 }
