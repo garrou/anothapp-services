@@ -8,7 +8,12 @@ class SimpleShowDto {
     constructor(id, title, poster) {
         this.id = id;
         this.title = title;
-        this.poster	= poster;
+        this.images = {
+            poster: poster,
+            show: null,
+            banner: null,
+            box: null
+        }
     }
 }
 

@@ -45,7 +45,7 @@ const login = async (req, res) => {
     }
 }
 
-const getUser = async (req, res) => {
+const getProfile = async (req, res) => {
     try {
         const resp = await userRepository.getUserById(req.user.id);
 
@@ -59,8 +59,13 @@ const getUser = async (req, res) => {
     }
 }
 
+const checkUser = (_, res) => {
+    res.sendStatus(200);
+}
+
 module.exports = { 
     register, 
     login, 
-    getUser 
+    checkUser,
+    getProfile,
 };

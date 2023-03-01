@@ -28,7 +28,6 @@ const getShowsByTitle = async (req, res) => {
         const resp = await axios.get(`${betaseries}/shows/search?title=${title}&key=${key}`);
         const { shows } = await resp.data;
         const previews = shows.map(s => new PreviewShowDto(s.id, s.title, s.images, s.length));
-
         res.status(200).json(previews);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });

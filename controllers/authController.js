@@ -8,6 +8,8 @@ router.post('/register', authService.register);
 
 router.post('/login', authService.login);
 
-router.get('/me', checkJwt, authService.getUser);
+router.get('/me/profile', checkJwt, authService.getProfile);
+
+router.get('/me', checkJwt, authService.checkUser);
 
 module.exports = router;
