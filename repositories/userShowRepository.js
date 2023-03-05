@@ -3,7 +3,7 @@ const pool = require('../helpers/db');
 /**
  * @param {string} userId 
  * @param {number} showId 
- * @returns QueryResult
+ * @returns Promise<QueryResult>
  */
 const getShowByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
@@ -46,7 +46,7 @@ const deleteByUserIdShowId = async (userId, showId) => {
 /**
  * @param {string} userId 
  * @param {number} limit
- * @returns QueryResult
+ * @returns Promise<QueryResult>
  */
 const getShowsByUserId = async (userId, limit) => {
     const client = await pool.connect();
@@ -66,7 +66,7 @@ const getShowsByUserId = async (userId, limit) => {
 /**
  * @param {string} userId 
  * @param {string} title
- * @returns QueryResult
+ * @returns Promise<QueryResult>
  */
 const getShowsByUserIdByTitle = async (userId, title) => {
     const client = await pool.connect();
@@ -85,7 +85,7 @@ const getShowsByUserIdByTitle = async (userId, title) => {
 
 /**
  * @param {string} userId 
- * @returns QueryResult
+ * @returns Promise<QueryResult>
  */
 const getByUserId = async (userId) => {
     const client = await pool.connect();
@@ -102,7 +102,7 @@ const getByUserId = async (userId) => {
 /**
  * @param {string} userId 
  * @param {boolean} isContinue 
- * @returns QueryResult
+ * @returns Promise<QueryResult>
  */
 const getByUserIdByContinue = async (userId, isContinue) => {
     const client = await pool.connect();
@@ -119,11 +119,35 @@ const getByUserIdByContinue = async (userId, isContinue) => {
     return res;
 }
 
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
+const getNotStartedShowsByUserId = async (userId) => {
+    const client = await pool.connect();
+    const res = await client.query(` 
+        SELECT id, title, poster
+        FROM shows
+        JOIN users_shows ON users_shows.show_id = shows.id
+        WHERE users_shows.user_id = $1
+        AND NOT EXISTS (
+            SELECT *
+            FROM users_seasons
+            WHERE users_seasons.show_id = shows.id
+            AND users_seasons.user_id = $1
+        );
+    `, [userId]);
+    client.release();
+    
+    return res;
+}
+
 module.exports = {
     getByUserId,
     getByUserIdByContinue,
     create,
     deleteByUserIdShowId,
+    getNotStartedShowsByUserId,
     getShowsByUserId,
     getShowByUserIdByShowId,
     getShowsByUserIdByTitle

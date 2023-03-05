@@ -146,16 +146,26 @@ const getViewedCurrentMonth = async (req, res) => {
     }
 }
 
+const getNotStartedShows = async (req, res) => {
+    try {
+        const resp = await userShowRepository.getNotStartedShowsByUserId(req.user.id);
+        res.status(200).json(resp['rows']);
+    } catch (_) {
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
+    }
+}
+
 module.exports = {
     addSeasonByShowId,
     addShow,
     deleteByShowId,
+    getByTitle,
+    getDistinctByShowId,
+    getNotStartedShows,
     getToWatch,
+    getSeasonInfosByShowIdBySeason,
+    getShows,
     getViewedCurrentMonth,
     getViewingTimeByShowId,
-    getViewingTimeByShowIdBySeason,
-    getSeasonInfosByShowIdBySeason,
-    getDistinctByShowId,
-    getByTitle,
-    getShows
+    getViewingTimeByShowIdBySeason
 };
