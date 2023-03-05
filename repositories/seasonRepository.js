@@ -1,7 +1,7 @@
 const pool = require('../helpers/db');
 
 /**
- * @param {id} number 
+ * @param {number} id 
  */
 const deleteSeasonById = async (id) => {
     const client = await pool.connect();
@@ -12,7 +12,11 @@ const deleteSeasonById = async (id) => {
     client.release();
 }
 
-
+/**
+ * @param {number} showId 
+ * @param {number} number 
+ * @returns Promise<QueryResult>
+ */
 const getSeasonByShowIdByNumber = async (showId, number) => {
     const client = await pool.connect();
     const res = await client.query(`
@@ -25,6 +29,13 @@ const getSeasonByShowIdByNumber = async (showId, number) => {
     return res;
 }
 
+/**
+ * @param {number} episode 
+ * @param {number} number 
+ * @param {string} image 
+ * @param {number} showId 
+ * @param {number} epDuration 
+ */
 const createSeason = async (episode, number, image, showId, epDuration) => {
     const client = await pool.connect();
     await client.query(`

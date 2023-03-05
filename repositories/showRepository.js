@@ -2,7 +2,7 @@ const pool = require('../helpers/db');
 
 /**
  * @param {number} id 
- * @returns QueryResult 
+ * @returns Promise<QueryResult> 
  */
 const getShowById = async (id) => {
     const client = await pool.connect();

@@ -2,7 +2,7 @@ const pool = require('../helpers/db');
 
 /**
  * @param {string} email 
- * @returns QueryResult 
+ * @returns Promise<QueryResult> 
  */
 const getUserByEmail = async (email) => {
     const client = await pool.connect();
@@ -18,7 +18,7 @@ const getUserByEmail = async (email) => {
 
 /**
  * @param {string} id 
- * @returns QueryResult 
+ * @returns Promise<QueryResult> 
  */
 const getUserById = async (id) => {
     const client = await pool.connect();

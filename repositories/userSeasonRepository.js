@@ -3,7 +3,7 @@ const pool = require('../helpers/db');
 /**
  * @param {string} userId 
  * @param {number} showId 
- * @returns QueryResult
+ * @returns Promise<QueryResult>
  */
 const getByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
@@ -33,6 +33,11 @@ const create = async (userId, showId, number) => {
     client.release();
 }
 
+/**
+ * @param {string} userId 
+ * @param {number} showId 
+ * @returns Promise<QueryResult>
+ */
 const getDistinctByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
     const res = await client.query(`
@@ -52,7 +57,7 @@ const getDistinctByUserIdByShowId = async (userId, showId) => {
  * @param {string} userId 
  * @param {number} showId 
  * @param {number} number 
- * @returns 
+ * @returns Promise<QueryResult>
  */
 const getInfosByUserIdByShowId = async (userId, showId, number) => {
     const client = await pool.connect();
@@ -71,7 +76,7 @@ const getInfosByUserIdByShowId = async (userId, showId, number) => {
 /**
  * @param {string} userId 
  * @param {number} showId 
- * @returns QueryResult
+ * @returns Promise<QueryResult>
  */
 const getViewingTimeByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
@@ -92,7 +97,7 @@ const getViewingTimeByUserIdByShowId = async (userId, showId) => {
  * @param {string} userId 
  * @param {number} showId 
  * @param {number} number
- * @returns QueryResult
+ * @returns Promise<QueryResult>
  */
 const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) => {
     const client = await pool.connect();
@@ -112,7 +117,7 @@ const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) =>
 
 /**
  * @param {string} userId 
- * @returns QueryResult
+ * @returns Promise<QueryResult>
  */
 const getTotalTimeByUserId = async (userId) => {
     const client = await pool.connect();
@@ -128,6 +133,10 @@ const getTotalTimeByUserId = async (userId) => {
     return res;
 }
 
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
 const getNbSeasonsByUserIdGroupByYear = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
@@ -144,6 +153,10 @@ const getNbSeasonsByUserIdGroupByYear = async (userId) => {
     return res;
 }
 
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
 const getTimeHourByUserIdGroupByYear = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
@@ -160,6 +173,10 @@ const getTimeHourByUserIdGroupByYear = async (userId) => {
     return res;
 }
 
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
 const getTimeCurrentMonthByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
@@ -175,6 +192,10 @@ const getTimeCurrentMonthByUserId = async (userId) => {
     return res;
 }
 
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
 const getNbSeasonsByUserIdGroupByMonth = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
@@ -189,7 +210,10 @@ const getNbSeasonsByUserIdGroupByMonth = async (userId) => {
     return res;
 }
 
-
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
 const getNbEpisodesByUserIdGroupByYear = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
@@ -206,6 +230,10 @@ const getNbEpisodesByUserIdGroupByYear = async (userId) => {
     return res;
 }
 
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
 const getTotalEpisodesByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
@@ -220,6 +248,10 @@ const getTotalEpisodesByUserId = async (userId) => {
     return res;
 }
 
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
 const getViewedCurrentMonth = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
