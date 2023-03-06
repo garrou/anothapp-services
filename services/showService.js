@@ -2,6 +2,7 @@ const { getImageUrl } = require('../dto/show/image');
 const axios = require('axios');
 const userSeasonRepository = require('../repositories/userSeasonRepository');
 const userShowRepository = require('../repositories/userShowRepository');
+const userWatchRepository = require('../repositories/userWatchRepository');
 const seasonRepository = require('../repositories/seasonRepository');
 const showRepository = require('../repositories/showRepository');
 
@@ -155,6 +156,15 @@ const getNotStartedShows = async (req, res) => {
     }
 }
 
+const getShowsToContinue = async (req, res) => {
+    try {
+        const resp = await userWatchRepository.getShowsToContinueByUserId(req.user.id);
+        res.status(200).json(resp['rows']);
+    } catch (_) {
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
+    }
+}
+
 module.exports = {
     addSeasonByShowId,
     addShow,
@@ -165,6 +175,7 @@ module.exports = {
     getToWatch,
     getSeasonInfosByShowIdBySeason,
     getShows,
+    getShowsToContinue,
     getViewedCurrentMonth,
     getViewingTimeByShowId,
     getViewingTimeByShowIdBySeason

@@ -27,4 +27,6 @@ router.get('/viewed/month', showService.getViewedCurrentMonth);
 
 router.get('/not-started', showService.getNotStartedShows);
 
+router.get('/continue', showService.getShowsToContinue);
+
 module.exports = router;
