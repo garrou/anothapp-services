@@ -1,4 +1,4 @@
-const { getImageUrl } = require('../dto/show/image');
+const { getImageUrl } = require('../helpers/image');
 const axios = require('axios');
 const userSeasonRepository = require('../repositories/userSeasonRepository');
 const userShowRepository = require('../repositories/userShowRepository');
