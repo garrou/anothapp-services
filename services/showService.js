@@ -94,7 +94,8 @@ const getDistinctByShowId = async (req, res) => {
 const getSeasonInfosByShowIdBySeason = async (req, res) => {
     try {
         const resp = await userSeasonRepository.getInfosByUserIdByShowId(req.user.id, req.params.id, req.params.num);
-        res.status(200).json(resp['rows']);
+        const infos = resp['rows'].map(e => ({ id: e.id, addedAt: e.added_at }));
+        res.status(200).json(infos);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
