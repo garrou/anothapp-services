@@ -47,8 +47,7 @@ const deleteByShowId = async (req, res) => {
 
 const getShows = async (req, res) => {
     try {
-        const { limit } = req.query;
-        const resp = await userShowRepository.getShowsByUserId(req.user.id, limit);
+        const resp = await userShowRepository.getShowsByUserId(req.user.id);
         res.status(200).json(resp['rows']);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });

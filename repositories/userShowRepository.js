@@ -44,11 +44,10 @@ const deleteByUserIdShowId = async (userId, showId) => {
 }
 
 /**
- * @param {string} userId 
- * @param {number} limit
+ * @param {string} userId
  * @returns Promise<QueryResult>
  */
-const getShowsByUserId = async (userId, limit) => {
+const getShowsByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
         SELECT id, title, poster
@@ -56,8 +55,7 @@ const getShowsByUserId = async (userId, limit) => {
         JOIN shows ON id = show_id
         WHERE user_id = $1
         ORDER BY users_shows.added_at DESC
-        LIMIT $2
-    `, [userId, limit]);
+    `, [userId]);
     client.release();
 
     return res;
