@@ -140,6 +140,21 @@ const getNotStartedShowsByUserId = async (userId) => {
     return res;
 }
 
+/**
+ * @param {string} userId 
+ * @param {number} showId 
+ */
+const updateWatchingByUserIdByShowId = async (userId, showId) => {
+    const client = await pool.connect();
+    await client.query(` 
+        UPDATE users_shows
+        SET continue = NOT continue
+        WHERE users_shows.user_id = $1
+        AND show_id = $2
+    `, [userId, showId]);
+    client.release();
+}
+
 module.exports = {
     getByUserId,
     getByUserIdByContinue,
@@ -148,5 +163,6 @@ module.exports = {
     getNotStartedShowsByUserId,
     getShowsByUserId,
     getShowByUserIdByShowId,
-    getShowsByUserIdByTitle
+    getShowsByUserIdByTitle,
+    updateWatchingByUserIdByShowId
 }

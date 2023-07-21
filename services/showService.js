@@ -118,26 +118,6 @@ const getViewingTimeByShowIdBySeason = async (req, res) => {
     }
 }
 
-const getToWatch = async (req, res) => {
-    try {
-        const result = await userShowRepository.getByUserIdByContinue(req.user.id, true);
-        const showsToWatch = [];
-
-        for (let obj of result['rows']) {
-            let resp = await axios.get(`${betaseries}/shows/seasons?id=${obj.id}&key=${key}`);
-            const { seasons } = await resp.data;
-            
-            if (seasons.length > obj.number) {
-                showsToWatch.push(obj);
-            }
-        }
-
-        res.status(200).json(showsToWatch);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
-}
-
 const getViewedCurrentMonth = async (req, res) => {
     try {
         const resp = await userSeasonRepository.getViewedCurrentMonth(req.user.id);
@@ -165,6 +145,16 @@ const getShowsToContinue = async (req, res) => {
     }
 }
 
+const updateWatchingByShowId = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await userShowRepository.updateWatchingByUserIdByShowId(req.user.id, id);
+        res.sendStatus(200);
+    } catch (_) {
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
+    }
+}
+
 module.exports = {
     addSeasonByShowId,
     addShow,
@@ -172,11 +162,11 @@ module.exports = {
     getByTitle,
     getDistinctByShowId,
     getNotStartedShows,
-    getToWatch,
     getSeasonInfosByShowIdBySeason,
     getShows,
     getShowsToContinue,
     getViewedCurrentMonth,
     getViewingTimeByShowId,
-    getViewingTimeByShowIdBySeason
+    getViewingTimeByShowIdBySeason,
+    updateWatchingByShowId
 };
