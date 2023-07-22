@@ -263,6 +263,7 @@ const getViewedByMonthAgo = async (userId, month) => {
         AND seasons.number = users_seasons.number
         AND added_at >= DATE_TRUNC('month', CURRENT_DATE) - $2 * INTERVAL '1 month'
         WHERE users_seasons.user_id = $1
+        ORDER BY added_at DESC
     `, [userId, month]);
     client.release();
 
