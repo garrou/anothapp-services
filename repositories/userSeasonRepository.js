@@ -250,9 +250,10 @@ const getTotalEpisodesByUserId = async (userId) => {
 
 /**
  * @param {string} userId 
+ * @param {number} month
  * @returns Promise<QueryResult>
  */
-const getViewedCurrentMonth = async (userId) => {
+const getViewedByMonthAgo = async (userId, month) => {
     const client = await pool.connect();
     const res = await client.query(`
         SELECT shows.id, shows.title, seasons.image, shows.poster, users_seasons.number
@@ -260,9 +261,9 @@ const getViewedCurrentMonth = async (userId) => {
         JOIN seasons ON seasons.show_id = users_seasons.show_id
         JOIN shows ON shows.id = seasons.show_id
         AND seasons.number = users_seasons.number
-        AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
+        AND added_at >= DATE_TRUNC('month', CURRENT_DATE) - $2 * INTERVAL '1 month'
         WHERE users_seasons.user_id = $1
-    `, [userId]);
+    `, [userId, month]);
     client.release();
 
     return res;
@@ -280,7 +281,7 @@ module.exports = {
     getTimeHourByUserIdGroupByYear,
     getTotalEpisodesByUserId,
     getTotalTimeByUserId,
-    getViewedCurrentMonth,
+    getViewedByMonthAgo,
     getViewingTimeByUserIdByShowId,
     getViewingTimeByUserIdByShowIdByNumber
 }

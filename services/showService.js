@@ -118,9 +118,14 @@ const getViewingTimeByShowIdBySeason = async (req, res) => {
     }
 }
 
-const getViewedCurrentMonth = async (req, res) => {
+const getViewedByMonthAgo = async (req, res) => {
     try {
-        const resp = await userSeasonRepository.getViewedCurrentMonth(req.user.id);
+        const { month } = req.query;
+
+        if (!['0', '1', '2', '3', '6', '12'].includes(month)) {
+            return res.status(400).json({ 'message': `Choix non valide ${month}` });
+        }
+        const resp = await userSeasonRepository.getViewedByMonthAgo(req.user.id, month);
         res.status(200).json(resp['rows']);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
@@ -175,7 +180,7 @@ module.exports = {
     getShows,
     getShowsToContinue,
     getShowsToResume,
-    getViewedCurrentMonth,
+    getViewedByMonthAgo,
     getViewingTimeByShowId,
     getViewingTimeByShowIdBySeason,
     updateWatchingByShowId

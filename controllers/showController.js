@@ -23,7 +23,7 @@ router.get('/:id/time', showService.getViewingTimeByShowId);
 
 router.get('/:id/seasons/:num/time', showService.getViewingTimeByShowIdBySeason);
 
-router.get('/viewed/month', showService.getViewedCurrentMonth);
+router.get('/viewed', showService.getViewedByMonthAgo);
 
 router.get('/continue', showService.getShowsToContinue);
 
