@@ -155,14 +155,33 @@ const updateWatchingByUserIdByShowId = async (userId, showId) => {
     client.release();
 }
 
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
+const getShowsToResumeByUserId = async (userId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT id, title, poster
+        FROM shows
+        JOIN users_shows ON users_shows.show_id = shows.id
+        WHERE users_shows.user_id = $1 
+        AND users_shows.continue = FALSE
+    `, [userId]);
+    client.release();
+
+    return res;
+}
+
 module.exports = {
-    getByUserId,
-    getByUserIdByContinue,
     create,
     deleteByUserIdShowId,
     getNotStartedShowsByUserId,
     getShowsByUserId,
     getShowByUserIdByShowId,
     getShowsByUserIdByTitle,
+    getByUserId,
+    getByUserIdByContinue,
+    getShowsToResumeByUserId,
     updateWatchingByUserIdByShowId
 }

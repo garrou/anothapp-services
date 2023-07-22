@@ -155,6 +155,15 @@ const updateWatchingByShowId = async (req, res) => {
     }
 }
 
+const getShowsToResume = async (req, res) => {
+    try {
+        const resp = await userShowRepository.getShowsToResumeByUserId(req.user.id);
+        res.status(200).json(resp['rows']);
+    } catch (_) {
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
+    }
+}
+
 module.exports = {
     addSeasonByShowId,
     addShow,
@@ -165,6 +174,7 @@ module.exports = {
     getSeasonInfosByShowIdBySeason,
     getShows,
     getShowsToContinue,
+    getShowsToResume,
     getViewedCurrentMonth,
     getViewingTimeByShowId,
     getViewingTimeByShowIdBySeason,

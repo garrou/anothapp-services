@@ -25,8 +25,10 @@ router.get('/:id/seasons/:num/time', showService.getViewingTimeByShowIdBySeason)
 
 router.get('/viewed/month', showService.getViewedCurrentMonth);
 
-router.get('/not-started', showService.getNotStartedShows);
-
 router.get('/continue', showService.getShowsToContinue);
+
+router.get('/resume', showService.getShowsToResume);
+
+router.get('/not-started', showService.getNotStartedShows);
 
 module.exports = router;
