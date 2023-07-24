@@ -167,6 +167,7 @@ const getShowsToResumeByUserId = async (userId) => {
         JOIN users_shows ON users_shows.show_id = shows.id
         WHERE users_shows.user_id = $1 
         AND users_shows.continue = FALSE
+        ORDER BY title
     `, [userId]);
     client.release();
 

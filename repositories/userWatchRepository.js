@@ -11,7 +11,7 @@ const getShowsToContinueByUserId = async (userId) => {
         FROM users_towatch
         JOIN shows ON id = show_id
         WHERE user_id = $1
-        ORDER BY id
+        ORDER BY title
     `, [userId]);
     client.release();
 

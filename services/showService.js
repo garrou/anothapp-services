@@ -1,13 +1,10 @@
 const { getImageUrl } = require('../helpers/image');
-const axios = require('axios');
 const userSeasonRepository = require('../repositories/userSeasonRepository');
 const userShowRepository = require('../repositories/userShowRepository');
 const userWatchRepository = require('../repositories/userWatchRepository');
 const seasonRepository = require('../repositories/seasonRepository');
 const showRepository = require('../repositories/showRepository');
-
-const betaseries = 'https://api.betaseries.com';
-const key = process.env.BETASERIES_KEY;
+const { search } = require('../services/searchService');
 
 const addShow = async (req, res) => {
     try {
@@ -47,17 +44,14 @@ const deleteByShowId = async (req, res) => {
 
 const getShows = async (req, res) => {
     try {
-        const resp = await userShowRepository.getShowsByUserId(req.user.id);
-        res.status(200).json(resp['rows']);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
-}
+        const { title } = req.query;
+        let resp = title 
+            ? await userShowRepository.getShowsByUserIdByTitle(req.user.id, title)
+            : await userShowRepository.getShowsByUserId(req.user.id);
 
-const getByTitle = async (req, res) => {
-    try {
-        const { title } = req.params;
-        const resp = await userShowRepository.getShowsByUserIdByTitle(req.user.id, title);
+        if (title && resp.rowCount === 0) {
+            return res.status(200).json(await search(title));
+        }
         res.status(200).json(resp['rows']);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
@@ -173,7 +167,6 @@ module.exports = {
     addSeasonByShowId,
     addShow,
     deleteByShowId,
-    getByTitle,
     getDistinctByShowId,
     getNotStartedShows,
     getSeasonInfosByShowIdBySeason,

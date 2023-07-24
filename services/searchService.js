@@ -3,36 +3,24 @@ const axios = require('axios');
 const betaseries = 'https://api.betaseries.com';
 const key = process.env.BETASERIES_KEY;
 
-const discover = async (_, res) => {
-    try {
-        const resp = await axios.get(`${betaseries}/shows/discover?limit=32&key=${key}`);
-        const { shows } = await resp.data;
-        const previews = shows.map(s => ({
-            id: s.id, 
-            title: s.title, 
-            images: s.images,
-            duration: s.length
-        }));
-
-        res.status(200).json(previews);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
+const search = async (title) => {
+    const resp = title 
+            ? await axios.get(`${betaseries}/shows/search?title=${title}&key=${key}`)
+            : await axios.get(`${betaseries}/shows/discover?limit=32&key=${key}`);
+    const { shows } = await resp.data;
+    
+    return shows.map(s => ({
+        id: s.id, 
+        title: s.title, 
+        images: s.images,
+        duration: s.length
+    }));
 }
 
-const getShowsByTitle = async (req, res) => {
+const discoverShows = async (req, res) => {
     try {
-        const { title } = req.params;
-        const resp = await axios.get(`${betaseries}/shows/search?title=${title}&key=${key}`);
-        const { shows } = await resp.data;
-        const previews = shows.map(s => ({
-            id: s.id, 
-            title: s.title, 
-            images: s.images,
-            duration: s.length
-        }));
-
-        res.status(200).json(previews);
+        const { title } = req.query;
+        res.status(200).json(await search(title));
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
@@ -168,14 +156,14 @@ const getImagesByShowId = async (req, res) => {
 }
 
 module.exports = { 
-    discover, 
     getCharactersByShowId,
     getEpisodesByShowIdBySeason, 
     getByShowId,
     getImagesByShowId,
     getKinds,
     getShowsByKind,
-    getShowsByTitle, 
+    discoverShows, 
     getSeasonsByShowId,
-    getSimilarsByShowId
+    getSimilarsByShowId,
+    search
 };

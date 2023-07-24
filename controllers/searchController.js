@@ -3,9 +3,7 @@ const searchService = require('../services/searchService');
 
 const router = Router();
 
-router.get('/shows/discover', searchService.discover);
-
-router.get('/shows/titles/:title', searchService.getShowsByTitle);
+router.get('/shows', searchService.discoverShows);
 
 router.get('/shows/:showId', searchService.getByShowId);
 

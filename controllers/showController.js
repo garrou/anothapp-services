@@ -7,8 +7,6 @@ router.post('/', showService.addShow);
 
 router.get('/', showService.getShows);
 
-router.get('/titles/:title', showService.getByTitle);
-
 router.delete('/:id', showService.deleteByShowId);
 
 router.patch('/:id/watching', showService.updateWatchingByShowId);
