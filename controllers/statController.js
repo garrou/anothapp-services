@@ -19,4 +19,6 @@ router.get('/episodes/years', statService.getNbEpisodesByYear);
 
 router.get('/count/episodes', statService.getNbEpisodes);
 
+router.get('/shows/ranking', statService.getRankingTimeShows);
+
 module.exports = router;
