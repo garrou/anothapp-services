@@ -277,14 +277,14 @@ const getViewedByMonthAgo = async (userId, month) => {
 const getRankingViewingTimeByShows = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT shows.title, SUM(seasons.episode * seasons.ep_duration) / 60 AS time
+        SELECT shows.title AS label, SUM(seasons.episode * seasons.ep_duration) / 60 AS value
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
         JOIN shows ON shows.id = seasons.show_id
         WHERE user_id = $1
-        GROUP BY shows.title
-        ORDER BY time desc    
+        GROUP BY label
+        ORDER BY value DESC    
         LIMIT 10
     `, [userId]);
     client.release();
