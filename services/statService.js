@@ -83,12 +83,22 @@ const getRankingTimeShows = async (req, res) => {
     }
 }
 
+const getRecordTimeMonth = async (req, res) => {
+    try {
+        const resp = await userSeasonRepository.getRecordViewingTimeMonth(req.user.id);
+        res.status(200).json(resp['rows'][0]);
+    } catch (_) {
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
+    }
+}
+
 module.exports = {
     getNbEpisodes,
     getNbEpisodesByYear,
     getNbShows,
     getNbSeasonsByMonth,
     getRankingTimeShows,
+    getRecordTimeMonth,
     getSeasonsByYears,
     getTimeByYears,
     getTimeCurrentMonth,

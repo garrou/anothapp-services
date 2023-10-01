@@ -292,6 +292,23 @@ const getRankingViewingTimeByShows = async (userId) => {
     return res;
 }
 
+const getRecordViewingTimeMonth = async (userId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT TO_CHAR(added_at, 'MM/YYYY') as date, SUM(ep_duration * episode) AS time 
+        FROM users_seasons
+        JOIN seasons ON users_seasons.show_id = seasons.show_id
+        AND users_seasons.number = seasons.number
+        WHERE users_seasons.user_id = $1
+        GROUP BY date
+        ORDER BY time DESC 
+        LIMIT 1
+    `, [userId]);
+    client.release();
+
+    return res;
+}
+
 module.exports = {
     create,
     getByUserIdByShowId,
@@ -301,6 +318,7 @@ module.exports = {
     getNbSeasonsByUserIdGroupByYear,
     getInfosByUserIdByShowId,
     getRankingViewingTimeByShows,
+    getRecordViewingTimeMonth,
     getTimeCurrentMonthByUserId,
     getTimeHourByUserIdGroupByYear,
     getTotalEpisodesByUserId,

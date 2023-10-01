@@ -13,6 +13,8 @@ router.get('/time/years', statService.getTimeByYears);
 
 router.get('/time/month', statService.getTimeCurrentMonth);
 
+router.get('/time/month-best', statService.getRecordTimeMonth);
+
 router.get('/seasons/months', statService.getNbSeasonsByMonth);
 
 router.get('/episodes/years', statService.getNbEpisodesByYear);
