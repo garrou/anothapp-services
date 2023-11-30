@@ -105,7 +105,7 @@ const getSimilarsByShowId = async (req, res) => {
 
         res.status(200).json(previews);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue '});
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
 }
 
@@ -138,7 +138,7 @@ const getShowsByKind = async (req, res) => {
         
         res.status(200).json(previews);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue '});
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
 }
 

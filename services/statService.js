@@ -6,7 +6,7 @@ const getNbShows = async (req, res) => {
         const result = await userShowRepository.getByUserId(req.user.id);
         res.status(200).json(result.rowCount);
     } catch (_) {
-        res.status(500).json({ 'message' : 'Une erreur est survenue '});
+        res.status(500).json({ 'message' : 'Une erreur est survenue' });
     }
 }
 
@@ -43,7 +43,7 @@ const getTimeCurrentMonth = async (req, res) => {
         const resp = await userSeasonRepository.getTimeCurrentMonthByUserId(req.user.id);
         res.status(200).json(resp['rows'][0].time);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue '});
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
 }
 
@@ -52,7 +52,7 @@ const getNbSeasonsByMonth = async (req, res) => {
         const resp = await userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(req.user.id);
         res.status(200).json(resp['rows']);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue '});
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
 }
 
@@ -61,7 +61,7 @@ const getNbEpisodesByYear = async (req, res) => {
         const resp = await userSeasonRepository.getNbEpisodesByUserIdGroupByYear(req.user.id);
         res.status(200).json(resp['rows']);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue '});
+        res.status(500).json({ 'message': 'Une erreur est survenue' });
     }
 }
 
