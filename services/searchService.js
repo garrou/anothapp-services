@@ -31,7 +31,7 @@ const getByShowId = async (req, res) => {
         const { showId } = req.params;
         const resp = await axios.get(`${betaseries}/shows/display?id=${showId}&key=${key}`);
         const { show: 
-            { id, title, description, seasons, episodes, length, network, notes, images, status, creation } 
+            { id, title, description, seasons, episodes, length, network, notes, images, status, creation, genres } 
         } = await resp.data;
         res.status(200).json({
             id: id,
@@ -44,7 +44,8 @@ const getByShowId = async (req, res) => {
             note: notes.mean,
             images: images,
             status: status,
-            creation: creation
+            creation: creation,
+            kinds: Object.values(genres)
         });
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
@@ -57,7 +58,6 @@ const getSeasonsByShowId = async (req, res) => {
         const resp = await axios.get(`${betaseries}/shows/seasons?id=${showId}&key=${key}`);
         const { seasons } = await resp.data;
         const previews = seasons.map(s => ({number: s.number, episode: s.episodes, image: s.image}));
-
         res.status(200).json(previews);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
@@ -76,7 +76,6 @@ const getEpisodesByShowIdBySeason = async (req, res) => {
             description: e.description, 
             date: e.date
         }));
-
         res.status(200).json(previews);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
@@ -89,7 +88,6 @@ const getCharactersByShowId = async (req, res) => {
         const resp = await axios.get(`${betaseries}/shows/characters?id=${showId}&key=${key}`);
         const { characters } = await resp.data;
         const previews = characters.map(c => ({id: c.id, name: c.name, actor: c.actor, picture: c.picture}));
-
         res.status(200).json(previews);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
@@ -102,7 +100,6 @@ const getSimilarsByShowId = async (req, res) => {
         const resp = await axios.get(`${betaseries}/shows/similars?id=${showId}&key=${key}`);
         const { similars } = await resp.data;
         const previews = similars.map(s => ({ id: s.show_id, title: s.show_title }));
-
         res.status(200).json(previews);
     } catch (_) {
         res.status(500).json({ 'message': 'Une erreur est survenue' });
