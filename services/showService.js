@@ -44,10 +44,10 @@ const deleteByShowId = async (req, res) => {
 
 const getShows = async (req, res) => {
     try {
-        const { title } = req.query;
+        const { title, limit } = req.query;
         let resp = title 
             ? await userShowRepository.getShowsByUserIdByTitle(req.user.id, title)
-            : await userShowRepository.getShowsByUserId(req.user.id);
+            : await userShowRepository.getShowsByUserId(req.user.id, limit);
 
         if (title && resp.rowCount === 0) {
             return res.status(200).json(await search(title));
