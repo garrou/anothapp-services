@@ -1,6 +1,6 @@
-const axios = require('axios');
+const axios = require("axios");
 
-const betaseries = 'https://api.betaseries.com';
+const betaseries = "https://api.betaseries.com";
 const key = process.env.BETASERIES_KEY;
 
 const search = async (title) => {
@@ -22,7 +22,7 @@ const discoverShows = async (req, res) => {
         const { title } = req.query;
         res.status(200).json(await search(title));
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
@@ -48,7 +48,7 @@ const getByShowId = async (req, res) => {
             kinds: Object.values(genres)
         });
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
@@ -60,7 +60,7 @@ const getSeasonsByShowId = async (req, res) => {
         const previews = seasons.map(s => ({number: s.number, episode: s.episodes, image: s.image}));
         res.status(200).json(previews);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
@@ -78,7 +78,7 @@ const getEpisodesByShowIdBySeason = async (req, res) => {
         }));
         res.status(200).json(previews);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
@@ -90,7 +90,7 @@ const getCharactersByShowId = async (req, res) => {
         const previews = characters.map(c => ({id: c.id, name: c.name, actor: c.actor, picture: c.picture}));
         res.status(200).json(previews);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
@@ -102,7 +102,7 @@ const getSimilarsByShowId = async (req, res) => {
         const previews = similars.map(s => ({ id: s.show_id, title: s.show_title }));
         res.status(200).json(previews);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
@@ -113,7 +113,7 @@ const getKinds = async (_, res) => {
 
         res.status(200).json(genres);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
@@ -135,7 +135,7 @@ const getShowsByKind = async (req, res) => {
         
         res.status(200).json(previews);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
@@ -148,7 +148,7 @@ const getImagesByShowId = async (req, res) => {
 
         res.status(200).json(urls);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 

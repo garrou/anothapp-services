@@ -1,106 +1,79 @@
-const userSeasonRepository = require('../repositories/userSeasonRepository');
-const userShowRepository = require('../repositories/userShowRepository');
+const userSeasonRepository = require("../repositories/userSeasonRepository");
+const userShowRepository = require("../repositories/userShowRepository");
 
-const getNbShows = async (req, res) => {
+const getCountByType = async (req, res) => {
     try {
-        const result = await userShowRepository.getByUserId(req.user.id);
-        res.status(200).json(result.rowCount);
+        const { type } = req.query;
+        let response = null;
+
+        switch (type) {
+            case "shows":
+                response = (await userShowRepository.getByUserId(req.user.id)).rowCount;
+                break;
+            case "episodes":
+                response = (await userSeasonRepository.getTotalEpisodesByUserId(req.user.id))["rows"][0].total;
+                break;
+            default:
+                throw new Error("Invalid type");
+        }
+        res.status(200).json(response);
     } catch (_) {
-        res.status(500).json({ 'message' : 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
-const getTotalTime = async (req, res) => {
+const getTimeByType = async (req, res) => {
     try {
-        const result = await userSeasonRepository.getTotalTimeByUserId(req.user.id);
-        const viewingTime = result['rows'][0]['time'];
-        res.status(200).json(parseInt(viewingTime));
+        const { type } = req.query;
+        let response = null;
+
+        switch (type) {
+            case "total":
+                response = (await userSeasonRepository.getTotalTimeByUserId(req.user.id))["rows"][0]["time"];
+                break;
+            case "years":
+                response = (await userSeasonRepository.getTimeHourByUserIdGroupByYear(req.user.id))["rows"];
+                break;
+            case "month":
+                response = (await userSeasonRepository.getTimeCurrentMonthByUserId(req.user.id))["rows"][0].time;
+                break;
+            case "best-month":
+                response = (await userSeasonRepository.getRecordViewingTimeMonth(req.user.id))["rows"][0];
+                break;
+            case "rank":
+                response = (await userSeasonRepository.getRankingViewingTimeByShows(req.user.id))["rows"];
+                break;
+            default:
+                throw new Error("Invalid type");
+        }
+        res.status(200).json(response);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
-const getSeasonsByYears = async (req, res) => {
+const getCountGroupedByTypeByPeriod = async (req, res) => {
     try {
-        const resp = await userSeasonRepository.getNbSeasonsByUserIdGroupByYear(req.user.id);
-        res.status(200).json(resp['rows']);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
-}
+        const { type, period } = req.query;
+        let response = null;
 
-const getTimeByYears = async (req, res) => {
-    try {
-        const resp = await userSeasonRepository.getTimeHourByUserIdGroupByYear(req.user.id);
-        res.status(200).json(resp['rows']);
+        if (type === "seasons") {
+            if (period === "years") {
+                response = (await userSeasonRepository.getNbSeasonsByUserIdGroupByYear(req.user.id))["rows"];
+            } else if (period === "months") {
+                response = (await userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(req.user.id))["rows"];
+            }
+        } else if (type === "episodes" && period === "years") {
+            response = (await userSeasonRepository.getNbEpisodesByUserIdGroupByYear(req.user.id))['rows'];
+        }
+        res.status(200).json(response);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
-}
-
-const getTimeCurrentMonth = async (req, res) => {
-    try {
-        const resp = await userSeasonRepository.getTimeCurrentMonthByUserId(req.user.id);
-        res.status(200).json(resp['rows'][0].time);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
-}
-
-const getNbSeasonsByMonth = async (req, res) => {
-    try {
-        const resp = await userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(req.user.id);
-        res.status(200).json(resp['rows']);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
-}
-
-const getNbEpisodesByYear = async (req, res) => {
-    try {
-        const resp = await userSeasonRepository.getNbEpisodesByUserIdGroupByYear(req.user.id);
-        res.status(200).json(resp['rows']);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
-}
-
-const getNbEpisodes = async (req, res) => {
-    try {
-        const resp = await userSeasonRepository.getTotalEpisodesByUserId(req.user.id);
-        res.status(200).json(resp['rows'][0].total);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
-}
-
-const getRankingTimeShows = async (req, res) => {
-    try {
-        const resp = await userSeasonRepository.getRankingViewingTimeByShows(req.user.id);
-        res.status(200).json(resp['rows']);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
-    }
-}
-
-const getRecordTimeMonth = async (req, res) => {
-    try {
-        const resp = await userSeasonRepository.getRecordViewingTimeMonth(req.user.id);
-        res.status(200).json(resp['rows'][0]);
-    } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
 module.exports = {
-    getNbEpisodes,
-    getNbEpisodesByYear,
-    getNbShows,
-    getNbSeasonsByMonth,
-    getRankingTimeShows,
-    getRecordTimeMonth,
-    getSeasonsByYears,
-    getTimeByYears,
-    getTimeCurrentMonth,
-    getTotalTime,
+    getCountByType,
+    getCountGroupedByTypeByPeriod,
+    getTimeByType,
 }

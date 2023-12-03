@@ -1,6 +1,6 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const { v4: uuidv4 } = require("uuid");
 
 /**
  * @param {string} userId 

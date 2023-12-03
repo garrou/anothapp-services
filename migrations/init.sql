@@ -1,4 +1,4 @@
-SET client_encoding = 'UTF8';
+SET client_encoding = "UTF8";
 
 CREATE TABLE users (
     id VARCHAR(50),
@@ -12,6 +12,7 @@ CREATE TABLE shows (
     id INTEGER,
     title VARCHAR(255) UNIQUE NOT NULL,
     poster VARCHAR(255),
+    kinds VARCHAR(255),
     PRIMARY KEY(id)
 );
 

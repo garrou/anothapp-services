@@ -1,4 +1,4 @@
-const seasonRepository = require('../repositories/seasonRepository');
+const seasonRepository = require("../repositories/seasonRepository");
 
 const deleteBySeasonId = async (req, res) => {
     try {
@@ -7,7 +7,7 @@ const deleteBySeasonId = async (req, res) => {
 
         res.sendStatus(204);
     } catch (_) {
-        res.status(500).json({ 'message': 'Une erreur est survenue' });
+        res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
