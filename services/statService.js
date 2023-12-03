@@ -65,6 +65,8 @@ const getCountGroupedByTypeByPeriod = async (req, res) => {
             }
         } else if (type === "episodes" && period === "years") {
             response = (await userSeasonRepository.getNbEpisodesByUserIdGroupByYear(req.user.id))['rows'];
+        } else {
+            throw new Error("Invalid type");
         }
         res.status(200).json(response);
     } catch (_) {
