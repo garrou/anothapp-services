@@ -57,21 +57,74 @@ const getCountGroupedByTypeByPeriod = async (req, res) => {
         const { type, period } = req.query;
         let response = null;
 
-        if (type === "seasons") {
-            if (period === "years") {
-                response = (await userSeasonRepository.getNbSeasonsByUserIdGroupByYear(req.user.id))["rows"];
-            } else if (period === "months") {
-                response = (await userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(req.user.id))["rows"];
-            }
-        } else if (type === "episodes" && period === "years") {
-            response = (await userSeasonRepository.getNbEpisodesByUserIdGroupByYear(req.user.id))['rows'];
-        } else {
-            throw new Error("Invalid type");
+        switch (type) {
+            case "seasons":
+                response = await getNbSeasonsByUserIdByPeriod(req.user.id, period);
+                break;
+            case "episodes":
+                response = await getNbEpisodesByUserIdByPeriod(req.user.id, period);
+                break;
+            case "kinds":
+                response = await getNbKindsByUserId(req.user.id);
+                break;
+            default:
+                throw new Error("Invalid type");
         }
         res.status(200).json(response);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
+}
+
+/**
+ * @param {String} userId
+ * @param {String} period
+ * @return Promise
+ */
+const getNbSeasonsByUserIdByPeriod = async (userId, period) => {
+    switch (period) {
+        case "years":
+            return (await userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId))["rows"];
+        case "months":
+            return (await userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId))["rows"];
+        default:
+            throw new Error("Invalid period");
+    }
+}
+
+/**
+ * @param {String} userId
+ * @param {String} period 
+ * @return Promise
+ */
+const getNbEpisodesByUserIdByPeriod = async (userId, period) => {
+    switch (period) {
+        case "years":
+            return (await userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId))['rows'];
+        default:
+            throw new Error("Invalid period");
+    }
+}
+
+/**
+ * @param {String} userId
+ * @return Promise
+ */
+const getNbKindsByUserId = async (userId) => {
+    const kindsMap = new Map();
+    const resp = await userShowRepository.getKindsByUserId(userId);
+
+    resp["rows"].forEach((row) => row["kinds"]
+        .split(";")
+        .forEach((kind) => {
+            const val = kindsMap.get(kind);
+            !val ? kindsMap.set(kind, 1) : kindsMap.set(kind, val + 1);
+        })
+    );
+    return Array
+        .from(kindsMap, ([kind, occur]) => ({ "label": kind, "value": occur }))
+        .sort((a, b) => b.value - a.value)
+        .splice(0, 10);
 }
 
 module.exports = {

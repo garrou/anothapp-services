@@ -172,13 +172,30 @@ const getShowsToResumeByUserId = async (userId) => {
         ORDER BY title
     `, [userId]);
     client.release();
-
     return res;
 }
+
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
+const getKindsByUserId = async (userId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT kinds
+        FROM shows
+        JOIN users_shows ON users_shows.show_id = shows.id
+        WHERE users_shows.user_id = $1 
+    `, [userId]);
+    client.release();
+    return res;
+}
+
 
 module.exports = {
     create,
     deleteByUserIdShowId,
+    getKindsByUserId,
     getNotStartedShowsByUserId,
     getShowsByUserId,
     getShowByUserIdByShowId,
