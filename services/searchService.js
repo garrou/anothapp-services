@@ -6,14 +6,15 @@ const key = process.env.BETASERIES_KEY;
 const search = async (title) => {
     const resp = title 
             ? await axios.get(`${betaseries}/shows/search?title=${title}&key=${key}`)
-            : await axios.get(`${betaseries}/shows/discover?limit=32&key=${key}`);
+            : await axios.get(`${betaseries}/shows/discover?limit=20&key=${key}`);
     const { shows } = await resp.data;
     
     return shows.map(s => ({
         id: s.id, 
         title: s.title, 
         images: s.images,
-        duration: s.length
+        duration: s.length,
+        kinds: Object.values(s.genres),
     }));
 }
 

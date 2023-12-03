@@ -20,13 +20,14 @@ const getShowById = async (id) => {
  * @param {number} id 
  * @param {string} title 
  * @param {string} poster 
+ * @param {string} kinds
  */
-const createShow = async (id, title, poster) => {
+const createShow = async (id, title, poster, kinds) => {
     const client = await pool.connect();
     await client.query(`
-        INSERT INTO shows (id, title, poster)
-        VALUES ($1, $2, $3)
-    `, [id, title, poster]);
+        INSERT INTO shows (id, title, poster, kinds)
+        VALUES ($1, $2, $3, $4)
+    `, [id, title, poster, kinds]);
     client.release();
 }
 

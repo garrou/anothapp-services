@@ -10,7 +10,7 @@ const MONTH = ["0", "1", "2", "3", "6", "12"];
 
 const addShow = async (req, res) => {
     try {
-        const { id, title, images } = req.body;
+        const { id, title, images, kinds } = req.body;
         let result = await userShowRepository.getShowByUserIdByShowId(req.user.id, id);
 
         if (result.rowCount === 1) {
@@ -19,7 +19,7 @@ const addShow = async (req, res) => {
         result = await showRepository.getShowById(id);
 
         if (result.rowCount === 0) {
-            await showRepository.createShow(id, title, getImageUrl(images));
+            await showRepository.createShow(id, title, getImageUrl(images), kinds);
         }
         await userShowRepository.create(req.user.id, id);
         
