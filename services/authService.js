@@ -11,13 +11,13 @@ const register = async (req, res) => {
         if (password.length < 8) {
             return res.status(400).json({ "message": "Le mot de passe doit faire au moins 8 caractères" });
         }
-        const resp = await userRepository.getUserByEmail(email);
+        const resp = await userRepository.getUserByEmail(email.toLowerCase());
 
         if (resp.rowCount === 1) {
             return res.status(409).json({ "message": "Un compte est déjà associé à cet email" });
         }
         const hash = await createHash(password);
-        await userRepository.createUser(uuid(), email, hash);
+        await userRepository.createUser(uuid(), email.toLowerCase(), hash);
 
         res.sendStatus(201);
     } catch (_) {
@@ -28,7 +28,7 @@ const register = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const resp = await userRepository.getUserByEmail(email);
+        const resp = await userRepository.getUserByEmail(email.toLowerCase());
 
         if (resp.rowCount === 0) {
             return res.status(400).json({ "message": "Email ou mot de passe incorrect" });

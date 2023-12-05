@@ -147,7 +147,7 @@ const getNbSeasonsByUserIdGroupByYear = async (userId) => {
         AND DATE_PART('year', NOW()) - EXTRACT(YEAR FROM added_at) <= 10
         WHERE users_seasons.user_id = $1
         GROUP BY label
-        ORDER BY label DESC
+        ORDER BY label
     `, [userId]);
     client.release();
 
@@ -168,7 +168,7 @@ const getTimeHourByUserIdGroupByYear = async (userId) => {
         AND DATE_PART('year', NOW()) - EXTRACT(YEAR FROM added_at) <= 10
         WHERE users_seasons.user_id = $1
         GROUP BY label
-        ORDER BY label DESC
+        ORDER BY label
     `, [userId]);
     client.release();
 
@@ -226,7 +226,7 @@ const getNbEpisodesByUserIdGroupByYear = async (userId) => {
         AND users_seasons.user_id = $1
         AND DATE_PART('year', NOW()) - EXTRACT(YEAR FROM added_at) <= 10
         GROUP BY label
-        ORDER BY label DESC
+        ORDER BY label
     `, [userId]);
     client.release();
 
@@ -287,7 +287,7 @@ const getRankingViewingTimeByShows = async (userId) => {
         JOIN shows ON shows.id = seasons.show_id
         WHERE user_id = $1
         GROUP BY label
-        ORDER BY value DESC    
+        ORDER BY value DESC   
         LIMIT 10
     `, [userId]);
     client.release();
