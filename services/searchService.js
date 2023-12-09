@@ -6,6 +6,7 @@ const ApiEpisode = require("../models/ApiEpisode");
 const ApiSeason = require("../models/ApiSeason");
 const ApiCharacter = require("../models/ApiCharacter");
 const ApiSimilarShow = require("../models/ApiSimilarShow");
+const ApiShowKind = require("../models/ApiShowKind");
 
 const search = async (title) => {
     const resp = title
@@ -84,7 +85,7 @@ const getKinds = async (_, res) => {
         const resp = await axios.get(`${betaseries}/shows/genres?key=${key}`);
         const { genres } = await resp.data;
         const kinds = Object.entries(genres)
-            .map(entry => ({ "value": entry[0], "name": entry[1] }))
+            .map(entry => new ApiShowKind(entry))
             .sort((a, b) => a.name.localeCompare(b.name));
         res.status(200).json(kinds);
     } catch (_) {
@@ -119,9 +120,7 @@ const getImagesByShowId = async (req, res) => {
         const { showId } = req.params;
         const resp = await axios.get(`${betaseries}/shows/pictures?id=${showId}&key=${key}`);
         const { pictures } = await resp.data;
-        const urls = pictures.map(p => p.url);
-
-        res.status(200).json(urls);
+        res.status(200).json(pictures.map(p => p.url));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
