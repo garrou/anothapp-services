@@ -7,6 +7,7 @@ const ApiSeason = require("../models/ApiSeason");
 const ApiCharacter = require("../models/ApiCharacter");
 const ApiSimilarShow = require("../models/ApiSimilarShow");
 const ApiShowKind = require("../models/ApiShowKind");
+const ApiPerson = require("../models/ApiPerson");
 
 const search = async (title) => {
     const resp = title
@@ -126,12 +127,24 @@ const getImagesByShowId = async (req, res) => {
     }
 }
 
+const getPersonById = async (req, res) => {
+    try {
+        const { personId } = req.params;
+        const resp = await axios.get(`${betaseries}/persons/person?id=${personId}&key=${key}`);
+        const { person } = await resp.data;
+        res.status(200).json(new ApiPerson(person));
+    } catch (_) {
+        res.status(500).json({ "message": "Une erreur est survenue "});
+    }
+}
+
 module.exports = {
     getCharactersByShowId,
     getEpisodesByShowIdBySeason,
     getByShowId,
     getImagesByShowId,
     getKinds,
+    getPersonById,
     getShowsByKind,
     discoverShows,
     getSeasonsByShowId,
