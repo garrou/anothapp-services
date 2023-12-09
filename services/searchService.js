@@ -1,21 +1,18 @@
 const axios = require("axios");
-
 const betaseries = "https://api.betaseries.com";
 const key = process.env.BETASERIES_KEY;
+const ApiShowDetails = require("../models/ApiShowDetails");
+const ApiEpisode = require("../models/ApiEpisode");
+const ApiSeason = require("../models/ApiSeason");
+const ApiCharacter = require("../models/ApiCharacter");
+const ApiSimilarShow = require("../models/ApiSimilarShow");
 
 const search = async (title) => {
-    const resp = title 
-            ? await axios.get(`${betaseries}/shows/search?title=${title}&key=${key}`)
-            : await axios.get(`${betaseries}/shows/discover?limit=20&key=${key}`);
+    const resp = title
+        ? await axios.get(`${betaseries}/shows/search?title=${title}&key=${key}`)
+        : await axios.get(`${betaseries}/shows/discover?limit=20&key=${key}`);
     const { shows } = await resp.data;
-    
-    return shows.map(s => ({
-        id: s.id, 
-        title: s.title, 
-        images: s.images,
-        duration: s.length,
-        kinds: Object.values(s.genres),
-    }));
+    return shows.map(show => new ApiShowDetails(show));
 }
 
 const discoverShows = async (req, res) => {
@@ -31,23 +28,8 @@ const getByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
         const resp = await axios.get(`${betaseries}/shows/display?id=${showId}&key=${key}`);
-        const { show: 
-            { id, title, description, seasons, episodes, length, network, notes, images, status, creation, genres } 
-        } = await resp.data;
-        res.status(200).json({
-            id: id,
-            title: title,
-            description: description,
-            seasons: seasons,
-            episodes: episodes,
-            duration: length,
-            network: network,
-            note: notes.mean,
-            images: images,
-            status: status,
-            creation: creation,
-            kinds: Object.values(genres)
-        });
+        const { show } = await resp.data;
+        res.status(200).json(new ApiShowDetails(show));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -58,8 +40,7 @@ const getSeasonsByShowId = async (req, res) => {
         const { showId } = req.params;
         const resp = await axios.get(`${betaseries}/shows/seasons?id=${showId}&key=${key}`);
         const { seasons } = await resp.data;
-        const previews = seasons.map(s => ({number: s.number, episode: s.episodes, image: s.image}));
-        res.status(200).json(previews);
+        res.status(200).json(seasons.map(season => new ApiSeason(season)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -70,14 +51,7 @@ const getEpisodesByShowIdBySeason = async (req, res) => {
         const { showId, num } = req.params;
         const resp = await axios.get(`${betaseries}/shows/episodes?id=${showId}&season=${num}&key=${key}`);
         const { episodes } = await resp.data;
-        const previews = episodes.map(e => ({
-            id: e.id, 
-            title: e.title, 
-            code: e.code, 
-            description: e.description, 
-            date: e.date
-        }));
-        res.status(200).json(previews);
+        res.status(200).json(episodes.map(episode => new ApiEpisode(episode)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -88,8 +62,7 @@ const getCharactersByShowId = async (req, res) => {
         const { showId } = req.params;
         const resp = await axios.get(`${betaseries}/shows/characters?id=${showId}&key=${key}`);
         const { characters } = await resp.data;
-        const previews = characters.map(c => ({id: c.person_id, name: c.name, actor: c.actor, picture: c.picture}));
-        res.status(200).json(previews);
+        res.status(200).json(characters.map(character => new ApiCharacter(character)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -100,8 +73,7 @@ const getSimilarsByShowId = async (req, res) => {
         const { showId } = req.params;
         const resp = await axios.get(`${betaseries}/shows/similars?id=${showId}&key=${key}`);
         const { similars } = await resp.data;
-        const previews = similars.map(s => ({ id: s.show_id, title: s.show_title }));
-        res.status(200).json(previews);
+        res.status(200).json(similars.map(similar => new ApiSimilarShow(similar)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -111,8 +83,10 @@ const getKinds = async (_, res) => {
     try {
         const resp = await axios.get(`${betaseries}/shows/genres?key=${key}`);
         const { genres } = await resp.data;
-
-        res.status(200).json(genres);
+        const kinds = Object.entries(genres)
+            .map(entry => ({ "value": entry[0], "name": entry[1] }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+        res.status(200).json(kinds);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -124,8 +98,8 @@ const getShowsByKind = async (req, res) => {
         const resp = await axios.get(`${betaseries}/search/shows?genres=${kind}&key=${key}`);
         const { shows } = await resp.data;
         const previews = shows.map(s => ({
-            id: s.id, 
-            title: s.title, 
+            id: s.id,
+            title: s.title,
             images: {
                 poster: s.poster,
                 show: null,
@@ -133,7 +107,7 @@ const getShowsByKind = async (req, res) => {
                 box: null
             }
         }));
-        
+
         res.status(200).json(previews);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
@@ -153,14 +127,14 @@ const getImagesByShowId = async (req, res) => {
     }
 }
 
-module.exports = { 
+module.exports = {
     getCharactersByShowId,
-    getEpisodesByShowIdBySeason, 
+    getEpisodesByShowIdBySeason,
     getByShowId,
     getImagesByShowId,
     getKinds,
     getShowsByKind,
-    discoverShows, 
+    discoverShows,
     getSeasonsByShowId,
     getSimilarsByShowId,
     search
