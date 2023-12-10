@@ -11,8 +11,8 @@ class ApiPerson {
         this.nationality = person.nationality;
         this.description = person.description;
         this.poster = person.poster;
-        this.shows = person.shows.map(show => new ApiPersonShow(show));
-        this.movies = person.movies.map(movie => new ApiPersonMovie(movie));
+        this.shows = person.shows.map(show => new ApiPersonShow(show)).sort((a, b) => b.creation - a.creation);
+        this.movies = person.movies.map(movie => new ApiPersonMovie(movie)).sort((a, b) => b.productionYear - a.productionYear);
     }
 }
 
