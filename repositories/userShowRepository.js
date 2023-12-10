@@ -13,7 +13,6 @@ const getShowByUserIdByShowId = async (userId, showId) => {
         WHERE user_id = $1 AND show_id = $2
     `, [userId, showId]);
     client.release();
-
     return res;
 }
 
@@ -59,7 +58,6 @@ const getShowsByUserId = async (userId, limit) => {
         LIMIT $2
     `, [userId, limit]);
     client.release();
-
     return res;
 }
 
@@ -79,7 +77,6 @@ const getShowsByUserIdByTitle = async (userId, title) => {
         ORDER BY added_at DESC
     `, [userId, `%${title}%`]);
     client.release();
-
     return res;
 }
 
@@ -95,7 +92,6 @@ const getByUserId = async (userId) => {
         WHERE user_id = $1
     `, [userId]);
     client.release();
-
     return res;
 }
 
@@ -115,7 +111,6 @@ const getByUserIdByContinue = async (userId, isContinue) => {
         GROUP BY shows.id, title, poster
     `, [userId, isContinue]);
     client.release();
-
     return res;
 }
 
@@ -138,7 +133,6 @@ const getNotStartedShowsByUserId = async (userId) => {
         );
     `, [userId]);
     client.release();
-    
     return res;
 }
 

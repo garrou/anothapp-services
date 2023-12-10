@@ -14,7 +14,6 @@ const getShowsToContinueByUserId = async (userId) => {
         ORDER BY title
     `, [userId]);
     client.release();
-
     return res;
 }
 

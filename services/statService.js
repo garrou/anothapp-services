@@ -11,7 +11,10 @@ const getCountByType = async (req, res) => {
                 response = (await userShowRepository.getByUserId(req.user.id)).rowCount;
                 break;
             case "episodes":
-                response = (await userSeasonRepository.getTotalEpisodesByUserId(req.user.id))["rows"][0].total;
+                response = (await userSeasonRepository.getTotalEpisodesByUserId(req.user.id));
+                break;
+            case "seasons":
+                response = (await userSeasonRepository.getTotalSeasonsByUserId(req.user.id));
                 break;
             default:
                 throw new Error("Invalid type");

@@ -12,7 +12,6 @@ const getUserByEmail = async (email) => {
         WHERE email = $1
     `, [email]);
     client.release();
-
     return res;
 }
 
@@ -27,8 +26,7 @@ const getUserById = async (id) => {
         FROM users
         WHERE id = $1
     `, [id]);
-    client.release();
-        
+    client.release();       
     return res;
 }
 

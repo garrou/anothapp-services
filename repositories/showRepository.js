@@ -12,7 +12,6 @@ const getShowById = async (id) => {
         WHERE id = $1
     `, [id]);
     client.release();
-        
     return res;
 }
 

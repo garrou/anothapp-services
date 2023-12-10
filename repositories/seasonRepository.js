@@ -25,7 +25,6 @@ const getSeasonByShowIdByNumber = async (showId, number) => {
         WHERE show_id = $1 AND number = $2
     `, [showId, number]);
     client.release();
-
     return res;
 }
 

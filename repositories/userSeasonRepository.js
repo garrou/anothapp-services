@@ -15,7 +15,6 @@ const getByUserIdByShowId = async (userId, showId) => {
         WHERE users_seasons.user_id = $1 AND users_seasons.show_id = $2
     `, [userId, showId]);
     client.release();
-
     return res;
 }
 
@@ -49,7 +48,6 @@ const getDistinctByUserIdByShowId = async (userId, showId) => {
         ORDER BY users_seasons.number
     `, [userId, showId]);
     client.release();
-
     return res;
 }
 
@@ -69,7 +67,6 @@ const getInfosByUserIdByShowId = async (userId, showId, number) => {
         AND number = $3
     `, [userId, showId, number]);
     client.release();
-
     return res;
 }
 
@@ -89,7 +86,6 @@ const getViewingTimeByUserIdByShowId = async (userId, showId) => {
         AND users_seasons.show_id = $2
     `, [userId, showId]);
     client.release();
-
     return res;
 }
 
@@ -111,7 +107,6 @@ const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) =>
         AND users_seasons.number = $3
     `, [userId, showId, number]);
     client.release();
-
     return res;
 }
 
@@ -129,7 +124,6 @@ const getTotalTimeByUserId = async (userId) => {
         WHERE user_id = $1
     `, [userId]);
     client.release();
-
     return res;
 }
 
@@ -150,7 +144,6 @@ const getNbSeasonsByUserIdGroupByYear = async (userId) => {
         ORDER BY label
     `, [userId]);
     client.release();
-
     return res;
 }
 
@@ -171,7 +164,6 @@ const getTimeHourByUserIdGroupByYear = async (userId) => {
         ORDER BY label
     `, [userId]);
     client.release();
-
     return res;
 }
 
@@ -190,7 +182,6 @@ const getTimeCurrentMonthByUserId = async (userId) => {
         AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
     `, [userId]);
     client.release();
-
     return res;
 }
 
@@ -208,7 +199,6 @@ const getNbSeasonsByUserIdGroupByMonth = async (userId) => {
         ORDER BY num
     `, [userId]);
     client.release();
-
     return res;
 }
 
@@ -229,7 +219,6 @@ const getNbEpisodesByUserIdGroupByYear = async (userId) => {
         ORDER BY label
     `, [userId]);
     client.release();
-
     return res;
 }
 
@@ -247,8 +236,22 @@ const getTotalEpisodesByUserId = async (userId) => {
         WHERE user_id = $1 
     `, [userId]);
     client.release();
+    return res["rows"][0].total;
+}
 
-    return res;
+/**
+ * @param {string} userId
+ * @return Promise<number> 
+ */
+const getTotalSeasonsByUserId = async (userId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT COUNT(*) AS total
+        FROM users_seasons
+        WHERE user_id = $1 
+    `, [userId]);
+    client.release();
+    return res["rows"][0].total;
 }
 
 /**
@@ -269,7 +272,6 @@ const getViewedByMonthAgo = async (userId, month) => {
         ORDER BY added_at DESC
     `, [userId, month]);
     client.release();
-
     return res;
 }
 
@@ -291,7 +293,6 @@ const getRankingViewingTimeByShows = async (userId) => {
         LIMIT 10
     `, [userId]);
     client.release();
-
     return res;
 }
 
@@ -308,7 +309,6 @@ const getRecordViewingTimeMonth = async (userId) => {
         LIMIT 1
     `, [userId]);
     client.release();
-
     return res;
 }
 
@@ -325,6 +325,7 @@ module.exports = {
     getTimeCurrentMonthByUserId,
     getTimeHourByUserIdGroupByYear,
     getTotalEpisodesByUserId,
+    getTotalSeasonsByUserId,
     getTotalTimeByUserId,
     getViewedByMonthAgo,
     getViewingTimeByUserIdByShowId,
