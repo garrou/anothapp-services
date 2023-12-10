@@ -22,7 +22,7 @@ const addShow = async (req, res) => {
             await showRepository.createShow(id, title, getImageUrl(images), kinds);
         }
         await userShowRepository.create(req.user.id, id);
-        
+
         res.status(201).json({
             "id": id,
             "title": title,
@@ -46,13 +46,16 @@ const deleteByShowId = async (req, res) => {
 
 const getShows = async (req, res) => {
     try {
-        const { title, limit } = req.query;
-        let resp = title 
-            ? await userShowRepository.getShowsByUserIdByTitle(req.user.id, title)
-            : await userShowRepository.getShowsByUserId(req.user.id, limit);
+        const { title, limit, kind } = req.query;
+        let resp = null;
 
-        if (title && resp.rowCount === 0) {
-            return res.status(200).json(await search(title));
+        if (title) {
+            resp = await userShowRepository.getShowsByUserIdByTitle(req.user.id, title);
+            if (resp.rowCount === 0) return res.status(200).json(await search(title));
+        } else if (kind) {
+            resp = await userShowRepository.getShowsByUserIdByKind(req.user.id, kind);
+        } else {
+            resp = await userShowRepository.getShowsByUserId(req.user.id, limit);
         }
         res.status(200).json(resp["rows"]);
     } catch (_) {

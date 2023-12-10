@@ -191,6 +191,23 @@ const getKindsByUserId = async (userId) => {
     return res;
 }
 
+/**
+ * @param {string} userId 
+ * @param {string} kind 
+ * @returns Promise<QueryResult>
+ */
+const getShowsByUserIdByKind = async (userId, kind) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT id, title, poster
+        FROM shows
+        JOIN users_shows ON users_shows.show_id = shows.id
+        WHERE users_shows.user_id = $1 
+        AND kinds LIKE $2
+    `, [userId, `%${kind}%`]);
+    client.release();
+    return res;
+}
 
 module.exports = {
     create,
@@ -198,6 +215,7 @@ module.exports = {
     getKindsByUserId,
     getNotStartedShowsByUserId,
     getShowsByUserId,
+    getShowsByUserIdByKind,
     getShowByUserIdByShowId,
     getShowsByUserIdByTitle,
     getByUserId,
