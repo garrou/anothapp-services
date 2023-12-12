@@ -65,6 +65,7 @@ const getInfosByUserIdByShowId = async (userId, showId, number) => {
         WHERE user_id = $1
         AND show_id = $2
         AND number = $3
+        ORDER BY added_at
     `, [userId, showId, number]);
     client.release();
     return res;
