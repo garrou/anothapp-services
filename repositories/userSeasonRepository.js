@@ -40,7 +40,7 @@ const create = async (userId, showId, number) => {
 const getDistinctByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT DISTINCT ON (users_seasons.number) users_seasons.number, * 
+        SELECT DISTINCT ON (users_seasons.number) users_seasons.number, seasons.show_id, seasons.image, users_seasons.number, seasons.episode
         FROM users_seasons
         JOIN seasons ON seasons.show_id = users_seasons.show_id 
         AND seasons.number = users_seasons.number
@@ -297,6 +297,10 @@ const getRankingViewingTimeByShows = async (userId) => {
     return res;
 }
 
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult> 
+ */
 const getRecordViewingTimeMonth = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
@@ -313,6 +317,24 @@ const getRecordViewingTimeMonth = async (userId) => {
     return res;
 }
 
+/**
+ * @param {string} userId
+ * @param {number} year
+ */
+const getSeasonsByAddedYear = async (userId, year) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT seasons.show_id, users_seasons.number, seasons.episode, seasons.image
+        FROM users_seasons
+        JOIN seasons ON seasons.show_id = users_seasons.show_id
+        AND seasons.number = users_seasons.number
+        WHERE users_seasons.user_id = $1 and EXTRACT(year FROM added_at) = $2
+        ORDER BY added_at, number
+    `, [userId, year]);
+    client.release();
+    return res;
+}
+
 module.exports = {
     create,
     getByUserIdByShowId,
@@ -323,6 +345,7 @@ module.exports = {
     getInfosByUserIdByShowId,
     getRankingViewingTimeByShows,
     getRecordViewingTimeMonth,
+    getSeasonsByAddedYear,
     getTimeCurrentMonthByUserId,
     getTimeHourByUserIdGroupByYear,
     getTotalEpisodesByUserId,

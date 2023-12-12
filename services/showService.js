@@ -5,6 +5,7 @@ const userWatchRepository = require("../repositories/userWatchRepository");
 const seasonRepository = require("../repositories/seasonRepository");
 const showRepository = require("../repositories/showRepository");
 const { search } = require("../services/searchService");
+const Season = require("../models/Season");
 
 const MONTH = ["0", "1", "2", "3", "6", "12"];
 
@@ -82,7 +83,7 @@ const addSeasonByShowId = async (req, res) => {
 const getDistinctByShowId = async (req, res) => {
     try {
         const resp = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, req.params.id);
-        res.status(200).json(resp["rows"]);
+        res.status(200).json(resp["rows"].map(row => new Season(row)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
