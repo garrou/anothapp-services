@@ -5,6 +5,7 @@ const express = require("express");
 const app = express();
 
 const authController = require("./controllers/authController");
+const favoriteController = require("./controllers/favoriteController");
 const homeController = require("./controllers/homeController");
 const profileController  = require("./controllers/profileController");
 const searchController = require("./controllers/searchController");
@@ -27,5 +28,6 @@ app.use("/search", checkJwt, searchController);
 app.use("/shows", checkJwt, showController);
 app.use("/seasons", checkJwt, seasonController);
 app.use("/stats", checkJwt, statController);
+app.use("/favorites", checkJwt, favoriteController);
 
 app.listen(process.env.PORT);

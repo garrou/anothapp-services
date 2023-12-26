@@ -56,3 +56,11 @@ CREATE TABLE users_towatch (
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
 );
+
+CREATE TABLE favorites (
+    user_id VARCHAR(50),
+    show_id INTEGER,
+    PRIMARY KEY(user_id, show_id),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
+);

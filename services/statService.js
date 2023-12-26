@@ -44,7 +44,7 @@ const getTimeByType = async (req, res) => {
                 response = (await userSeasonRepository.getRecordViewingTimeMonth(req.user.id))["rows"][0];
                 break;
             case "rank":
-                response = (await userSeasonRepository.getRankingViewingTimeByShows(req.user.id))["rows"];
+                response = (await userSeasonRepository.getRankingViewingTimeByShows(req.user.id))["rows"].reverse();
                 break;
             default:
                 throw new Error("Invalid type");
@@ -127,7 +127,8 @@ const getNbKindsByUserId = async (userId) => {
     return Array
         .from(kindsMap, ([kind, occur]) => ({ "label": kind, "value": occur }))
         .sort((a, b) => b.value - a.value)
-        .splice(0, 10);
+        .splice(0, 10)
+        .reverse();
 }
 
 module.exports = {
