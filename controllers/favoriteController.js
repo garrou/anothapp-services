@@ -4,6 +4,10 @@ const router = Router();
 
 router.get("/", favoriteService.getFavorites);
 
-router.post("/", favoriteService.addFavorites);
+router.get("/:showId", favoriteService.getFavorite);
+
+router.post("/", favoriteService.addFavorite);
+
+router.delete("/:showId", favoriteService.deleteFavorite);
 
 module.exports = router;
