@@ -11,8 +11,16 @@ const ApiPerson = require("../models/ApiPerson");
 
 const search = async (title) => {
     const resp = title
-        ? await axios.get(`${betaseries}/shows/search?title=${title}&key=${key}`)
-        : await axios.get(`${betaseries}/shows/discover?limit=20&key=${key}`);
+        ? await axios.get(`${betaseries}/shows/search?title=${title}`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        })
+        : await axios.get(`${betaseries}/shows/discover?limit=20`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        });
     const { shows } = await resp.data;
     return shows.map(show => new ApiShowDetails(show));
 }
@@ -29,7 +37,11 @@ const discoverShows = async (req, res) => {
 const getByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
-        const resp = await axios.get(`${betaseries}/shows/display?id=${showId}&key=${key}`);
+        const resp = await axios.get(`${betaseries}/shows/display?id=${showId}`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        });
         const { show } = await resp.data;
         res.status(200).json(new ApiShowDetails(show));
     } catch (_) {
@@ -40,7 +52,11 @@ const getByShowId = async (req, res) => {
 const getSeasonsByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
-        const resp = await axios.get(`${betaseries}/shows/seasons?id=${showId}&key=${key}`);
+        const resp = await axios.get(`${betaseries}/shows/seasons?id=${showId}`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        });
         const { seasons } = await resp.data;
         res.status(200).json(seasons.map(season => new ApiSeason(season)));
     } catch (_) {
@@ -51,7 +67,11 @@ const getSeasonsByShowId = async (req, res) => {
 const getEpisodesByShowIdBySeason = async (req, res) => {
     try {
         const { showId, num } = req.params;
-        const resp = await axios.get(`${betaseries}/shows/episodes?id=${showId}&season=${num}&key=${key}`);
+        const resp = await axios.get(`${betaseries}/shows/episodes?id=${showId}&season=${num}`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        });
         const { episodes } = await resp.data;
         res.status(200).json(episodes.map(episode => new ApiEpisode(episode)));
     } catch (_) {
@@ -62,7 +82,11 @@ const getEpisodesByShowIdBySeason = async (req, res) => {
 const getCharactersByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
-        const resp = await axios.get(`${betaseries}/shows/characters?id=${showId}&key=${key}`);
+        const resp = await axios.get(`${betaseries}/shows/characters?id=${showId}`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        });
         const { characters } = await resp.data;
         res.status(200).json(characters.map(character => new ApiCharacter(character)));
     } catch (_) {
@@ -73,7 +97,11 @@ const getCharactersByShowId = async (req, res) => {
 const getSimilarsByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
-        const resp = await axios.get(`${betaseries}/shows/similars?id=${showId}&key=${key}`);
+        const resp = await axios.get(`${betaseries}/shows/similars?id=${showId}`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        });
         const { similars } = await resp.data;
         res.status(200).json(similars.map(similar => new ApiSimilarShow(similar)));
     } catch (_) {
@@ -97,7 +125,11 @@ const getKinds = async (_, res) => {
 const getShowsByKind = async (req, res) => {
     try {
         const { kind } = req.params;
-        const resp = await axios.get(`${betaseries}/search/shows?genres=${kind}&key=${key}`);
+        const resp = await axios.get(`${betaseries}/search/shows?genres=${kind}`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        });
         const { shows } = await resp.data;
         const previews = shows.map(s => ({
             id: s.id,
@@ -119,7 +151,11 @@ const getShowsByKind = async (req, res) => {
 const getImagesByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
-        const resp = await axios.get(`${betaseries}/shows/pictures?id=${showId}&key=${key}`);
+        const resp = await axios.get(`${betaseries}/shows/pictures?id=${showId}`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        });
         const { pictures } = await resp.data;
         res.status(200).json(pictures.map(p => p.url));
     } catch (_) {
@@ -130,7 +166,11 @@ const getImagesByShowId = async (req, res) => {
 const getPersonById = async (req, res) => {
     try {
         const { personId } = req.params;
-        const resp = await axios.get(`${betaseries}/persons/person?id=${personId}&key=${key}`);
+        const resp = await axios.get(`${betaseries}/persons/person?id=${personId}`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        });
         const { person } = await resp.data;
         res.status(200).json(new ApiPerson(person));
     } catch (_) {
