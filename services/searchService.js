@@ -37,6 +37,10 @@ const discoverShows = async (req, res) => {
 const getByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
+
+        if (!showId) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         const resp = await axios.get(`${betaseries}/shows/display?id=${showId}`, {
             headers: {
                 "X-BetaSeries-Key": key
@@ -52,6 +56,10 @@ const getByShowId = async (req, res) => {
 const getSeasonsByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
+
+        if (!showId) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         const resp = await axios.get(`${betaseries}/shows/seasons?id=${showId}`, {
             headers: {
                 "X-BetaSeries-Key": key
@@ -67,6 +75,10 @@ const getSeasonsByShowId = async (req, res) => {
 const getEpisodesByShowIdBySeason = async (req, res) => {
     try {
         const { showId, num } = req.params;
+
+        if (!showId || !num) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         const resp = await axios.get(`${betaseries}/shows/episodes?id=${showId}&season=${num}`, {
             headers: {
                 "X-BetaSeries-Key": key
@@ -82,6 +94,10 @@ const getEpisodesByShowIdBySeason = async (req, res) => {
 const getCharactersByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
+
+        if (!showId) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         const resp = await axios.get(`${betaseries}/shows/characters?id=${showId}`, {
             headers: {
                 "X-BetaSeries-Key": key
@@ -97,6 +113,10 @@ const getCharactersByShowId = async (req, res) => {
 const getSimilarsByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
+
+        if (!showId) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         const resp = await axios.get(`${betaseries}/shows/similars?id=${showId}`, {
             headers: {
                 "X-BetaSeries-Key": key
@@ -111,7 +131,11 @@ const getSimilarsByShowId = async (req, res) => {
 
 const getKinds = async (_, res) => {
     try {
-        const resp = await axios.get(`${betaseries}/shows/genres?key=${key}`);
+        const resp = await axios.get(`${betaseries}/shows/genres`, {
+            headers: {
+                "X-BetaSeries-Key": key
+            }
+        });
         const { genres } = await resp.data;
         const kinds = Object.entries(genres)
             .map(entry => new ApiShowKind(entry))
@@ -125,6 +149,10 @@ const getKinds = async (_, res) => {
 const getShowsByKind = async (req, res) => {
     try {
         const { kind } = req.params;
+
+        if (!kind) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         const resp = await axios.get(`${betaseries}/search/shows?genres=${kind}`, {
             headers: {
                 "X-BetaSeries-Key": key
@@ -151,6 +179,10 @@ const getShowsByKind = async (req, res) => {
 const getImagesByShowId = async (req, res) => {
     try {
         const { showId } = req.params;
+
+        if (!showId) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         const resp = await axios.get(`${betaseries}/shows/pictures?id=${showId}`, {
             headers: {
                 "X-BetaSeries-Key": key
@@ -166,6 +198,10 @@ const getImagesByShowId = async (req, res) => {
 const getPersonById = async (req, res) => {
     try {
         const { personId } = req.params;
+
+        if (!personId) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         const resp = await axios.get(`${betaseries}/persons/person?id=${personId}`, {
             headers: {
                 "X-BetaSeries-Key": key
@@ -174,7 +210,7 @@ const getPersonById = async (req, res) => {
         const { person } = await resp.data;
         res.status(200).json(new ApiPerson(person));
     } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue "});
+        res.status(500).json({ "message": "Une erreur est survenue " });
     }
 }
 

@@ -6,7 +6,7 @@ const acceptFriend = async (req, res) => {
         const { userId } = req.body;
 
         if (!userId) {
-            return res.status(404).json({ "message": "Requête invalide" });
+            return res.status(400).json({ "message": "Requête invalide" });
         }
         await friendRepository.acceptFriend(userId, req.user.id);
         res.sendStatus(200);
@@ -20,7 +20,7 @@ const sendFriendRequest = async (req, res) => {
         const { userId } = req.body;
 
         if (!userId) {
-            return res.status(404).json({ "message": "Requête invalide" });
+            return res.status(400).json({ "message": "Requête invalide" });
         }
         const occurence = await friendRepository.checkIfRelationExists(req.user.id, userId);
 
@@ -39,7 +39,7 @@ const deleteFriend = async (req, res) => {
         const { userId } = req.params;
 
         if (!userId) {
-            return res.status(404).json({ "message": "Requête invalide" });
+            return res.status(400).json({ "message": "Requête invalide" });
         }
         await friendRepository.deleteFriend(req.user.id, userId);
         res.sendStatus(204);

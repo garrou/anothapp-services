@@ -14,7 +14,7 @@ const getFavorite = async (req, res) => {
         const { showId } = req.params;
 
         if (!showId) {
-            return res.status(404).json({ "message": "Requête invalide" });
+            return res.status(400).json({ "message": "Requête invalide" });
         }
         const occurence = await favoriteRepository.getFavorite(req.user.id, showId);
         res.status(200).json(occurence === 1);
@@ -28,7 +28,7 @@ const addFavorite = async (req, res) => {
         const { showId } = req.body;
 
         if (!showId) {
-            return res.status(404).json({ "message": "Requête invalide" });
+            return res.status(400).json({ "message": "Requête invalide" });
         }
         await favoriteRepository.addFavorite(req.user.id, showId);
         res.sendStatus(201);
@@ -42,7 +42,7 @@ const deleteFavorite = async (req, res) => {
         const { showId } = req.params;
 
         if (!showId) {
-            return res.status(404).json({ "message": "Requête invalide" });
+            return res.status(400).json({ "message": "Requête invalide" });
         }
         await favoriteRepository.deleteFavorite(req.user.id, showId);
         res.sendStatus(204);

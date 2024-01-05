@@ -11,7 +11,7 @@ const getUser = async (req, res) => {
         const { email } = req.query;
 
         if (!email) { 
-            return res.status(404).json({ "message": "Email invalide" });
+            return res.status(400).json({ "message": "Email invalide" });
         }
         const resp = await userRepository.getUserByEmail(email);
 

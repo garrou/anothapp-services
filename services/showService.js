@@ -12,6 +12,10 @@ const MONTH = ["0", "1", "2", "3", "6", "12"];
 const addShow = async (req, res) => {
     try {
         const { id, title, images, kinds } = req.body;
+
+        if (!id || !title) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         let result = await userShowRepository.getShowByUserIdByShowId(req.user.id, id);
 
         if (result.rowCount === 1) {
@@ -37,6 +41,10 @@ const addShow = async (req, res) => {
 const deleteByShowId = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         await userShowRepository.deleteByUserIdShowId(req.user.id, id);
 
         res.sendStatus(204);
@@ -67,7 +75,12 @@ const getShows = async (req, res) => {
 const addSeasonByShowId = async (req, res) => {
     try {
         const { number, episode, image, duration } = req.body;
-        const result = await seasonRepository.getSeasonByShowIdByNumber(req.params.id, number);
+        const showId = req.params.id;
+
+        if (!number || !episode || !showId || !duration) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        const result = await seasonRepository.getSeasonByShowIdByNumber(showId, number);
         let created = null;
 
         if (result.rowCount === 0) {
@@ -82,7 +95,12 @@ const addSeasonByShowId = async (req, res) => {
 
 const getDistinctByShowId = async (req, res) => {
     try {
-        const resp = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, req.params.id);
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        const resp = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
         res.status(200).json(resp["rows"].map(row => new Season(row)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
@@ -91,7 +109,12 @@ const getDistinctByShowId = async (req, res) => {
 
 const getSeasonInfosByShowIdBySeason = async (req, res) => {
     try {
-        const resp = await userSeasonRepository.getInfosByUserIdByShowId(req.user.id, req.params.id, req.params.num);
+        const { id, num } = req.params;
+
+        if (!id || !num) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        const resp = await userSeasonRepository.getInfosByUserIdByShowId(req.user.id, id, num);
         const infos = resp["rows"].map(e => ({ id: e.id, addedAt: e.added_at }));
         res.status(200).json(infos);
     } catch (_) {
@@ -101,7 +124,12 @@ const getSeasonInfosByShowIdBySeason = async (req, res) => {
 
 const getViewingTimeByShowId = async (req, res) => {
     try {
-        const resp = await userSeasonRepository.getViewingTimeByUserIdByShowId(req.user.id, req.params.id);
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        const resp = await userSeasonRepository.getViewingTimeByUserIdByShowId(req.user.id, id);
         res.status(200).json(resp["rows"][0].time ?? 0);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
@@ -110,7 +138,12 @@ const getViewingTimeByShowId = async (req, res) => {
 
 const getViewingTimeByShowIdBySeason = async (req, res) => {
     try {
-        const resp = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(req.user.id, req.params.id, req.params.num);
+        const { id, num } = req.params;
+
+        if (!id || !num) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        const resp = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(req.user.id, id, num);
         res.status(200).json(resp["rows"][0].time ?? 0);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
@@ -152,6 +185,10 @@ const getShowsToContinue = async (req, res) => {
 const updateWatchingByShowId = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         await userShowRepository.updateWatchingByUserIdByShowId(req.user.id, id);
         res.sendStatus(200);
     } catch (_) {
