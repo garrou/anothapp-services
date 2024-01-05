@@ -5,6 +5,10 @@ const userSeasonRepository = require("../repositories/userSeasonRepository");
 const deleteBySeasonId = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         await seasonRepository.deleteSeasonById(id);
         res.sendStatus(204);
     } catch (_) {
@@ -17,7 +21,7 @@ const getSeasonsByYear = async (req, res) => {
         const { year } = req.query;
         
         if (!year) {
-            return res.sendStatus(400);
+            return res.status(400).json({ "message": "Requête invalide" });
         }
         const resp = await userSeasonRepository.getSeasonsByAddedYear(req.user.id, year);
         res.status(200).json(resp["rows"].map(obj => new Season(obj)));
