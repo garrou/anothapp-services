@@ -20,17 +20,17 @@ const getFavorites = async (userId) => {
 /**
  * @param {string} userId 
  * @param {number} showId
- * @return Promise<QueryResult>
+ * @return Promise<number>
  */
 const getFavorite = async (userId, showId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS total
         FROM favorites
         WHERE user_id = $1 AND show_id = $2
     `, [userId, showId]);
     client.release();
-    return res;
+    return res["rows"][0]["total"];
 }
 
 /**

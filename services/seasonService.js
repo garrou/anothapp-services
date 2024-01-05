@@ -15,6 +15,7 @@ const deleteBySeasonId = async (req, res) => {
 const getSeasonsByYear = async (req, res) => {
     try {
         const { year } = req.query;
+        
         if (!year) {
             return res.sendStatus(400);
         }

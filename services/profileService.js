@@ -1,3 +1,4 @@
+const UserProfile = require("../models/UserProfile");
 const userRepository = require("../repositories/userRepository");
 
 const setProfilePicture = async (req, res) => {
@@ -14,8 +15,8 @@ const getProfile = async (req, res) => {
     try {
         const resp = await userRepository.getUserById(req.user.id);
         return resp.rowCount === 1 
-            ? res.status(200).json(resp["rows"][0])
-            : res.sendStatus(400);
+            ? res.status(200).json(new UserProfile(resp["rows"][0]))
+            : res.status(400).json({ "message": "Profil introuvable" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

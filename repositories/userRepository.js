@@ -22,7 +22,7 @@ const getUserByEmail = async (email) => {
 const getUserById = async (id) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT * 
+        SELECT id, email, picture
         FROM users
         WHERE id = $1
     `, [id]);

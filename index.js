@@ -4,8 +4,9 @@ const cors = require("cors");
 const express = require("express");
 const app = express();
 
-const authController = require("./controllers/authController");
+const userController = require("./controllers/userController");
 const favoriteController = require("./controllers/favoriteController");
+const friendController = require("./controllers/friendController");
 const homeController = require("./controllers/homeController");
 const profileController  = require("./controllers/profileController");
 const searchController = require("./controllers/searchController");
@@ -22,12 +23,13 @@ app.use(cors({
 app.use(express.json());
 
 app.use("/intro", homeController);
-app.use("/auth", authController);
+app.use("/users", userController);
 app.use("/profile", checkJwt, profileController);
 app.use("/search", checkJwt, searchController);
 app.use("/shows", checkJwt, showController);
 app.use("/seasons", checkJwt, seasonController);
 app.use("/stats", checkJwt, statController);
 app.use("/favorites", checkJwt, favoriteController);
+app.use("/friends", checkJwt, friendController);
 
 app.listen(process.env.PORT);

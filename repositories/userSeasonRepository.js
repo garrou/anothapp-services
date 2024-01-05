@@ -252,7 +252,7 @@ const getTotalSeasonsByUserId = async (userId) => {
         WHERE user_id = $1 
     `, [userId]);
     client.release();
-    return res["rows"][0].total;
+    return res["rows"][0]["total"];
 }
 
 /**

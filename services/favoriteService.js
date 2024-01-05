@@ -12,9 +12,8 @@ const getFavorites = async (req, res) => {
 const getFavorite = async (req, res) => {
     try {
         const { showId } = req.params;
-        const resp = await favoriteRepository.getFavorite(req.user.id, showId);
-        const isFavorite = parseInt(resp["rows"][0]["count"]) === 1;
-        res.status(200).json(isFavorite);
+        const occurence = await favoriteRepository.getFavorite(req.user.id, showId);
+        res.status(200).json(occurence === 1);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
