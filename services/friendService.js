@@ -19,7 +19,7 @@ const sendFriendRequest = async (req, res) => {
             return res.status(404).json({ "message": "Requête invalide" });
         }
         const occurence = await friendRepository.checkIfRelationExists(req.user.id, userId);
-        
+
         if (occurence === 1) { 
             return res.status(409).json({ "message": "Vous êtes déjà amis avec cet utilisateur" });
         }
@@ -44,20 +44,23 @@ const getFriends = async (req, res) => {
         let response = null;
 
         switch (status) {
-            case "pending":
-                response = await friendRepository.getFriends(req.user.id, false);
+            case "send":
+                response = (await friendRepository.getFriendsRequestsSend(req.user.id))["rows"]
+                    .map(user => new UserProfile(user));
+                break;
+            case "receive":
+                response = (await friendRepository.getFriendsRequestsReceive(req.user.id))["rows"]
+                    .map(user => new UserProfile(user));
                 break;
             case "friend":
-                response = await friendRepository.getFriends(req.user.id, true);
+                response = (await friendRepository.getFriends(req.user.id))["rows"]
+                    .map(user => new UserProfile(user))
+                    .filter(user => user.id !== req.user.id);
                 break;
             default:
                 throw new Error("Invalid type");
         }
-        res.status(200).json(
-            response["rows"]
-                .map(user => new UserProfile(user))
-                .filter(user => user.id !== req.user.id)
-        );
+        res.status(200).json(response);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

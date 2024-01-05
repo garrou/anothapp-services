@@ -33,18 +33,48 @@ const updateFriendRequest = async (userId, otherId) => {
 
 /**
  * @param {string} userId 
- * @param {boolean} isValidated
  * @returns Promise<QueryResult>
  */
-const getFriends = async (userId, isValidated) => {
+const getFriends = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
         SELECT u.id, u.email, u.picture
         FROM friends
         JOIN users u ON id = fst_user_id OR id = sec_user_id
-        WHERE (fst_user_id = $1 OR sec_user_id = $1)
-        AND VALIDATED = $2
-    `, [userId, isValidated]);
+        WHERE (fst_user_id = $1 OR sec_user_id = $1) AND validated = TRUE
+    `, [userId]);
+    client.release();
+    return res;
+}
+
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
+const getFriendsRequestsSend = async (userId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT u.id, u.email, u.picture
+        FROM friends
+        JOIN users u ON id = sec_user_id
+        WHERE fst_user_id = $1 AND validated = FALSE
+    `, [userId]);
+    client.release();
+    return res;
+}
+
+/**
+ * @param {string} userId 
+ * @returns Promise<QueryResult>
+ */
+const getFriendsRequestsReceive = async (userId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT u.id, u.email, u.picture
+        FROM friends
+        JOIN users u ON id = fst_user_id
+        WHERE sec_user_id = $1 AND validated = FALSE
+    `, [userId]);
     client.release();
     return res;
 }
@@ -64,6 +94,8 @@ const sendFriendRequest = async (userId, otherId) => {
 
 module.exports = {
     checkIfRelationExists,
+    getFriendsRequestsSend,
+    getFriendsRequestsReceive,
     updateFriendRequest,
     sendFriendRequest,
     getFriends
