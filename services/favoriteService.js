@@ -12,6 +12,10 @@ const getFavorites = async (req, res) => {
 const getFavorite = async (req, res) => {
     try {
         const { showId } = req.params;
+
+        if (!showId) {
+            return res.status(404).json({ "message": "Requête invalide" });
+        }
         const occurence = await favoriteRepository.getFavorite(req.user.id, showId);
         res.status(200).json(occurence === 1);
     } catch (_) {
@@ -22,6 +26,10 @@ const getFavorite = async (req, res) => {
 const addFavorite = async (req, res) => {
     try {
         const { showId } = req.body;
+
+        if (!showId) {
+            return res.status(404).json({ "message": "Requête invalide" });
+        }
         await favoriteRepository.addFavorite(req.user.id, showId);
         res.sendStatus(201);
     } catch (_) {
@@ -32,6 +40,10 @@ const addFavorite = async (req, res) => {
 const deleteFavorite = async (req, res) => {
     try {
         const { showId } = req.params;
+
+        if (!showId) {
+            return res.status(404).json({ "message": "Requête invalide" });
+        }
         await favoriteRepository.deleteFavorite(req.user.id, showId);
         res.sendStatus(204);
     } catch (_) {
