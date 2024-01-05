@@ -4,6 +4,10 @@ const userRepository = require("../repositories/userRepository");
 const setProfilePicture = async (req, res) => {
     try {
         const { image } = req.body;
+
+        if (!image || typeof str !== "string" || str.trim().length === 0) {
+            return res.status(404).json({ "message": "Image invalide" });
+        }
         await userRepository.updatePicture(req.user.id, image);
         res.status(200).json({ "message": "Image de profil définie" });
     } catch (_) {
