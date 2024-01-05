@@ -1,10 +1,10 @@
 const UserProfile = require("../models/UserProfile");
 const friendRepository = require("../repositories/friendRepository");
 
-const updateFriendRequest = async (req, res) => {
+const acceptFriend = async (req, res) => {
     try {
         const { userId } = req.body;
-        await friendRepository.updateFriendRequest(userId, req.user.id);
+        await friendRepository.acceptFriend(userId, req.user.id);
         res.sendStatus(200);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
@@ -30,9 +30,11 @@ const sendFriendRequest = async (req, res) => {
     }
 }
 
-const getFriend = (req, res) => {
+const deleteFriend = async (req, res) => {
     try {
-
+        const { userId } = req.params;
+        await friendRepository.deleteFriend(req.user.id, userId);
+        res.sendStatus(204);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -67,8 +69,8 @@ const getFriends = async (req, res) => {
 }
 
 module.exports = {
-    getFriend,
+    deleteFriend,
     getFriends,
-    updateFriendRequest,
+    acceptFriend,
     sendFriendRequest
 }

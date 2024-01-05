@@ -7,8 +7,8 @@ router.get("/", friendService.getFriends);
 
 router.post("/", friendService.sendFriendRequest);
 
-router.get("/:userId", friendService.getFriend);
+router.patch("/:userId", friendService.acceptFriend);
 
-router.patch("/:userId", friendService.updateFriendRequest);
+router.delete("/:userId", friendService.deleteFriend);
 
 module.exports = router;

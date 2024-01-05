@@ -21,12 +21,13 @@ const checkIfRelationExists = async (userId, otherId) => {
  * @param {string} userId 
  * @param {string} otherId 
  */
-const updateFriendRequest = async (userId, otherId) => {
+const acceptFriend = async (userId, otherId) => {
     const client = await pool.connect();
     await client.query(`
         UPDATE friends
-        SET validated = NOT validated
-        WHERE fst_user_id = $1 AND sec_user_id = $2
+        SET validated = TRUE
+        WHERE (fst_user_id = $1 AND sec_user_id = $2)
+        OR (fst_user_id = $2 AND sec_user_id = $1)
     `, [userId, otherId]);
     client.release();
 }
@@ -92,11 +93,22 @@ const sendFriendRequest = async (userId, otherId) => {
     client.release();
 }
 
+const deleteFriend = async (userId, otherId) => {
+    const client = await pool.connect();
+    await client.query(`
+        DELETE FROM friends
+        WHERE (fst_user_id = $1 AND sec_user_id = $2)
+        OR (fst_user_id = $2 AND sec_user_id = $1)
+    `, [userId, otherId]);
+    client.release();
+}
+
 module.exports = {
     checkIfRelationExists,
+    deleteFriend,
     getFriendsRequestsSend,
     getFriendsRequestsReceive,
-    updateFriendRequest,
+    acceptFriend,
     sendFriendRequest,
     getFriends
 }
