@@ -84,23 +84,24 @@ const addSeasonByShowId = async (req, res) => {
         let created = null;
 
         if (result.rowCount === 0) {
-            created = await seasonRepository.createSeason(episode, number, image, req.params.id, duration);
+            created = await seasonRepository.createSeason(episode, number, image, showId, duration);
         }
-        await userSeasonRepository.create(req.user.id, req.params.id, number);
+        await userSeasonRepository.create(req.user.id, showId, number);
         res.status(201).json(result.rowCount === 1 ? result["rows"][0] : created);
-    } catch (_) {
+    } catch (e) {
+        console.log(e)
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
 const getDistinctByShowId = async (req, res) => {
     try {
-        const { id } = req.params;
+        const showId = req.params.id;
 
-        if (!id) {
+        if (!showId) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        const resp = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
+        const resp = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, showId);
         res.status(200).json(resp["rows"].map(row => new Season(row)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
