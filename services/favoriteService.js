@@ -2,22 +2,29 @@ const favoriteRepository = require("../repositories/favoriteRepository");
 
 const getFavorites = async (req, res) => {
     try {
-        const resp = await favoriteRepository.getFavorites(req.user.id);
+        const { id } = req.query;
+        const userId = id ?? req.user.id;
+        
+        if (!userId) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        const resp = await favoriteRepository.getFavorites(userId);
         res.status(200).json(resp["rows"]);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
-const getFavorite = async (req, res) => {
+const isFavorite = async (req, res) => {
     try {
         const { showId } = req.params;
 
         if (!showId) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        const occurence = await favoriteRepository.getFavorite(req.user.id, showId);
-        res.status(200).json(occurence === 1);
+        const isFavorite = await favoriteRepository.isFavorite(req.user.id, showId);
+        console.log(isFavorite)
+        res.status(200).json(isFavorite);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -54,6 +61,6 @@ const deleteFavorite = async (req, res) => {
 module.exports = {
     addFavorite,
     deleteFavorite,
-    getFavorite,
-    getFavorites
+    getFavorites,
+    isFavorite,
 };

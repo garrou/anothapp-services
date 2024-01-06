@@ -3,18 +3,19 @@ const userShowRepository = require("../repositories/userShowRepository");
 
 const getCountByType = async (req, res) => {
     try {
-        const { type } = req.query;
+        const { type, id } = req.query;
+        const userId = id ?? req.user.id;
         let response = null;
 
         switch (type) {
             case "shows":
-                response = (await userShowRepository.getByUserId(req.user.id)).rowCount;
+                response = (await userShowRepository.getByUserId(userId)).rowCount;
                 break;
             case "episodes":
-                response = (await userSeasonRepository.getTotalEpisodesByUserId(req.user.id));
+                response = (await userSeasonRepository.getTotalEpisodesByUserId(userId));
                 break;
             case "seasons":
-                response = (await userSeasonRepository.getTotalSeasonsByUserId(req.user.id));
+                response = (await userSeasonRepository.getTotalSeasonsByUserId(userId));
                 break;
             default:
                 throw new Error("Invalid type");
@@ -27,24 +28,25 @@ const getCountByType = async (req, res) => {
 
 const getTimeByType = async (req, res) => {
     try {
-        const { type } = req.query;
+        const { type, id } = req.query;
+        const userId = id ?? req.user.id;
         let response = null;
 
         switch (type) {
             case "total":
-                response = (await userSeasonRepository.getTotalTimeByUserId(req.user.id))["rows"][0]["time"];
+                response = (await userSeasonRepository.getTotalTimeByUserId(userId));
                 break;
             case "years":
-                response = (await userSeasonRepository.getTimeHourByUserIdGroupByYear(req.user.id))["rows"];
+                response = (await userSeasonRepository.getTimeHourByUserIdGroupByYear(userId))["rows"];
                 break;
             case "month":
-                response = (await userSeasonRepository.getTimeCurrentMonthByUserId(req.user.id))["rows"][0].time;
+                response = (await userSeasonRepository.getTimeCurrentMonthByUserId(userId));
                 break;
             case "best-month":
-                response = (await userSeasonRepository.getRecordViewingTimeMonth(req.user.id))["rows"][0];
+                response = (await userSeasonRepository.getRecordViewingTimeMonth(userId))["rows"][0];
                 break;
             case "rank":
-                response = (await userSeasonRepository.getRankingViewingTimeByShows(req.user.id))["rows"].reverse();
+                response = (await userSeasonRepository.getRankingViewingTimeByShows(userId))["rows"].reverse();
                 break;
             default:
                 throw new Error("Invalid type");
@@ -57,18 +59,19 @@ const getTimeByType = async (req, res) => {
 
 const getCountGroupedByTypeByPeriod = async (req, res) => {
     try {
-        const { type, period } = req.query;
+        const { type, period, id } = req.query;
+        const userId = id ?? req.user.id;
         let response = null;
 
         switch (type) {
             case "seasons":
-                response = await getNbSeasonsByUserIdByPeriod(req.user.id, period);
+                response = await getNbSeasonsByUserIdByPeriod(userId, period);
                 break;
             case "episodes":
-                response = await getNbEpisodesByUserIdByPeriod(req.user.id, period);
+                response = await getNbEpisodesByUserIdByPeriod(userId, period);
                 break;
             case "kinds":
-                response = await getNbKindsByUserId(req.user.id);
+                response = await getNbKindsByUserId(userId);
                 break;
             default:
                 throw new Error("Invalid type");

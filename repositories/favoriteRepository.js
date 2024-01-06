@@ -22,7 +22,7 @@ const getFavorites = async (userId) => {
  * @param {number} showId
  * @return Promise<number>
  */
-const getFavorite = async (userId, showId) => {
+const isFavorite = async (userId, showId) => {
     const client = await pool.connect();
     const res = await client.query(`
         SELECT COUNT(*) AS total
@@ -30,7 +30,7 @@ const getFavorite = async (userId, showId) => {
         WHERE user_id = $1 AND show_id = $2
     `, [userId, showId]);
     client.release();
-    return res["rows"][0]["total"];
+    return parseInt(res["rows"][0]["total"]) === 1;
 }
 
 /**
@@ -62,6 +62,6 @@ const deleteFavorite = async (userId, showId) => {
 module.exports = {
     addFavorite,
     deleteFavorite,
-    getFavorite,
-    getFavorites
+    getFavorites,
+    isFavorite,
 }

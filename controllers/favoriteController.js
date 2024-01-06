@@ -4,7 +4,7 @@ const router = Router();
 
 router.get("/", favoriteService.getFavorites);
 
-router.get("/:showId", favoriteService.getFavorite);
+router.get("/:showId", favoriteService.isFavorite);
 
 router.post("/", favoriteService.addFavorite);
 

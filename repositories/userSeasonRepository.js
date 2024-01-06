@@ -125,7 +125,7 @@ const getTotalTimeByUserId = async (userId) => {
         WHERE user_id = $1
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"][0]["time"];
 }
 
 /**
@@ -183,7 +183,7 @@ const getTimeCurrentMonthByUserId = async (userId) => {
         AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"][0]["time"];
 }
 
 /**

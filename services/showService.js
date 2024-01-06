@@ -88,8 +88,7 @@ const addSeasonByShowId = async (req, res) => {
         }
         await userSeasonRepository.create(req.user.id, showId, number);
         res.status(201).json(result.rowCount === 1 ? result["rows"][0] : created);
-    } catch (e) {
-        console.log(e)
+    } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }

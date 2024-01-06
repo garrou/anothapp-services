@@ -8,7 +8,6 @@ const userController = require("./controllers/userController");
 const favoriteController = require("./controllers/favoriteController");
 const friendController = require("./controllers/friendController");
 const homeController = require("./controllers/homeController");
-const profileController  = require("./controllers/profileController");
 const searchController = require("./controllers/searchController");
 const seasonController = require("./controllers/seasonController");
 const showController = require("./controllers/showController");
@@ -24,7 +23,6 @@ app.use(express.json());
 
 app.use("/intro", homeController);
 app.use("/users", userController);
-app.use("/profile", checkJwt, profileController);
 app.use("/search", checkJwt, searchController);
 app.use("/shows", checkJwt, showController);
 app.use("/seasons", checkJwt, seasonController);

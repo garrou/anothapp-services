@@ -68,8 +68,37 @@ const register = async (req, res) => {
     }
 }
 
+const setProfilePicture = async (req, res) => {
+    try {
+        const { image } = req.body;
+
+        if (typeof image !== "string" || image.trim().length === 0) {
+            return res.status(400).json({ "message": "Image invalide" });
+        }
+        await userRepository.updatePicture(req.user.id, image);
+        res.status(200).json({ "message": "Image de profil définie" });
+    } catch (_) {
+        res.status(500).json({ "message": "Une erreur est survenue" });
+    }
+}
+
+const getProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = id ?? req.user.id;
+        const resp = await userRepository.getUserById(userId);
+        return resp.rowCount === 1 
+            ? res.status(200).json(new UserProfile(resp["rows"][0]))
+            : res.status(400).json({ "message": "Profil introuvable" });
+    } catch (_) {
+        res.status(500).json({ "message": "Une erreur est survenue" });
+    }
+}
+
 module.exports = { 
     getUser,
+    getProfile,
+    setProfilePicture,
     register, 
     login, 
     checkUser,
