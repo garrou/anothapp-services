@@ -3,17 +3,17 @@ const pool = require('../helpers/db');
 /**
  * @param {string} userId 
  * @param {number} showId 
- * @returns Promise<QueryResult>
+ * @returns Promise<boolean>
  */
-const getShowByUserIdByShowId = async (userId, showId) => {
+const checkShowExistsByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT show_id
+        SELECT COUNT(*) AS total
         FROM users_shows
         WHERE user_id = $1 AND show_id = $2
     `, [userId, showId]);
     client.release();
-    return res;
+    return parseInt(res["rows"][0]["total"]) === 1;
 }
 
 /**
@@ -45,7 +45,7 @@ const deleteByUserIdShowId = async (userId, showId) => {
 /**
  * @param {string} userId
  * @param {number} limit
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getShowsByUserId = async (userId, limit) => {
     const client = await pool.connect();
@@ -58,13 +58,13 @@ const getShowsByUserId = async (userId, limit) => {
         LIMIT $2
     `, [userId, limit]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
  * @param {string} title
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getShowsByUserIdByTitle = async (userId, title) => {
     const client = await pool.connect();
@@ -77,46 +77,27 @@ const getShowsByUserIdByTitle = async (userId, title) => {
         ORDER BY added_at DESC
     `, [userId, `%${title}%`]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<number>
  */
-const getByUserId = async (userId) => {
+const getTotalShowsByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT show_id
+        SELECT COUNT(*) AS total
         FROM users_shows
         WHERE user_id = $1
     `, [userId]);
     client.release();
-    return res;
+    return parseInt(res["rows"][0]["total"]);
 }
 
 /**
  * @param {string} userId 
- * @param {boolean} isContinue 
- * @returns Promise<QueryResult>
- */
-const getByUserIdByContinue = async (userId, isContinue) => {
-    const client = await pool.connect();
-    const res = await client.query(`
-        SELECT shows.id AS id, title, poster, MAX(number) AS number
-        FROM users_shows
-        JOIN users_seasons ON users_seasons.show_id = users_shows.show_id
-        JOIN shows ON users_shows.show_id = shows.id
-        WHERE users_shows.user_id = $1 AND users_shows.continue = $2
-        GROUP BY shows.id, title, poster
-    `, [userId, isContinue]);
-    client.release();
-    return res;
-}
-
-/**
- * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getNotStartedShowsByUserId = async (userId) => {
     const client = await pool.connect();
@@ -133,7 +114,7 @@ const getNotStartedShowsByUserId = async (userId) => {
         );
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
@@ -153,7 +134,7 @@ const updateWatchingByUserIdByShowId = async (userId, showId) => {
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getShowsToResumeByUserId = async (userId) => {
     const client = await pool.connect();
@@ -166,12 +147,12 @@ const getShowsToResumeByUserId = async (userId) => {
         ORDER BY title
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getKindsByUserId = async (userId) => {
     const client = await pool.connect();
@@ -182,13 +163,13 @@ const getKindsByUserId = async (userId) => {
         WHERE users_shows.user_id = $1 
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
  * @param {string} kind 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getShowsByUserIdByKind = async (userId, kind) => {
     const client = await pool.connect();
@@ -200,20 +181,19 @@ const getShowsByUserIdByKind = async (userId, kind) => {
         AND kinds LIKE $2
     `, [userId, `%${kind}%`]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 module.exports = {
+    checkShowExistsByUserIdByShowId,
     create,
     deleteByUserIdShowId,
     getKindsByUserId,
     getNotStartedShowsByUserId,
     getShowsByUserId,
     getShowsByUserIdByKind,
-    getShowByUserIdByShowId,
     getShowsByUserIdByTitle,
-    getByUserId,
-    getByUserIdByContinue,
+    getTotalShowsByUserId,
     getShowsToResumeByUserId,
     updateWatchingByUserIdByShowId
 }

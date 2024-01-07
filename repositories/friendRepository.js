@@ -34,7 +34,7 @@ const acceptFriend = async (userId, otherId) => {
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getFriends = async (userId) => {
     const client = await pool.connect();
@@ -45,12 +45,12 @@ const getFriends = async (userId) => {
         WHERE (fst_user_id = $1 OR sec_user_id = $1) AND accepted = TRUE
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getFriendsRequestsSend = async (userId) => {
     const client = await pool.connect();
@@ -61,12 +61,12 @@ const getFriendsRequestsSend = async (userId) => {
         WHERE fst_user_id = $1 AND accepted = FALSE
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getFriendsRequestsReceive = async (userId) => {
     const client = await pool.connect();
@@ -77,7 +77,7 @@ const getFriendsRequestsReceive = async (userId) => {
         WHERE sec_user_id = $1 AND accepted = FALSE
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
@@ -93,6 +93,10 @@ const sendFriendRequest = async (userId, otherId) => {
     client.release();
 }
 
+/**
+ * @param {string} userId 
+ * @param {string} otherId
+ */
 const deleteFriend = async (userId, otherId) => {
     const client = await pool.connect();
     await client.query(`
@@ -103,6 +107,11 @@ const deleteFriend = async (userId, otherId) => {
     client.release();
 }
 
+/**
+ * @param {string} userId 
+ * @param {string} otherId
+ * @returns Promise<boolean>
+ */
 const checkAreFriends = async (userId, otherId) => {
     const client = await pool.connect();
     const res = await client.query(`

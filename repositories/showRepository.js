@@ -2,17 +2,17 @@ const pool = require('../helpers/db');
 
 /**
  * @param {number} id 
- * @returns Promise<QueryResult> 
+ * @returns Promise<boolean> 
  */
-const getShowById = async (id) => {
+const isNewShow = async (id) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT *
+        SELECT COUNT(*) AS total
         FROM shows
         WHERE id = $1
     `, [id]);
     client.release();
-    return res;
+    return parseInt(res["rows"][0]["total"]) === 0;
 }
 
 /**
@@ -31,6 +31,6 @@ const createShow = async (id, title, poster, kinds) => {
 }
 
 module.exports = {
-    getShowById,
-    createShow
+    createShow,
+    isNewShow
 }

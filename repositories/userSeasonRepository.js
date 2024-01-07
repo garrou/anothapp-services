@@ -3,24 +3,6 @@ const pool = require('../helpers/db');
 /**
  * @param {string} userId 
  * @param {number} showId 
- * @returns Promise<QueryResult>
- */
-const getByUserIdByShowId = async (userId, showId) => {
-    const client = await pool.connect();
-    const res = await client.query(`
-        SELECT *
-        FROM users_seasons
-        JOIN seasons ON seasons.show_id = users_seasons.show_id
-        AND seasons.number = users_seasons.number
-        WHERE users_seasons.user_id = $1 AND users_seasons.show_id = $2
-    `, [userId, showId]);
-    client.release();
-    return res;
-}
-
-/**
- * @param {string} userId 
- * @param {number} showId 
  * @param {number} number 
  */
 const create = async (userId, showId, number) => {
@@ -35,7 +17,7 @@ const create = async (userId, showId, number) => {
 /**
  * @param {string} userId 
  * @param {number} showId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getDistinctByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
@@ -48,14 +30,14 @@ const getDistinctByUserIdByShowId = async (userId, showId) => {
         ORDER BY users_seasons.number
     `, [userId, showId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
  * @param {number} showId 
  * @param {number} number 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getInfosByUserIdByShowId = async (userId, showId, number) => {
     const client = await pool.connect();
@@ -68,13 +50,13 @@ const getInfosByUserIdByShowId = async (userId, showId, number) => {
         ORDER BY added_at
     `, [userId, showId, number]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
  * @param {number} showId 
- * @returns Promise<QueryResult>
+ * @returns Promise<number>
  */
 const getViewingTimeByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
@@ -87,14 +69,14 @@ const getViewingTimeByUserIdByShowId = async (userId, showId) => {
         AND users_seasons.show_id = $2
     `, [userId, showId]);
     client.release();
-    return res;
+    return parseInt(res["rows"][0]["time"]);
 }
 
 /**
  * @param {string} userId 
  * @param {number} showId 
  * @param {number} number
- * @returns Promise<QueryResult>
+ * @returns Promise<number>
  */
 const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) => {
     const client = await pool.connect();
@@ -108,12 +90,12 @@ const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) =>
         AND users_seasons.number = $3
     `, [userId, showId, number]);
     client.release();
-    return res;
+    return parseInt(res["rows"][0]["time"]);
 }
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<number>
  */
 const getTotalTimeByUserId = async (userId) => {
     const client = await pool.connect();
@@ -130,7 +112,7 @@ const getTotalTimeByUserId = async (userId) => {
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getNbSeasonsByUserIdGroupByYear = async (userId) => {
     const client = await pool.connect();
@@ -145,12 +127,12 @@ const getNbSeasonsByUserIdGroupByYear = async (userId) => {
         ORDER BY label
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getTimeHourByUserIdGroupByYear = async (userId) => {
     const client = await pool.connect();
@@ -165,7 +147,7 @@ const getTimeHourByUserIdGroupByYear = async (userId) => {
         ORDER BY label
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
@@ -188,7 +170,7 @@ const getTimeCurrentMonthByUserId = async (userId) => {
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getNbSeasonsByUserIdGroupByMonth = async (userId) => {
     const client = await pool.connect();
@@ -200,12 +182,12 @@ const getNbSeasonsByUserIdGroupByMonth = async (userId) => {
         ORDER BY num
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getNbEpisodesByUserIdGroupByYear = async (userId) => {
     const client = await pool.connect();
@@ -220,12 +202,12 @@ const getNbEpisodesByUserIdGroupByYear = async (userId) => {
         ORDER BY label
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<number>
  */
 const getTotalEpisodesByUserId = async (userId) => {
     const client = await pool.connect();
@@ -258,7 +240,7 @@ const getTotalSeasonsByUserId = async (userId) => {
 /**
  * @param {string} userId 
  * @param {number} month
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getViewedByMonthAgo = async (userId, month) => {
     const client = await pool.connect();
@@ -273,12 +255,12 @@ const getViewedByMonthAgo = async (userId, month) => {
         ORDER BY added_at DESC
     `, [userId, month]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getRankingViewingTimeByShows = async (userId) => {
     const client = await pool.connect();
@@ -294,12 +276,12 @@ const getRankingViewingTimeByShows = async (userId) => {
         LIMIT 10
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult> 
+ * @returns Promise<any> 
  */
 const getRecordViewingTimeMonth = async (userId) => {
     const client = await pool.connect();
@@ -314,12 +296,13 @@ const getRecordViewingTimeMonth = async (userId) => {
         LIMIT 1
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"][0];
 }
 
 /**
  * @param {string} userId
  * @param {number} year
+ * @returns Promise<any[]>
  */
 const getSeasonsByAddedYear = async (userId, year) => {
     const client = await pool.connect();
@@ -332,12 +315,11 @@ const getSeasonsByAddedYear = async (userId, year) => {
         ORDER BY added_at, number
     `, [userId, year]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 module.exports = {
     create,
-    getByUserIdByShowId,
     getDistinctByUserIdByShowId,
     getNbEpisodesByUserIdGroupByYear,
     getNbSeasonsByUserIdGroupByMonth,

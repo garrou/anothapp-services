@@ -2,7 +2,7 @@ const pool = require('../helpers/db');
 
 /**
  * @param {string} userId 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getShowsToContinueByUserId = async (userId) => {
     const client = await pool.connect();
@@ -14,7 +14,7 @@ const getShowsToContinueByUserId = async (userId) => {
         ORDER BY title
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 module.exports = {

@@ -13,12 +13,12 @@ const getUser = async (req, res) => {
         if (!email) { 
             return res.status(400).json({ "message": "Email invalide" });
         }
-        const resp = await userRepository.getUserByEmail(email);
+        const rows = await userRepository.getUserByEmail(email);
 
-        if (resp.rowCount === 0) {
+        if (rows === 0) {
             return res.status(404).json({ "message": "Aucun résultat" });
         }
-        res.status(200).json(resp["rows"].map(user => new UserProfile(user)));
+        res.status(200).json(rows.map(user => new UserProfile(user)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -27,17 +27,17 @@ const getUser = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const resp = await userRepository.getUserByEmail(email.toLowerCase());
+        const rows = await userRepository.getUserByEmail(email.toLowerCase());
 
-        if (resp.rowCount === 0) {
+        if (rows.length === 0) {
             return res.status(400).json({ "message": "Email ou mot de passe incorrect" });
         }
-        const same = await comparePassword(password, resp["rows"][0].password);
+        const same = await comparePassword(password, rows[0]["password"]);
 
         if (!same) {
             return res.status(400).json({ "message": "Email ou mot de passe incorrect" });
         }
-        const token = signJwt(resp["rows"][0].id, process.env.JWT_SECRET);
+        const token = signJwt(rows[0]["id"], process.env.JWT_SECRET);
         res.status(200).json({ "token": token });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
@@ -86,9 +86,9 @@ const getProfile = async (req, res) => {
     try {
         const { id } = req.params;
         const userId = id ?? req.user.id;
-        const resp = await userRepository.getUserById(userId);
-        return resp.rowCount === 1 
-            ? res.status(200).json(new UserProfile(resp["rows"][0]))
+        const rows = await userRepository.getUserById(userId);
+        return rows.length === 1 
+            ? res.status(200).json(new UserProfile(rows[0]))
             : res.status(400).json({ "message": "Profil introuvable" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });

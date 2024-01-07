@@ -51,26 +51,26 @@ const deleteFriend = async (req, res) => {
 const getFriends = async (req, res) => {
     try {
         const { status } = req.query;
-        let response = null;
+        let rows = [];
 
         switch (status) {
             case "send":
-                response = (await friendRepository.getFriendsRequestsSend(req.user.id))["rows"]
+                rows = (await friendRepository.getFriendsRequestsSend(req.user.id))
                     .map(user => new UserProfile(user));
                 break;
             case "receive":
-                response = (await friendRepository.getFriendsRequestsReceive(req.user.id))["rows"]
+                rows = (await friendRepository.getFriendsRequestsReceive(req.user.id))
                     .map(user => new UserProfile(user));
                 break;
             case "friend":
-                response = (await friendRepository.getFriends(req.user.id))["rows"]
+                rows = (await friendRepository.getFriends(req.user.id))
                     .map(user => new UserProfile(user))
                     .filter(user => user.id !== req.user.id);
                 break;
             default:
                 throw new Error("Invalid type");
         }
-        res.status(200).json(response);
+        res.status(200).json(rows);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

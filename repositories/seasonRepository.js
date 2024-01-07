@@ -15,7 +15,7 @@ const deleteSeasonById = async (id) => {
 /**
  * @param {number} showId 
  * @param {number} number 
- * @returns Promise<QueryResult>
+ * @returns Promise<any[]>
  */
 const getSeasonByShowIdByNumber = async (showId, number) => {
     const client = await pool.connect();
@@ -25,7 +25,7 @@ const getSeasonByShowIdByNumber = async (showId, number) => {
         WHERE show_id = $1 AND number = $2
     `, [showId, number]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**

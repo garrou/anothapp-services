@@ -2,7 +2,7 @@ const pool = require('../helpers/db');
 
 /**
  * @param {string} userId 
- * @return Promise<QueryResult>
+ * @return Promise<any[]>
  */
 const getFavorites = async (userId) => {
     const client = await pool.connect();
@@ -14,13 +14,13 @@ const getFavorites = async (userId) => {
         ORDER BY s.title
     `, [userId]);
     client.release();
-    return res;
+    return res["rows"];
 }
 
 /**
  * @param {string} userId 
  * @param {number} showId
- * @return Promise<number>
+ * @return Promise<boolean>
  */
 const isFavorite = async (userId, showId) => {
     const client = await pool.connect();

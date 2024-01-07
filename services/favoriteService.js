@@ -4,8 +4,8 @@ const getFavorites = async (req, res) => {
     try {
         const { id } = req.query;
         const userId = id ?? req.user.id;
-        const resp = await favoriteRepository.getFavorites(userId);
-        res.status(200).json(resp["rows"]);
+        const rows = await favoriteRepository.getFavorites(userId);
+        res.status(200).json(rows);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

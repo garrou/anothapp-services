@@ -10,17 +10,14 @@ const ApiShowKind = require("../models/ApiShowKind");
 const ApiPerson = require("../models/ApiPerson");
 
 const search = async (title) => {
-    const resp = title
-        ? await axios.get(`${betaseries}/shows/search?title=${title}`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
-        })
-        : await axios.get(`${betaseries}/shows/discover?limit=20`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
-        });
+    const url = title 
+        ? `${betaseries}/shows/search?title=${title}` 
+        : `${betaseries}/shows/discover?limit=20`;
+    const resp = await axios.get(url, {
+        headers: {
+            "X-BetaSeries-Key": key
+        }
+    });
     const { shows } = await resp.data;
     return shows.map(show => new ApiShowDetails(show));
 }

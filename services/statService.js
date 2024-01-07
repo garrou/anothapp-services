@@ -5,22 +5,22 @@ const getCountByType = async (req, res) => {
     try {
         const { type, id } = req.query;
         const userId = id ?? req.user.id;
-        let response = null;
+        let total = 0;
 
         switch (type) {
             case "shows":
-                response = (await userShowRepository.getByUserId(userId)).rowCount;
+                total = await userShowRepository.getTotalShowsByUserId(userId);
                 break;
             case "episodes":
-                response = await userSeasonRepository.getTotalEpisodesByUserId(userId);
+                total = await userSeasonRepository.getTotalEpisodesByUserId(userId);
                 break;
             case "seasons":
-                response = await userSeasonRepository.getTotalSeasonsByUserId(userId);
+                total = await userSeasonRepository.getTotalSeasonsByUserId(userId);
                 break;
             default:
                 throw new Error("Invalid type");
         }
-        res.status(200).json(response);
+        res.status(200).json(total);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -37,16 +37,16 @@ const getTimeByType = async (req, res) => {
                 response = await userSeasonRepository.getTotalTimeByUserId(userId);
                 break;
             case "years":
-                response = (await userSeasonRepository.getTimeHourByUserIdGroupByYear(userId))["rows"];
+                response = (await userSeasonRepository.getTimeHourByUserIdGroupByYear(userId));
                 break;
             case "month":
                 response = await userSeasonRepository.getTimeCurrentMonthByUserId(userId);
                 break;
             case "best-month":
-                response = (await userSeasonRepository.getRecordViewingTimeMonth(userId))["rows"][0];
+                response = await userSeasonRepository.getRecordViewingTimeMonth(userId);
                 break;
             case "rank":
-                response = (await userSeasonRepository.getRankingViewingTimeByShows(userId))["rows"].reverse();
+                response = (await userSeasonRepository.getRankingViewingTimeByShows(userId)).reverse();
                 break;
             default:
                 throw new Error("Invalid type");
@@ -90,9 +90,9 @@ const getCountGroupedByTypeByPeriod = async (req, res) => {
 const getNbSeasonsByUserIdByPeriod = async (userId, period) => {
     switch (period) {
         case "years":
-            return (await userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId))["rows"];
+            return await userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId);
         case "months":
-            return (await userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId))["rows"];
+            return await userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId);
         default:
             throw new Error("Invalid period");
     }
@@ -106,7 +106,7 @@ const getNbSeasonsByUserIdByPeriod = async (userId, period) => {
 const getNbEpisodesByUserIdByPeriod = async (userId, period) => {
     switch (period) {
         case "years":
-            return (await userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId))['rows'];
+            return await userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId);
         default:
             throw new Error("Invalid period");
     }
@@ -118,9 +118,9 @@ const getNbEpisodesByUserIdByPeriod = async (userId, period) => {
  */
 const getNbKindsByUserId = async (userId) => {
     const kindsMap = new Map();
-    const resp = await userShowRepository.getKindsByUserId(userId);
+    const rows = await userShowRepository.getKindsByUserId(userId);
 
-    resp["rows"].forEach((row) => row["kinds"]
+    rows.forEach((row) => row["kinds"]
         .split(";")
         .forEach((kind) => {
             const val = kindsMap.get(kind);
