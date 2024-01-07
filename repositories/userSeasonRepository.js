@@ -125,7 +125,7 @@ const getTotalTimeByUserId = async (userId) => {
         WHERE user_id = $1
     `, [userId]);
     client.release();
-    return res["rows"][0]["time"];
+    return parseInt(res["rows"][0]["time"]);
 }
 
 /**
@@ -183,7 +183,7 @@ const getTimeCurrentMonthByUserId = async (userId) => {
         AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
     `, [userId]);
     client.release();
-    return res["rows"][0]["time"];
+    return parseInt(res["rows"][0]["time"]);
 }
 
 /**
@@ -237,7 +237,7 @@ const getTotalEpisodesByUserId = async (userId) => {
         WHERE user_id = $1 
     `, [userId]);
     client.release();
-    return res["rows"][0].total;
+    return parseInt(res["rows"][0]["total"]);
 }
 
 /**
@@ -252,7 +252,7 @@ const getTotalSeasonsByUserId = async (userId) => {
         WHERE user_id = $1 
     `, [userId]);
     client.release();
-    return res["rows"][0]["total"];
+    return parseInt(res["rows"][0]["total"]);
 }
 
 /**

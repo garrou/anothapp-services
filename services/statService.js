@@ -12,10 +12,10 @@ const getCountByType = async (req, res) => {
                 response = (await userShowRepository.getByUserId(userId)).rowCount;
                 break;
             case "episodes":
-                response = (await userSeasonRepository.getTotalEpisodesByUserId(userId));
+                response = await userSeasonRepository.getTotalEpisodesByUserId(userId);
                 break;
             case "seasons":
-                response = (await userSeasonRepository.getTotalSeasonsByUserId(userId));
+                response = await userSeasonRepository.getTotalSeasonsByUserId(userId);
                 break;
             default:
                 throw new Error("Invalid type");
@@ -34,13 +34,13 @@ const getTimeByType = async (req, res) => {
 
         switch (type) {
             case "total":
-                response = (await userSeasonRepository.getTotalTimeByUserId(userId));
+                response = await userSeasonRepository.getTotalTimeByUserId(userId);
                 break;
             case "years":
                 response = (await userSeasonRepository.getTimeHourByUserIdGroupByYear(userId))["rows"];
                 break;
             case "month":
-                response = (await userSeasonRepository.getTimeCurrentMonthByUserId(userId));
+                response = await userSeasonRepository.getTimeCurrentMonthByUserId(userId);
                 break;
             case "best-month":
                 response = (await userSeasonRepository.getRecordViewingTimeMonth(userId))["rows"][0];

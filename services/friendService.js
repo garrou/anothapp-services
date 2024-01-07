@@ -22,9 +22,9 @@ const sendFriendRequest = async (req, res) => {
         if (!userId) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        const occurence = await friendRepository.checkIfRelationExists(req.user.id, userId);
+        const exists = await friendRepository.checkIfRelationExists(req.user.id, userId);
 
-        if (occurence === 1) { 
+        if (exists) {
             return res.status(409).json({ "message": "Vous êtes déjà amis avec cet utilisateur" });
         }
         await friendRepository.sendFriendRequest(req.user.id, userId);
@@ -76,7 +76,22 @@ const getFriends = async (req, res) => {
     }
 }
 
+const checkAreFriends = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        const areFriends = await friendRepository.checkAreFriends(req.user.id, userId);
+        res.status(200).json(areFriends);
+    } catch (_) {
+        res.status(500).json({ "message": "Une erreur est survenue" });
+    }
+}
+
 module.exports = {
+    checkAreFriends,
     deleteFriend,
     getFriends,
     acceptFriend,

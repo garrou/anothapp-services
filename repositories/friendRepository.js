@@ -3,7 +3,7 @@ const pool = require('../helpers/db');
 /**
  * @param {string} userId 
  * @param {string} otherId 
- * @returns Promise<number>
+ * @returns Promise<boolean>
  */
 const checkIfRelationExists = async (userId, otherId) => {
     const client = await pool.connect();
@@ -14,7 +14,7 @@ const checkIfRelationExists = async (userId, otherId) => {
         OR (fst_user_id = $2 AND sec_user_id = $1)
     `, [userId, otherId]);
     client.release();
-    return res["rows"][0]["total"];
+    return parseInt(res["rows"][0]["total"]) === 1;
 }
 
 /**
@@ -25,7 +25,7 @@ const acceptFriend = async (userId, otherId) => {
     const client = await pool.connect();
     await client.query(`
         UPDATE friends
-        SET validated = TRUE
+        SET accepted = TRUE
         WHERE (fst_user_id = $1 AND sec_user_id = $2)
         OR (fst_user_id = $2 AND sec_user_id = $1)
     `, [userId, otherId]);
@@ -42,7 +42,7 @@ const getFriends = async (userId) => {
         SELECT u.id, u.email, u.picture
         FROM friends
         JOIN users u ON id = fst_user_id OR id = sec_user_id
-        WHERE (fst_user_id = $1 OR sec_user_id = $1) AND validated = TRUE
+        WHERE (fst_user_id = $1 OR sec_user_id = $1) AND accepted = TRUE
     `, [userId]);
     client.release();
     return res;
@@ -58,7 +58,7 @@ const getFriendsRequestsSend = async (userId) => {
         SELECT u.id, u.email, u.picture
         FROM friends
         JOIN users u ON id = sec_user_id
-        WHERE fst_user_id = $1 AND validated = FALSE
+        WHERE fst_user_id = $1 AND accepted = FALSE
     `, [userId]);
     client.release();
     return res;
@@ -74,7 +74,7 @@ const getFriendsRequestsReceive = async (userId) => {
         SELECT u.id, u.email, u.picture
         FROM friends
         JOIN users u ON id = fst_user_id
-        WHERE sec_user_id = $1 AND validated = FALSE
+        WHERE sec_user_id = $1 AND accepted = FALSE
     `, [userId]);
     client.release();
     return res;
@@ -103,7 +103,21 @@ const deleteFriend = async (userId, otherId) => {
     client.release();
 }
 
+const checkAreFriends = async (userId, otherId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT COUNT(*) AS total
+        FROM friends
+        WHERE ((fst_user_id = $1 AND sec_user_id = $2)
+        OR (fst_user_id = $2 AND sec_user_id = $1))
+        AND accepted = TRUE
+    `, [userId, otherId]);
+    client.release();
+    return parseInt(res["rows"][0]["total"]) === 1;
+}
+
 module.exports = {
+    checkAreFriends,
     checkIfRelationExists,
     deleteFriend,
     getFriendsRequestsSend,

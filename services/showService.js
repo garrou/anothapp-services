@@ -152,12 +152,13 @@ const getViewingTimeByShowIdBySeason = async (req, res) => {
 
 const getViewedByMonthAgo = async (req, res) => {
     try {
-        const { month } = req.query;
+        const { month, id } = req.query;
+        const userId = id ?? req.user.id;
 
         if (!MONTH.includes(month)) {
             return res.status(400).json({ "message": `Choix non valide ${month}` });
         }
-        const resp = await userSeasonRepository.getViewedByMonthAgo(req.user.id, month);
+        const resp = await userSeasonRepository.getViewedByMonthAgo(userId, month);
         res.status(200).json(resp["rows"]);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });

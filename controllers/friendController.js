@@ -1,6 +1,5 @@
 const { Router } = require("express");
 const friendService = require("../services/friendService");
-const userProfile = require("../services/userService");
 
 const router = Router();
 
@@ -12,6 +11,6 @@ router.patch("/:userId", friendService.acceptFriend);
 
 router.delete("/:userId", friendService.deleteFriend);
 
-router.get("/:userId/profile", userProfile.getUser)
+router.get("/:userId/accepted", friendService.checkAreFriends);
 
 module.exports = router;

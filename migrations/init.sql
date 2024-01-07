@@ -69,7 +69,7 @@ CREATE TABLE friends (
     fst_user_id VARCHAR(50),
     sec_user_id VARCHAR(50),
     friend_at TIMESTAMP DEFAULT NOW(),
-    validated BOOLEAN DEFAULT FALSE,
+    accepted BOOLEAN DEFAULT FALSE,
     PRIMARY KEY(fst_user_id, sec_user_id),
     FOREIGN KEY(fst_user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(sec_user_id) REFERENCES users(id) ON DELETE CASCADE
