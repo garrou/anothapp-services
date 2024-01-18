@@ -7,7 +7,7 @@ const pool = require('../helpers/db');
 const getUserByEmail = async (email) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT *
+        SELECT id, email, picture, password
         FROM users
         WHERE email = $1
     `, [email]);
@@ -22,7 +22,7 @@ const getUserByEmail = async (email) => {
 const getUserById = async (id) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, email, picture
+        SELECT id, email, picture, password
         FROM users
         WHERE id = $1
     `, [id]);
@@ -58,9 +58,39 @@ const updatePicture = async (id, picture) => {
     client.release();
 }
 
+/**
+ * @param {string} id 
+ * @param {string} hash 
+ */
+const updatePassword = async (id, hash) => {
+    const client = await pool.connect();
+    await client.query(`
+        UPDATE users
+        SET password = $1
+        WHERE id = $2
+    `, [hash, id]);
+    client.release();
+}
+
+/**
+ * @param {string} id 
+ * @param {string} email 
+ */
+const updateEmail = async (id, email) => {
+    const client = await pool.connect();
+    await client.query(`
+        UPDATE users
+        SET email = $1
+        WHERE id = $2
+    `, [email, id]);
+    client.release();
+}
+
 module.exports = {
     createUser,
     getUserByEmail,
     getUserById,
+    updateEmail,
+    updatePassword,
     updatePicture
 }

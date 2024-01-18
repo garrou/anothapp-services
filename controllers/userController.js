@@ -8,9 +8,13 @@ router.post("/register", userService.register);
 
 router.post("/login", userService.login);
 
-router.get("/", checkJwt, userService.getUser);
+router.post("/search", checkJwt, userService.getUser);
 
 router.get("/me", checkJwt, userService.checkUser);
+
+router.post("/me/password", checkJwt, userService.changePassword);
+
+router.post("/me/email", checkJwt, userService.changeEmail);
 
 router.get("/profile", checkJwt, userService.getProfile);
 
