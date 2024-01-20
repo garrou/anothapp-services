@@ -37,7 +37,7 @@ const getTimeByType = async (req, res) => {
                 response = await userSeasonRepository.getTotalTimeByUserId(userId);
                 break;
             case "years":
-                response = (await userSeasonRepository.getTimeHourByUserIdGroupByYear(userId));
+                response = await userSeasonRepository.getTimeHourByUserIdGroupByYear(userId);
                 break;
             case "month":
                 response = await userSeasonRepository.getTimeCurrentMonthByUserId(userId);
@@ -51,7 +51,7 @@ const getTimeByType = async (req, res) => {
             default:
                 throw new Error("Invalid type");
         }
-        res.status(200).json(response);
+        res.status(200).json(response ?? []);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -76,7 +76,7 @@ const getCountGroupedByTypeByPeriod = async (req, res) => {
             default:
                 throw new Error("Invalid type");
         }
-        res.status(200).json(response);
+        res.status(200).json(response ?? []);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

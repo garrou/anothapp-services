@@ -92,7 +92,7 @@ const getTotalShowsByUserId = async (userId) => {
         WHERE user_id = $1
     `, [userId]);
     client.release();
-    return parseInt(res["rows"][0]["total"]);
+    return parseInt(res["rows"][0]["total"] ?? 0);
 }
 
 /**
