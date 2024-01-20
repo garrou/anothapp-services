@@ -139,7 +139,7 @@ const changeEmail = async (req, res) => {
             return res.status(400).json({ "message": "Le nouveau mail doit être différent de l'ancien" });
         }
         await userRepository.updateEmail(req.user.id, newEmail);
-        res.status(200).json({ "message": "Mot de passe modifié" });
+        res.status(200).json({ "message": "Email modifié" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
