@@ -100,6 +100,16 @@ const getProfile = async (req, res) => {
 const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword, confirmPassword } = req.body;
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        if ((newPassword !== confirmPassword) || (newPassword.length < MIN_PASSWORD)) {
+            return res.status(400).json({ "message": `Le mot de passe doit faire au moins ${MIN_PASSWORD} caractères` });
+        }
+        if (currentPassword === newPassword) {
+            return res.status(400).json({ "message": "Le nouveau mot de passe doit être différent de l'ancien" });
+        }
         const rows = await userRepository.getUserById(req.user.id);
 
         if (rows.length === 0) {
@@ -109,12 +119,6 @@ const changePassword = async (req, res) => {
 
         if (!same) {
             return res.status(400).json({ "message": "Mot de passe incorrect" });
-        }
-        if ((newPassword !== confirmPassword) || (newPassword.length < MIN_PASSWORD)) {
-            return res.status(400).json({ "message": `Le mot de passe doit faire au moins ${MIN_PASSWORD} caractères` });
-        }
-        if (currentPassword === newPassword) {
-            return res.status(400).json({ "message": "Le nouveau mot de passe doit être différent de l'ancien" });
         }
         const hash = await createHash(newPassword);
         await userRepository.updatePassword(req.user.id, hash);
@@ -127,6 +131,10 @@ const changePassword = async (req, res) => {
 const changeEmail = async (req, res) => {
     try {
         const { mail, newEmail } = req.body;
+
+        if (!mail || !newEmail) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
         const rows = await userRepository.getUserById(req.user.id);
 
         if (rows.length === 0) {

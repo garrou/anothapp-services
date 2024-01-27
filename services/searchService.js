@@ -9,9 +9,13 @@ const ApiSimilarShow = require("../models/ApiSimilarShow");
 const ApiShowKind = require("../models/ApiShowKind");
 const ApiPerson = require("../models/ApiPerson");
 
+/**
+ * @param {string} title 
+ * @returns ApiShowDetails[]
+ */
 const search = async (title) => {
-    const url = title 
-        ? `${betaseries}/shows/search?title=${title}` 
+    const url = title
+        ? `${betaseries}/shows/search?title=${title}`
         : `${betaseries}/shows/discover?limit=20`;
     const resp = await axios.get(url, {
         headers: {
@@ -22,10 +26,40 @@ const search = async (title) => {
     return shows.map(show => new ApiShowDetails(show));
 }
 
+/**
+ * @param {string} kind 
+ * @returns any[]
+ */
+const getShowsByKind = async (kind) => {
+    const resp = await axios.get(`${betaseries}/search/shows?genres=${kind}`, {
+        headers: {
+            "X-BetaSeries-Key": key
+        }
+    });
+    const { shows } = await resp.data;
+    return shows.map(s => ({
+        id: s.id,
+        title: s.title,
+        images: {
+            poster: s.poster,
+            show: null,
+            banner: null,
+            box: null
+        }
+    }));
+}
+
 const discoverShows = async (req, res) => {
     try {
-        const { title } = req.query;
-        res.status(200).json(await search(title));
+        const { title, kind } = req.query;
+        let response = [];
+
+        if (kind) {
+            response = await getShowsByKind(kind);
+        } else {
+            response = await search(title);
+        }
+        res.status(200).json(response);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -138,36 +172,6 @@ const getKinds = async (_, res) => {
             .map(entry => new ApiShowKind(entry))
             .sort((a, b) => a.name.localeCompare(b.name));
         res.status(200).json(kinds);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
-}
-
-const getShowsByKind = async (req, res) => {
-    try {
-        const { kind } = req.params;
-
-        if (!kind) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        const resp = await axios.get(`${betaseries}/search/shows?genres=${kind}`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
-        });
-        const { shows } = await resp.data;
-        const previews = shows.map(s => ({
-            id: s.id,
-            title: s.title,
-            images: {
-                poster: s.poster,
-                show: null,
-                banner: null,
-                box: null
-            }
-        }));
-
-        res.status(200).json(previews);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
