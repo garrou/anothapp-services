@@ -11,6 +11,4 @@ router.patch("/:userId", friendService.acceptFriend);
 
 router.delete("/:userId", friendService.deleteFriend);
 
-router.get("/:userId/accepted", friendService.checkAreFriends);
-
 module.exports = router;

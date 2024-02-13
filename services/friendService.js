@@ -76,22 +76,7 @@ const getFriends = async (req, res) => {
     }
 }
 
-const checkAreFriends = async (req, res) => {
-    try {
-        const { userId } = req.params;
-
-        if (!userId) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        const areFriends = await friendRepository.checkAreFriends(req.user.id, userId);
-        res.status(200).json(areFriends);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
-}
-
 module.exports = {
-    checkAreFriends,
     deleteFriend,
     getFriends,
     acceptFriend,
