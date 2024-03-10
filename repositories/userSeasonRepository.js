@@ -322,7 +322,7 @@ const getSeasonsByAddedYear = async (userId, year) => {
  * @param {string} userId
  * @returns Promise<any[]>
  */
-const getNbSeasonsByUserIdByCurrentYear = async (userId) => {
+const getNbSeasonsByUserIdGroupByMonthByCurrentYear = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
         SELECT EXTRACT(MONTH FROM added_at) AS num, TO_CHAR(added_at, 'Mon') AS label, COUNT(*) AS value
@@ -335,12 +335,28 @@ const getNbSeasonsByUserIdByCurrentYear = async (userId) => {
     return res["rows"];
 }
 
+const getNbEpisodesByUserIdGroupByMonthByCurrentYear = async (userId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT EXTRACT(MONTH FROM added_at) AS num, TO_CHAR(added_at, 'Mon') AS label, SUM(episode) AS value
+        FROM users_seasons
+        JOIN seasons ON users_seasons.show_id = seasons.show_id
+        WHERE users_seasons.number = seasons.number and extract(year from added_at) = extract(year from current_date)
+        AND users_seasons.user_id = $1
+        GROUP BY num, label
+        ORDER BY label
+    `, [userId]);
+    client.release();
+    return res["rows"];
+}
+
 module.exports = {
     create,
     getDistinctByUserIdByShowId,
     getNbEpisodesByUserIdGroupByYear,
-    getNbSeasonsByUserIdByCurrentYear,
+    getNbEpisodesByUserIdGroupByMonthByCurrentYear,
     getNbSeasonsByUserIdGroupByMonth,
+    getNbSeasonsByUserIdGroupByMonthByCurrentYear,
     getNbSeasonsByUserIdGroupByYear,
     getInfosByUserIdByShowId,
     getRankingViewingTimeByShows,
