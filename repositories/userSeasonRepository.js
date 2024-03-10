@@ -341,10 +341,10 @@ const getNbEpisodesByUserIdGroupByMonthByCurrentYear = async (userId) => {
         SELECT EXTRACT(MONTH FROM added_at) AS num, TO_CHAR(added_at, 'Mon') AS label, SUM(episode) AS value
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
-        WHERE users_seasons.number = seasons.number and extract(YEAR FROM added_at) = extract(YEAR FROM current_date)
+        WHERE users_seasons.number = seasons.number and EXTRACT(YEAR FROM added_at) = EXTRACT(YEAR FROM current_date)
         AND users_seasons.user_id = $1
         GROUP BY num, label
-        ORDER BY label
+        ORDER BY num
     `, [userId]);
     client.release();
     return res["rows"];
