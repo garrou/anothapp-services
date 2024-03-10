@@ -318,10 +318,28 @@ const getSeasonsByAddedYear = async (userId, year) => {
     return res["rows"];
 }
 
+/**
+ * @param {string} userId
+ * @returns Promise<any[]>
+ */
+const getNbSeasonsByUserIdByCurrentYear = async (userId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT EXTRACT(MONTH FROM added_at) AS num, TO_CHAR(added_at, 'Mon') AS label, COUNT(*) AS value
+        FROM users_seasons
+        WHERE users_seasons.user_id = $1 AND EXTRACT(YEAR FROM added_at) = EXTRACT(YEAR from CURRENT_DATE)
+        GROUP BY num, label
+        ORDER BY num
+    `, [userId]);
+    client.release();
+    return res["rows"];
+}
+
 module.exports = {
     create,
     getDistinctByUserIdByShowId,
     getNbEpisodesByUserIdGroupByYear,
+    getNbSeasonsByUserIdByCurrentYear,
     getNbSeasonsByUserIdGroupByMonth,
     getNbSeasonsByUserIdGroupByYear,
     getInfosByUserIdByShowId,
