@@ -1,17 +1,18 @@
 const Cache = require("node-cache");
 
-const cache = new Cache({ checkPeriod: 60 });
+const cache = new Cache({ checkPeriod: 20 });
 
 /**
  * @param {Number} duration 
+ * @param {Boolean} eachUser
  * @returns (Request, Response, NextFunction)
  */
-module.exports = (duration) => (req, res, next) => {
+module.exports = (duration, eachUser) => (req, res, next) => {
 
     if (req.method !== "GET") {
         return next();
     }
-    const key = req.originalUrl;
+    const key = eachUser ? `${req.user.id}-${req.originalUrl}` : req.originalUrl;
     const cachedResponse = cache.get(key);
 
     if (cachedResponse) {

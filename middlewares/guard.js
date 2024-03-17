@@ -1,6 +1,10 @@
 const { verifyJwt } = require("../helpers/security");
 
 const checkJwt = (req, res, next) => {
+
+    if (["/users/login", "/users/register"].includes(req.originalUrl)) {
+        return next();
+    }
     const authHeader = req.headers["authorization"];
 
     if (!authHeader) {
