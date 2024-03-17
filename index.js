@@ -16,7 +16,7 @@ const statController = require("./controllers/statController");
 const { checkJwt } = require( "./middlewares/guard");
 
 app.use(cors({
-    origin: process.env.ORIGIN,
+    origins: [process.env.ORIGIN_REACT, process.env.ORIGIN_VUE],
     allowedHeaders: ["Authorization", "Content-Type"]
 }));
 app.use(express.json());
