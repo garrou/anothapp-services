@@ -11,6 +11,8 @@ router.delete("/:id", showService.deleteByShowId);
 
 router.patch("/:id/watching", showService.updateWatchingByShowId);
 
+router.patch("/:id/favorite", showService.updateFavoriteByShowId);
+
 router.post("/:id/seasons", showService.addSeasonByShowId);
 
 router.get("/:id/seasons", showService.getDistinctByShowId);

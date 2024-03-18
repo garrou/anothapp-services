@@ -50,9 +50,9 @@ const deleteByUserIdShowId = async (userId, showId) => {
 const getShowsByUserId = async (userId, limit) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, title, poster
-        FROM users_shows
-        JOIN shows ON id = show_id
+        SELECT id, title, poster, favorite
+        FROM shows
+        JOIN users_shows ON id = show_id
         WHERE user_id = $1
         ORDER BY users_shows.added_at DESC
         LIMIT $2
@@ -126,7 +126,22 @@ const updateWatchingByUserIdByShowId = async (userId, showId) => {
     await client.query(` 
         UPDATE users_shows
         SET continue = NOT continue
-        WHERE users_shows.user_id = $1
+        WHERE user_id = $1
+        AND show_id = $2
+    `, [userId, showId]);
+    client.release();
+}
+
+/**
+ * @param {string} userId 
+ * @param {number} showId 
+ */
+const updateFavoriteByUserIdByShowId = async (userId, showId) => {
+    const client = await pool.connect();
+    await client.query(` 
+        UPDATE users_shows
+        SET favorite = NOT favorite
+        WHERE user_id = $1
         AND show_id = $2
     `, [userId, showId]);
     client.release();
@@ -174,7 +189,7 @@ const getKindsByUserId = async (userId) => {
 const getShowsByUserIdByKind = async (userId, kind) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, title, poster
+        SELECT id, title, poster, favorite
         FROM shows
         JOIN users_shows ON users_shows.show_id = shows.id
         WHERE users_shows.user_id = $1 
@@ -195,5 +210,6 @@ module.exports = {
     getShowsByUserIdByTitle,
     getTotalShowsByUserId,
     getShowsToResumeByUserId,
+    updateFavoriteByUserIdByShowId,
     updateWatchingByUserIdByShowId
 }

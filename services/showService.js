@@ -6,6 +6,7 @@ const seasonRepository = require("../repositories/seasonRepository");
 const showRepository = require("../repositories/showRepository");
 const { search } = require("../services/searchService");
 const Season = require("../models/Season");
+const Show = require("../models/Show");
 
 const MONTH = ["0", "1", "2", "3", "6", "12"];
 
@@ -60,13 +61,16 @@ const getShows = async (req, res) => {
 
         if (title) {
             rows = await userShowRepository.getShowsByUserIdByTitle(req.user.id, title);
-            if (rows.length === 0) return res.status(200).json(await search(title));
+
+            if (rows.length === 0) {
+                return res.status(200).json(await search(title));
+            }
         } else if (kind) {
             rows = await userShowRepository.getShowsByUserIdByKind(req.user.id, kind);
         } else {
             rows = await userShowRepository.getShowsByUserId(req.user.id, limit);
         }
-        res.status(200).json(rows);
+        res.status(200).json(rows.map((row) => new Show(row)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -196,6 +200,20 @@ const updateWatchingByShowId = async (req, res) => {
     }
 }
 
+const updateFavoriteByShowId = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        await userShowRepository.updateFavoriteByUserIdByShowId(req.user.id, id);
+        res.sendStatus(200);
+    } catch (_) {
+        res.status(500).json({ "message": "Une erreur est survenue" });
+    }
+}
+
 const getShowsToResume = async (req, res) => {
     try {
         const rows = await userShowRepository.getShowsToResumeByUserId(req.user.id);
@@ -218,5 +236,6 @@ module.exports = {
     getViewedByMonthAgo,
     getViewingTimeByShowId,
     getViewingTimeByShowIdBySeason,
+    updateFavoriteByShowId,
     updateWatchingByShowId
 };

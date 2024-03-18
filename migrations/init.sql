@@ -21,6 +21,7 @@ CREATE TABLE users_shows (
     added_at TIMESTAMP DEFAULT NOW(),
     user_id VARCHAR(50),
     show_id INTEGER,
+    favorite BOOLEAN DEFAULT FALSE,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE,
     PRIMARY KEY(user_id, show_id)
@@ -52,14 +53,6 @@ CREATE TABLE users_towatch (
     user_id VARCHAR(50),
     show_id INTEGER,
     nb INTEGER NOT NULL,
-    PRIMARY KEY(user_id, show_id),
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
-);
-
-CREATE TABLE favorites (
-    user_id VARCHAR(50),
-    show_id INTEGER,
     PRIMARY KEY(user_id, show_id),
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
