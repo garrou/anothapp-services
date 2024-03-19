@@ -47,8 +47,7 @@ const deleteByShowId = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         await userShowRepository.deleteByUserIdShowId(req.user.id, id);
-
-        res.sendStatus(204);
+        res.status(204).json({ "message": "ok" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -194,7 +193,7 @@ const updateWatchingByShowId = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         await userShowRepository.updateWatchingByUserIdByShowId(req.user.id, id);
-        res.sendStatus(200);
+        res.status(200).json({ "message": "ok" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -208,7 +207,7 @@ const updateFavoriteByShowId = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         await userShowRepository.updateFavoriteByUserIdByShowId(req.user.id, id);
-        res.sendStatus(200);
+        res.status(200).json({ "message": "ok" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

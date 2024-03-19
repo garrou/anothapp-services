@@ -5,7 +5,7 @@ const UserProfile = require("../models/UserProfile");
 const MIN_PASSWORD = 8;
 
 const checkUser = (_, res) => {
-    res.sendStatus(200);
+    res.status(200).json({ "message": "ok" });
 }
 
 const getUser = async (req, res) => {

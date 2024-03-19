@@ -9,7 +9,7 @@ const acceptFriend = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         await friendRepository.acceptFriend(userId, req.user.id);
-        res.sendStatus(200);
+        res.status(200).json({ "message": "ok" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -28,7 +28,7 @@ const sendFriendRequest = async (req, res) => {
             return res.status(409).json({ "message": "Vous êtes déjà amis avec cet utilisateur" });
         }
         await friendRepository.sendFriendRequest(req.user.id, userId);
-        res.sendStatus(201);
+        res.status(201).json({ "message": "ok" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -42,7 +42,7 @@ const deleteFriend = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         await friendRepository.deleteFriend(req.user.id, userId);
-        res.sendStatus(204);
+        res.status(204).json({ "message": "ok" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
