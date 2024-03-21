@@ -7,6 +7,8 @@ router.post("/", showService.addShow);
 
 router.get("/", showService.getShows);
 
+router.get("/:id", showService.getShow);
+
 router.delete("/:id", showService.deleteByShowId);
 
 router.patch("/:id/watching", showService.updateWatchingByShowId);
@@ -15,11 +17,7 @@ router.patch("/:id/favorite", showService.updateFavoriteByShowId);
 
 router.post("/:id/seasons", showService.addSeasonByShowId);
 
-router.get("/:id/seasons", showService.getDistinctByShowId);
-
 router.get("/:id/seasons/:num", showService.getSeasonInfosByShowIdBySeason);
-
-router.get("/:id/time", showService.getViewingTimeByShowId);
 
 router.get("/:id/seasons/:num/time", showService.getViewingTimeByShowIdBySeason);
 

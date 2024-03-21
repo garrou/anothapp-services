@@ -16,6 +16,7 @@ module.exports = (duration, eachUser) => (req, res, next) => {
     const cachedResponse = cache.get(key);
 
     if (cachedResponse) {
+        console.log(cachedResponse);
         res.json(cachedResponse);
     } else {
         res.originalJson = res.json;

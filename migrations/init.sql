@@ -67,3 +67,12 @@ CREATE TABLE friends (
     FOREIGN KEY(fst_user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(sec_user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+ALTER TABLE users_shows
+ADD COLUMN favorite BOOLEAN
+DEFAULT FALSE;
+
+DROP TABLE favorites;
+
+ALTER TABLE seasons
+RENAME COLUMN episode TO episodes;

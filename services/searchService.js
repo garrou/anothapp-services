@@ -3,7 +3,7 @@ const betaseries = "https://api.betaseries.com";
 const key = process.env.BETASERIES_KEY;
 const ApiShowDetails = require("../models/ApiShowDetails");
 const ApiEpisode = require("../models/ApiEpisode");
-const ApiSeason = require("../models/ApiSeason");
+const Season = require("../models/Season");
 const ApiCharacter = require("../models/ApiCharacter");
 const ApiSimilarShow = require("../models/ApiSimilarShow");
 const ApiShowKind = require("../models/ApiShowKind");
@@ -97,7 +97,7 @@ const getSeasonsByShowId = async (req, res) => {
             }
         });
         const { seasons } = await resp.data;
-        res.status(200).json(seasons.map(season => new ApiSeason(season)));
+        res.status(200).json(seasons.map(season => new Season(season)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

@@ -62,6 +62,24 @@ const getShowsByUserId = async (userId, limit) => {
 }
 
 /**
+ * @param {string} userId
+ * @param {string} id
+ * @returns Promise<any>
+ */
+const getShowByUserIdByShowId = async (userId, id) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT id, title, poster, favorite
+        FROM shows
+        JOIN users_shows ON id = show_id
+        WHERE user_id = $1 AND show_id = $2
+        LIMIT 1
+    `, [userId, id]);
+    client.release();
+    return res["rows"][0];
+}
+
+/**
  * @param {string} userId 
  * @param {string} title
  * @returns Promise<any[]>
@@ -135,16 +153,19 @@ const updateWatchingByUserIdByShowId = async (userId, showId) => {
 /**
  * @param {string} userId 
  * @param {number} showId 
+ * @return Promise<boolean>
  */
 const updateFavoriteByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
-    await client.query(` 
+    const res = await client.query(` 
         UPDATE users_shows
         SET favorite = NOT favorite
         WHERE user_id = $1
         AND show_id = $2
+        RETURNING favorite
     `, [userId, showId]);
     client.release();
+    return res["rows"][0]["favorite"];
 }
 
 /**
@@ -205,6 +226,7 @@ module.exports = {
     deleteByUserIdShowId,
     getKindsByUserId,
     getNotStartedShowsByUserId,
+    getShowByUserIdByShowId,
     getShowsByUserId,
     getShowsByUserIdByKind,
     getShowsByUserIdByTitle,

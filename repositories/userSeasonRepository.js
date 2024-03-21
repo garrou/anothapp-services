@@ -22,7 +22,7 @@ const create = async (userId, showId, number) => {
 const getDistinctByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT DISTINCT ON (users_seasons.number) users_seasons.number, seasons.show_id, seasons.image, users_seasons.number, seasons.episode
+        SELECT DISTINCT ON (users_seasons.number) users_seasons.number, seasons.image, users_seasons.number, seasons.episodes
         FROM users_seasons
         JOIN seasons ON seasons.show_id = users_seasons.show_id 
         AND seasons.number = users_seasons.number
@@ -61,7 +61,7 @@ const getInfosByUserIdByShowId = async (userId, showId, number) => {
 const getViewingTimeByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(seasons.episode * seasons.ep_duration) AS time
+        SELECT SUM(seasons.episodes * seasons.ep_duration) AS time
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -81,7 +81,7 @@ const getViewingTimeByUserIdByShowId = async (userId, showId) => {
 const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(seasons.episode * seasons.ep_duration) AS time
+        SELECT SUM(seasons.episodes * seasons.ep_duration) AS time
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -100,7 +100,7 @@ const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) =>
 const getTotalTimeByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(seasons.episode * seasons.ep_duration) AS time
+        SELECT SUM(seasons.episodes * seasons.ep_duration) AS time
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -265,7 +265,7 @@ const getViewedByMonthAgo = async (userId, month) => {
 const getRankingViewingTimeByShows = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT shows.title AS label, SUM(seasons.episode * seasons.ep_duration) / 60 AS value
+        SELECT shows.title AS label, SUM(seasons.episodes * seasons.ep_duration) / 60 AS value
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -307,7 +307,7 @@ const getRecordViewingTimeMonth = async (userId) => {
 const getSeasonsByAddedYear = async (userId, year) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT seasons.show_id, users_seasons.number, seasons.episode, seasons.image
+        SELECT seasons.show_id, users_seasons.number, seasons.episodes, seasons.image
         FROM users_seasons
         JOIN seasons ON seasons.show_id = users_seasons.show_id
         AND seasons.number = users_seasons.number

@@ -42,7 +42,7 @@ const deleteFriend = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         await friendRepository.deleteFriend(req.user.id, userId);
-        res.status(204).json({ "message": "ok" });
+        res.status(200).json({ "message": "ok" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

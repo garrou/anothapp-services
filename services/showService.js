@@ -47,10 +47,31 @@ const deleteByShowId = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         await userShowRepository.deleteByUserIdShowId(req.user.id, id);
-        res.status(204).json({ "message": "ok" });
+        res.status(200).json({ "message": "ok" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
+}
+
+const getShow = async (req, res) => {
+    const { id } = req.params;
+
+    if (!id) {
+        return res.status(400).json({ "message": "Requête invalide" });
+    }
+    const show = await userShowRepository.getShowByUserIdByShowId(req.user.id, id);
+    
+    if (!show) {
+        return res.status(404).json({ "message": "Série introuvable "});
+    }
+    const seasons =  await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
+    const time = await userSeasonRepository.getViewingTimeByUserIdByShowId(req.user.id, id);
+
+    return res.status(200).json({
+        "serie": new Show(show),
+        "seasons": seasons.map(season => new Season(season)),
+        "time": time,
+    });
 }
 
 const getShows = async (req, res) => {
@@ -95,20 +116,6 @@ const addSeasonByShowId = async (req, res) => {
     }
 }
 
-const getDistinctByShowId = async (req, res) => {
-    try {
-        const showId = req.params.id;
-
-        if (!showId) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        const rows = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, showId);
-        res.status(200).json(rows.map(row => new Season(row)));
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
-}
-
 const getSeasonInfosByShowIdBySeason = async (req, res) => {
     try {
         const { id, num } = req.params;
@@ -119,20 +126,6 @@ const getSeasonInfosByShowIdBySeason = async (req, res) => {
         const rows = await userSeasonRepository.getInfosByUserIdByShowId(req.user.id, id, num);
         const infos = rows.map(e => ({ id: e.id, addedAt: e.added_at }));
         res.status(200).json(infos);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
-}
-
-const getViewingTimeByShowId = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        if (!id) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        const time = await userSeasonRepository.getViewingTimeByUserIdByShowId(req.user.id, id);
-        res.status(200).json(time);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -206,8 +199,8 @@ const updateFavoriteByShowId = async (req, res) => {
         if (!id) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        await userShowRepository.updateFavoriteByUserIdByShowId(req.user.id, id);
-        res.status(200).json({ "message": "ok" });
+        const favorite = await userShowRepository.updateFavoriteByUserIdByShowId(req.user.id, id);
+        res.status(200).json({ "favorite": favorite });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -226,14 +219,13 @@ module.exports = {
     addSeasonByShowId,
     addShow,
     deleteByShowId,
-    getDistinctByShowId,
     getNotStartedShows,
     getSeasonInfosByShowIdBySeason,
+    getShow,
     getShows,
     getShowsToContinue,
     getShowsToResume,
     getViewedByMonthAgo,
-    getViewingTimeByShowId,
     getViewingTimeByShowIdBySeason,
     updateFavoriteByShowId,
     updateWatchingByShowId
