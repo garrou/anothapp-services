@@ -12,9 +12,9 @@ const MONTH = ["0", "1", "2", "3", "6", "12"];
 
 const addShow = async (req, res) => {
     try {
-        const { id, title, images, kinds } = req.body;
+        const { id, title, images, kinds, duration } = req.body;
 
-        if (!id || !title) {
+        if (!id || !title || !duration) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         const exists = await userShowRepository.checkShowExistsByUserIdByShowId(req.user.id, id);
@@ -25,7 +25,7 @@ const addShow = async (req, res) => {
         const isNewShow = await showRepository.isNewShow(id);
 
         if (isNewShow) {
-            await showRepository.createShow(id, title, getImageUrl(images), kinds);
+            await showRepository.createShow(id, title, getImageUrl(images), kinds, duration);
         }
         await userShowRepository.create(req.user.id, id);
 
@@ -65,12 +65,13 @@ const getShow = async (req, res) => {
         return res.status(404).json({ "message": "Série introuvable "});
     }
     const seasons =  await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
-    const time = await userSeasonRepository.getViewingTimeByUserIdByShowId(req.user.id, id);
+    const [time, episodes] = await userSeasonRepository.getTimeEpisodesByUserIdByShowId(req.user.id, id);
 
     return res.status(200).json({
         "serie": new Show(show),
         "seasons": seasons.map(season => new Season(season)),
         "time": time,
+        "episodes": episodes
     });
 }
 
@@ -98,20 +99,21 @@ const getShows = async (req, res) => {
 
 const addSeasonByShowId = async (req, res) => {
     try {
-        const { number, episode, image, duration } = req.body;
+        const { number, episodes, image } = req.body;
         const showId = req.params.id;
 
-        if (!number || !episode || !showId || !duration) {
+        if (!number || !episodes || !showId) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         const rows = await seasonRepository.getSeasonByShowIdByNumber(showId, number);
 
         if (rows.length === 0) {
-            await seasonRepository.createSeason(episode, number, image, showId, duration);
+            await seasonRepository.createSeason(episodes, number, image, showId);
         }
         await userSeasonRepository.create(req.user.id, showId, number);
         res.status(201).json(rows.length === 1 ? rows[0] : null);
-    } catch (_) {
+    } catch (e) {
+        console.log(e)
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }

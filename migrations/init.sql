@@ -13,6 +13,7 @@ CREATE TABLE shows (
     title VARCHAR(255) UNIQUE NOT NULL,
     poster VARCHAR(255),
     kinds VARCHAR(255),
+    duration INTEGER NOT NULL,
     PRIMARY KEY(id)
 );
 
@@ -30,7 +31,7 @@ CREATE TABLE users_shows (
 CREATE TABLE seasons (
     number INTEGER NOT NULL,
     episode INTEGER NOT NULL,
-    ep_duration INTEGER NOT NULL,
+    duration INTEGER NOT NULL,
     image VARCHAR(255),
     show_id INTEGER,
     FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
@@ -76,3 +77,12 @@ DROP TABLE favorites;
 
 ALTER TABLE seasons
 RENAME COLUMN episode TO episodes;
+
+ALTER TABLE seasons
+RENAME COLUMN ep_duration TO duration;
+
+ALTER TABLE shows
+ADD COLUMN duration INTEGER DEFAULT 0;
+
+UPDATE shows
+SET duration = (SELECT duration FROM seasons WHERE show_id = shows.id LIMIT 1)

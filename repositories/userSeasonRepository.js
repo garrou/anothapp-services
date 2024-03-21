@@ -56,12 +56,12 @@ const getInfosByUserIdByShowId = async (userId, showId, number) => {
 /**
  * @param {string} userId 
  * @param {number} showId 
- * @returns Promise<number>
+ * @returns Promise<number[]>
  */
-const getViewingTimeByUserIdByShowId = async (userId, showId) => {
+const getTimeEpisodesByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(seasons.episodes * seasons.ep_duration) AS time
+        SELECT SUM(seasons.episodes * seasons.duration) AS time, SUM(seasons.episodes) as episodes
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -69,7 +69,8 @@ const getViewingTimeByUserIdByShowId = async (userId, showId) => {
         AND users_seasons.show_id = $2
     `, [userId, showId]);
     client.release();
-    return parseInt(res["rows"][0]["time"]);
+    const row = res["rows"][0];
+    return [parseInt(row["time"]), parseInt(row["episodes"])];
 }
 
 /**
@@ -81,7 +82,7 @@ const getViewingTimeByUserIdByShowId = async (userId, showId) => {
 const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(seasons.episodes * seasons.ep_duration) AS time
+        SELECT SUM(seasons.episodes * seasons.duration) AS time
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -100,7 +101,7 @@ const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) =>
 const getTotalTimeByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(seasons.episodes * seasons.ep_duration) AS time
+        SELECT SUM(seasons.episodes * seasons.duration) AS time
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -137,7 +138,7 @@ const getNbSeasonsByUserIdGroupByYear = async (userId) => {
 const getTimeHourByUserIdGroupByYear = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT EXTRACT(YEAR FROM added_at) AS label, (SUM(ep_duration * episode) / 60) AS value
+        SELECT EXTRACT(YEAR FROM added_at) AS label, (SUM(duration * episode) / 60) AS value
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -157,7 +158,7 @@ const getTimeHourByUserIdGroupByYear = async (userId) => {
 const getTimeCurrentMonthByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(ep_duration * episode) AS time
+        SELECT SUM(duration * episode) AS time
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -265,7 +266,7 @@ const getViewedByMonthAgo = async (userId, month) => {
 const getRankingViewingTimeByShows = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT shows.title AS label, SUM(seasons.episodes * seasons.ep_duration) / 60 AS value
+        SELECT shows.title AS label, SUM(seasons.episodes * seasons.duration) / 60 AS value
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -286,7 +287,7 @@ const getRankingViewingTimeByShows = async (userId) => {
 const getRecordViewingTimeMonth = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT TO_CHAR(added_at, 'MM/YYYY') as date, SUM(ep_duration * episode) AS time 
+        SELECT TO_CHAR(added_at, 'MM/YYYY') as date, SUM(duration * episode) AS time 
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -363,11 +364,11 @@ module.exports = {
     getRecordViewingTimeMonth,
     getSeasonsByAddedYear,
     getTimeCurrentMonthByUserId,
+    getTimeEpisodesByUserIdByShowId,
     getTimeHourByUserIdGroupByYear,
     getTotalEpisodesByUserId,
     getTotalSeasonsByUserId,
     getTotalTimeByUserId,
     getViewedByMonthAgo,
-    getViewingTimeByUserIdByShowId,
     getViewingTimeByUserIdByShowIdByNumber
 }

@@ -29,18 +29,17 @@ const getSeasonByShowIdByNumber = async (showId, number) => {
 }
 
 /**
- * @param {number} episode 
+ * @param {number} episodes 
  * @param {number} number 
  * @param {string} image 
- * @param {number} showId 
- * @param {number} epDuration 
+ * @param {number} showId
  */
-const createSeason = async (episode, number, image, showId, epDuration) => {
+const createSeason = async (episodes, number, image, showId) => {
     const client = await pool.connect();
     await client.query(`
-        INSERT INTO seasons (episode, number, image, show_id, ep_duration)
-        VALUES ($1, $2, $3, $4, $5)
-    `, [episode, number, image, showId, epDuration]);
+        INSERT INTO seasons (episodes, number, image, show_id, duration)
+        VALUES ($1, $2, $3, $4, (SELECT duration FROM shows WHERE id = $4))
+    `, [episodes, number, image, showId]);
     client.release();
 }
 
