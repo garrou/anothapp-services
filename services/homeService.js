@@ -1,7 +1,7 @@
 const axios = require("axios");
 const betaseries = "https://api.betaseries.com";
 const key = process.env.BETASERIES_KEY;
-const ApiShowPreview = require("../models/ApiShowPreview");
+const ApiShow = require("../models/ApiShow");
 
 const getShowsImages = async (_, res) => {
     try {
@@ -11,7 +11,7 @@ const getShowsImages = async (_, res) => {
             }
         });
         const { shows } = await resp.data;
-        res.status(200).json(shows.map(show => new ApiShowPreview(show)));
+        res.status(200).json(shows.map(show => new ApiShow(show)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

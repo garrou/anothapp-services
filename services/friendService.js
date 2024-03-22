@@ -63,9 +63,11 @@ const getFriends = async (req, res) => {
                     .map(user => new UserProfile(user));
                 break;
             case "friend":
-                rows = (await friendRepository.getFriends(req.user.id))
-                    .map(user => new UserProfile(user))
-                    .filter(user => user.id !== req.user.id);
+                rows = (await friendRepository.getFriends(req.user.id)).reduce((acc, curr) => {
+                        if (curr.id !== req.user.id) {
+                            acc.push(curr)
+                        }
+                    }, []);
                 break;
             default:
                 throw new Error("Invalid type");

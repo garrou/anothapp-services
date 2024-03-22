@@ -11,7 +11,7 @@ CREATE TABLE users (
 CREATE TABLE shows (
     id INTEGER,
     title VARCHAR(255) UNIQUE NOT NULL,
-    poster VARCHAR(255),
+    poster VARCHAR(255) NOT NULL,
     kinds VARCHAR(255),
     duration INTEGER NOT NULL,
     PRIMARY KEY(id)
@@ -85,4 +85,7 @@ ALTER TABLE shows
 ADD COLUMN duration INTEGER DEFAULT 0;
 
 UPDATE shows
-SET duration = (SELECT duration FROM seasons WHERE show_id = shows.id LIMIT 1)
+SET duration = (SELECT duration FROM seasons WHERE show_id = shows.id LIMIT 1);
+
+ALTER TABLE shows
+ALTER COLUMN poster SET NOT NULL;

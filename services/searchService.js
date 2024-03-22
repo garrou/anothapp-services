@@ -1,7 +1,7 @@
 const axios = require("axios");
 const betaseries = "https://api.betaseries.com";
 const key = process.env.BETASERIES_KEY;
-const ApiShowDetails = require("../models/ApiShowDetails");
+const ApiShow = require("../models/ApiShow");
 const ApiEpisode = require("../models/ApiEpisode");
 const Season = require("../models/Season");
 const ApiCharacter = require("../models/ApiCharacter");
@@ -11,7 +11,7 @@ const ApiPerson = require("../models/ApiPerson");
 
 /**
  * @param {string} title 
- * @returns ApiShowDetails[]
+ * @returns ApiShow[]
  */
 const search = async (title) => {
     const url = title
@@ -23,7 +23,7 @@ const search = async (title) => {
         }
     });
     const { shows } = await resp.data;
-    return shows.map(show => new ApiShowDetails(show));
+    return shows.map(show => new ApiShow(show));
 }
 
 /**
@@ -78,7 +78,7 @@ const getByShowId = async (req, res) => {
             }
         });
         const { show } = await resp.data;
-        res.status(200).json(new ApiShowDetails(show));
+        res.status(200).json(new ApiShow(show));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

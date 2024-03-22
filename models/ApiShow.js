@@ -1,4 +1,4 @@
-class ApiShowDetails {
+class ApiShow {
 
     /**
      * @param {Object} show 
@@ -6,17 +6,29 @@ class ApiShowDetails {
     constructor(show) {
         this.id = show.id;
         this.title = show.title;
+        this.poster = getImageUrl(show.images);
+        this.duration = show.length ?? 0;
         this.description = show.description;
         this.seasons = show.seasons;
         this.episodes = show.episodes;
-        this.duration = show.length;
         this.network = show.network;
         this.note = show.notes.mean;
-        this.images = show.images;
         this.status = show.status;
         this.creation = show.creation;
         this.kinds = Object.values(show.genres);
     }
 }
 
-module.exports = ApiShowDetails;
+/**
+ * @param {Object} image 
+ * @returns string
+ */
+const getImageUrl = (image) => {
+    if (image.poster) return image.poster;
+    if (image.show) return image.show;
+    if (image.banner) return image.banner;
+    if (image.box) return image.box;
+    return null;
+}
+
+module.exports = ApiShow;

@@ -12,9 +12,9 @@ const MONTH = ["0", "1", "2", "3", "6", "12"];
 
 const addShow = async (req, res) => {
     try {
-        const { id, title, images, kinds, duration } = req.body;
+        const { id, title, poster, kinds, duration } = req.body;
 
-        if (!id || !title || !duration) {
+        if (!id || !title || !poster || !duration) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         const exists = await userShowRepository.checkShowExistsByUserIdByShowId(req.user.id, id);
@@ -25,14 +25,16 @@ const addShow = async (req, res) => {
         const isNewShow = await showRepository.isNewShow(id);
 
         if (isNewShow) {
-            await showRepository.createShow(id, title, getImageUrl(images), kinds, duration);
+            await showRepository.createShow(id, title, poster, kinds, duration);
         }
         await userShowRepository.create(req.user.id, id);
 
         res.status(201).json({
             "id": id,
             "title": title,
-            "poster": getImageUrl(images),
+            "poster": poster,
+            "duration": duration,
+            "kinds": kinds,
         });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
