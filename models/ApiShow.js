@@ -13,7 +13,7 @@ class ApiShow {
         this.episodes = show.episodes;
         this.network = show.network;
         this.note = show.notes.mean;
-        this.status = show.status;
+        this.status = show.status === "Continuing" ? "En cours" : "Terminée";
         this.creation = show.creation;
         this.kinds = Object.values(show.genres);
     }
