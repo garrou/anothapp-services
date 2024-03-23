@@ -1,4 +1,3 @@
-const { getImageUrl } = require("../helpers/image");
 const userSeasonRepository = require("../repositories/userSeasonRepository");
 const userShowRepository = require("../repositories/userShowRepository");
 const userWatchRepository = require("../repositories/userWatchRepository");
@@ -14,7 +13,7 @@ const addShow = async (req, res) => {
     try {
         const { id, title, poster, kinds, duration } = req.body;
 
-        if (!id || !title || !poster || !duration) {
+        if (!id || !title || !poster || !kinds || !duration) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         const exists = await userShowRepository.checkShowExistsByUserIdByShowId(req.user.id, id);
@@ -25,7 +24,7 @@ const addShow = async (req, res) => {
         const isNewShow = await showRepository.isNewShow(id);
 
         if (isNewShow) {
-            await showRepository.createShow(id, title, poster, kinds, duration);
+            await showRepository.createShow(id, title, poster, kinds.join(";"), duration);
         }
         await userShowRepository.create(req.user.id, id);
 
@@ -128,22 +127,13 @@ const getSeasonInfosByShowIdBySeason = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         const rows = await userSeasonRepository.getInfosByUserIdByShowId(req.user.id, id, num);
-        const infos = rows.map(e => ({ id: e.id, addedAt: e.added_at }));
-        res.status(200).json(infos);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
-}
-
-const getViewingTimeByShowIdBySeason = async (req, res) => {
-    try {
-        const { id, num } = req.params;
-
-        if (!id || !num) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
         const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(req.user.id, id, num);
-        res.status(200).json(time);
+        const infos = rows.map(e => ({ id: e.id, addedAt: e.added_at }));
+
+        res.status(200).json({
+            "time": time,
+            "infos": infos
+        });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -230,7 +220,6 @@ module.exports = {
     getShowsToContinue,
     getShowsToResume,
     getViewedByMonthAgo,
-    getViewingTimeByShowIdBySeason,
     updateFavoriteByShowId,
     updateWatchingByShowId
 };

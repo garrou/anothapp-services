@@ -6,7 +6,6 @@ const app = express();
 
 const userController = require("./controllers/userController");
 const friendController = require("./controllers/friendController");
-const homeController = require("./controllers/homeController");
 const searchController = require("./controllers/searchController");
 const seasonController = require("./controllers/seasonController");
 const showController = require("./controllers/showController");
@@ -21,7 +20,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-app.use("/intro", cache(3600, false), homeController);
 app.use("/users", checkJwt, userController);
 app.use("/search", checkJwt, cache(3600, false), searchController);
 app.use("/shows", checkJwt, showController);

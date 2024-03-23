@@ -12,7 +12,7 @@ CREATE TABLE shows (
     id INTEGER,
     title VARCHAR(255) UNIQUE NOT NULL,
     poster VARCHAR(255) NOT NULL,
-    kinds VARCHAR(255),
+    kinds VARCHAR(255) NOT NULL,
     duration INTEGER NOT NULL,
     PRIMARY KEY(id)
 );
@@ -89,3 +89,6 @@ SET duration = (SELECT duration FROM seasons WHERE show_id = shows.id LIMIT 1);
 
 ALTER TABLE shows
 ALTER COLUMN poster SET NOT NULL;
+
+ALTER TABLE shows
+ALTER COLUMN kinds SET NOT NULL;

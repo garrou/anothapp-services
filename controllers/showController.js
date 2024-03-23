@@ -19,8 +19,6 @@ router.post("/:id/seasons", showService.addSeasonByShowId);
 
 router.get("/:id/seasons/:num", showService.getSeasonInfosByShowIdBySeason);
 
-router.get("/:id/seasons/:num/time", showService.getViewingTimeByShowIdBySeason);
-
 router.get("/viewed", showService.getViewedByMonthAgo);
 
 router.get("/continue", showService.getShowsToContinue);
