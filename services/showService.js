@@ -128,12 +128,8 @@ const getSeasonInfosByShowIdBySeason = async (req, res) => {
         }
         const rows = await userSeasonRepository.getInfosByUserIdByShowId(req.user.id, id, num);
         const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(req.user.id, id, num);
-        const infos = rows.map(e => ({ id: e.id, addedAt: e.added_at }));
-
-        res.status(200).json({
-            "time": time,
-            "infos": infos
-        });
+        const seasons = rows.map(row => ({ id: row.id, addedAt: row.added_at }));
+        res.status(200).json({ time, seasons });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
