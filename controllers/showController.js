@@ -19,10 +19,4 @@ router.post("/:id/seasons", showService.addSeasonByShowId);
 
 router.get("/:id/seasons/:num", showService.getSeasonInfosByShowIdBySeason);
 
-router.get("/continue", showService.getShowsToContinue);
-
-router.get("/resume", showService.getShowsToResume);
-
-router.get("/not-started", showService.getNotStartedShows);
-
 module.exports = router;

@@ -40,12 +40,7 @@ const getShowsByKind = async (kind) => {
     return shows.map(s => ({
         id: s.id,
         title: s.title,
-        images: {
-            poster: s.poster,
-            show: null,
-            banner: null,
-            box: null
-        }
+        poster: s.poster
     }));
 }
 

@@ -34,8 +34,7 @@ const getSeasons = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         res.status(200).json(response);
-    } catch (e) {
-        console.log(e);
+    } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }

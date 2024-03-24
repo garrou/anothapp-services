@@ -90,11 +90,11 @@ const getCountGroupedByTypeByPeriod = async (req, res) => {
 const getNbSeasonsByUserIdByPeriod = async (userId, period) => {
     switch (period) {
         case "years":
-            return await userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId);
+            return userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId);
         case "year":
-            return await userSeasonRepository.getNbSeasonsByUserIdGroupByMonthByCurrentYear(userId);
+            return userSeasonRepository.getNbSeasonsByUserIdGroupByMonthByCurrentYear(userId);
         case "months":
-            return await userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId);
+            return userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId);
         default:
             throw new Error("Invalid period");
     }
@@ -108,9 +108,9 @@ const getNbSeasonsByUserIdByPeriod = async (userId, period) => {
 const getNbEpisodesByUserIdByPeriod = async (userId, period) => {
     switch (period) {
         case "years":
-            return await userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId);
+            return userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId);
         case "year":
-            return await userSeasonRepository.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId);
+            return userSeasonRepository.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId);
         default:
             throw new Error("Invalid period");
     }

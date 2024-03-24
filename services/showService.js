@@ -7,6 +7,26 @@ const { search } = require("../services/searchService");
 const Season = require("../models/Season");
 const Show = require("../models/Show");
 
+/**
+ * @param {string} userId
+ * @param {string} status
+ * @returns Promise
+ */
+const getShowsByStatus = async (userId, status) => {
+    switch (status) {
+        case "resume":
+            return userShowRepository.getShowsToResumeByUserId(userId);
+        case "not-started":
+            return userShowRepository.getNotStartedShowsByUserId(userId);
+        case "continue":
+            return userWatchRepository.getShowsToContinueByUserId(userId);
+        case "favorite":
+            return userShowRepository.getFavorites(userId);
+        default:
+            throw new Error("Invalid status");
+    }
+}
+
 const addShow = async (req, res) => {
     try {
         const { id, title, poster, kinds, duration } = req.body;
@@ -46,30 +66,34 @@ const deleteByShowId = async (req, res) => {
 }
 
 const getShow = async (req, res) => {
-    const { id } = req.params;
+    try {
+        const { id } = req.params;
 
-    if (!id) {
-        return res.status(400).json({ "message": "Requête invalide" });
-    }
-    const show = await userShowRepository.getShowByUserIdByShowId(req.user.id, id);
-    
-    if (!show) {
-        return res.status(404).json({ "message": "Série introuvable "});
-    }
-    const seasons =  await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
-    const [time, episodes] = await userSeasonRepository.getTimeEpisodesByUserIdByShowId(req.user.id, id);
+        if (!id) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        const show = await userShowRepository.getShowByUserIdByShowId(req.user.id, id);
 
-    return res.status(200).json({
-        "serie": new Show(show),
-        "seasons": seasons.map(season => new Season(season)),
-        "time": time,
-        "episodes": episodes
-    });
+        if (!show) {
+            return res.status(404).json({ "message": "Série introuvable " });
+        }
+        const seasons = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
+        const [time, episodes] = await userSeasonRepository.getTimeEpisodesByUserIdByShowId(req.user.id, id);
+
+        return res.status(200).json({
+            "serie": new Show(show),
+            "seasons": seasons.map(season => new Season(season)),
+            "time": time,
+            "episodes": episodes
+        });
+    } catch (_) {
+        res.status(500).json({ "message": "Une erreur est survenue" });
+    }
 }
 
 const getShows = async (req, res) => {
     try {
-        const { title, limit, kind } = req.query;
+        const { title, limit, kind, status } = req.query;
         let rows = null;
 
         if (title) {
@@ -80,6 +104,8 @@ const getShows = async (req, res) => {
             }
         } else if (kind) {
             rows = await userShowRepository.getShowsByUserIdByKind(req.user.id, kind);
+        } else if (status) {
+            rows = await getShowsByStatus(req.user.id, status);
         } else {
             rows = await userShowRepository.getShowsByUserId(req.user.id, limit);
         }
@@ -125,24 +151,6 @@ const getSeasonInfosByShowIdBySeason = async (req, res) => {
     }
 }
 
-const getNotStartedShows = async (req, res) => {
-    try {
-        const rows = await userShowRepository.getNotStartedShowsByUserId(req.user.id);
-        res.status(200).json(rows);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
-}
-
-const getShowsToContinue = async (req, res) => {
-    try {
-        const rows = await userWatchRepository.getShowsToContinueByUserId(req.user.id);
-        res.status(200).json(rows);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
-}
-
 const updateWatchingByShowId = async (req, res) => {
     try {
         const { id } = req.params;
@@ -171,25 +179,15 @@ const updateFavoriteByShowId = async (req, res) => {
     }
 }
 
-const getShowsToResume = async (req, res) => {
-    try {
-        const rows = await userShowRepository.getShowsToResumeByUserId(req.user.id);
-        res.status(200).json(rows);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
-}
+
 
 module.exports = {
     addSeasonByShowId,
     addShow,
     deleteByShowId,
-    getNotStartedShows,
     getSeasonInfosByShowIdBySeason,
     getShow,
     getShows,
-    getShowsToContinue,
-    getShowsToResume,
     updateFavoriteByShowId,
     updateWatchingByShowId
 };
