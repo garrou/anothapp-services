@@ -52,7 +52,7 @@ const getShowsByKind = async (kind) => {
 const discoverShows = async (req, res) => {
     try {
         const { title, kind } = req.query;
-        let response = [];
+        let response = null;
 
         if (kind) {
             response = await getShowsByKind(kind);

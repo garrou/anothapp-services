@@ -1,6 +1,9 @@
 const Season = require("../models/Season");
+const SeasonTimeline = require("../models/SeasonTimeline");
 const seasonRepository = require("../repositories/seasonRepository");
 const userSeasonRepository = require("../repositories/userSeasonRepository");
+
+const MONTHS = ["0", "1", "2", "3", "6", "12"];
 
 const deleteBySeasonId = async (req, res) => {
     try {
@@ -16,18 +19,25 @@ const deleteBySeasonId = async (req, res) => {
     }
 }
 
-const getSeasonsByYear = async (req, res) => {
+const getSeasons = async (req, res) => {
     try {
-        const { year } = req.query;
-        
-        if (!year) {
+        const { year, month } = req.query;
+        let response = null;
+
+        if (month && MONTHS.includes(month)) {
+            response = (await userSeasonRepository.getViewedByMonthAgo(req.user.id, month))
+                .map(row => new SeasonTimeline(row));
+        } else if (year) {
+            response = (await userSeasonRepository.getSeasonsByAddedYear(req.user.id, year))
+                .map(obj => new Season(obj));
+        } else {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        const rows = await userSeasonRepository.getSeasonsByAddedYear(req.user.id, year);
-        res.status(200).json(rows.map(obj => new Season(obj)));
-    } catch (_) {
+        res.status(200).json(response);
+    } catch (e) {
+        console.log(e);
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
 
-module.exports = { deleteBySeasonId, getSeasonsByYear };
+module.exports = { deleteBySeasonId, getSeasons };

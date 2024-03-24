@@ -246,7 +246,8 @@ const getTotalSeasonsByUserId = async (userId) => {
 const getViewedByMonthAgo = async (userId, month) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT shows.id, shows.title, seasons.image, shows.poster, users_seasons.number
+        SELECT shows.id, shows.title, shows.poster, seasons.image, seasons.episodes,
+            users_seasons.number, users_seasons.added_at
         FROM users_seasons
         JOIN seasons ON seasons.show_id = users_seasons.show_id
         JOIN shows ON shows.id = seasons.show_id

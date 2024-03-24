@@ -3,7 +3,7 @@ const seasonService = require("../services/seasonService");
 
 const router = Router();
 
-router.get("/", seasonService.getSeasonsByYear);
+router.get("/", seasonService.getSeasons);
 
 router.delete("/:id", seasonService.deleteBySeasonId);
 

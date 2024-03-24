@@ -50,7 +50,7 @@ const deleteByUserIdShowId = async (userId, showId) => {
 const getShowsByUserId = async (userId, limit) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, title, poster, kinds, favorite
+        SELECT id, title, poster, kinds, favorite, duration
         FROM shows
         JOIN users_shows ON id = show_id
         WHERE user_id = $1
@@ -69,7 +69,7 @@ const getShowsByUserId = async (userId, limit) => {
 const getShowByUserIdByShowId = async (userId, id) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, title, poster, kinds, favorite
+        SELECT id, title, poster, kinds, favorite, duration
         FROM shows
         JOIN users_shows ON id = show_id
         WHERE user_id = $1 AND show_id = $2
@@ -87,7 +87,7 @@ const getShowByUserIdByShowId = async (userId, id) => {
 const getShowsByUserIdByTitle = async (userId, title) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, title, poster, kinds, favorite
+        SELECT id, title, poster, kinds, favorite, duration
         FROM users_shows
         JOIN shows ON id = show_id
         WHERE user_id = $1
@@ -120,7 +120,7 @@ const getTotalShowsByUserId = async (userId) => {
 const getNotStartedShowsByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(` 
-        SELECT id, title, poster, kinds, favorite
+        SELECT id, title, poster, kinds, favorite, duration
         FROM shows
         JOIN users_shows ON users_shows.show_id = shows.id
         WHERE users_shows.user_id = $1
@@ -210,7 +210,7 @@ const getKindsByUserId = async (userId) => {
 const getShowsByUserIdByKind = async (userId, kind) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, title, poster, kinds, favorite
+        SELECT id, title, poster, kinds, favorite, duration
         FROM shows
         JOIN users_shows ON users_shows.show_id = shows.id
         WHERE users_shows.user_id = $1 

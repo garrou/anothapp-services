@@ -3,8 +3,8 @@ const Cache = require("node-cache");
 const cache = new Cache({ checkPeriod: 20 });
 
 /**
- * @param {Number} duration 
- * @param {Boolean} eachUser
+ * @param {number} duration 
+ * @param {boolean} eachUser
  * @returns (Request, Response, NextFunction)
  */
 module.exports = (duration, eachUser) => (req, res, next) => {

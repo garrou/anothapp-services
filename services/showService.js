@@ -7,8 +7,6 @@ const { search } = require("../services/searchService");
 const Season = require("../models/Season");
 const Show = require("../models/Show");
 
-const MONTH = ["0", "1", "2", "3", "6", "12"];
-
 const addShow = async (req, res) => {
     try {
         const { id, title, poster, kinds, duration } = req.body;
@@ -27,14 +25,7 @@ const addShow = async (req, res) => {
             await showRepository.createShow(id, title, poster, kinds.join(";"), duration);
         }
         await userShowRepository.create(req.user.id, id);
-
-        res.status(201).json({
-            "id": id,
-            "title": title,
-            "poster": poster,
-            "duration": duration,
-            "kinds": kinds,
-        });
+        res.status(201).json({ "message": "ok" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -112,9 +103,8 @@ const addSeasonByShowId = async (req, res) => {
             await seasonRepository.createSeason(episodes, number, image, showId);
         }
         await userSeasonRepository.create(req.user.id, showId, number);
-        res.status(201).json(rows.length === 1 ? rows[0] : null);
-    } catch (e) {
-        console.log(e)
+        res.status(201).json({ "message": "ok" });
+    } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
 }
@@ -130,21 +120,6 @@ const getSeasonInfosByShowIdBySeason = async (req, res) => {
         const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(req.user.id, id, num);
         const seasons = rows.map(row => ({ id: row.id, addedAt: row.added_at }));
         res.status(200).json({ time, seasons });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
-}
-
-const getViewedByMonthAgo = async (req, res) => {
-    try {
-        const { month, id } = req.query;
-        const userId = id ?? req.user.id;
-
-        if (!MONTH.includes(month)) {
-            return res.status(400).json({ "message": `Choix non valide ${month}` });
-        }
-        const rows = await userSeasonRepository.getViewedByMonthAgo(userId, month);
-        res.status(200).json(rows);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -215,7 +190,6 @@ module.exports = {
     getShows,
     getShowsToContinue,
     getShowsToResume,
-    getViewedByMonthAgo,
     updateFavoriteByShowId,
     updateWatchingByShowId
 };
