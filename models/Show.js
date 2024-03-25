@@ -9,6 +9,7 @@ class Show {
         this.poster = obj.poster;
         this.kinds = obj.kinds.split(";");
         this.favorite = obj.favorite;
+        this.missing = obj.missing;
     }
 }
 

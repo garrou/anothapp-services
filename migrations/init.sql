@@ -23,6 +23,7 @@ CREATE TABLE users_shows (
     user_id VARCHAR(50),
     show_id INTEGER,
     favorite BOOLEAN DEFAULT FALSE,
+    missing INTEGER NOT NULL,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE,
     PRIMARY KEY(user_id, show_id)
@@ -50,15 +51,6 @@ CREATE TABLE users_seasons (
     FOREIGN KEY(user_id, show_id) REFERENCES users_shows(user_id, show_id) ON DELETE CASCADE
 );
 
-CREATE TABLE users_towatch (
-    user_id VARCHAR(50),
-    show_id INTEGER,
-    nb INTEGER NOT NULL,
-    PRIMARY KEY(user_id, show_id),
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
-);
-
 CREATE TABLE friends (
     fst_user_id VARCHAR(50),
     sec_user_id VARCHAR(50),
@@ -82,13 +74,31 @@ ALTER TABLE seasons
 RENAME COLUMN ep_duration TO duration;
 
 ALTER TABLE shows
-ADD COLUMN duration INTEGER DEFAULT 0;
+ADD COLUMN duration INTEGER;
 
 UPDATE shows
 SET duration = (SELECT duration FROM seasons WHERE show_id = shows.id LIMIT 1);
+
+ALTER TABLE shows
+ALTER COLUMN duration SET NOT NULL;
 
 ALTER TABLE shows
 ALTER COLUMN poster SET NOT NULL;
 
 ALTER TABLE shows
 ALTER COLUMN kinds SET NOT NULL;
+
+UPDATE seasons
+SET image = (SELECT poster FROM shows WHERE seasons.show_id = shows.id)
+WHERE image IS NULL;
+
+ALTER TABLE users_shows
+ADD COLUMN missing INTEGER DEFAULT 0;
+
+UPDATE users_shows
+SET missing = (SELECT nb FROM users_towatch WHERE show_id = users_shows.show_id);
+
+ALTER TABLE users_shows
+ALTER COLUMN missing SET NOT NULL;
+
+DROP TABLE users_towatch;

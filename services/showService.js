@@ -1,6 +1,5 @@
 const userSeasonRepository = require("../repositories/userSeasonRepository");
 const userShowRepository = require("../repositories/userShowRepository");
-const userWatchRepository = require("../repositories/userWatchRepository");
 const seasonRepository = require("../repositories/seasonRepository");
 const showRepository = require("../repositories/showRepository");
 const { search } = require("../services/searchService");
@@ -19,7 +18,7 @@ const getShowsByStatus = async (userId, status) => {
         case "not-started":
             return userShowRepository.getNotStartedShowsByUserId(userId);
         case "continue":
-            return userWatchRepository.getShowsToContinueByUserId(userId);
+            return userShowRepository.getShowsToContinueByUserId(userId);
         case "favorite":
             return userShowRepository.getFavorites(userId);
         default:
