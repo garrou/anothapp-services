@@ -141,13 +141,15 @@ const getNotStartedShowsByUserId = async (userId) => {
  */
 const updateWatchingByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
-    await client.query(` 
+    const res = await client.query(` 
         UPDATE users_shows
         SET continue = NOT continue
         WHERE user_id = $1
         AND show_id = $2
+        RETURNING continue
     `, [userId, showId]);
     client.release();
+    return res["rows"][0]["continue"];
 }
 
 /**

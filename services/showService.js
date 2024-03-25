@@ -150,29 +150,19 @@ const getSeasonInfosByShowIdBySeason = async (req, res) => {
     }
 }
 
-const updateWatchingByShowId = async (req, res) => {
+const updateByShowId = async (req, res) => {
     try {
         const { id } = req.params;
+        const { favorite, watch } = req.body;
+        let result = null;
 
-        if (!id) {
+        if (!id || (!favorite && !watch)) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        await userShowRepository.updateWatchingByUserIdByShowId(req.user.id, id);
-        res.status(200).json({ "message": "ok" });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
-}
-
-const updateFavoriteByShowId = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        if (!id) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        const favorite = await userShowRepository.updateFavoriteByUserIdByShowId(req.user.id, id);
-        res.status(200).json({ "favorite": favorite });
+        result = favorite
+            ? await userShowRepository.updateFavoriteByUserIdByShowId(req.user.id, id)
+            : await userShowRepository.updateWatchingByUserIdByShowId(req.user.id, id);
+        res.status(200).json({ "result": result });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -187,6 +177,5 @@ module.exports = {
     getSeasonInfosByShowIdBySeason,
     getShow,
     getShows,
-    updateFavoriteByShowId,
-    updateWatchingByShowId
+    updateByShowId,
 };
