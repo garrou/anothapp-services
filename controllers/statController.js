@@ -3,6 +3,8 @@ const statService = require("../services/statService");
 
 const router = Router();
 
+router.get("/", statService.getStats);
+
 router.get("/count", statService.getCountByType);
 
 router.get("/time", statService.getTimeByType);

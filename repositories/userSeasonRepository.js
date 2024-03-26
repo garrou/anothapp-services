@@ -138,7 +138,7 @@ const getNbSeasonsByUserIdGroupByYear = async (userId) => {
 const getTimeHourByUserIdGroupByYear = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT EXTRACT(YEAR FROM added_at) AS label, (SUM(duration * episode) / 60) AS value
+        SELECT EXTRACT(YEAR FROM added_at) AS label, (SUM(duration * episodes) / 60) AS value
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -158,7 +158,7 @@ const getTimeHourByUserIdGroupByYear = async (userId) => {
 const getTimeCurrentMonthByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(duration * episode) AS time
+        SELECT SUM(duration * episodes) AS time
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -193,7 +193,7 @@ const getNbSeasonsByUserIdGroupByMonth = async (userId) => {
 const getNbEpisodesByUserIdGroupByYear = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT EXTRACT(YEAR FROM added_at) AS label, SUM(episode) AS value
+        SELECT EXTRACT(YEAR FROM added_at) AS label, SUM(episodes) AS value
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         WHERE users_seasons.number = seasons.number
@@ -213,7 +213,7 @@ const getNbEpisodesByUserIdGroupByYear = async (userId) => {
 const getTotalEpisodesByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(episode) AS total
+        SELECT SUM(episodes) AS total
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -288,7 +288,7 @@ const getRankingViewingTimeByShows = async (userId) => {
 const getRecordViewingTimeMonth = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT TO_CHAR(added_at, 'MM/YYYY') as date, SUM(duration * episode) AS time 
+        SELECT TO_CHAR(added_at, 'MM/YYYY') as date, SUM(duration * episodes) AS time 
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
@@ -340,7 +340,7 @@ const getNbSeasonsByUserIdGroupByMonthByCurrentYear = async (userId) => {
 const getNbEpisodesByUserIdGroupByMonthByCurrentYear = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT EXTRACT(MONTH FROM added_at) AS num, TO_CHAR(added_at, 'Mon') AS label, SUM(episode) AS value
+        SELECT EXTRACT(MONTH FROM added_at) AS num, TO_CHAR(added_at, 'Mon') AS label, SUM(episodes) AS value
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         WHERE users_seasons.number = seasons.number and EXTRACT(YEAR FROM added_at) = EXTRACT(YEAR FROM current_date)
