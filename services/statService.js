@@ -87,7 +87,7 @@ const getCountGroupedByTypeByPeriod = async (req, res) => {
  * @param {string} period
  * @return Promise
  */
-const getNbSeasonsByUserIdByPeriod = async (userId, period) => {
+const getNbSeasonsByUserIdByPeriod = (userId, period) => {
     switch (period) {
         case "years":
             return userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId);
@@ -105,7 +105,7 @@ const getNbSeasonsByUserIdByPeriod = async (userId, period) => {
  * @param {string} period 
  * @return Promise
  */
-const getNbEpisodesByUserIdByPeriod = async (userId, period) => {
+const getNbEpisodesByUserIdByPeriod = (userId, period) => {
     switch (period) {
         case "years":
             return userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId);
