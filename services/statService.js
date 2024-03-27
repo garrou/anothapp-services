@@ -146,7 +146,7 @@ const getNbEpisodesByUserIdByPeriod = (userId, period) => {
 
 /**
  * @param {string} userId
- * @return Promise
+ * @return Promise<any[]>
  */
 const getNbKindsByUserId = async (userId) => {
     const kindsMap = new Map();

@@ -42,7 +42,9 @@ const getFriends = async (userId) => {
         SELECT u.id, u.email, u.picture
         FROM friends
         JOIN users u ON id = fst_user_id OR id = sec_user_id
-        WHERE (fst_user_id = $1 OR sec_user_id = $1) AND accepted = TRUE
+        WHERE (fst_user_id = $1 OR sec_user_id = $1) 
+        AND accepted = TRUE
+        AND id <> $1
     `, [userId]);
     client.release();
     return res["rows"];

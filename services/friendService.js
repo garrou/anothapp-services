@@ -51,31 +51,40 @@ const deleteFriend = async (req, res) => {
 const getFriends = async (req, res) => {
     try {
         const { status } = req.query;
-        let rows = [];
-
-        switch (status) {
-            case "send":
-                rows = (await friendRepository.getFriendsRequestsSend(req.user.id))
-                    .map(user => new UserProfile(user));
-                break;
-            case "receive":
-                rows = (await friendRepository.getFriendsRequestsReceive(req.user.id))
-                    .map(user => new UserProfile(user));
-                break;
-            case "friend":
-                rows = (await friendRepository.getFriends(req.user.id)).reduce((acc, curr) => {
-                        if (curr.id !== req.user.id) {
-                            acc.push(curr)
-                        }
-                    }, []);
-                break;
-            default:
-                throw new Error("Invalid type");
-        }
-        res.status(200).json(rows);
+        const users = await getFriendsByUserIdByStatus(req.user.id, status);
+        res.status(200).json(status ? { [status]: users } : users);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
+}
+
+/**
+ * @param {string} userId 
+ * @param {string?} status
+ * @returns {Friend[] | map<string, Friend[]>}
+ */
+const getFriendsByUserIdByStatus = async (userId, status) => {
+    let rows = null;
+    const mapToUser = (arr) => arr.map(user => new UserProfile(user));
+
+    switch (status) {
+        case "send":
+            rows = (await friendRepository.getFriendsRequestsSend(userId));
+            break;
+        case "receive":
+            rows = (await friendRepository.getFriendsRequestsReceive(userId));
+            break;
+        case "friend":
+            rows = (await friendRepository.getFriends(userId));
+            break;
+        default:
+            return {
+                "send": mapToUser(await friendRepository.getFriendsRequestsSend(userId)),
+                "receive": mapToUser(await friendRepository.getFriendsRequestsReceive(userId)),
+                "friend": mapToUser(await friendRepository.getFriends(userId))
+            }
+    }
+    return rows ? mapToUser(rows) : [];
 }
 
 module.exports = {
