@@ -7,6 +7,7 @@ class UserProfile {
         this.id = user.id;
         this.email = user.email;
         this.picture = user.picture
+        this.username = user.username;
     }
 }
 

@@ -16,6 +16,20 @@ const getUserByEmail = async (email) => {
 }
 
 /**
+ * @param {string} username 
+ */
+const getUserByUsername = async (username) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT id, email, picture, password
+        FROM users
+        WHERE username = $1
+    `, [username]);
+    client.release();
+    return res["rows"];
+}
+
+/**
  * @param {string} id 
  * @returns Promise<any[]> 
  */
@@ -89,6 +103,7 @@ const updateEmail = async (id, email) => {
 module.exports = {
     createUser,
     getUserByEmail,
+    getUserByUsername,
     getUserById,
     updateEmail,
     updatePassword,

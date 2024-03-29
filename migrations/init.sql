@@ -2,6 +2,7 @@ SET client_encoding = "UTF8";
 
 CREATE TABLE users (
     id VARCHAR(50),
+    username VARCHAR(25) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     picture VARCHAR(255),
@@ -18,12 +19,12 @@ CREATE TABLE shows (
 );
 
 CREATE TABLE users_shows (
-    continue BOOLEAN DEFAULT TRUE,
-    added_at TIMESTAMP DEFAULT NOW(),
+    continue BOOLEAN NOT NULL DEFAULT TRUE,
+    added_at TIMESTAMP NOT NULL DEFAULT NOW(),
     user_id VARCHAR(50),
     show_id INTEGER,
-    favorite BOOLEAN DEFAULT FALSE,
-    missing INTEGER NOT NULL,
+    favorite BOOLEAN NOT NULL DEFAULT FALSE,
+    missing INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE,
     PRIMARY KEY(user_id, show_id)
@@ -33,7 +34,7 @@ CREATE TABLE seasons (
     number INTEGER NOT NULL,
     episode INTEGER NOT NULL,
     duration INTEGER NOT NULL,
-    image VARCHAR(255),
+    image VARCHAR(255) NOT NULL,
     show_id INTEGER,
     FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
     PRIMARY KEY(number, show_id)
@@ -92,8 +93,20 @@ UPDATE seasons
 SET image = (SELECT poster FROM shows WHERE seasons.show_id = shows.id)
 WHERE image IS NULL;
 
+ALTER TABLE seasons
+ALTER COLUMN image SET NOT NULL;
+
 ALTER TABLE users_shows
-ADD COLUMN missing INTEGER DEFAULT 0;
+ALTER COLUMN continue SET NOT NULL;
+
+ALTER TABLE users_shows
+ALTER COLUMN added_at SET NOT NULL;
+
+ALTER TABLE users_shows
+ALTER COLUMN favorite SET NOT NULL;
+
+ALTER TABLE users_shows
+ADD COLUMN missing INTEGER NOT NULL DEFAULT 0;
 
 UPDATE users_shows
 SET missing = (SELECT nb FROM users_towatch WHERE show_id = users_shows.show_id);
@@ -102,3 +115,12 @@ ALTER TABLE users_shows
 ALTER COLUMN missing SET NOT NULL;
 
 DROP TABLE users_towatch;
+
+ALTER TABLE users
+ADD COLUMN username VARCHAR(25) UNIQUE;
+
+UPDATE users
+SET username = SUBSTR(email, 0, 26);
+
+ALTER TABLE users
+ALTER COLUMN username SET NOT NULL;

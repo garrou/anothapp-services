@@ -1,8 +1,7 @@
 const userRepository = require("../repositories/userRepository");
 const { comparePassword, createHash, uuid, signJwt } = require("../helpers/security");
 const UserProfile = require("../models/UserProfile");
-
-const MIN_PASSWORD = 8;
+const { isValidEmail, isValidUsername, isValidPassword } = require("../helpers/validator");
 
 const checkUser = (_, res) => {
     res.status(200).json({ "message": "ok" });
@@ -10,16 +9,16 @@ const checkUser = (_, res) => {
 
 const getUser = async (req, res) => {
     try {
-        const { email } = req.body;
+        const { username } = req.body;
 
-        if (!email) {
-            return res.status(400).json({ "message": "Email invalide" });
-        }
-        const rows = await userRepository.getUserByEmail(email.toLowerCase());
+        if (!username) 
+            return res.status(400).json({ "message": "Requête invalide" });
+        
+        const rows = await userRepository.getUserByUsername(username.toLowerCase());
 
-        if (rows === 0) {
+        if (rows === 0)
             return res.status(404).json({ "message": "Aucun résultat" });
-        }
+        
         res.status(200).json(rows.map(user => new UserProfile(user)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
@@ -28,17 +27,19 @@ const getUser = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const rows = await userRepository.getUserByEmail(email.toLowerCase());
-
-        if (rows.length === 0) {
+        const { name, password } = req.body;
+        const rows = value.includes("@")
+            ? await userRepository.getUserByEmail(name.toLowerCase())
+            : await userRepository.getUserByUsername(name.toLowerCase());
+        
+        if (rows.length === 0)
             return res.status(400).json({ "message": "Email ou mot de passe incorrect" });
-        }
+
         const same = await comparePassword(password, rows[0]["password"]);
 
-        if (!same) {
+        if (!same)
             return res.status(400).json({ "message": "Email ou mot de passe incorrect" });
-        }
+        
         const token = signJwt(rows[0]["id"], process.env.JWT_SECRET);
         res.status(200).json({ "token": token });
     } catch (_) {
@@ -48,22 +49,30 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
     try {
-        const { email, password, confirm } = req.body;
+        const { email, username, password, confirm } = req.body;
 
-        if (password != confirm) {
-            return res.status(400).json({ "message": "Les mots de passe sont différents" });
-        }
-        if (password.length < MIN_PASSWORD) {
-            return res.status(400).json({ "message": `Le mot de passe doit faire au moins ${MIN_PASSWORD} caractères` });
-        }
+        const nameValid = isValidUsername(username);
+
+        if (!nameValid.status)
+            return res.status(400).json({ "message": nameValid.message });
+        
+        const emailValid = isValidEmail(email);
+
+        if (!emailValid.status)
+            return res.status(400).json({ "message": emailValid.message });
+        
+        const passValid = isValidPassword(password, confirm);
+
+        if (!passValid.status)
+            return res.status(400).json({ "message": passValid.message });
+    
         const resp = await userRepository.getUserByEmail(email.toLowerCase());
 
-        if (resp.rowCount > 0) {
+        if (resp.rowCount > 0)
             return res.status(409).json({ "message": "Un compte est déjà associé à cet email" });
-        }
+        
         const hash = await createHash(password);
         await userRepository.createUser(uuid(), email.toLowerCase(), hash);
-
         res.status(201).json({ "message": "Compte créé" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
