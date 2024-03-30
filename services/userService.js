@@ -1,7 +1,7 @@
 const userRepository = require("../repositories/userRepository");
 const { comparePassword, createHash, uuid, signJwt } = require("../helpers/security");
 const UserProfile = require("../models/UserProfile");
-const { isValidEmail, isValidUsername, isValidPassword } = require("../helpers/validator");
+const { isValidEmail, isValidUsername, isValidPassword, isValidImage, isValidId, isValidChangePassword } = require("../helpers/validator");
 
 const checkUser = (_, res) => {
     res.status(200).json({ "message": "ok" });
@@ -14,9 +14,9 @@ const getUser = async (req, res) => {
         if (!username) 
             return res.status(400).json({ "message": "Requête invalide" });
         
-        const rows = await userRepository.getUserByUsername(username.toLowerCase());
+        const rows = await userRepository.getUserByUsername(username);
 
-        if (rows === 0)
+        if (rows.length === 0)
             return res.status(404).json({ "message": "Aucun résultat" });
         
         res.status(200).json(rows.map(user => new UserProfile(user)));
@@ -27,18 +27,24 @@ const getUser = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { name, password } = req.body;
-        const rows = value.includes("@")
-            ? await userRepository.getUserByEmail(name.toLowerCase())
-            : await userRepository.getUserByUsername(name.toLowerCase());
+        const { identifier, password } = req.body;
+
+        if (!isValidId(identifier))
+            return res.status(400).json({ "message": "Identifiant incorrect" });
+
+        const isEmail = identifier.includes("@");
+
+        const rows = isEmail
+            ? await userRepository.getUserByEmail(identifier.toLowerCase())
+            : await userRepository.getUserByUsername(identifier);
         
         if (rows.length === 0)
-            return res.status(400).json({ "message": "Email ou mot de passe incorrect" });
+            return res.status(400).json({ "message": `${isEmail ? "Email" : "Username"} ou mot de passe incorrect` });
 
         const same = await comparePassword(password, rows[0]["password"]);
 
         if (!same)
-            return res.status(400).json({ "message": "Email ou mot de passe incorrect" });
+            return res.status(400).json({ "message": `${isEmail ? "Email" : "Username"} ou mot de passe incorrect` });
         
         const token = signJwt(rows[0]["id"], process.env.JWT_SECRET);
         res.status(200).json({ "token": token });
@@ -50,7 +56,6 @@ const login = async (req, res) => {
 const register = async (req, res) => {
     try {
         const { email, username, password, confirm } = req.body;
-
         const nameValid = isValidUsername(username);
 
         if (!nameValid.status)
@@ -66,13 +71,18 @@ const register = async (req, res) => {
         if (!passValid.status)
             return res.status(400).json({ "message": passValid.message });
     
-        const resp = await userRepository.getUserByEmail(email.toLowerCase());
+        let resp = await userRepository.getUserByEmail(email.toLowerCase());
 
-        if (resp.rowCount > 0)
+        if (resp.length > 0)
             return res.status(409).json({ "message": "Un compte est déjà associé à cet email" });
+
+        resp = await userRepository.getUserByUsername(username);
+
+        if (resp.length > 0)
+            return res.status(409).json({ "message": "Un compte est déjà associé à ce nom d'utilisateur" });
         
         const hash = await createHash(password);
-        await userRepository.createUser(uuid(), email.toLowerCase(), hash);
+        await userRepository.createUser(uuid(), email.toLowerCase(), hash, username);
         res.status(201).json({ "message": "Compte créé" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
@@ -83,9 +93,9 @@ const setProfilePicture = async (req, res) => {
     try {
         const { image } = req.body;
 
-        if (typeof image !== "string" || image.trim().length === 0) {
+        if (!isValidImage(image))
             return res.status(400).json({ "message": "Image invalide" });
-        }
+
         await userRepository.updatePicture(req.user.id, image);
         res.status(200).json({ "message": "Image de profil définie" });
     } catch (_) {
@@ -109,26 +119,21 @@ const getProfile = async (req, res) => {
 const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword, confirmPassword } = req.body;
+        const changeValid = isValidChangePassword(currentPassword, newPassword, confirmPassword);
 
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        if ((newPassword !== confirmPassword) || (newPassword.length < MIN_PASSWORD)) {
-            return res.status(400).json({ "message": `Le mot de passe doit faire au moins ${MIN_PASSWORD} caractères` });
-        }
-        if (currentPassword === newPassword) {
-            return res.status(400).json({ "message": "Le nouveau mot de passe doit être différent de l'ancien" });
-        }
+        if (!changeValid.status)
+            return res.status(400).json({ "message": changeValid.message });
+
         const rows = await userRepository.getUserById(req.user.id);
 
-        if (rows.length === 0) {
+        if (rows.length === 0)
             throw new Error();
-        }
+        
         const same = await comparePassword(currentPassword, rows[0]["password"]);
 
-        if (!same) {
+        if (!same)
             return res.status(400).json({ "message": "Mot de passe incorrect" });
-        }
+
         const hash = await createHash(newPassword);
         await userRepository.updatePassword(req.user.id, hash);
         res.status(200).json({ "message": "Mot de passe modifié" });

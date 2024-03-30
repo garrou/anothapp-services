@@ -48,13 +48,14 @@ const getUserById = async (id) => {
  * @param {string} id 
  * @param {string} email 
  * @param {string} password 
+ * @param {string} username
  */
-const createUser = async (id, email, password) => {
+const createUser = async (id, email, password, username) => {
     const client = await pool.connect();
     await client.query(`
-        INSERT INTO users (id, email, password)
-        VALUES ($1, $2, $3)
-    `, [id, email, password]);
+        INSERT INTO users (id, email, password, username)
+        VALUES ($1, $2, $3, $4)
+    `, [id, email, password, username]);
     client.release();
 }
 
