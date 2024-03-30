@@ -7,7 +7,7 @@ const pool = require('../helpers/db');
 const getUserByEmail = async (email) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, email, picture, password
+        SELECT id, email, picture, password, username
         FROM users
         WHERE email = $1
     `, [email]);
@@ -21,7 +21,7 @@ const getUserByEmail = async (email) => {
 const getUserByUsername = async (username) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, email, picture, password
+        SELECT id, email, picture, password, username
         FROM users
         WHERE username = $1
     `, [username]);
@@ -36,7 +36,7 @@ const getUserByUsername = async (username) => {
 const getUserById = async (id) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, email, picture, password
+        SELECT id, email, picture, password, username
         FROM users
         WHERE id = $1
     `, [id]);

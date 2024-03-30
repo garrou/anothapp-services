@@ -15,11 +15,7 @@ const getUser = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         
         const rows = await userRepository.getUserByUsername(username);
-
-        if (rows.length === 0)
-            return res.status(404).json({ "message": "Aucun résultat" });
-        
-        res.status(200).json(rows.map(user => new UserProfile(user)));
+        res.status(200).json(rows.map(user => new UserProfile(user, true)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
