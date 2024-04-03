@@ -39,7 +39,7 @@ const acceptFriend = async (userId, otherId) => {
 const getFriends = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT u.id, u.email, u.picture
+        SELECT u.id, u.email, u.picture, u.username
         FROM friends
         JOIN users u ON id = fst_user_id OR id = sec_user_id
         WHERE (fst_user_id = $1 OR sec_user_id = $1) 
@@ -57,7 +57,7 @@ const getFriends = async (userId) => {
 const getFriendsRequestsSend = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT u.id, u.email, u.picture
+        SELECT u.id, u.email, u.picture, u.username
         FROM friends
         JOIN users u ON id = sec_user_id
         WHERE fst_user_id = $1 AND accepted = FALSE
@@ -73,7 +73,7 @@ const getFriendsRequestsSend = async (userId) => {
 const getFriendsRequestsReceive = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT u.id, u.email, u.picture
+        SELECT u.id, u.email, u.picture, u.username
         FROM friends
         JOIN users u ON id = fst_user_id
         WHERE sec_user_id = $1 AND accepted = FALSE

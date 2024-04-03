@@ -14,8 +14,13 @@ const getUser = async (req, res) => {
         if (!username) 
             return res.status(400).json({ "message": "Requête invalide" });
         
-        const rows = await userRepository.getUserByUsername(username);
-        res.status(200).json(rows.map(user => new UserProfile(user, true)));
+        const users = (await userRepository.getUserByUsername(username)).reduce((acc, curr) => {
+            const user = new UserProfile(curr, true);
+            if (user.id !== req.user.id)
+                acc.push(user);
+            return acc;
+        }, []); 
+        res.status(200).json(users);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

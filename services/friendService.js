@@ -65,7 +65,7 @@ const getFriends = async (req, res) => {
  */
 const getFriendsByUserIdByStatus = async (userId, status) => {
     let rows = null;
-    const mapToUser = (arr) => arr.map(user => new UserProfile(user));
+    const mapToUser = (arr) => arr.map(user => new UserProfile(user, true));
 
     switch (status) {
         case "send":

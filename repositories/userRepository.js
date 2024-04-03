@@ -10,6 +10,7 @@ const getUserByEmail = async (email) => {
         SELECT id, email, picture, password, username
         FROM users
         WHERE email = $1
+        LIMIT 1
     `, [email]);
     client.release();
     return res["rows"];
@@ -23,8 +24,9 @@ const getUserByUsername = async (username) => {
     const res = await client.query(`
         SELECT id, email, picture, password, username
         FROM users
-        WHERE username = $1
-    `, [username]);
+        WHERE UPPER(username) LIKE UPPER($1)
+        LIMIT 1
+    `, [`%${username}%`]);
     client.release();
     return res["rows"];
 }
