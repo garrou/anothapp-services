@@ -11,40 +11,43 @@ class ApiPerson {
         this.nationality = person.nationality;
         this.description = person.description;
         this.poster = person.poster;
-        this.shows = person.shows.map(show => new ApiPersonShow(show)).sort((a, b) => b.creation - a.creation);
+        this.series = person.shows.map(show => new ApiPersonShow(show)).sort((a, b) => b.creation - a.creation);
         this.movies = person.movies.map(movie => new ApiPersonMovie(movie)).sort((a, b) => b.productionYear - a.productionYear);
     }
 }
 
-class ApiPersonShow {
+class ApiIntertainment {
+
+    constructor(obj) {
+        this.id = obj.id;
+        this.name = obj.name;
+        this.title = obj.title;
+        this.creation = obj.creation;
+        this.poster = obj.poster;
+    }
+}
+
+class ApiPersonShow extends ApiIntertainment {
 
     /**
      * @param {Object} obj 
      */
     constructor(obj) {
         const { show } = obj;
-        this.name = obj.name;
-        this.id = show.id;
-        this.title = show.title;
+        super(show);
         this.seasons = show.seasons;
         this.episodes = show.episodes;
-        this.creation = show.creation;
-        this.poster = show.poster;
     }
 }
 
-class ApiPersonMovie {
+class ApiPersonMovie extends ApiIntertainment {
 
     /**
      * @param {Object} obj 
      */
     constructor(obj) {
         const { movie } = obj;
-        this.name = obj.name;
-        this.id = movie.id;
-        this.title = movie.title;
-        this.productionYear = movie.production_year;
-        this.poster = movie.poster;
+        super(movie);
     }
 }
 
