@@ -62,7 +62,22 @@ const isValidChangePassword = (oldPass, newPass, confPass) => {
     if (oldPass === newPass)
         return { status: false, message: "Le nouveau mot de passe doit être différent de l'ancien "};
 
-    return isValidPassword(newPass, confPass)
+    return isValidPassword(newPass, confPass);
+}
+
+/**
+ * @param {string|undefined} oldEmail 
+ * @param {string|undefined} newEmail
+ * @returns object
+ */
+const isValidChangeEmail = (oldEmail, newEmail) => {
+    if (typeof oldEmail !== "string")
+        return { status: false, message: "Email incorrect" };
+
+    if (oldEmail === newEmail)
+        return { status: false, message: "Le nouveau mail doit être différent" };
+
+    return isValidEmail(newEmail);
 }
 
 /**
@@ -79,6 +94,7 @@ const isValidId = (name) => {
 }
 
 module.exports = {
+    isValidChangeEmail,
     isValidChangePassword,
     isValidEmail,
     isValidId,
