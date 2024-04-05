@@ -1,7 +1,7 @@
 class ApiShowKind {
 
     /**
-     * @param {Array<string>} array 
+     * @param {string[]} array 
      */
     constructor(array) {
         this.value = array[0];

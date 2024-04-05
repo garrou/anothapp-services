@@ -1,9 +1,9 @@
 const axios = require("axios");
 const betaseries = "https://api.betaseries.com";
 const key = process.env.BETASERIES_KEY;
-const ApiShowDetails = require("../models/ApiShowDetails");
+const ApiShow = require("../models/ApiShow");
 const ApiEpisode = require("../models/ApiEpisode");
-const ApiSeason = require("../models/ApiSeason");
+const Season = require("../models/Season");
 const ApiCharacter = require("../models/ApiCharacter");
 const ApiSimilarShow = require("../models/ApiSimilarShow");
 const ApiShowKind = require("../models/ApiShowKind");
@@ -11,7 +11,7 @@ const ApiPerson = require("../models/ApiPerson");
 
 /**
  * @param {string} title 
- * @returns ApiShowDetails[]
+ * @returns ApiShow[]
  */
 const search = async (title) => {
     const url = title
@@ -23,7 +23,7 @@ const search = async (title) => {
         }
     });
     const { shows } = await resp.data;
-    return shows.map(show => new ApiShowDetails(show));
+    return shows.map(show => new ApiShow(show));
 }
 
 /**
@@ -40,19 +40,14 @@ const getShowsByKind = async (kind) => {
     return shows.map(s => ({
         id: s.id,
         title: s.title,
-        images: {
-            poster: s.poster,
-            show: null,
-            banner: null,
-            box: null
-        }
+        poster: s.poster
     }));
 }
 
 const discoverShows = async (req, res) => {
     try {
         const { title, kind } = req.query;
-        let response = [];
+        let response = null;
 
         if (kind) {
             response = await getShowsByKind(kind);
@@ -78,7 +73,7 @@ const getByShowId = async (req, res) => {
             }
         });
         const { show } = await resp.data;
-        res.status(200).json(new ApiShowDetails(show));
+        res.status(200).json(new ApiShow(show));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -97,7 +92,7 @@ const getSeasonsByShowId = async (req, res) => {
             }
         });
         const { seasons } = await resp.data;
-        res.status(200).json(seasons.map(season => new ApiSeason(season)));
+        res.status(200).json(seasons.map(season => new Season(season)));
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

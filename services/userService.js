@@ -1,26 +1,26 @@
 const userRepository = require("../repositories/userRepository");
 const { comparePassword, createHash, uuid, signJwt } = require("../helpers/security");
 const UserProfile = require("../models/UserProfile");
-
-const MIN_PASSWORD = 8;
+const { isValidEmail, isValidUsername, isValidPassword, isValidImage, isValidId, isValidChangePassword, isValidChangeEmail } = require("../helpers/validator");
 
 const checkUser = (_, res) => {
-    res.sendStatus(200);
+    res.status(200).json({ "message": "ok" });
 }
 
 const getUser = async (req, res) => {
     try {
-        const { email } = req.body;
+        const { username } = req.body;
 
-        if (!email) {
-            return res.status(400).json({ "message": "Email invalide" });
-        }
-        const rows = await userRepository.getUserByEmail(email.toLowerCase());
+        if (!username)
+            return res.status(400).json({ "message": "Requête invalide" });
 
-        if (rows === 0) {
-            return res.status(404).json({ "message": "Aucun résultat" });
-        }
-        res.status(200).json(rows.map(user => new UserProfile(user)));
+        const users = (await userRepository.getUserByUsername(username)).reduce((acc, curr) => {
+            const user = new UserProfile(curr, true);
+            if (user.id !== req.user.id)
+                acc.push(user);
+            return acc;
+        }, []);
+        res.status(200).json(users);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
@@ -28,17 +28,25 @@ const getUser = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const rows = await userRepository.getUserByEmail(email.toLowerCase());
+        const { identifier, password } = req.body;
 
-        if (rows.length === 0) {
-            return res.status(400).json({ "message": "Email ou mot de passe incorrect" });
-        }
+        if (!isValidId(identifier))
+            return res.status(400).json({ "message": "Identifiant incorrect" });
+
+        const isEmail = identifier.includes("@");
+
+        const rows = isEmail
+            ? await userRepository.getUserByEmail(identifier.toLowerCase())
+            : await userRepository.getUserByUsername(identifier);
+
+        if (rows.length === 0)
+            return res.status(400).json({ "message": `${isEmail ? "Email" : "Username"} ou mot de passe incorrect` });
+
         const same = await comparePassword(password, rows[0]["password"]);
 
-        if (!same) {
-            return res.status(400).json({ "message": "Email ou mot de passe incorrect" });
-        }
+        if (!same)
+            return res.status(400).json({ "message": `${isEmail ? "Email" : "Username"} ou mot de passe incorrect` });
+
         const token = signJwt(rows[0]["id"], process.env.JWT_SECRET);
         res.status(200).json({ "token": token });
     } catch (_) {
@@ -48,22 +56,34 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
     try {
-        const { email, password, confirm } = req.body;
+        const { email, username, password, confirm } = req.body;
+        const nameValid = isValidUsername(username);
 
-        if (password != confirm) {
-            return res.status(400).json({ "message": "Les mots de passe sont différents" });
-        }
-        if (password.length < MIN_PASSWORD) {
-            return res.status(400).json({ "message": `Le mot de passe doit faire au moins ${MIN_PASSWORD} caractères` });
-        }
-        const resp = await userRepository.getUserByEmail(email.toLowerCase());
+        if (!nameValid.status)
+            return res.status(400).json({ "message": nameValid.message });
 
-        if (resp.rowCount > 0) {
+        const emailValid = isValidEmail(email);
+
+        if (!emailValid.status)
+            return res.status(400).json({ "message": emailValid.message });
+
+        const passValid = isValidPassword(password, confirm);
+
+        if (!passValid.status)
+            return res.status(400).json({ "message": passValid.message });
+
+        let resp = await userRepository.getUserByEmail(email.toLowerCase());
+
+        if (resp.length > 0)
             return res.status(409).json({ "message": "Un compte est déjà associé à cet email" });
-        }
-        const hash = await createHash(password);
-        await userRepository.createUser(uuid(), email.toLowerCase(), hash);
 
+        resp = await userRepository.getUserByUsername(username);
+
+        if (resp.length > 0)
+            return res.status(409).json({ "message": "Un compte est déjà associé à ce nom d'utilisateur" });
+
+        const hash = await createHash(password);
+        await userRepository.createUser(uuid(), email.toLowerCase(), hash, username);
         res.status(201).json({ "message": "Compte créé" });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
@@ -74,9 +94,9 @@ const setProfilePicture = async (req, res) => {
     try {
         const { image } = req.body;
 
-        if (typeof image !== "string" || image.trim().length === 0) {
+        if (!isValidImage(image))
             return res.status(400).json({ "message": "Image invalide" });
-        }
+
         await userRepository.updatePicture(req.user.id, image);
         res.status(200).json({ "message": "Image de profil définie" });
     } catch (_) {
@@ -97,65 +117,95 @@ const getProfile = async (req, res) => {
     }
 }
 
-const changePassword = async (req, res) => {
+const changeProfile = async (req, res) => {
     try {
-        const { currentPassword, newPassword, confirmPassword } = req.body;
+        const { currentPassword, newPassword, confirmPassword, email, newEmail, image } = req.body;
 
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            return res.status(400).json({ "message": "Requête invalide" });
+        if (currentPassword && newPassword && confirmPassword) {
+            await changePassword(req.user.id, currentPassword, newPassword, confirmPassword);
+            return res.status(200).json({ "message": "Mot de passe modifié" });
+        } else if (email && newEmail) {
+            await changeEmail(req.user.id, email, newEmail);
+            return res.status(200).json({ "message": "Email modifié" });
+        } else if (image) {
+            await changeImage(req.user.id, image);
+            return res.status(200).json({ "message": "Image de profil définie" });
         }
-        if ((newPassword !== confirmPassword) || (newPassword.length < MIN_PASSWORD)) {
-            return res.status(400).json({ "message": `Le mot de passe doit faire au moins ${MIN_PASSWORD} caractères` });
-        }
-        if (currentPassword === newPassword) {
-            return res.status(400).json({ "message": "Le nouveau mot de passe doit être différent de l'ancien" });
-        }
-        const rows = await userRepository.getUserById(req.user.id);
-
-        if (rows.length === 0) {
-            throw new Error();
-        }
-        const same = await comparePassword(currentPassword, rows[0]["password"]);
-
-        if (!same) {
-            return res.status(400).json({ "message": "Mot de passe incorrect" });
-        }
-        const hash = await createHash(newPassword);
-        await userRepository.updatePassword(req.user.id, hash);
-        res.status(200).json({ "message": "Mot de passe modifié" });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+        res.status(400).json({ "message": "Requête invalide" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
-const changeEmail = async (req, res) => {
-    try {
-        const { mail, newEmail } = req.body;
+/**
+ * @param {string} userId 
+ * @param {string} image 
+ */
+const changeImage = async (userId, image) => {
+    if (!isValidImage(image))
+       throw new Error("Image invalide");
 
-        if (!mail || !newEmail) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        const rows = await userRepository.getUserById(req.user.id);
+    await userRepository.updatePicture(userId, image);
+}
 
-        if (rows.length === 0) {
-            throw new Error();
-        }
-        if (rows[0]["email"] !== mail) {
-            return res.status(400).json({ "message": "Email incorrect" });
-        }
-        if (mail === newEmail) {
-            return res.status(400).json({ "message": "Le nouveau mail doit être différent de l'ancien" });
-        }
-        await userRepository.updateEmail(req.user.id, newEmail);
-        res.status(200).json({ "message": "Email modifié" });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
-    }
+/**
+ * @param {string} userId
+ * @param {string} currentPass 
+ * @param {string} newPass 
+ * @param {string} confirmPass 
+ */
+const changePassword = async (userId, currentPass, newPass, confirmPass) => {
+    const changeValid = isValidChangePassword(currentPass, newPass, confirmPass);
+
+    if (!changeValid.status)
+        throw new Error(changeValid.message);
+
+    const rows = await userRepository.getUserById(userId);
+
+    if (rows.length === 0)
+        throw new Error("Utilisateur inconnu");
+
+    const same = await comparePassword(currentPass, rows[0]["password"]);
+
+    if (!same)
+        throw new Error("Mot de passe incorrect");
+
+    const hash = await createHash(newPass);
+    await userRepository.updatePassword(userId, hash);
+}
+
+/**
+ * @param {string} userId 
+ * @param {string} email 
+ * @param {string} newEmail 
+ */
+const changeEmail = async (userId, email, newEmail) => {
+    const changeValid = isValidChangeEmail(email, newEmail);
+
+    if (!changeValid.status)
+        throw new Error(changeValid.message);
+
+    let rows = await userRepository.getUserById(userId);
+
+    if (rows.length === 0)
+        throw new Error("Utilisateur inconnu");
+
+    if (rows[0]["email"] !== email)
+        throw new Error("Email incorrect");
+
+    if (email === newEmail)
+        throw new Error("Le nouveau mail doit être différent de l'ancien");
+    
+    rows = await userRepository.getUserByEmail(newEmail);
+
+    if (rows.length > 0)
+        throw new Error("Cet email est déjà associé à un compte");
+
+    await userRepository.updateEmail(userId, newEmail);
 }
 
 module.exports = {
-    changeEmail,
-    changePassword,
+    changeProfile,
     getUser,
     getProfile,
     setProfilePicture,

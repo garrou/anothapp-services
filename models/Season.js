@@ -4,11 +4,22 @@ class Season {
      * @param {Object} obj 
      */
     constructor(obj) {
-        this.showId = obj.show_id;
         this.number = obj.number;
-        this.episode = obj.episode;
+        this.episodes = obj.episodes;
         this.image = obj.image;
     }
+
+    /**
+     * @param {number} number 
+     * @param {number} episodes 
+     * @param {string} image 
+     * @return Season
+     */
+    static from = (number, episodes, image) => new this({
+        number,
+        episodes,
+        image
+    });
 }
 
 module.exports = Season;

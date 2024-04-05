@@ -7,10 +7,26 @@ const pool = require('../helpers/db');
 const getUserByEmail = async (email) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, email, picture, password
+        SELECT id, email, picture, password, username
         FROM users
         WHERE email = $1
+        LIMIT 1
     `, [email]);
+    client.release();
+    return res["rows"];
+}
+
+/**
+ * @param {string} username 
+ */
+const getUserByUsername = async (username) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT id, email, picture, password, username
+        FROM users
+        WHERE UPPER(username) LIKE UPPER($1)
+        LIMIT 1
+    `, [`%${username}%`]);
     client.release();
     return res["rows"];
 }
@@ -22,7 +38,7 @@ const getUserByEmail = async (email) => {
 const getUserById = async (id) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, email, picture, password
+        SELECT id, email, picture, password, username
         FROM users
         WHERE id = $1
     `, [id]);
@@ -34,13 +50,14 @@ const getUserById = async (id) => {
  * @param {string} id 
  * @param {string} email 
  * @param {string} password 
+ * @param {string} username
  */
-const createUser = async (id, email, password) => {
+const createUser = async (id, email, password, username) => {
     const client = await pool.connect();
     await client.query(`
-        INSERT INTO users (id, email, password)
-        VALUES ($1, $2, $3)
-    `, [id, email, password]);
+        INSERT INTO users (id, email, password, username)
+        VALUES ($1, $2, $3, $4)
+    `, [id, email, password, username]);
     client.release();
 }
 
@@ -89,6 +106,7 @@ const updateEmail = async (id, email) => {
 module.exports = {
     createUser,
     getUserByEmail,
+    getUserByUsername,
     getUserById,
     updateEmail,
     updatePassword,

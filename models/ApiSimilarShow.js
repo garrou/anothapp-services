@@ -1,7 +1,7 @@
 class ApiSimilarShow {
 
     /**
-     * @param {Object} episode 
+     * @param {Object} show 
      */
     constructor(show) {
         this.id = show.show_id;
