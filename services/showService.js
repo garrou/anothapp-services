@@ -158,11 +158,12 @@ const updateByShowId = async (req, res) => {
 
         if (!id || (!favorite && !watch)) {
             return res.status(400).json({ "message": "Requête invalide" });
+        } else if (favorite) {
+            result = await userShowRepository.updateFavoriteByUserIdByShowId(req.user.id, id);
+        } else if (watch) {
+            result = await userShowRepository.updateWatchingByUserIdByShowId(req.user.id, id);
         }
-        result = favorite
-            ? await userShowRepository.updateFavoriteByUserIdByShowId(req.user.id, id)
-            : await userShowRepository.updateWatchingByUserIdByShowId(req.user.id, id);
-        res.status(200).json({ "result": result });
+        res.status(200).json({ "favorite": result });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }
