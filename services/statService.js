@@ -13,8 +13,8 @@ const getStats = async (req, res) => {
             "nbEpisodes": await getCountByUserIdByType(userId, "episodes"),
             "bestMonth": await getTimeByUserIdByType(userId, "best-month"),
         });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -24,8 +24,8 @@ const getCountByType = async (req, res) => {
         const userId = id ?? req.user.id;
         const total = getCountByUserIdByType(userId, type);
         res.status(200).json(total);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -35,8 +35,8 @@ const getTimeByType = async (req, res) => {
         const userId = id ?? req.user.id;
         const response = await getTimeByUserIdByType(userId, type);
         res.status(200).json(response);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -44,10 +44,10 @@ const getCountGroupedByTypeByPeriod = async (req, res) => {
     try {
         const { type, period, id } = req.query;
         const userId = id ?? req.user.id;
-        const response = await getGroupedCountByUserIdByTypeByPeriod(type, period, userId);
+        const response = await getGroupedCountByUserIdByTypeByPeriod(userId, type, period);
         res.status(200).json(response);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
