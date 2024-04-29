@@ -8,6 +8,7 @@ const ApiCharacter = require("../models/ApiCharacter");
 const ApiSimilarShow = require("../models/ApiSimilarShow");
 const ApiShowKind = require("../models/ApiShowKind");
 const ApiPerson = require("../models/ApiPerson");
+const { cumulate } = require("../helpers/utils");
 
 /**
  * @param {string} title 
@@ -92,7 +93,13 @@ const getSeasonsByShowId = async (req, res) => {
             }
         });
         const { seasons } = await resp.data;
-        res.status(200).json(seasons.map(season => new Season(season)));
+        const episodes = cumulate(seasons);
+        const mapSeasons = seasons.map((s, i) => {
+            const season = new Season(s);
+            season.interval = `${episodes[i] + 1} - ${episodes[i + 1]}`;
+            return season;
+        });
+        res.status(200).json(mapSeasons);
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
     }

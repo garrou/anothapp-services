@@ -1,12 +1,13 @@
 class Season {
 
     /**
-     * @param {Object} obj 
+     * @param {Object} obj
      */
     constructor(obj) {
         this.number = obj.number;
         this.episodes = obj.episodes;
         this.image = obj.image;
+        this.interval = "";
     }
 
     /**

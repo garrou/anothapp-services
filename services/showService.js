@@ -5,6 +5,7 @@ const showRepository = require("../repositories/showRepository");
 const { search } = require("../services/searchService");
 const Season = require("../models/Season");
 const Show = require("../models/Show");
+const { cumulate } = require("../helpers/utils");
 
 /**
  * @param {string} userId
@@ -77,13 +78,19 @@ const getShow = async (req, res) => {
             return res.status(404).json({ "message": "Série introuvable " });
         }
         const seasons = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
-        const [time, episodes] = await userSeasonRepository.getTimeEpisodesByUserIdByShowId(req.user.id, id);
-
+        const [time, nbEpisodes] = await userSeasonRepository.getTimeEpisodesByUserIdByShowId(req.user.id, id);
+        const episodes = cumulate(seasons);
+        const mapSeasons = seasons.map((s, i) => {
+            const season = new Season(s);
+            season.interval = `${episodes[i] + 1} - ${episodes[i + 1]}`;
+            return season;
+        });
+        
         return res.status(200).json({
             "serie": new Show(show),
-            "seasons": seasons.map(season => new Season(season)),
+            "seasons": mapSeasons,
             "time": time,
-            "episodes": episodes
+            "episodes": nbEpisodes
         });
     } catch (_) {
         res.status(500).json({ "message": "Une erreur est survenue" });
