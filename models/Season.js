@@ -7,7 +7,7 @@ class Season {
         this.number = obj.number;
         this.episodes = obj.episodes;
         this.image = obj.image;
-        this.interval = "";
+        this.interval = null;
     }
 
     /**
