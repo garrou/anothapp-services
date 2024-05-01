@@ -83,7 +83,7 @@ const getTimeByUserIdByType = (userId, type) => {
         case "month":
             return userSeasonRepository.getTimeCurrentMonthByUserId(userId);
         case "best-month":
-            return userSeasonRepository.getRecordViewingTimeMonth(userId);
+            return userSeasonRepository.getRecordViewingTimeMonth(userId, 1);
         case "rank":
             return userSeasonRepository.getRankingViewingTimeByShows(userId);
         default:
@@ -105,6 +105,8 @@ const getGroupedCountByUserIdByTypeByPeriod = (userId, type, period) => {
             return getNbEpisodesByUserIdByPeriod(userId, period);
         case "kinds":
             return getNbKindsByUserId(userId);
+        case "best-months":
+            return userSeasonRepository.getRecordViewingTimeMonth(userId, 10);
         default:
             throw new Error("Invalid type");
     }

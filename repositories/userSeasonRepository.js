@@ -283,22 +283,23 @@ const getRankingViewingTimeByShows = async (userId) => {
 
 /**
  * @param {string} userId 
+ * @param {number} limit
  * @returns Promise<any> 
  */
-const getRecordViewingTimeMonth = async (userId) => {
+const getRecordViewingTimeMonth = async (userId, limit) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT TO_CHAR(added_at, 'MM/YYYY') as date, SUM(duration * episodes) AS time 
+        SELECT TO_CHAR(added_at, 'MM/YYYY') as label, SUM(duration * episodes) AS value 
         FROM users_seasons
         JOIN seasons ON users_seasons.show_id = seasons.show_id
         AND users_seasons.number = seasons.number
         WHERE users_seasons.user_id = $1
-        GROUP BY date
-        ORDER BY time DESC 
-        LIMIT 1
-    `, [userId]);
+        GROUP BY label
+        ORDER BY value DESC 
+        LIMIT $2
+    `, [userId, limit]);
     client.release();
-    return res["rows"][0];
+    return res["rows"];
 }
 
 /**
