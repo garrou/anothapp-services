@@ -14,8 +14,8 @@ const deleteBySeasonId = async (req, res) => {
         }
         await seasonRepository.deleteSeasonById(id);
         res.status(200).json({ "message": "ok" });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -34,8 +34,8 @@ const getSeasons = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         res.status(200).json(response);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 

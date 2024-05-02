@@ -56,8 +56,8 @@ const discoverShows = async (req, res) => {
             response = await search(title);
         }
         res.status(200).json(response);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -75,8 +75,8 @@ const getByShowId = async (req, res) => {
         });
         const { show } = await resp.data;
         res.status(200).json(new ApiShow(show));
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -100,8 +100,8 @@ const getSeasonsByShowId = async (req, res) => {
             return season;
         });
         res.status(200).json(mapSeasons);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -119,8 +119,8 @@ const getEpisodesByShowIdBySeason = async (req, res) => {
         });
         const { episodes } = await resp.data;
         res.status(200).json(episodes.map(episode => new ApiEpisode(episode)));
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -138,8 +138,8 @@ const getCharactersByShowId = async (req, res) => {
         });
         const { characters } = await resp.data;
         res.status(200).json(characters.map(character => new ApiCharacter(character)));
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -157,8 +157,8 @@ const getSimilarsByShowId = async (req, res) => {
         });
         const { similars } = await resp.data;
         res.status(200).json(similars.map(similar => new ApiSimilarShow(similar)));
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -174,8 +174,8 @@ const getKinds = async (_, res) => {
             .map(entry => new ApiShowKind(entry))
             .sort((a, b) => a.name.localeCompare(b.name));
         res.status(200).json(kinds);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -193,8 +193,8 @@ const getImagesByShowId = async (req, res) => {
         });
         const { pictures } = await resp.data;
         res.status(200).json(pictures.map(p => p.url));
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -212,7 +212,7 @@ const getPersonById = async (req, res) => {
         });
         const { person } = await resp.data;
         res.status(200).json(new ApiPerson(person));
-    } catch (_) {
+    } catch (e) {
         res.status(500).json({ "message": "Une erreur est survenue " });
     }
 }

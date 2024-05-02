@@ -10,8 +10,8 @@ const acceptFriend = async (req, res) => {
         }
         await friendRepository.acceptFriend(userId, req.user.id);
         res.status(200).json({ "message": "ok" });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -29,8 +29,8 @@ const sendFriendRequest = async (req, res) => {
         }
         await friendRepository.sendFriendRequest(req.user.id, userId);
         res.status(201).json({ "message": "ok" });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -43,8 +43,8 @@ const deleteFriend = async (req, res) => {
         }
         await friendRepository.deleteFriend(req.user.id, userId);
         res.status(200).json({ "message": "ok" });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -53,8 +53,8 @@ const getFriends = async (req, res) => {
         const { status } = req.query;
         const users = await getFriendsByUserIdByStatus(req.user.id, status);
         res.status(200).json(status ? { [status]: users } : users);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 

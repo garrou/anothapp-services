@@ -18,7 +18,7 @@ const checkJwt = (req, res, next) => {
 
     try {
         req.user = { id: verifyJwt(token, process.env.JWT_SECRET) };
-    } catch (_) {
+    } catch (e) {
         return res.status(403).json({ "message": "Utilisateur non autorisé" });
     }
     next();

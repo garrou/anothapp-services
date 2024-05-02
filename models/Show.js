@@ -10,6 +10,7 @@ class Show {
         this.kinds = obj.kinds.split(";");
         this.favorite = obj.favorite;
         this.missing = obj.missing;
+        this.duration = obj.duration;
     }
 }
 

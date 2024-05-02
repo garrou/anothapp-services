@@ -21,8 +21,8 @@ const getUser = async (req, res) => {
             return acc;
         }, []);
         res.status(200).json(users);
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -49,8 +49,8 @@ const login = async (req, res) => {
 
         const token = signJwt(rows[0]["id"], process.env.JWT_SECRET);
         res.status(200).json({ "token": token });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -85,8 +85,8 @@ const register = async (req, res) => {
         const hash = await createHash(password);
         await userRepository.createUser(uuid(), email.toLowerCase(), hash, username);
         res.status(201).json({ "message": "Compte créé" });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -99,8 +99,8 @@ const setProfilePicture = async (req, res) => {
 
         await userRepository.updatePicture(req.user.id, image);
         res.status(200).json({ "message": "Image de profil définie" });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
@@ -112,8 +112,8 @@ const getProfile = async (req, res) => {
         return rows.length === 1
             ? res.status(200).json(new UserProfile(rows[0]))
             : res.status(400).json({ "message": "Profil introuvable" });
-    } catch (_) {
-        res.status(500).json({ "message": "Une erreur est survenue" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
     }
 }
 
