@@ -123,20 +123,17 @@ const getShows = async (req, res) => {
 
 const addSeasonByShowId = async (req, res) => {
     try {
-        const { number, episodes, image } = req.body;
-        const showId = req.params.id;
+        const { season, serie } = req.body;
 
-        if (!number || !episodes || !showId) {
+        if (!serie || !serie.id || !season || !season.number || !season.episodes) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        const rows = await seasonRepository.getSeasonByShowIdByNumber(showId, number);
+        const rows = await seasonRepository.getSeasonByShowIdByNumber(serie.id, season.number);
 
         if (rows.length === 0) {
-            const s = await userShowRepository.getShowByUserIdByShowId(req.user.id, showId);
-            const show = new Show(s);
-            await seasonRepository.createSeason(episodes, number, image ?? show.poster, showId, show.duration);
+            await seasonRepository.createSeason(season.episodes, season.number, season.image ?? serie.poster, serie.id, serie.duration);
         }
-        await userSeasonRepository.create(req.user.id, showId, number);
+        await userSeasonRepository.create(req.user.id, serie.id, season.number);
         res.status(201).json({ "message": "ok" });
     } catch (e) {
         res.status(500).json({ "message": e.message });
