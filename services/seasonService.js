@@ -24,7 +24,7 @@ const getSeasons = async (req, res) => {
         const { year, month } = req.query;
         let response = null;
 
-        if (month && MONTHS.includes(month)) {
+        if (MONTHS.includes(month)) {
             response = (await userSeasonRepository.getViewedByMonthAgo(req.user.id, month))
                 .map(row => new SeasonTimeline(row));
         } else if (year) {
