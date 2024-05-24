@@ -1,6 +1,6 @@
-const axios = require("axios");
 const betaseries = "https://api.betaseries.com";
 const key = process.env.BETASERIES_KEY;
+const axios = require("axios");
 const ApiShow = require("../models/ApiShow");
 const ApiEpisode = require("../models/ApiEpisode");
 const Season = require("../models/Season");

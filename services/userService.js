@@ -37,7 +37,7 @@ const login = async (req, res) => {
 
         const rows = isEmail
             ? await userRepository.getUserByEmail(identifier.toLowerCase())
-            : await userRepository.getUserByUsername(identifier);
+            : await userRepository.getUserByUsername(identifier, true);
 
         if (rows.length === 0)
             return res.status(400).json({ "message": `${isEmail ? "Email" : "Username"} ou mot de passe incorrect` });
@@ -77,7 +77,7 @@ const register = async (req, res) => {
         if (resp.length > 0)
             return res.status(409).json({ "message": "Un compte est déjà associé à cet email" });
 
-        resp = await userRepository.getUserByUsername(username);
+        resp = await userRepository.getUserByUsername(username, true);
 
         if (resp.length > 0)
             return res.status(409).json({ "message": "Un compte est déjà associé à ce nom d'utilisateur" });

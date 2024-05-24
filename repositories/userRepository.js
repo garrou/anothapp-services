@@ -18,15 +18,17 @@ const getUserByEmail = async (email) => {
 
 /**
  * @param {string} username 
+ * @param {boolean} strict
  */
-const getUserByUsername = async (username) => {
+const getUserByUsername = async (username, strict = false) => {
     const client = await pool.connect();
+    const param = strict ? [`${username}`, 1] : [`%${username}%`, 10]
     const res = await client.query(`
         SELECT id, email, picture, password, username
         FROM users
         WHERE UPPER(username) LIKE UPPER($1)
-        LIMIT 1
-    `, [`%${username}%`]);
+        LIMIT $2
+    `, param);
     client.release();
     return res["rows"];
 }
