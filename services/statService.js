@@ -11,7 +11,7 @@ const getStats = async (req, res) => {
             "nbSeries": await getCountByUserIdByType(userId, "shows"),
             "nbSeasons": await getCountByUserIdByType(userId, "seasons"),
             "nbEpisodes": await getCountByUserIdByType(userId, "episodes"),
-            "bestMonth": await getTimeByUserIdByType(userId, "best-month"),
+            "bestMonth": (await getTimeByUserIdByType(userId, "best-month"))[0],
         });
     } catch (e) {
         res.status(500).json({ "message": e.message });
