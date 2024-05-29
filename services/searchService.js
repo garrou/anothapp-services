@@ -14,7 +14,7 @@ const { cumulate } = require("../helpers/utils");
  * @param {string} title 
  * @returns ApiShow[]
  */
-const search = async (title) => {
+const getShowsByTitle = async (title) => {
     const url = title
         ? `${betaseries}/shows/search?title=${title}`
         : `${betaseries}/shows/discover?limit=20`;
@@ -53,7 +53,7 @@ const discoverShows = async (req, res) => {
         if (kind) {
             response = await getShowsByKind(kind);
         } else {
-            response = await search(title);
+            response = await getShowsByTitle(title);
         }
         res.status(200).json(response);
     } catch (e) {
@@ -227,6 +227,5 @@ module.exports = {
     getShowsByKind,
     discoverShows,
     getSeasonsByShowId,
-    getSimilarsByShowId,
-    search
+    getSimilarsByShowId
 };

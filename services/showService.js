@@ -2,7 +2,6 @@ const userSeasonRepository = require("../repositories/userSeasonRepository");
 const userShowRepository = require("../repositories/userShowRepository");
 const seasonRepository = require("../repositories/seasonRepository");
 const showRepository = require("../repositories/showRepository");
-const { search } = require("../services/searchService");
 const Season = require("../models/Season");
 const Show = require("../models/Show");
 const { cumulate } = require("../helpers/utils");
@@ -104,10 +103,6 @@ const getShows = async (req, res) => {
 
         if (title) {
             rows = await userShowRepository.getShowsByUserIdByTitle(req.user.id, title);
-
-            if (rows.length === 0) {
-                return res.status(200).json(await search(title));
-            }
         } else if (kind) {
             rows = await userShowRepository.getShowsByUserIdByKind(req.user.id, kind);
         } else if (status) {
