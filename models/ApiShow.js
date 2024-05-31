@@ -16,7 +16,23 @@ class ApiShow {
         this.status = show.status === "Continuing" ? "En cours" : "Terminée";
         this.creation = show.creation;
         this.kinds = Object.values(show.genres);
+        this.platforms = getPlatforms(show.platforms);
     }
+}
+
+/**
+ * @param {object} platforms 
+ * @return object[]
+ */
+const getPlatforms = (platforms) => {
+    return platforms?.svods
+        ? platforms?.svods.map((p) => (
+            { 
+                "name": p.name,
+                "logo": p.logo
+            }
+        ))
+        : [];
 }
 
 /**
