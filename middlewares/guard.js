@@ -1,8 +1,14 @@
 const { verifyJwt } = require("../helpers/security");
 
+const WHITELIST = [
+    "/users/login", 
+    "/users/register", 
+    "/search/images",
+];
+
 const checkJwt = (req, res, next) => {
 
-    if (["/users/login", "/users/register"].includes(req.originalUrl)) {
+    if (WHITELIST.includes(req.originalUrl)) {
         return next();
     }
     const authHeader = req.headers["authorization"];

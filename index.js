@@ -15,7 +15,7 @@ const { checkJwt } = require( "./middlewares/guard");
 const cache = require("./middlewares/cache");
 
 app.use(cors({
-    origins: [process.env.ORIGIN_REACT, process.env.ORIGIN_VUE],
+    origins: [process.env.ORIGIN],
     allowedHeaders: ["Authorization", "Content-Type"]
 }));
 app.use(express.json());

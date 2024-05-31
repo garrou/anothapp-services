@@ -11,13 +11,14 @@ const ApiPerson = require("../models/ApiPerson");
 const { cumulate } = require("../helpers/utils");
 
 /**
- * @param {string} title 
+ * @param {string?} title 
+ * @param {limit} limit
  * @returns ApiShow[]
  */
-const getShowsByTitle = async (title) => {
+const getShowsByTitle = async (title, limit = 20) => {
     const url = title
         ? `${betaseries}/shows/search?title=${title}`
-        : `${betaseries}/shows/discover?limit=20`;
+        : `${betaseries}/shows/discover?limit=${limit}`;
     const resp = await axios.get(url, {
         headers: {
             "X-BetaSeries-Key": key
@@ -43,6 +44,15 @@ const getShowsByKind = async (kind) => {
         title: s.title,
         poster: s.poster
     }));
+}
+
+const getImages = async (req, res) => {
+    try {
+        const shows = await getShowsByTitle(null, 8);
+        res.status(200).json(shows.map((s) => s.poster)); 
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
+    }
 }
 
 const discoverShows = async (req, res) => {
@@ -218,9 +228,10 @@ const getPersonById = async (req, res) => {
 }
 
 module.exports = {
+    getByShowId,
     getCharactersByShowId,
     getEpisodesByShowIdBySeason,
-    getByShowId,
+    getImages,
     getImagesByShowId,
     getKinds,
     getPersonById,
