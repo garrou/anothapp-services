@@ -50,7 +50,7 @@ const deleteByUserIdShowId = async (userId, showId) => {
 const getShowsByUserId = async (userId, limit) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.missing
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
         FROM shows s
         JOIN users_shows us ON s.id = us.show_id
         WHERE us.user_id = $1
@@ -69,7 +69,7 @@ const getShowsByUserId = async (userId, limit) => {
 const getShowByUserIdByShowId = async (userId, id) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.missing
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
         FROM shows s
         JOIN users_shows us ON s.id = us.show_id
         WHERE us.user_id = $1 AND us.show_id = $2
@@ -87,7 +87,7 @@ const getShowByUserIdByShowId = async (userId, id) => {
 const getShowsByUserIdByTitle = async (userId, title) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.missing
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
         FROM users_shows us
         JOIN shows s ON s.id = us.show_id
         WHERE user_id = $1
@@ -120,7 +120,7 @@ const getTotalShowsByUserId = async (userId) => {
 const getNotStartedShowsByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(` 
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.missing
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
         FROM shows s
         JOIN users_shows us ON us.show_id = s.id
         WHERE us.user_id = $1
@@ -177,7 +177,7 @@ const updateFavoriteByUserIdByShowId = async (userId, showId) => {
 const getShowsToResumeByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.missing
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
         FROM shows s
         JOIN users_shows us ON us.show_id = s.id
         WHERE us.user_id = $1 
@@ -212,7 +212,7 @@ const getKindsByUserId = async (userId) => {
 const getShowsByUserIdByKind = async (userId, kind) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.missing
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
         FROM shows s
         JOIN users_shows us ON us.show_id = s.id
         WHERE us.user_id = $1 
@@ -229,7 +229,7 @@ const getShowsByUserIdByKind = async (userId, kind) => {
 const getFavorites = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.missing
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
         FROM users_shows us
         JOIN shows s ON s.id = us.show_id
         WHERE us.user_id = $1 
@@ -247,16 +247,20 @@ const getFavorites = async (userId) => {
 const getShowsToContinueByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.missing
-        FROM users_shows us
-        JOIN shows s ON s.id = us.show_id
-        WHERE us.user_id = $1 AND us.missing > 0
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, s.seasons - (
+	        SELECT COUNT(distinct users_seasons.number)
+	        FROM shows
+	        JOIN users_seasons ON s.id = users_seasons.show_id 
+	        WHERE users_seasons.user_id = $1 and s.id = shows.id
+        ) as missing
+        FROM shows s
+        JOIN users_shows ON s.id = users_shows.show_id
+        WHERE users_shows.user_id = $1
         ORDER BY s.title
     `, [userId]);
     client.release();
     return res["rows"];
 }
-
 
 module.exports = {
     checkShowExistsByUserIdByShowId,

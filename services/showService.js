@@ -28,9 +28,9 @@ const getShowsByStatus = async (userId, status) => {
 
 const addShow = async (req, res) => {
     try {
-        const { id, title, poster, kinds, duration } = req.body;
+        const { id, title, poster, kinds, duration, seasons } = req.body;
 
-        if (!id || !title || !poster || !kinds || !duration) {
+        if (!id || !title || !poster || !kinds || !duration || !seasons) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         const exists = await userShowRepository.checkShowExistsByUserIdByShowId(req.user.id, id);
@@ -41,7 +41,7 @@ const addShow = async (req, res) => {
         const isNewShow = await showRepository.isNewShow(id);
 
         if (isNewShow) {
-            await showRepository.createShow(id, title, poster, kinds.join(";"), duration);
+            await showRepository.createShow(id, title, poster, kinds.join(";"), duration, parseInt(seasons));
         }
         await userShowRepository.create(req.user.id, id);
         res.status(201).json({ "message": "ok" });
@@ -106,7 +106,7 @@ const getShows = async (req, res) => {
         } else if (kind) {
             rows = await userShowRepository.getShowsByUserIdByKind(req.user.id, kind);
         } else if (status) {
-            rows = await getShowsByStatus(req.user.id, status);
+            rows = (await getShowsByStatus(req.user.id, status)).filter((row) => row.missing > 0);
         } else {
             rows = await userShowRepository.getShowsByUserId(req.user.id, limit);
         }

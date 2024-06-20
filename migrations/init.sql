@@ -15,6 +15,7 @@ CREATE TABLE shows (
     poster VARCHAR(255) NOT NULL,
     kinds VARCHAR(255) NOT NULL,
     duration INTEGER NOT NULL,
+    seasons INTEGER NOT NULL,
     PRIMARY KEY(id)
 );
 
@@ -24,7 +25,6 @@ CREATE TABLE users_shows (
     user_id VARCHAR(50),
     show_id INTEGER,
     favorite BOOLEAN NOT NULL DEFAULT FALSE,
-    missing INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE,
     PRIMARY KEY(user_id, show_id)
