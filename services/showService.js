@@ -106,7 +106,7 @@ const getShows = async (req, res) => {
         } else if (kind) {
             rows = await userShowRepository.getShowsByUserIdByKind(req.user.id, kind);
         } else if (status) {
-            rows = (await getShowsByStatus(req.user.id, status)).filter((row) => row.missing > 0);
+            rows = await getShowsByStatus(req.user.id, status);
         } else {
             rows = await userShowRepository.getShowsByUserId(req.user.id, limit);
         }

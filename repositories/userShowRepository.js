@@ -259,7 +259,7 @@ const getShowsToContinueByUserId = async (userId) => {
         ORDER BY s.title
     `, [userId]);
     client.release();
-    return res["rows"];
+    return res["rows"].filter((row) => row.missing > 0);
 }
 
 module.exports = {
