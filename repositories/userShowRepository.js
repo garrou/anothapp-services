@@ -226,7 +226,7 @@ const getShowsByUserIdByKind = async (userId, kind) => {
  * @param {string} userId 
  * @return Promise<any[]>
  */
-const getFavorites = async (userId) => {
+const getFavoritesByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
         SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
@@ -266,7 +266,7 @@ module.exports = {
     checkShowExistsByUserIdByShowId,
     create,
     deleteByUserIdShowId,
-    getFavorites,
+    getFavoritesByUserId,
     getKindsByUserId,
     getNotStartedShowsByUserId,
     getShowByUserIdByShowId,

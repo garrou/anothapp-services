@@ -11,7 +11,7 @@ const { cumulate } = require("../helpers/utils");
  * @param {string} status
  * @returns Promise
  */
-const getShowsByStatus = async (userId, status) => {
+const getShowsByStatus = (userId, status) => {
     switch (status) {
         case "resume":
             return userShowRepository.getShowsToResumeByUserId(userId);
@@ -20,7 +20,7 @@ const getShowsByStatus = async (userId, status) => {
         case "continue":
             return userShowRepository.getShowsToContinueByUserId(userId);
         case "favorite":
-            return userShowRepository.getFavorites(userId);
+            return userShowRepository.getFavoritesByUserId(userId);
         default:
             throw new Error("Invalid status");
     }
