@@ -50,7 +50,7 @@ const deleteByUserIdShowId = async (userId, showId) => {
 const getShowsByUserId = async (userId, limit) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at
         FROM shows s
         JOIN users_shows us ON s.id = us.show_id
         WHERE us.user_id = $1
@@ -69,7 +69,7 @@ const getShowsByUserId = async (userId, limit) => {
 const getShowByUserIdByShowId = async (userId, id) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at
         FROM shows s
         JOIN users_shows us ON s.id = us.show_id
         WHERE us.user_id = $1 AND us.show_id = $2
@@ -87,7 +87,7 @@ const getShowByUserIdByShowId = async (userId, id) => {
 const getShowsByUserIdByTitle = async (userId, title) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at
         FROM users_shows us
         JOIN shows s ON s.id = us.show_id
         WHERE user_id = $1
@@ -120,7 +120,7 @@ const getTotalShowsByUserId = async (userId) => {
 const getNotStartedShowsByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(` 
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at
         FROM shows s
         JOIN users_shows us ON us.show_id = s.id
         WHERE us.user_id = $1
@@ -177,7 +177,7 @@ const updateFavoriteByUserIdByShowId = async (userId, showId) => {
 const getShowsToResumeByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at
         FROM shows s
         JOIN users_shows us ON us.show_id = s.id
         WHERE us.user_id = $1 
@@ -212,7 +212,7 @@ const getKindsByUserId = async (userId) => {
 const getShowsByUserIdByKind = async (userId, kind) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at
         FROM shows s
         JOIN users_shows us ON us.show_id = s.id
         WHERE us.user_id = $1 

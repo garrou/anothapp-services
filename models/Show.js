@@ -11,6 +11,7 @@ class Show {
         this.favorite = obj.favorite;
         this.missing = obj.missing;
         this.duration = obj.duration;
+        this.addedAt = obj.added_at;
     }
 }
 
