@@ -2,27 +2,14 @@ class UserProfile {
 
     /**
      * @param {Object} user 
-     * @param {boolean} friend
+     * @param {boolean} current
      */
-    constructor(user, friend = false) {
-        if (friend) {
-            this.friendConstructor(user);
-        } else {
-            this.userConstructor(user);
-        }
-    }
-
-    userConstructor(user) {
+    constructor(user, current = false) {
         this.id = user.id;
         this.email = user.email;
         this.picture = user.picture;
         this.username = user.username;
-    }
-
-    friendConstructor(user) {
-        this.id = user.id;
-        this.picture = user.picture;
-        this.username = user.username;
+        this.current = current;
     }
 }
 

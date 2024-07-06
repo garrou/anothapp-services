@@ -15,7 +15,7 @@ const getUser = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
 
         const users = (await userRepository.getUserByUsername(username)).reduce((acc, curr) => {
-            const user = new UserProfile(curr, true);
+            const user = new UserProfile(curr);
             if (user.id !== req.user.id)
                 acc.push(user);
             return acc;
@@ -48,7 +48,8 @@ const login = async (req, res) => {
             return res.status(400).json({ "message": `${isEmail ? "Email" : "Username"} ou mot de passe incorrect` });
 
         const token = signJwt(rows[0]["id"], process.env.JWT_SECRET);
-        res.status(200).json({ "token": token });
+        const user = new UserProfile(rows[0], true);
+        res.status(200).json({ "token": token, ...user });
     } catch (e) {
         res.status(500).json({ "message": e.message });
     }
@@ -110,7 +111,7 @@ const getProfile = async (req, res) => {
         const userId = id ?? req.user.id;
         const rows = await userRepository.getUserById(userId);
         return rows.length === 1
-            ? res.status(200).json(new UserProfile(rows[0]))
+            ? res.status(200).json(new UserProfile(rows[0], !id))
             : res.status(400).json({ "message": "Profil introuvable" });
     } catch (e) {
         res.status(500).json({ "message": e.message });
