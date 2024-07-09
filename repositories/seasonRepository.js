@@ -40,7 +40,7 @@ const createSeason = async (episodes, number, image, showId) => {
     await client.query(`
         INSERT INTO seasons (episodes, number, image, show_id)
         VALUES ($1, $2, $3, $4, $5)
-    `, [episodes, number, image, showId, duration]);
+    `, [episodes, number, image, showId]);
     client.release();
 }
 

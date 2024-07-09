@@ -138,10 +138,11 @@ const getNbSeasonsByUserIdGroupByYear = async (userId) => {
 const getTimeHourByUserIdGroupByYear = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT EXTRACT(YEAR FROM added_at) AS label, (SUM(duration * episodes) / 60) AS value
+        SELECT EXTRACT(YEAR FROM added_at) AS label, (SUM(shows.duration * episodes) / 60) AS value
         FROM users_seasons
-        JOIN seasons ON users_seasons.show_id = seasons.show_id
-        AND users_seasons.number = seasons.number
+        JOIN shows ON users_seasons.show_id = shows.id
+        JOIN seasons ON users_seasons.show_id = seasons.show_id 
+        AND users_seasons.number = seasons.number 
         AND DATE_PART('year', NOW()) - EXTRACT(YEAR FROM added_at) <= 10
         WHERE users_seasons.user_id = $1
         GROUP BY label
@@ -158,12 +159,11 @@ const getTimeHourByUserIdGroupByYear = async (userId) => {
 const getTimeCurrentMonthByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(duration * episodes) AS time
+        SELECT SUM(shows.duration * episodes) AS time
         FROM users_seasons
-        JOIN seasons ON users_seasons.show_id = seasons.show_id
-        AND users_seasons.number = seasons.number
-        WHERE users_seasons.user_id = $1
-        AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
+        JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
+        JOIN shows ON seasons.show_id = shows.id
+        WHERE users_seasons.user_id = $1 AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
     `, [userId]);
     client.release();
     return parseInt(res["rows"][0]["time"] ?? 0);
@@ -288,10 +288,10 @@ const getRankingViewingTimeByShows = async (userId) => {
 const getRecordViewingTimeMonth = async (userId, limit) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT TO_CHAR(added_at, 'MM/YYYY') as label, SUM(duration * episodes) AS value 
+        SELECT TO_CHAR(added_at, 'MM/YYYY') as label, SUM(shows.duration * episodes) AS value 
         FROM users_seasons
-        JOIN seasons ON users_seasons.show_id = seasons.show_id
-        AND users_seasons.number = seasons.number
+        JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
+        JOIN shows ON seasons.show_id = shows.id
         WHERE users_seasons.user_id = $1
         GROUP BY label
         ORDER BY value DESC 

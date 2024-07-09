@@ -90,8 +90,7 @@ const getShowsByUserIdByTitle = async (userId, title) => {
         SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at
         FROM users_shows us
         JOIN shows s ON s.id = us.show_id
-        WHERE user_id = $1
-        AND UPPER(s.title) LIKE UPPER($2)
+        WHERE user_id = $1 AND UPPER(s.title) LIKE UPPER($2)
         ORDER BY us.added_at DESC
     `, [userId, `%${title}%`]);
     client.release();
@@ -127,8 +126,7 @@ const getNotStartedShowsByUserId = async (userId) => {
         AND NOT EXISTS (
             SELECT *
             FROM users_seasons
-            WHERE users_seasons.show_id = s.id
-            AND users_seasons.user_id = $1
+            WHERE users_seasons.show_id = s.id AND users_seasons.user_id = $1
         );
     `, [userId]);
     client.release();
@@ -180,8 +178,7 @@ const getShowsToResumeByUserId = async (userId) => {
         SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at
         FROM shows s
         JOIN users_shows us ON us.show_id = s.id
-        WHERE us.user_id = $1 
-        AND us.continue = FALSE
+        WHERE us.user_id = $1 AND us.continue = FALSE
         ORDER BY title
     `, [userId]);
     client.release();
@@ -215,8 +212,7 @@ const getShowsByUserIdByKind = async (userId, kind) => {
         SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at
         FROM shows s
         JOIN users_shows us ON us.show_id = s.id
-        WHERE us.user_id = $1 
-        AND kinds LIKE $2
+        WHERE us.user_id = $1 AND kinds LIKE $2
     `, [userId, `%${kind}%`]);
     client.release();
     return res["rows"];
@@ -232,8 +228,7 @@ const getFavoritesByUserId = async (userId) => {
         SELECT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite
         FROM users_shows us
         JOIN shows s ON s.id = us.show_id
-        WHERE us.user_id = $1 
-        AND favorite = TRUE
+        WHERE us.user_id = $1 AND favorite = TRUE
         ORDER BY s.title
     `, [userId]);
     client.release();
