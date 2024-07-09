@@ -234,7 +234,7 @@ const getFavoritesByUserId = async (userId) => {
         JOIN shows s ON s.id = us.show_id
         WHERE us.user_id = $1 
         AND favorite = TRUE
-        ORDER BY us.added_at
+        ORDER BY s.title
     `, [userId]);
     client.release();
     return res["rows"];

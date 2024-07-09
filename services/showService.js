@@ -83,11 +83,10 @@ const getShow = async (req, res) => {
         const seasons = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
         const [time, nbEpisodes] = await userSeasonRepository.getTimeEpisodesByUserIdByShowId(req.user.id, id);
         const episodes = cumulate(seasons);
-        const mapSeasons = seasons.map((s, i) => {
-            const season = new Season(s);
-            season.interval = `${episodes[i] + 1} - ${episodes[i + 1]}`;
-            return season;
-        });
+        const mapSeasons = seasons.map((s, i) => new Season({
+            ...s,
+            interval: `${episodes[i] + 1} - ${episodes[i + 1]}`,
+        }));
         
         return res.status(200).json({
             "serie": new Show(show),
@@ -130,7 +129,7 @@ const addSeasonByShowId = async (req, res) => {
         const rows = await seasonRepository.getSeasonByShowIdByNumber(serie.id, season.number);
 
         if (rows.length === 0) {
-            await seasonRepository.createSeason(season.episodes, season.number, season.image ?? serie.poster, serie.id, serie.duration);
+            await seasonRepository.createSeason(season.episodes, season.number, season.image ?? serie.poster, serie.id);
         }
         await userSeasonRepository.create(req.user.id, serie.id, season.number);
         res.status(201).json({ "message": "ok" });

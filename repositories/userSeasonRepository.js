@@ -61,10 +61,10 @@ const getInfosByUserIdByShowId = async (userId, showId, number) => {
 const getTimeEpisodesByUserIdByShowId = async (userId, showId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(seasons.episodes * seasons.duration) AS time, SUM(seasons.episodes) as episodes
+        SELECT SUM(seasons.episodes * shows.duration) AS time, SUM(seasons.episodes) as episodes
         FROM users_seasons
-        JOIN seasons ON users_seasons.show_id = seasons.show_id
-        AND users_seasons.number = seasons.number
+        JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
+        JOIN shows ON seasons.show_id = shows.id
         WHERE user_id = $1
         AND users_seasons.show_id = $2
     `, [userId, showId]);
@@ -82,10 +82,10 @@ const getTimeEpisodesByUserIdByShowId = async (userId, showId) => {
 const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(seasons.episodes * seasons.duration) AS time
+        SELECT SUM(seasons.episodes * shows.duration) AS time
         FROM users_seasons
-        JOIN seasons ON users_seasons.show_id = seasons.show_id
-        AND users_seasons.number = seasons.number
+        JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
+        JOIN shows ON seasons.show_id = shows.id
         WHERE users_seasons.user_id = $1
         AND users_seasons.show_id = $2
         AND users_seasons.number = $3
@@ -101,10 +101,10 @@ const getViewingTimeByUserIdByShowIdByNumber = async (userId, showId, number) =>
 const getTotalTimeByUserId = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT SUM(seasons.episodes * seasons.duration) AS time
+        SELECT SUM(seasons.episodes * shows.duration) AS time
         FROM users_seasons
-        JOIN seasons ON users_seasons.show_id = seasons.show_id
-        AND users_seasons.number = seasons.number
+        JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
+        JOIN shows ON seasons.show_id = shows.id
         WHERE user_id = $1
     `, [userId]);
     client.release();
@@ -267,10 +267,9 @@ const getViewedByMonthAgo = async (userId, month) => {
 const getRankingViewingTimeByShows = async (userId) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT shows.title AS label, SUM(seasons.episodes * seasons.duration) / 60 AS value
+        SELECT shows.title AS label, SUM(seasons.episodes * shows.duration) / 60 AS value
         FROM users_seasons
-        JOIN seasons ON users_seasons.show_id = seasons.show_id
-        AND users_seasons.number = seasons.number
+        JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
         JOIN shows ON shows.id = seasons.show_id
         WHERE user_id = $1
         GROUP BY label
