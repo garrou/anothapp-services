@@ -22,13 +22,14 @@ const isNewShow = async (id) => {
  * @param {string} kinds
  * @param {number} duration
  * @param {number} seasons
+ * @param {string} country
  */
-const createShow = async (id, title, poster, kinds, duration, seasons) => {
+const createShow = async (id, title, poster, kinds, duration, seasons, country) => {
     const client = await pool.connect();
     await client.query(`
-        INSERT INTO shows (id, title, poster, kinds, duration, seasons)
-        VALUES ($1, $2, $3, $4, $5, $6)
-    `, [id, title, poster, kinds, duration, seasons]);
+        INSERT INTO shows (id, title, poster, kinds, duration, seasons, country)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [id, title, poster, kinds, duration, seasons, country]);
     client.release();
 }
 

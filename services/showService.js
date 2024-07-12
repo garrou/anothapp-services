@@ -28,9 +28,9 @@ const getShowsByStatus = (userId, status) => {
 
 const addShow = async (req, res) => {
     try {
-        const { id, title, poster, kinds, duration, seasons } = req.body;
+        const { id, title, poster, kinds, duration, seasons, country } = req.body;
 
-        if (!id || !title || !poster || !kinds || !duration || !seasons) {
+        if (!id || !title || !poster || !kinds || !duration || !seasons || !country) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         const exists = await userShowRepository.checkShowExistsByUserIdByShowId(req.user.id, id);
@@ -41,7 +41,7 @@ const addShow = async (req, res) => {
         const isNewShow = await showRepository.isNewShow(id);
 
         if (isNewShow) {
-            await showRepository.createShow(id, title, poster, kinds.join(";"), duration, parseInt(seasons));
+            await showRepository.createShow(id, title, poster, kinds.join(";"), duration, parseInt(seasons), country);
         }
         await userShowRepository.create(req.user.id, id);
         res.status(201).json({ "message": "ok" });

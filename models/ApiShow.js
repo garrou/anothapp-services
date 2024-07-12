@@ -8,6 +8,7 @@ class ApiShow {
         this.title = show.title;
         this.poster = getImageUrl(show.images);
         this.duration = show.length ?? 0;
+        this.country = show.country;
         this.description = show.description;
         this.seasons = show.seasons;
         this.episodes = show.episodes;
@@ -26,7 +27,7 @@ class ApiShow {
  */
 const getPlatforms = (platforms) => {
     return platforms?.svods
-        ? platforms?.svods.map((p) => (
+        ? platforms.svods.map((p) => (
             { 
                 "name": p.name,
                 "logo": p.logo

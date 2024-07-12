@@ -21,8 +21,7 @@ const getStats = async (req, res) => {
 const getCountByType = async (req, res) => {
     try {
         const { type, id } = req.query;
-        const userId = id ?? req.user.id;
-        const total = getCountByUserIdByType(userId, type);
+        const total = await getCountByUserIdByType(id ?? req.user.id, type);
         res.status(200).json(total);
     } catch (e) {
         res.status(500).json({ "message": e.message });
@@ -32,8 +31,7 @@ const getCountByType = async (req, res) => {
 const getTimeByType = async (req, res) => {
     try {
         const { type, id } = req.query;
-        const userId = id ?? req.user.id;
-        const response = await getTimeByUserIdByType(userId, type);
+        const response = await getTimeByUserIdByType(id ?? req.user.id, type);
         res.status(200).json(response);
     } catch (e) {
         res.status(500).json({ "message": e.message });
@@ -43,8 +41,7 @@ const getTimeByType = async (req, res) => {
 const getCountGroupedByTypeByPeriod = async (req, res) => {
     try {
         const { type, period, id } = req.query;
-        const userId = id ?? req.user.id;
-        const response = await getGroupedCountByUserIdByTypeByPeriod(userId, type, period);
+        const response = await getGroupedCountByUserIdByTypeByPeriod(id ?? req.user.id, type, period);
         res.status(200).json(response);
     } catch (e) {
         res.status(500).json({ "message": e.message });
@@ -107,6 +104,8 @@ const getGroupedCountByUserIdByTypeByPeriod = (userId, type, period) => {
             return getNbKindsByUserId(userId);
         case "best-months":
             return userSeasonRepository.getRecordViewingTimeMonth(userId, 10);
+        case "countries":
+            return userShowRepository.getCountriesByUserId(userId);
         default:
             throw new Error("Invalid type");
     }

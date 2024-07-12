@@ -16,6 +16,7 @@ CREATE TABLE shows (
     kinds VARCHAR(255) NOT NULL,
     duration INTEGER NOT NULL,
     seasons INTEGER NOT NULL,
+    country VARCHAR(50) NOT NULL,
     PRIMARY KEY(id)
 );
 
