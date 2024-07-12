@@ -67,18 +67,9 @@ const deleteByShowId = async (req, res) => {
 const getShow = async (req, res) => {
     try {
         const { id } = req.params;
-        const { simplified } = req.query;
 
         if (!id) {
             return res.status(400).json({ "message": "Requête invalide" });
-        }
-        const show = await userShowRepository.getShowByUserIdByShowId(req.user.id, id);
-
-        if (!show) {
-            return res.status(404).json({ "message": "Série introuvable" });
-        }
-        if (simplified) {
-            return res.status(200).json(new Show(show));
         }
         const seasons = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
         const [time, nbEpisodes] = await userSeasonRepository.getTimeEpisodesByUserIdByShowId(req.user.id, id);
@@ -89,7 +80,6 @@ const getShow = async (req, res) => {
         }));
         
         return res.status(200).json({
-            "serie": new Show(show),
             "seasons": mapSeasons,
             "time": time,
             "episodes": nbEpisodes

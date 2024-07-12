@@ -13,6 +13,7 @@ class Show {
         this.duration = obj.duration;
         this.addedAt = obj.added_at;
         this.country = obj.country;
+        this.continue = obj.continue;
     }
 }
 
