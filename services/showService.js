@@ -157,7 +157,7 @@ const updateByShowId = async (req, res) => {
         } else if (watch) {
             result = await userShowRepository.updateWatchingByUserIdByShowId(req.user.id, id);
         }
-        res.status(200).json({ "favorite": result });
+        res.status(200).json({ "value": result });
     } catch (e) {
         res.status(500).json({ "message": e.message });
     }

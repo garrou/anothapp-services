@@ -272,7 +272,7 @@ const getShowsToContinueByUserId = async (userId) => {
 	        FROM shows
 	        JOIN users_seasons ON s.id = users_seasons.show_id 
 	        WHERE users_seasons.user_id = $1 and s.id = shows.id
-        ) as missing, us.added_at, s.country
+        ) as missing, us.added_at, us.continue, s.country
         FROM shows s
         JOIN users_shows us ON s.id = us.show_id
         WHERE us.user_id = $1 AND us.continue = TRUE
