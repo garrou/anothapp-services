@@ -50,8 +50,8 @@ const deleteFriend = async (req, res) => {
 
 const getFriends = async (req, res) => {
     try {
-        const { status } = req.query;
-        const users = await getFriendsByUserIdByStatus(req.user.id, status);
+        const { status, serieId } = req.query;
+        const users = await getFriendsByUserIdByStatus(req.user.id, status, serieId);
         res.status(200).json(status ? { [status]: users } : users);
     } catch (e) {
         res.status(500).json({ "message": e.message });
@@ -60,29 +60,28 @@ const getFriends = async (req, res) => {
 
 /**
  * @param {string} userId 
- * @param {string?} status
+ * @param {string} status
+ * @param {number?} showId
  * @returns {Friend[] | map<string, Friend[]>}
  */
-const getFriendsByUserIdByStatus = async (userId, status) => {
+const getFriendsByUserIdByStatus = async (userId, status, showId) => {
     let rows = null;
     const mapToUser = (arr) => arr.map(user => new UserProfile(user));
 
-    switch (status) {
-        case "send":
-            rows = (await friendRepository.getFriendsRequestsSend(userId));
-            break;
-        case "receive":
-            rows = (await friendRepository.getFriendsRequestsReceive(userId));
-            break;
-        case "friend":
-            rows = (await friendRepository.getFriends(userId));
-            break;
-        default:
-            return {
-                "send": mapToUser(await friendRepository.getFriendsRequestsSend(userId)),
-                "receive": mapToUser(await friendRepository.getFriendsRequestsReceive(userId)),
-                "friend": mapToUser(await friendRepository.getFriends(userId))
-            }
+    if (status === "send") {
+        rows = await friendRepository.getFriendsRequestsSend(userId);
+    } else if (status === "receive") {
+            rows = await friendRepository.getFriendsRequestsReceive(userId);
+    } else if (status === "friend") {
+            rows = await friendRepository.getFriends(userId);
+    } else if (status === "viewed" && showId) {
+         rows = await friendRepository.getFriendsWhoWatchSerie(userId, showId)
+    } else {
+        return {
+            "send": mapToUser(await friendRepository.getFriendsRequestsSend(userId)),
+            "receive": mapToUser(await friendRepository.getFriendsRequestsReceive(userId)),
+            "friend": mapToUser(await friendRepository.getFriends(userId))
+        }
     }
     return rows ? mapToUser(rows) : [];
 }

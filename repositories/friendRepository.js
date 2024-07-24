@@ -66,6 +66,21 @@ const getFriendsRequestsSend = async (userId) => {
     return res["rows"];
 }
 
+const getFriendsWhoWatchSerie = async (userId, showId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT u.id, u.email, u.picture, u.username
+        FROM users u
+        JOIN users_shows us ON us.show_id = $2 AND u.id = us.user_id
+        JOIN friends f ON u.id = f.fst_user_id OR u.id = f.sec_user_id
+        WHERE (f.fst_user_id = $1 OR f.sec_user_id = $1) 
+        AND f.accepted = TRUE
+        AND u.id <> $1
+    `, [userId, showId]);
+    client.release();
+    return res["rows"];
+}
+
 /**
  * @param {string} userId 
  * @returns Promise<any[]>
@@ -112,6 +127,7 @@ const deleteFriend = async (userId, otherId) => {
 module.exports = {
     checkIfRelationExists,
     deleteFriend,
+    getFriendsWhoWatchSerie,
     getFriendsRequestsSend,
     getFriendsRequestsReceive,
     acceptFriend,
