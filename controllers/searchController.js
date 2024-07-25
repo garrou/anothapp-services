@@ -21,6 +21,8 @@ router.get("/shows/:showId/images", searchService.getImagesByShowId);
 
 router.get("/kinds", searchService.getKinds);
 
+router.get("/platforms", searchService.getPlatforms);
+
 router.get("/persons/:personId", searchService.getPersonById);
 
 module.exports = router;

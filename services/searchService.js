@@ -9,6 +9,8 @@ const ApiSimilarShow = require("../models/ApiSimilarShow");
 const ApiShowKind = require("../models/ApiShowKind");
 const ApiPerson = require("../models/ApiPerson");
 const { cumulate } = require("../helpers/utils");
+const platformRepository = require("../repositories/platformRepository");
+const Platform = require("../models/Platform");
 
 /**
  * @param {string?} title 
@@ -226,10 +228,20 @@ const getPersonById = async (req, res) => {
     }
 }
 
+const getPlatforms = async (req, res) => {
+    try {
+        const rows = await platformRepository.getPlatforms();
+        res.status(200).json(rows.map((row) => new Platform(row)));
+    } catch (e) {
+        res.status(500).json({ "message": "Une erreur est survenue " });
+    }
+}
+
 module.exports = {
     getByShowId,
     getCharactersByShowId,
     getEpisodesByShowIdBySeason,
+    getPlatforms,
     getImages,
     getImagesByShowId,
     getKinds,

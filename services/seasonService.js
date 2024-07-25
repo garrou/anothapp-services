@@ -12,7 +12,7 @@ const deleteBySeasonId = async (req, res) => {
         if (!id) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        await seasonRepository.deleteSeasonById(id);
+        await seasonRepository.deleteSeasonById(id, req.user.id);
         res.status(200).json({ "message": "ok" });
     } catch (e) {
         res.status(500).json({ "message": e.message });
@@ -39,4 +39,19 @@ const getSeasons = async (req, res) => {
     }
 }
 
-module.exports = { deleteBySeasonId, getSeasons };
+const updateBySeasonId = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { platform } = req.body;
+
+        if (!id) {
+            return res.status(400).json({ "message": "Requête invalide" });
+        }
+        await seasonRepository.updateSeason(id, req.user.id, platform);
+        res.status(200).json({ "message": "ok" });
+    } catch (e) {
+        res.status(500).json({ "message": e.message });
+    }
+}
+
+module.exports = { deleteBySeasonId, getSeasons, updateBySeasonId };

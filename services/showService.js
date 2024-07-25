@@ -5,6 +5,7 @@ const showRepository = require("../repositories/showRepository");
 const Season = require("../models/Season");
 const Show = require("../models/Show");
 const { cumulate } = require("../helpers/utils");
+const UserSeason = require("../models/UserSeason");
 
 /**
  * @param {string} userId
@@ -74,7 +75,12 @@ const getShow = async (req, res) => {
 
         if (!id) {
             return res.status(400).json({ "message": "Requête invalide" });
-        }
+        }/*
+        const show = await userShowRepository.getShowByUserIdByShowId(req.user.id, id);
+
+        if (!show) {
+            return res.status(404).json({ "message": "Série introuvable" });
+        }*/
         const seasons = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
         const [time, nbEpisodes] = await userSeasonRepository.getTimeEpisodesByUserIdByShowId(req.user.id, id);
         const episodes = cumulate(seasons);
@@ -84,6 +90,7 @@ const getShow = async (req, res) => {
         }));
         
         return res.status(200).json({
+            // "serie": new Show(show),
             "seasons": mapSeasons,
             "time": time,
             "episodes": nbEpisodes
@@ -140,9 +147,9 @@ const getSeasonInfosByShowIdBySeason = async (req, res) => {
             return res.status(400).json({ "message": "Requête invalide" });
         }
         const rows = await userSeasonRepository.getInfosByUserIdByShowId(req.user.id, id, num);
-        const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(req.user.id, id, num);
-        const seasons = rows.map(row => ({ id: row.id, addedAt: row.added_at }));
-        res.status(200).json({ time, seasons });
+        // const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(req.user.id, id, num);
+        const seasons = rows.map(row => new UserSeason(row));
+        res.status(200).json(seasons);
     } catch (e) {
         res.status(500).json({ "message": e.message });
     }
@@ -176,5 +183,5 @@ module.exports = {
     getSeasonInfosByShowIdBySeason,
     getShow,
     getShows,
-    updateByShowId,
+    updateByShowId
 };

@@ -45,8 +45,10 @@ CREATE TABLE users_seasons (
     added_at TIMESTAMP DEFAULT NOW(),
     user_id VARCHAR(50),
     show_id INTEGER,
+    platform INTEGER,
     number INTEGER,
     PRIMARY KEY(id),
+    FOREIGN KEY(platform) REFERENCES platforms(id) ON DELETE CASCADE,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(show_id, number) REFERENCES seasons(show_id, number) ON DELETE CASCADE,
     FOREIGN KEY(user_id, show_id) REFERENCES users_shows(user_id, show_id) ON DELETE CASCADE
@@ -60,4 +62,11 @@ CREATE TABLE friends (
     PRIMARY KEY(fst_user_id, sec_user_id),
     FOREIGN KEY(fst_user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(sec_user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE platforms (
+    id SERIAL,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    logo VARCHAR(255),
+    PRIMARY KEY(id)
 );
