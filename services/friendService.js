@@ -68,20 +68,26 @@ const getFriendsByUserIdByStatus = async (userId, status, showId) => {
     let rows = null;
     const mapToUser = (arr) => arr.map(user => new UserProfile(user));
 
-    if (status === "send") {
-        rows = await friendRepository.getFriendsRequestsSend(userId);
-    } else if (status === "receive") {
-            rows = await friendRepository.getFriendsRequestsReceive(userId);
-    } else if (status === "friend") {
-            rows = await friendRepository.getFriends(userId);
-    } else if (status === "viewed" && showId) {
-         rows = await friendRepository.getFriendsWhoWatchSerie(userId, showId)
-    } else {
-        return {
-            "send": mapToUser(await friendRepository.getFriendsRequestsSend(userId)),
-            "receive": mapToUser(await friendRepository.getFriendsRequestsReceive(userId)),
-            "friend": mapToUser(await friendRepository.getFriends(userId))
-        }
+    switch (status) {
+        case "send":
+            rows = (await friendRepository.getFriendsRequestsSend(userId));
+            break;
+        case "receive":
+            rows = (await friendRepository.getFriendsRequestsReceive(userId));
+            break;
+        case "friend":
+            rows = (await friendRepository.getFriends(userId));
+            break;
+        case "viewed":
+            if (!showId) throw new Error("Requête invalide");
+            rows = await friendRepository.getFriendsWhoWatchSerie(userId, showId)
+            break;
+        default:
+            return {
+                "send": mapToUser(await friendRepository.getFriendsRequestsSend(userId)),
+                "receive": mapToUser(await friendRepository.getFriendsRequestsReceive(userId)),
+                "friend": mapToUser(await friendRepository.getFriends(userId))
+            }
     }
     return rows ? mapToUser(rows) : [];
 }

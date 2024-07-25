@@ -282,6 +282,26 @@ const getShowsToContinueByUserId = async (userId) => {
     return res["rows"].filter((row) => row.missing > 0);
 }
 
+const getSharedShowsWithFriend = async (userId, friendId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT s.id, s.title, s.poster, s.kinds, s.duration, s.country
+        FROM shows s
+        WHERE id in (
+	        SELECT show_id
+            FROM users_shows
+            WHERE user_id = $1
+            INTERSECT
+            SELECT show_id
+            FROM users_shows
+            WHERE user_id = $2
+        )
+        ORDER BY s.title
+    `, [userId, friendId]);
+    client.release();
+    return res["rows"];
+}
+
 module.exports = {
     checkShowExistsByUserIdByShowId,
     create,
@@ -290,6 +310,7 @@ module.exports = {
     getFavoritesByUserId,
     getKindsByUserId,
     getNotStartedShowsByUserId,
+    getSharedShowsWithFriend,
     getShowByUserIdByShowId,
     getShowsByUserId,
     getShowsByUserIdByKind,

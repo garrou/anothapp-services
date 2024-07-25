@@ -9,9 +9,10 @@ const { cumulate } = require("../helpers/utils");
 /**
  * @param {string} userId
  * @param {string} status
+ * @param {string?} friendId
  * @returns Promise
  */
-const getShowsByStatus = (userId, status) => {
+const getShowsByStatus = (userId, status, friendId) => {
     switch (status) {
         case "resume":
             return userShowRepository.getShowsToResumeByUserId(userId);
@@ -21,6 +22,9 @@ const getShowsByStatus = (userId, status) => {
             return userShowRepository.getShowsToContinueByUserId(userId);
         case "favorite":
             return userShowRepository.getFavoritesByUserId(userId);
+        case "shared":
+            if (!friendId) throw new Error("Requête invalide");
+            return userShowRepository.getSharedShowsWithFriend(userId, friendId);
         default:
             throw new Error("Invalid status");
     }
@@ -91,7 +95,7 @@ const getShow = async (req, res) => {
 
 const getShows = async (req, res) => {
     try {
-        const { title, limit, kind, status } = req.query;
+        const { title, limit, kind, status, friendId } = req.query;
         let rows = null;
 
         if (title) {
@@ -99,7 +103,7 @@ const getShows = async (req, res) => {
         } else if (kind) {
             rows = await userShowRepository.getShowsByUserIdByKind(req.user.id, kind);
         } else if (status) {
-            rows = await getShowsByStatus(req.user.id, status);
+            rows = await getShowsByStatus(req.user.id, status, friendId);
         } else {
             rows = await userShowRepository.getShowsByUserId(req.user.id, limit);
         }
