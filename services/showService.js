@@ -26,7 +26,7 @@ const getShowsByStatus = (userId, status, friendId) => {
             if (!friendId) throw new Error("Requête invalide");
             return userShowRepository.getSharedShowsWithFriend(userId, friendId);
         default:
-            throw new Error("Invalid status");
+            throw new Error("Requête invalide");
     }
 }
 

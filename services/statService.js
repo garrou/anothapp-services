@@ -62,7 +62,7 @@ const getCountByUserIdByType = (userId, type) => {
         case "seasons":
             return userSeasonRepository.getTotalSeasonsByUserId(userId);
         default:
-            throw new Error("Invalid type");
+            throw new Error("Requête invalide");
     }
 }
 
@@ -84,7 +84,7 @@ const getTimeByUserIdByType = (userId, type) => {
         case "rank":
             return userSeasonRepository.getRankingViewingTimeByShows(userId);
         default:
-            throw new Error("Invalid type");
+            throw new Error("Requête invalide");
     }
 }
 
@@ -107,7 +107,7 @@ const getGroupedCountByUserIdByTypeByPeriod = (userId, type, period) => {
         case "countries":
             return userShowRepository.getCountriesByUserId(userId);
         default:
-            throw new Error("Invalid type");
+            throw new Error("Requête invalide");
     }
 }
 
@@ -125,7 +125,7 @@ const getNbSeasonsByUserIdByPeriod = (userId, period) => {
         case "months":
             return userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId);
         default:
-            throw new Error("Invalid period");
+            throw new Error("Requête invalide");
     }
 }
 
@@ -141,7 +141,7 @@ const getNbEpisodesByUserIdByPeriod = (userId, period) => {
         case "year":
             return userSeasonRepository.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId);
         default:
-            throw new Error("Invalid period");
+            throw new Error("Requête invalide");
     }
 }
 
