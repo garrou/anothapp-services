@@ -238,6 +238,7 @@ const getShowsByUserIdByKind = async (userId, kind) => {
         FROM shows s
         JOIN users_shows us ON us.show_id = s.id
         WHERE us.user_id = $1 AND kinds LIKE $2
+        ORDER BY us.added_at DESC
     `, [userId, `%${kind}%`]);
     client.release();
     return res["rows"];
@@ -254,9 +255,9 @@ const getShowsByUserIdByPlatform = async (userId, platform) => {
         SELECT DISTINCT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at, us.continue, s.country
         FROM shows s
         JOIN users_shows us ON us.show_id = s.id
-        JOIN users_seasons use ON s.id = use.show_id
-        WHERE us.user_id = $1 
-        AND use.platform = $2
+        JOIN users_seasons use ON us.user_id = use.user_id AND us.show_id = use.show_id
+        WHERE us.user_id = $1 AND use.platform = $2
+        ORDER BY us.added_at DESC
     `, [userId, platform]);
     client.release();
     return res["rows"];    
