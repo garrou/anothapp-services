@@ -287,7 +287,7 @@ const getRankingViewingTimeByShows = async (userId, limit = 10) => {
  * @param {number} limit
  * @returns Promise<any> 
  */
-const getRecordViewingTimeMonth = async (userId, limit) => {
+const getRecordViewingTimeMonth = async (userId, limit = 10) => {
     const client = await pool.connect();
     const res = await client.query(`
         SELECT TO_CHAR(added_at, 'MM/YYYY') as label, SUM(shows.duration * episodes) AS value 
@@ -300,7 +300,7 @@ const getRecordViewingTimeMonth = async (userId, limit) => {
         LIMIT $2
     `, [userId, limit]);
     client.release();
-    return res["rows"];
+    return res["rows"].reverse();
 }
 
 /**
@@ -354,6 +354,26 @@ const getNbEpisodesByUserIdGroupByMonthByCurrentYear = async (userId) => {
     return res["rows"];
 }
 
+/**
+ * @param {string} userId 
+ * @param {number} limit
+ * @returns Promise<any[]>
+ */
+const getPlatformsByUserId = async (userId, limit = 10) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT name as label, COUNT(*) AS value
+        FROM users_seasons us
+        JOIN platforms p ON p.id = us.platform
+        WHERE us.user_id = $1
+        GROUP BY name
+        ORDER BY value DESC
+        LIMIT $2
+    `, [userId, limit]);
+    client.release();
+    return res["rows"];
+}
+
 module.exports = {
     create,
     getDistinctByUserIdByShowId,
@@ -363,6 +383,7 @@ module.exports = {
     getNbSeasonsByUserIdGroupByMonthByCurrentYear,
     getNbSeasonsByUserIdGroupByYear,
     getInfosByUserIdByShowId,
+    getPlatformsByUserId,
     getRankingViewingTimeByShows,
     getRecordViewingTimeMonth,
     getSeasonsByAddedYear,

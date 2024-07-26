@@ -103,9 +103,11 @@ const getGroupedCountByUserIdByTypeByPeriod = (userId, type, period) => {
         case "kinds":
             return getNbKindsByUserId(userId);
         case "best-months":
-            return userSeasonRepository.getRecordViewingTimeMonth(userId, 10);
+            return userSeasonRepository.getRecordViewingTimeMonth(userId);
         case "countries":
             return userShowRepository.getCountriesByUserId(userId);
+        case "platforms":
+            return userSeasonRepository.getPlatformsByUserId(userId);
         default:
             throw new Error("Requête invalide");
     }
@@ -163,8 +165,7 @@ const getNbKindsByUserId = async (userId) => {
     return Array
         .from(kindsMap, ([kind, occur]) => ({ "label": kind, "value": occur }))
         .sort((a, b) => b.value - a.value)
-        .splice(0, 10)
-        .reverse();
+        .splice(0, 10);
 }
 
 module.exports = {

@@ -102,7 +102,7 @@ const getShow = async (req, res) => {
 
 const getShows = async (req, res) => {
     try {
-        const { title, limit, kind, status, friendId } = req.query;
+        const { title, limit, kind, status, friendId, platform } = req.query;
         let rows = null;
 
         if (title) {
@@ -111,6 +111,8 @@ const getShows = async (req, res) => {
             rows = await userShowRepository.getShowsByUserIdByKind(req.user.id, kind);
         } else if (status) {
             rows = await getShowsByStatus(req.user.id, status, friendId);
+        } else if (platform) {
+            rows = await userShowRepository.getShowsByUserIdByPlatform(req.user.id, platform);
         } else {
             rows = await userShowRepository.getShowsByUserId(req.user.id, limit);
         }

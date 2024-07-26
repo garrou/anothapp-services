@@ -245,6 +245,25 @@ const getShowsByUserIdByKind = async (userId, kind) => {
 
 /**
  * @param {string} userId 
+ * @param {number} platform 
+ * @returns Promise<any[]>
+ */
+const getShowsByUserIdByPlatform = async (userId, platform) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT DISTINCT s.id, s.title, s.poster, s.kinds, s.duration, us.favorite, us.added_at, us.continue, s.country
+        FROM shows s
+        JOIN users_shows us ON us.show_id = s.id
+        JOIN users_seasons use ON s.id = use.show_id
+        WHERE us.user_id = $1 
+        AND use.platform = $2
+    `, [userId, platform]);
+    client.release();
+    return res["rows"];    
+}
+
+/**
+ * @param {string} userId 
  * @return Promise<any[]>
  */
 const getFavoritesByUserId = async (userId) => {
@@ -314,6 +333,7 @@ module.exports = {
     getShowByUserIdByShowId,
     getShowsByUserId,
     getShowsByUserIdByKind,
+    getShowsByUserIdByPlatform,
     getShowsByUserIdByTitle,
     getShowsToContinueByUserId,
     getTotalShowsByUserId,
