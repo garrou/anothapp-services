@@ -9,7 +9,7 @@ const getUserByEmail = async (email) => {
     const res = await client.query(`
         SELECT id, email, picture, password, username
         FROM users
-        WHERE email = $1
+        WHERE UPPER(email) = UPPER($1)
         LIMIT 1
     `, [email]);
     client.release();
@@ -32,6 +32,22 @@ const getUserByUsername = async (username, strict = false) => {
     client.release();
     return res["rows"];
 }
+
+/**
+ * @param {string} identifier
+ */
+const getUserByIdentifier = async (identifier) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT id, email, picture, password, username
+        FROM users
+        WHERE UPPER(username) = UPPER($1) OR UPPER(email) = UPPER($1)
+        LIMIT 1
+    `, [identifier]);
+    client.release();
+    return res["rows"];
+}
+
 
 /**
  * @param {string} id 
@@ -109,6 +125,7 @@ module.exports = {
     createUser,
     getUserByEmail,
     getUserByUsername,
+    getUserByIdentifier,
     getUserById,
     updateEmail,
     updatePassword,

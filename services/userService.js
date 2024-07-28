@@ -33,19 +33,15 @@ const login = async (req, res) => {
         if (!isValidId(identifier))
             return res.status(400).json({ "message": "Identifiant incorrect" });
 
-        const isEmail = identifier.includes("@");
-
-        const rows = isEmail
-            ? await userRepository.getUserByEmail(identifier.toLowerCase())
-            : await userRepository.getUserByUsername(identifier, true);
+        const rows = await userRepository.getUserByIdentifier(identifier);
 
         if (rows.length === 0)
-            return res.status(400).json({ "message": `${isEmail ? "Email" : "Username"} ou mot de passe incorrect` });
+            return res.status(400).json({ "message": "Identifiant ou mot de passe incorrect" });
 
         const same = await comparePassword(password, rows[0]["password"]);
 
         if (!same)
-            return res.status(400).json({ "message": `${isEmail ? "Email" : "Username"} ou mot de passe incorrect` });
+            return res.status(400).json({ "message": "Identifiant ou mot de passe incorrect" });
 
         const token = signJwt(rows[0]["id"], process.env.JWT_SECRET);
         const user = new UserProfile(rows[0], true);
@@ -73,7 +69,7 @@ const register = async (req, res) => {
         if (!passValid.status)
             return res.status(400).json({ "message": passValid.message });
 
-        let resp = await userRepository.getUserByEmail(email.toLowerCase());
+        let resp = await userRepository.getUserByEmail(email);
 
         if (resp.length > 0)
             return res.status(409).json({ "message": "Un compte est déjà associé à cet email" });
@@ -84,7 +80,7 @@ const register = async (req, res) => {
             return res.status(409).json({ "message": "Un compte est déjà associé à ce nom d'utilisateur" });
 
         const hash = await createHash(password);
-        await userRepository.createUser(uuid(), email.toLowerCase(), hash, username);
+        await userRepository.createUser(uuid(), email, hash, username);
         res.status(201).json({ "message": "Compte créé" });
     } catch (e) {
         res.status(500).json({ "message": e.message });
