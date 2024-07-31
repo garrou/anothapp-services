@@ -84,11 +84,7 @@ const getShow = async (req, res) => {
         const seasons = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
         const [time, nbEpisodes] = await userSeasonRepository.getTimeEpisodesByUserIdByShowId(req.user.id, id);
         const episodes = cumulate(seasons);
-        const mapSeasons = seasons.map((s, i) => new Season({
-            ...s,
-            interval: `${episodes[i] + 1} - ${episodes[i + 1]}`,
-        }));
-        
+        const mapSeasons = seasons.map((s, i) => new Season(s, `${episodes[i] + 1} - ${episodes[i + 1]}`));
         return res.status(200).json({
             // "serie": new Show(show),
             "seasons": mapSeasons,

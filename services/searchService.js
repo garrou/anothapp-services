@@ -106,10 +106,7 @@ const getSeasonsByShowId = async (req, res) => {
         });
         const { seasons } = await resp.data;
         const episodes = cumulate(seasons);
-        const mapSeasons = seasons.map((s, i) => new Season({
-            ...s,
-            interval: `${episodes[i] + 1} - ${episodes[i + 1]}`,
-        }));
+        const mapSeasons = seasons.map((s, i) => new Season(s,  `${episodes[i] + 1} - ${episodes[i + 1]}`));
         res.status(200).json(mapSeasons);
     } catch (e) {
         res.status(500).json({ "message": e.message });

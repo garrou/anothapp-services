@@ -2,12 +2,13 @@ class Season {
 
     /**
      * @param {Object} obj
+     * @param {string?} interval
      */
-    constructor(obj) {
+    constructor(obj, interval = null) {
         this.number = obj.number;
         this.episodes = obj.episodes;
         this.image = obj.image;
-        this.interval = null;
+        this.interval = interval;
     }
 
     /**
