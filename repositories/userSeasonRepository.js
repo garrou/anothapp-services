@@ -42,7 +42,7 @@ const getDistinctByUserIdByShowId = async (userId, showId) => {
 const getInfosByUserIdByShowId = async (userId, showId, number) => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT us.id, us.added_at, p.name, p.logo
+        SELECT us.id, us.added_at, p.id, p.name, p.logo
         FROM users_seasons us
         LEFT JOIN platforms p ON p.id = us.platform 
         WHERE user_id = $1
