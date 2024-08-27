@@ -6,7 +6,7 @@ const pool = require('../helpers/db');
 const getPlatforms = async () => {
     const client = await pool.connect();
     const res = await client.query(`
-        SELECT id, name, logo
+        SELECT id AS pid, name, logo
         FROM platforms
         ORDER BY name
     `);

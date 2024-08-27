@@ -4,7 +4,7 @@ class Platform {
      * @param {Object} obj
      */
     constructor(obj) {
-        this.id = obj.id;
+        this.id = obj.pid;
         this.name = obj.name;
         this.logo = obj.logo;
     }
