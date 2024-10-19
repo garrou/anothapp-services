@@ -70,3 +70,11 @@ CREATE TABLE platforms (
     logo VARCHAR(255),
     PRIMARY KEY(id)
 );
+
+CREATE TABLE users_list (
+    user_id VARCHAR(50),
+    show_id INTEGER,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE,
+    PRIMARY KEY(user_id, show_id)
+);

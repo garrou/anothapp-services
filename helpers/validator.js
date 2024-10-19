@@ -93,6 +93,11 @@ const isValidId = (name) => {
     return typeof name === "string";
 }
 
+const idValidShow = (serie) => {
+    const { id, title, poster, kinds, duration, seasons, country } = serie;
+    return id && title && poster && kinds && duration && seasons && country;
+}
+
 module.exports = {
     isValidChangeEmail,
     isValidChangePassword,
@@ -100,5 +105,6 @@ module.exports = {
     isValidId,
     isValidImage,
     isValidUsername,
-    isValidPassword
+    isValidPassword,
+    idValidShow
 }

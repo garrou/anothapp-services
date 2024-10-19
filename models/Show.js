@@ -14,6 +14,7 @@ class Show {
         this.addedAt = obj.added_at;
         this.country = obj.country;
         this.watch = obj.continue;
+        this.seasons = obj.seasons;
     }
 }
 

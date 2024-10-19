@@ -4,6 +4,7 @@ const seasonRepository = require("../repositories/seasonRepository");
 const showRepository = require("../repositories/showRepository");
 const Season = require("../models/Season");
 const Show = require("../models/Show");
+const { idValidShow } = require("../helpers/validator");
 const { cumulate } = require("../helpers/utils");
 const UserSeason = require("../models/UserSeason");
 
@@ -33,22 +34,23 @@ const getShowsByStatus = (userId, status, friendId) => {
 
 const addShow = async (req, res) => {
     try {
-        const { id, title, poster, kinds, duration, seasons, country } = req.body;
-
-        if (!id || !title || !poster || !kinds || !duration || !seasons || !country) {
+        if (!idValidShow(req.body)) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        const exists = await userShowRepository.checkShowExistsByUserIdByShowId(req.user.id, id);
+        const { id, title, poster, kinds, duration, seasons, country, list } = req.body;
+        const addInList = !!list;
+
+        const exists = await userShowRepository.checkShowExistsByUserIdByShowId(req.user.id, id, addInList);
 
         if (exists) {
-            return res.status(409).json({ "message": "Cette série est déjà dans votre collection" });
+            return res.status(409).json({ "message": `Cette série est déjà dans votre ${addInList ? "liste" : "collection"}` });
         }
         const isNewShow = await showRepository.isNewShow(id);
 
         if (isNewShow) {
             await showRepository.createShow(id, title, poster, kinds.join(";"), duration, parseInt(seasons), country);
         }
-        await userShowRepository.create(req.user.id, id);
+        await userShowRepository.create(req.user.id, id, addInList);
         res.status(201).json({ "message": "ok" });
     } catch (e) {
         res.status(500).json({ "message": e.message });
@@ -58,11 +60,12 @@ const addShow = async (req, res) => {
 const deleteByShowId = async (req, res) => {
     try {
         const { id } = req.params;
+        const { list } = req.query;
 
         if (!id) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        await userShowRepository.deleteByUserIdShowId(req.user.id, id);
+        await userShowRepository.deleteByUserIdShowId(req.user.id, id, !!list);
         res.status(200).json({ "message": "ok" });
     } catch (e) {
         res.status(500).json({ "message": e.message });
