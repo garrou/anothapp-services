@@ -61,11 +61,12 @@ const deleteByShowId = async (req, res) => {
     try {
         const { id } = req.params;
         const { list } = req.query;
+        const deleteInList = (/true/i).test(list);
 
         if (!id) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        await userShowRepository.deleteByUserIdShowId(req.user.id, id, !!list);
+        await userShowRepository.deleteByUserIdShowId(req.user.id, id, deleteInList);
         res.status(200).json({ "message": "ok" });
     } catch (e) {
         res.status(500).json({ "message": e.message });
