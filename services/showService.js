@@ -2,6 +2,7 @@ const userSeasonRepository = require("../repositories/userSeasonRepository");
 const userShowRepository = require("../repositories/userShowRepository");
 const seasonRepository = require("../repositories/seasonRepository");
 const showRepository = require("../repositories/showRepository");
+const friendRepository = require("../repositories/friendRepository");
 const Season = require("../models/Season");
 const Show = require("../models/Show");
 const { idValidShow } = require("../helpers/validator");
@@ -105,6 +106,9 @@ const getShows = async (req, res) => {
         const { title, limit, kind, status, friendId, platform } = req.query;
         let rows = null;
 
+        if (friendId && !await friendRepository.checkIfAlreadyFriend(req.user.id, friendId)) {
+            return res.status(400).json({ "message": "Vous n'êtes pas en relation avec cette personne" });
+        }
         if (title) {
             rows = await userShowRepository.getShowsByUserIdByTitle(req.user.id, title);
         } else if (kind) {

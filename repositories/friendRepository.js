@@ -20,6 +20,23 @@ const checkIfRelationExists = async (userId, otherId) => {
 /**
  * @param {string} userId 
  * @param {string} otherId 
+ * @returns Promise<boolean>
+ */
+const checkIfAlreadyFriend = async (userId, otherId) => {
+    const client = await pool.connect();
+    const res = await client.query(`
+        SELECT COUNT(*) AS total
+        FROM friends
+        WHERE ((fst_user_id = $1 AND sec_user_id = $2) OR (fst_user_id = $2 AND sec_user_id = $1))
+        AND accepted = TRUE
+    `, [userId, otherId]);
+    client.release();
+    return parseInt(res["rows"][0]["total"]) === 1;
+}
+
+/**
+ * @param {string} userId 
+ * @param {string} otherId 
  */
 const acceptFriend = async (userId, otherId) => {
     const client = await pool.connect();
@@ -125,6 +142,7 @@ const deleteFriend = async (userId, otherId) => {
 }
 
 module.exports = {
+    checkIfAlreadyFriend,
     checkIfRelationExists,
     deleteFriend,
     getFriendsWhoWatchSerie,

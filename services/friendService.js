@@ -25,7 +25,7 @@ const sendFriendRequest = async (req, res) => {
         const exists = await friendRepository.checkIfRelationExists(req.user.id, userId);
 
         if (exists) {
-            return res.status(409).json({ "message": "Vous êtes déjà amis avec cet utilisateur" });
+            return res.status(409).json({ "message": "Vous êtes déjà en relation avec cet utilisateur" });
         }
         await friendRepository.sendFriendRequest(req.user.id, userId);
         res.status(201).json({ "message": "ok" });
