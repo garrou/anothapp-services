@@ -4,14 +4,17 @@ const pool = require('../helpers/db');
  * @param {string} userId 
  * @param {number} showId 
  * @param {number} number 
+ * @returns {Promise<number>} id of created season
  */
 const create = async (userId, showId, number) => {
     const client = await pool.connect();
-    await client.query(`
+    const res = await client.query(`
         INSERT INTO users_seasons (user_id, show_id, number)
         VALUES ($1, $2, $3)
+        RETURNING id
     `, [userId, showId, number]);
     client.release();
+    return res["rows"][0].id;
 }
 
 /**

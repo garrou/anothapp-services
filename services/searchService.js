@@ -31,11 +31,11 @@ const getShowsByTitle = async (title, limit = 20) => {
 }
 
 /**
- * @param {string} kind 
+ * @param {string} kinds
  * @returns any[]
  */
-const getShowsByKind = async (kind) => {
-    const resp = await axios.get(`${betaseries}/search/shows?genres=${kind}`, {
+const getShowsByKinds = async (kinds) => {
+    const resp = await axios.get(`${betaseries}/search/shows?genres=${kinds}`, {
         headers: {
             "X-BetaSeries-Key": key
         }
@@ -59,11 +59,11 @@ const getImages = async (req, res) => {
 
 const discoverShows = async (req, res) => {
     try {
-        const { title, kind } = req.query;
+        const { title, kinds } = req.query;
         let response = null;
 
-        if (kind) {
-            response = await getShowsByKind(kind);
+        if (kinds) {
+            response = await getShowsByKinds(kinds);
         } else {
             response = await getShowsByTitle(title);
         }
@@ -243,7 +243,7 @@ module.exports = {
     getImagesByShowId,
     getKinds,
     getPersonById,
-    getShowsByKind,
+    getShowsByKinds,
     discoverShows,
     getSeasonsByShowId,
     getSimilarsByShowId
