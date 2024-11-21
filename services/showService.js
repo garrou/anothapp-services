@@ -23,7 +23,7 @@ const getShowsByStatus = (userId, status, friendId) => {
         case "continue":
             return userShowRepository.getShowsToContinueByUserId(userId);
         case "favorite":
-            return userShowRepository.getFavoritesByUserId(userId);
+            return userShowRepository.getFavoritesByUserId(friendId ?? userId);
         case "shared":
             if (!friendId) throw new Error("Requête invalide");
             return userShowRepository.getSharedShowsWithFriend(userId, friendId);
