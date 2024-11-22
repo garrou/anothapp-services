@@ -138,8 +138,8 @@ const addSeasonByShowId = async (req, res) => {
         if (rows.length === 0) {
             await seasonRepository.createSeason(season.episodes, season.number, season.image ?? serie.poster, serie.id);
         }
-        const seasonId = await userSeasonRepository.create(req.user.id, serie.id, season.number);
-        res.status(201).json({ "seasonId": seasonId });
+        await userSeasonRepository.create(req.user.id, serie.id, season.number);
+        res.status(201).json({ "message": "ok" });
     } catch (e) {
         res.status(500).json({ "message": e.message });
     }
