@@ -103,7 +103,7 @@ const getShow = async (req, res) => {
 
 const getShows = async (req, res) => {
     try {
-        const { title, limit, kind, status, friendId, platform } = req.query;
+        const { title, limit, kind, status, friendId, platforms } = req.query;
         let rows = null;
 
         if (friendId && !await friendRepository.checkIfAlreadyFriend(req.user.id, friendId)) {
@@ -115,8 +115,9 @@ const getShows = async (req, res) => {
             rows = await userShowRepository.getShowsByUserIdByKind(req.user.id, kind);
         } else if (status) {
             rows = await getShowsByStatus(req.user.id, status, friendId);
-        } else if (platform) {
-            rows = await userShowRepository.getShowsByUserIdByPlatform(req.user.id, platform);
+        } else if (platforms) {
+            const ids = platforms.split(",").map((p) => parseInt(p));
+            rows = await userShowRepository.getShowsByUserIdByPlatforms(req.user.id, ids);
         } else {
             rows = await userShowRepository.getShowsByUserId(req.user.id, limit);
         }

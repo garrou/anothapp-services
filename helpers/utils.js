@@ -1,6 +1,8 @@
+const Season = require("../models/Season");
+
 /**
- * @param {Array} arr
- * @returns Array<number>
+ * @param {Season[]} arr
+ * @returns number[]
  */
 const cumulate = (arr) => {
     const result = new Array(arr.length + 1).fill(0);

@@ -48,6 +48,20 @@ const getShowsByKinds = async (kinds) => {
     }));
 }
 
+const getShowsByPlatforms = async (platforms) => {
+    const resp = await axios.get(`${betaseries}/search/shows?svods=${platforms}`, {
+        headers: {
+            "X-BetaSeries-Key": key
+        }
+    });
+    const { shows } = await resp.data;
+    return shows.map(s => ({
+        id: s.id,
+        title: s.title,
+        poster: s.poster
+    }));
+}
+
 const getImages = async (req, res) => {
     try {
         const shows = await getShowsByTitle(null, 8);
@@ -59,11 +73,13 @@ const getImages = async (req, res) => {
 
 const discoverShows = async (req, res) => {
     try {
-        const { title, kinds } = req.query;
+        const { title, kinds, platforms } = req.query;
         let response = null;
 
         if (kinds) {
             response = await getShowsByKinds(kinds);
+        } else if (platforms) {
+            response = await getShowsByPlatforms(platforms);
         } else {
             response = await getShowsByTitle(title);
         }
@@ -244,6 +260,7 @@ module.exports = {
     getKinds,
     getPersonById,
     getShowsByKinds,
+    getShowsByPlatforms,
     discoverShows,
     getSeasonsByShowId,
     getSimilarsByShowId
