@@ -10,6 +10,17 @@ const cumulate = (arr) => {
     return result;
 }
 
+/**
+ * @param {string} url 
+ * @param {string} query 
+ * @param {any} param 
+ * @returns string
+ */
+const buildUrl = (url, query, param) => {
+    return param === undefined ? url : url.concat(`${url.includes("?") ? "&" : "?"}${query}=${param}`);
+}
+
 module.exports = {
+    buildUrl,
     cumulate
 }

@@ -8,20 +8,16 @@ const ApiCharacter = require("../models/ApiCharacter");
 const ApiSimilarShow = require("../models/ApiSimilarShow");
 const ApiShowKind = require("../models/ApiShowKind");
 const ApiPerson = require("../models/ApiPerson");
-const { cumulate } = require("../helpers/utils");
+const { cumulate, buildUrl } = require("../helpers/utils");
 const platformRepository = require("../repositories/platformRepository");
 const Platform = require("../models/Platform");
 
 /**
- * @param {string?} title 
  * @param {limit} limit
  * @returns ApiShow[]
  */
-const getShowsByTitle = async (title, limit = 20) => {
-    const url = title
-        ? `${betaseries}/shows/search?title=${title}`
-        : `${betaseries}/shows/discover?limit=${limit}`;
-    const resp = await axios.get(url, {
+const getShowsToDiscover = async (limit = 20) => {
+    const resp = await axios.get(`${betaseries}/shows/discover?limit=${limit}`, {
         headers: {
             "X-BetaSeries-Key": key
         }
@@ -31,25 +27,23 @@ const getShowsByTitle = async (title, limit = 20) => {
 }
 
 /**
- * @param {string} kinds
- * @returns any[]
+ * @param {string?} title
+ * @param {string?} kinds
+ * @param {string?} platforms
+ * @param {number?} limit
+ * @param {number?} year
+ * @returns { id, title, poster}[]
  */
-const getShowsByKinds = async (kinds) => {
-    const resp = await axios.get(`${betaseries}/search/shows?genres=${kinds}`, {
-        headers: {
-            "X-BetaSeries-Key": key
-        }
-    });
-    const { shows } = await resp.data;
-    return shows.map(s => ({
-        id: s.id,
-        title: s.title,
-        poster: s.poster
-    }));
-}
-
-const getShowsByPlatforms = async (platforms) => {
-    const resp = await axios.get(`${betaseries}/search/shows?svods=${platforms}`, {
+const getShowsByFilters = async (title, kinds, platforms, limit = 20, year) => {
+    const url = buildUrl(buildUrl(buildUrl(buildUrl(buildUrl(
+        `${betaseries}/search/shows`, 
+        "text", title),
+        "genres", kinds),
+        "svods", platforms),
+        "limit", limit),
+        "creations", year
+    );
+    const resp = await axios.get(url, {
         headers: {
             "X-BetaSeries-Key": key
         }
@@ -73,15 +67,13 @@ const getImages = async (req, res) => {
 
 const discoverShows = async (req, res) => {
     try {
-        const { title, kinds, platforms } = req.query;
+        const { title, kinds, platforms, limit, year } = req.query;
         let response = null;
 
-        if (kinds) {
-            response = await getShowsByKinds(kinds);
-        } else if (platforms) {
-            response = await getShowsByPlatforms(platforms);
+        if (Object.keys(req.query).length === 1 && limit) {
+            response = await getShowsToDiscover(limit);
         } else {
-            response = await getShowsByTitle(title);
+            response = await getShowsByFilters(title, kinds, platforms, limit, year);
         }
         res.status(200).json(response);
     } catch (e) {
@@ -259,8 +251,7 @@ module.exports = {
     getImagesByShowId,
     getKinds,
     getPersonById,
-    getShowsByKinds,
-    getShowsByPlatforms,
+    getShowsByFilters,
     discoverShows,
     getSeasonsByShowId,
     getSimilarsByShowId
