@@ -8,7 +8,7 @@ const WHITELIST = [
 
 const checkJwt = (req, res, next) => {
 
-    if (WHITELIST.includes(req.originalUrl)) {
+    if (WHITELIST.some((url) => req.originalUrl.startsWith(url))) {
         return next();
     }
     const authHeader = req.headers["authorization"];

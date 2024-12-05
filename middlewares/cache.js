@@ -7,7 +7,7 @@ const cache = new Cache({ checkPeriod: 20 });
  * @param {boolean} eachUser
  * @returns (Request, Response, NextFunction)
  */
-module.exports = (duration, eachUser) => (req, res, next) => {
+module.exports = (duration, eachUser = false) => (req, res, next) => {
 
     if (req.method !== "GET") {
         return next();

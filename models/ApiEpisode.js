@@ -1,11 +1,12 @@
-class ApiEpisode {
+const ApiEntity = require("./ApiEntity");
+
+class ApiEpisode extends ApiEntity {
 
     /**
      * @param {Object} episode 
      */
     constructor(episode) {
-        this.id = episode.id;
-        this.title = episode.title
+        super(episode.id, episode.title);
         this.code = episode.code;
         this.global = episode.global;
         this.description = episode.description;

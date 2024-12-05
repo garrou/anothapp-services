@@ -94,8 +94,8 @@ const isValidId = (name) => {
 }
 
 const idValidShow = (serie) => {
-    const { id, title, poster, kinds, duration, seasons, country } = serie;
-    return id && title && poster && kinds && duration && seasons && country;
+    const { id, title, kinds, duration, seasons, country } = serie;
+    return id && title && kinds && duration && seasons && country;
 }
 
 module.exports = {

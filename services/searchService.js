@@ -1,79 +1,102 @@
 const betaseries = "https://api.betaseries.com";
 const key = process.env.BETASERIES_KEY;
 const axios = require("axios");
-const ApiShow = require("../models/ApiShow");
+const { ApiShow, ApiShowPreview } = require("../models/ApiShow");
 const ApiEpisode = require("../models/ApiEpisode");
 const Season = require("../models/Season");
 const ApiCharacter = require("../models/ApiCharacter");
-const ApiSimilarShow = require("../models/ApiSimilarShow");
+const ApiEntity = require("../models/ApiEntity");
 const ApiShowKind = require("../models/ApiShowKind");
 const ApiPerson = require("../models/ApiPerson");
-const { cumulate, buildUrl } = require("../helpers/utils");
+const { cumulate } = require("../helpers/utils");
 const platformRepository = require("../repositories/platformRepository");
 const Platform = require("../models/Platform");
+const { buildUrlWithParams, fetchPromises, Param, buildLimit } = require("../helpers/fetch");
 
 /**
  * @param {limit} limit
- * @returns ApiShow[]
+ * @returns Promise<ApiShow[]>
  */
-const getShowsToDiscover = async (limit = 20) => {
-    const resp = await axios.get(`${betaseries}/shows/discover?limit=${limit}`, {
-        headers: {
-            "X-BetaSeries-Key": key
-        }
-    });
-    const { shows } = await resp.data;
-    return shows.map(show => new ApiShow(show));
+const getShowsToDiscover = async (limit) => {
+    const allShows = [];
+    const url = buildUrlWithParams(`${betaseries}/shows/discover`, [
+        new Param("limit", limit)
+    ]);
+    const results = await Promise.all(fetchPromises(url, "offset", limit));
+    for (const result of results) {
+        const { shows } = result.data;
+        allShows.push(...shows.map(show => new ApiShow(show)));
+    }
+    return allShows;
+}
+
+/**
+ * 
+ * @param {string?} title 
+ * @param {string?} platforms 
+ * @param {number} limit
+ * @returns Promise<ApiShow[]>
+ */
+const getShowsByFilters = async (title, platforms, limit) => {
+    const allShows = [];
+    const url = buildUrlWithParams(`${betaseries}/shows/search`, [
+        new Param("title", title),
+        new Param("platforms", platforms),
+        new Param("nbpp", limit)
+    ]);
+    const results = await Promise.all(fetchPromises(url, "page", limit));
+    for (const result of results) {
+        const { shows } = result.data;
+        allShows.push(...shows.map((s) => new ApiShow(s)));
+    }
+    return allShows;
 }
 
 /**
  * @param {string?} title
  * @param {string?} kinds
- * @param {string?} platforms
- * @param {number?} limit
  * @param {number?} year
- * @returns { id, title, poster}[]
+ * @param {string?} platforms
+ * @param {number} limit
+ * @returns Promise<ApiShowPreview[]>
  */
-const getShowsByFilters = async (title, kinds, platforms, limit = 20, year) => {
-    const url = buildUrl(buildUrl(buildUrl(buildUrl(buildUrl(
-        `${betaseries}/search/shows`, 
-        "text", title),
-        "genres", kinds),
-        "svods", platforms),
-        "limit", limit),
-        "creations", year
-    );
-    const resp = await axios.get(url, {
-        headers: {
-            "X-BetaSeries-Key": key
-        }
-    });
-    const { shows } = await resp.data;
-    return shows.map(s => ({
-        id: s.id,
-        title: s.title,
-        poster: s.poster
-    }));
+const getShowsPreviewByFilters = async (title, kinds, year, platforms, limit) => {
+    const allShows = [];
+    const url = buildUrlWithParams(`${betaseries}/search/shows`, [
+        new Param("text", title),
+        new Param("genres", kinds),
+        new Param("limit", limit),
+        new Param("svods", platforms),
+        new Param("creations", year)
+    ]);
+    const results = await Promise.all(fetchPromises(url, "offset", limit));
+    for (const result of results) {
+        const { shows } = result.data;
+        allShows.push(...shows.map((s) => new ApiShowPreview(s)));
+    }
+    return allShows;
 }
 
 const getImages = async (req, res) => {
     try {
-        const shows = await getShowsByTitle(null, 8);
-        res.status(200).json(shows.map((s) => s.poster)); 
+        const { limit } = req.query;
+        const shows = await getShowsToDiscover(buildLimit(limit));
+        res.status(200).json(shows.map((s) => s.poster));
     } catch (e) {
         res.status(500).json({ "message": e.message });
     }
 }
 
-const discoverShows = async (req, res) => {
+const getShows = async (req, res) => {
     try {
         const { title, kinds, platforms, limit, year } = req.query;
+        const numLimit = buildLimit(limit);
         let response = null;
 
-        if (Object.keys(req.query).length === 1 && limit) {
-            response = await getShowsToDiscover(limit);
+        if (Object.keys(req.query).length > 1) {
+            response = await getShowsPreviewByFilters(title, kinds, year, platforms, numLimit);
         } else {
-            response = await getShowsByFilters(title, kinds, platforms, limit, year);
+            response = await getShowsToDiscover(numLimit);
         }
         res.status(200).json(response);
     } catch (e) {
@@ -114,7 +137,7 @@ const getSeasonsByShowId = async (req, res) => {
         });
         const { seasons } = await resp.data;
         const episodes = cumulate(seasons);
-        const mapSeasons = seasons.map((s, i) => new Season(s,  `${episodes[i] + 1} - ${episodes[i + 1]}`));
+        const mapSeasons = seasons.map((s, i) => new Season(s, `${episodes[i] + 1} - ${episodes[i + 1]}`));
         res.status(200).json(mapSeasons);
     } catch (e) {
         res.status(500).json({ "message": e.message });
@@ -172,7 +195,7 @@ const getSimilarsByShowId = async (req, res) => {
             }
         });
         const { similars } = await resp.data;
-        res.status(200).json(similars.map(similar => new ApiSimilarShow(similar)));
+        res.status(200).json(similars.map((s) => new ApiEntity(s.show_id, s.show_title)));
     } catch (e) {
         res.status(500).json({ "message": e.message });
     }
@@ -251,8 +274,7 @@ module.exports = {
     getImagesByShowId,
     getKinds,
     getPersonById,
-    getShowsByFilters,
-    discoverShows,
+    getShows,
     getSeasonsByShowId,
     getSimilarsByShowId
 };

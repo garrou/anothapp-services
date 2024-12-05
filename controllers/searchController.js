@@ -5,7 +5,7 @@ const router = Router();
 
 router.get("/images", searchService.getImages);
 
-router.get("/shows", searchService.discoverShows);
+router.get("/shows", searchService.getShows);
 
 router.get("/shows/:showId", searchService.getByShowId);
 

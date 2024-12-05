@@ -3,7 +3,7 @@ const SeasonTimeline = require("../models/SeasonTimeline");
 const seasonRepository = require("../repositories/seasonRepository");
 const userSeasonRepository = require("../repositories/userSeasonRepository");
 
-const MONTHS = ["0", "1", "2", "3", "6", "12", "120"];
+const MONTHS = ["0", "1", "2", "3", "6", "12", "60"];
 
 const deleteBySeasonId = async (req, res) => {
     try {

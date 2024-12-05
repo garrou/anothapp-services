@@ -21,7 +21,7 @@ app.use(cors({
 app.use(express.json());
 
 app.use("/users", checkJwt, userController);
-app.use("/search", checkJwt, cache(3600, false), searchController);
+app.use("/search", checkJwt, cache(3600), searchController);
 app.use("/shows", checkJwt, showController);
 app.use("/seasons", checkJwt, cache(60, true), seasonController);
 app.use("/stats", checkJwt, cache(60, true), statController);
