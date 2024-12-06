@@ -29,6 +29,15 @@ const buildLimit = (limit) => {
 }
 
 /**
+ * @param {number} page 
+ * @returns number
+ */
+const buildPagination = (limit) => {
+    const page = Math.round(limit / 100);
+    return page > 0 ? page : 1;
+}
+
+/**
  * @param {string} url
  * @param {Param[]} params 
  * @returns string
@@ -45,8 +54,7 @@ const buildUrlWithParams = (url, params) => {
  */
 const fetchPromises = (url, queryPage, limit) => {
     const promises = [];
-
-    for (let page = 0; page <= Math.round(limit / 100); page += 1) {
+    for (let page = 1; page <= buildPagination(limit); page += 1) {
         promises.push(axios.get(buildUrl(url, queryPage, page), { headers: { "X-BetaSeries-Key": key } }));
     }
     return promises;

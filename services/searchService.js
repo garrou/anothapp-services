@@ -94,7 +94,7 @@ const getShows = async (req, res) => {
         let response = null;
 
         if (Object.keys(req.query).length > 1) {
-            response = await getShowsPreviewByFilters(title, kinds, year, platforms, numLimit);
+            response = await getShowsByFilters(title, platforms, numLimit);
         } else {
             response = await getShowsToDiscover(numLimit);
         }
