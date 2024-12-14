@@ -7,7 +7,7 @@ type UserShow struct {
 	AddedAt  time.Time `gorm:"default:CURRENT_TIMESTAMP;not null;"`
 	UserID   string    `gorm:"primaryKey"`
 	User     User      `gorm:"foreignKey:UserID"`
-	ShowID   int       `gorm:"primaryKey"`
+	ShowID   uint      `gorm:"primaryKey"`
 	Show     Show      `gorm:"foreignKey:ShowID"`
 	Favorite bool      `gorm:"default:false"`
 }

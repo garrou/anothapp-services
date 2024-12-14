@@ -7,9 +7,9 @@ type UserSeason struct {
 	AddedAt    time.Time `gorm:"default:CURRENT_TIMESTAMP;not null;"`
 	UserID     string
 	User       User
-	ShowID     int
+	ShowID     uint
 	Show       Show
 	Number     uint `gorm:"not null;"`
-	PlatformID int
+	PlatformID uint
 	Platform   Platform
 }

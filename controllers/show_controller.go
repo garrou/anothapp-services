@@ -1,8 +1,8 @@
 package controllers
 
 import (
+	"anothapp-v3/models"
 	"anothapp-v3/services"
-	"anothapp-v3/utils"
 	"net/http"
 	"strconv"
 
@@ -19,7 +19,7 @@ func GetUserShow(ctx *gin.Context) {
 	showId, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, utils.NewResponse("Données erronées", nil))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.NewResponse("Données erronées"))
 		return
 	}
 	userId := ctx.GetString("userId")

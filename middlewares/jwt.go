@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"anothapp-v3/models"
 	"anothapp-v3/utils"
 	"net/http"
 	"strings"
@@ -11,20 +12,20 @@ import (
 const BEARER = "Bearer "
 
 func AuthorizeJwt() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
+	return func(ctx *gin.Context) {
+		authHeader := ctx.GetHeader("Authorization")
 
 		if !strings.Contains(authHeader, BEARER) {
-			c.AbortWithStatusJSON(http.StatusBadRequest, utils.NewResponse("User not authenticated", nil))
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, models.NewResponse("User not authenticated"))
 			return
 		}
 		bearer := authHeader[len(BEARER):]
 		token, err := utils.ValidateToken(bearer)
 
 		if !token.Valid || err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, utils.NewResponse("Invalid token", nil))
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, models.NewResponse("Invalid token"))
 			return
 		}
-		c.Set("userId", utils.ExtractUserId(token))
+		ctx.Set("userId", utils.ExtractUserId(token))
 	}
 }

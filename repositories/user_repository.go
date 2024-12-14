@@ -11,28 +11,44 @@ func SaveUser(user entities.User) *gorm.DB {
 	return database.Db.Save(&user)
 }
 
-func FindUserByIdentifier(identifier string) interface{} {
-	var user entities.User
-	database.Db.Find(&user, "username = ? OR email = ?", identifier, identifier)
-	return user
+func FindUserByIdentifier(identifier string) *entities.User {
+	user := &entities.User{}
+	res := database.Db.Find(user, "username = ? OR email = ?", identifier, identifier)
+
+	if res.Error == nil {
+		return user
+	}
+	return nil
 }
 
-func FindUserByUsername(username string) interface{} {
-	var user entities.User
-	database.Db.Find(&user, "username = ?", username)
-	return user
+func FindUserByUsername(username string) *entities.User {
+	user := &entities.User{}
+	res := database.Db.Find(user, "username = ?", username)
+
+	if res.Error == nil {
+		return user
+	}
+	return nil
 }
 
-func FindUserByEmail(email string) interface{} {
-	var user entities.User
-	database.Db.Find(&user, "email = ?", email)
-	return user
+func FindUserByEmail(email string) *entities.User {
+	user := &entities.User{}
+	res := database.Db.Find(user, "email = ?", email)
+
+	if res.Error == nil {
+		return user
+	}
+	return nil
 }
 
-func FindUserById(id string) interface{} {
-	var user entities.User
-	database.Db.Find(&user, "id = ?", id)
-	return user
+func FindUserById(id string) *entities.User {
+	user := &entities.User{}
+	res := database.Db.Find(user, "id = ?", id)
+
+	if res.Error == nil {
+		return user
+	}
+	return nil
 }
 
 func UsernameExists(username string) *gorm.DB {

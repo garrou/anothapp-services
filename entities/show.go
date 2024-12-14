@@ -1,7 +1,7 @@
 package entities
 
 type Show struct {
-	ID        int    `gorm:"primaryKey;"`
+	ID        uint   `gorm:"primaryKey;"`
 	Title     string `gorm:"type:varchar(255);not null;"`
 	Poster    string `gorm:"type:varchar(255);"`
 	Duration  uint   `gorm:"not null;"`

@@ -5,6 +5,7 @@ import (
 	"anothapp-v3/models"
 	"anothapp-v3/repositories"
 	"anothapp-v3/utils"
+	"net/http"
 
 	"github.com/google/uuid"
 )
@@ -19,31 +20,38 @@ func IsDuplicateEmail(email string) bool {
 	return res.Error == nil
 }
 
-func FindUserById(id string) interface{} {
+func FindUserById(id string) *entities.User {
 	return repositories.FindUserById(id)
 }
 
-func Register(user models.UserSignUpDto) bool {
-	create := entities.User{
+func Register(user models.UserSignUpDto) (int, models.Response) {
+	if IsDuplicateUsername(user.Username) {
+		return http.StatusConflict, models.NewResponse("An account already exists with this username")
+	} else if IsDuplicateEmail(user.Email) {
+		return http.StatusConflict, models.NewResponse("An account already exists with this email")
+	}
+	res := repositories.SaveUser(entities.User{
 		ID:       uuid.New().String(),
 		Email:    user.Email,
 		Username: user.Username,
 		Password: utils.HashPassword(user.Password),
+	})
+
+	if res.Error == nil {
+		return http.StatusOK, models.NewResponse("Account created")
 	}
-	res := repositories.SaveUser(create)
-	return res.Error == nil
+	return http.StatusInternalServerError, models.NewResponse("Error during account creation")
 }
 
-func Login(identifier, password string) interface{} {
-	res := repositories.FindUserByIdentifier(identifier)
+func Login(identifier, password string) (bool, string) {
+	user := repositories.FindUserByIdentifier(identifier)
 
-	if user, ok := res.(entities.User); ok {
+	if user != nil {
 		same := utils.ComparePassword(user.Password, password)
 
 		if same {
-			return res
+			return true, utils.GenerateToken(user.ID)
 		}
-		return false
 	}
-	return false
+	return false, ""
 }

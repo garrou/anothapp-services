@@ -3,6 +3,7 @@ package main
 import (
 	"anothapp-v3/controllers"
 	"anothapp-v3/database"
+	"anothapp-v3/utils"
 	"fmt"
 	"log"
 	"os"
@@ -16,6 +17,8 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		panic(err.Error())
 	}
+	utils.ApiKey = os.Getenv("API_KEY")
+
 	database.Open()
 	defer database.Close()
 

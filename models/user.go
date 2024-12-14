@@ -6,8 +6,8 @@ type UserDto struct {
 }
 
 type UserLoginDto struct {
-	Identifier string `json:"identifier" binding:"required,max=255"`
-	Password   string `json:"password" binding:"required,min=8,max=50"`
+	Identifier string `json:"identifier" binding:"required"`
+	Password   string `json:"password" binding:"required"`
 }
 
 type UserSignUpDto struct {

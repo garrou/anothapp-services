@@ -1,8 +1,8 @@
 package entities
 
 type ShowKind struct {
-	ShowID int
+	ShowID uint
 	Show   Show
-	KindID int
+	KindID uint
 	Kind   Kind
 }
