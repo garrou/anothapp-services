@@ -6,10 +6,10 @@ type UserSeason struct {
 	ID         uint      `gorm:"autoIncrement;"`
 	AddedAt    time.Time `gorm:"default:CURRENT_TIMESTAMP;"`
 	UserID     string
-	User       User
+	User       User `gorm:"constraint:OnDelete:CASCADE"`
 	ShowID     uint
-	Show       Show
+	Show       Show `gorm:"constraint:OnDelete:CASCADE"`
 	Number     uint `gorm:"not null;"`
 	PlatformID uint
-	Platform   Platform
+	Platform   Platform `gorm:"constraint:OnUpdate:CASCADE"`
 }

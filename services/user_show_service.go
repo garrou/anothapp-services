@@ -3,10 +3,23 @@ package services
 import (
 	"anothapp-v3/entities"
 	"anothapp-v3/repositories"
+	"anothapp-v3/utils"
 	"strconv"
 )
 
-func GetUserShows(userId string) []entities.Show {
+func GetUserShows(userId, status string) []entities.Show {
+	switch status {
+	case "resume":
+		return repositories.GetUserShowsToResume(userId)
+	case "not-started":
+		return repositories.GetUserListShows(userId)
+	case "continue":
+		return repositories.GetUserShowsToContinue(userId)
+	case "favorite":
+		return repositories.GetUserShowsFavorite(userId)
+	case "shared":
+		// TODO
+	}
 	return repositories.GetUserShows(userId)
 }
 
@@ -37,4 +50,13 @@ func PostUserShow(userId string, showId int) bool {
 		UserID: userId,
 		ShowID: uint(showId),
 	}).Error == nil
+}
+
+func DeleteUserShow(userId string, showId string) bool {
+	id := utils.BuildId(showId)
+
+	if id == nil {
+		return false
+	}
+	return repositories.DeleteUserShow(userId, *id).Error == nil
 }

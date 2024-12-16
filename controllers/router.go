@@ -35,7 +35,7 @@ func InitRouter() *gin.Engine {
 		showRoutes.GET("", GetUserShows)
 		showRoutes.GET("/:id", GetUserShow)
 		showRoutes.POST("", PostUserShow)
-		showRoutes.DELETE("/:id")
+		showRoutes.DELETE("/:id", DeleteUserShow)
 		showRoutes.PATCH("/:id")
 		showRoutes.POST("/:id/seasons")
 		showRoutes.GET("/:id/seasons/:num")

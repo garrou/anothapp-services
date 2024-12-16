@@ -32,7 +32,8 @@ func Open() {
 		&entities.Season{},
 		&entities.UserSeason{},
 		&entities.Platform{},
-		&entities.Friend{}); errMigrate != nil {
+		&entities.Friend{},
+		&entities.UserList{}); errMigrate != nil {
 		panic(errMigrate)
 	}
 	Db = db

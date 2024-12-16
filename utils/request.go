@@ -11,7 +11,6 @@ import (
 
 const BaseUrl = "https://api.betaseries.com"
 const DefaultLimit = 20
-const DefaultId = -1
 
 func BuildLimit(limit string) int {
 	if limit == "" {
@@ -23,14 +22,14 @@ func BuildLimit(limit string) int {
 	return DefaultLimit
 }
 
-func BuildId(id string) int {
+func BuildId(id string) *int {
 	if id == "" {
-		return DefaultId
+		return nil
 	}
 	if number, err := strconv.Atoi(id); err == nil {
-		return number
+		return &number
 	}
-	return DefaultId
+	return nil
 }
 
 func addApiKey(url string) string {

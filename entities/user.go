@@ -8,4 +8,5 @@ type User struct {
 	Username    string `gorm:"type:varchar(50);not null;"`
 	UserShows   []UserShow
 	UserSeasons []UserSeason
+	UserList    []UserList
 }

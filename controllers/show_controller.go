@@ -11,7 +11,8 @@ import (
 )
 
 func GetUserShows(ctx *gin.Context) {
-	shows := services.GetUserShows(ctx.GetString(middlewares.UserId))
+	status := ctx.Query("status")
+	shows := services.GetUserShows(ctx.GetString(middlewares.UserId), status)
 	ctx.JSON(http.StatusOK, shows)
 }
 
@@ -42,5 +43,14 @@ func PostUserShow(ctx *gin.Context) {
 		ctx.JSON(http.StatusCreated, models.NewResponse("Série ajoutée"))
 	} else {
 		ctx.JSON(http.StatusInternalServerError, models.NewResponse("Erreur durant l'ajout"))
+	}
+}
+
+func DeleteUserShow(ctx *gin.Context) {
+
+	if deleted := services.DeleteUserShow(ctx.GetString(middlewares.UserId), ctx.Param("id")); deleted {
+		ctx.JSON(http.StatusOK, models.NewResponse("Série supprimée"))
+	} else {
+		ctx.JSON(http.StatusInternalServerError, models.NewResponse("Erreur durant la suppression"))
 	}
 }

@@ -27,7 +27,12 @@ func DiscoverShows(limit string) []models.ApiShow {
 }
 
 func DisplayShow(id string) *models.ApiShow {
-	body := utils.HttpGet(fmt.Sprintf("/shows/display?id=%d", utils.BuildId(id)))
+	numId := utils.BuildId(id)
+
+	if numId == nil {
+		return nil
+	}
+	body := utils.HttpGet(fmt.Sprintf("/shows/display?id=%d", numId))
 	var show models.DisplayApiShow
 
 	if err := json.Unmarshal(body, &show); err != nil {
