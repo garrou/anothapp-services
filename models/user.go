@@ -16,3 +16,10 @@ type UserSignUpDto struct {
 	Password string `json:"password" binding:"required,min=8,max=50"`
 	Confirm  string `json:"confirm" binding:"required,min=8,max=50,eqfield=Password"`
 }
+
+type UserProfileDto struct {
+	Id       string `json:"id"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Picture  string `json:"picture"`
+}

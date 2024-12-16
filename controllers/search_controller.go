@@ -8,22 +8,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func DiscoverShowsImages(ctx *gin.Context) {
+func GetDiscoverShowsImages(ctx *gin.Context) {
 	images := services.DiscoverShowsImages(ctx.Query("limit"))
 	ctx.JSON(http.StatusOK, images)
 }
 
-func DiscoverShows(ctx *gin.Context) {
+func GetDiscoverShows(ctx *gin.Context) {
 	shows := services.DiscoverShows(ctx.Query("limit"))
 	ctx.JSON(http.StatusOK, shows)
 }
 
-func DisplayShow(ctx *gin.Context) {
-	show := services.DisplayShow(ctx.Param("id"))
-
-	if show == nil {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, models.NewResponse("Série non trouvée"))
-		return
+func GetDisplayShow(ctx *gin.Context) {
+	if show := services.DisplayShow(ctx.Param("id")); show == nil {
+		ctx.JSON(http.StatusNotFound, models.NewResponse("Série non trouvée"))
+	} else {
+		ctx.JSON(http.StatusOK, show)
 	}
-	ctx.JSON(http.StatusOK, show)
 }

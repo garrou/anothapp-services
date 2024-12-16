@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"anothapp-v3/middlewares"
 	"anothapp-v3/models"
 	"anothapp-v3/services"
 	"net/http"
@@ -14,14 +15,10 @@ func Login(ctx *gin.Context) {
 
 	if err := ctx.ShouldBind(&userDto); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.NewResponse("Invalid form"))
-		return
-	}
-	ok, token := services.Login(userDto.Identifier, userDto.Password)
-
-	if ok {
-		ctx.JSON(http.StatusOK, models.NewDataResponse("token", token))
+	} else if token := services.Login(userDto.Identifier, userDto.Password); token == "" {
+		ctx.JSON(http.StatusUnauthorized, models.NewResponse("Invalid username or password"))
 	} else {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, models.NewResponse("Invalid username or password"))
+		ctx.JSON(http.StatusOK, models.NewDataResponse("token", token))
 	}
 }
 
@@ -30,24 +27,24 @@ func Register(ctx *gin.Context) {
 	var userDto models.UserSignUpDto
 
 	if err := ctx.ShouldBind(&userDto); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.NewResponse("Invalid form"))
-		return
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.NewResponse("Données invalides"))
+	} else if services.IsDuplicateUsername(userDto.Username) {
+		ctx.AbortWithStatusJSON(http.StatusConflict, models.NewResponse("Un compte est associé à ce nom"))
+	} else if services.IsDuplicateEmail(userDto.Email) {
+		ctx.AbortWithStatusJSON(http.StatusConflict, models.NewResponse("Un compte est associé à cet email"))
+	} else if created := services.Register(userDto); created {
+		ctx.JSON(http.StatusCreated, models.NewResponse("Account created"))
+	} else {
+		ctx.JSON(http.StatusInternalServerError, models.NewResponse("Error during account creation"))
 	}
-	code, response := services.Register(userDto)
-	ctx.JSON(code, response)
 }
 
 func GetAuthUser(ctx *gin.Context) {
+	userId := ctx.GetString(middlewares.UserId)
 
-	userId := ctx.GetString("userId")
-	user := services.FindUserById(userId)
-
-	if user == nil {
-		ctx.AbortWithStatus(http.StatusForbidden)
-		return
+	if user := services.GetUserById(userId); user == nil {
+		ctx.Status(http.StatusNotFound)
+	} else {
+		ctx.Status(http.StatusOK)
 	}
-	ctx.JSON(http.StatusOK, models.UserDto{
-		Email:    user.Email,
-		Username: user.Username,
-	})
 }

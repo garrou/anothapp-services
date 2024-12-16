@@ -4,7 +4,7 @@ import "time"
 
 type UserSeason struct {
 	ID         uint      `gorm:"autoIncrement;"`
-	AddedAt    time.Time `gorm:"default:CURRENT_TIMESTAMP;not null;"`
+	AddedAt    time.Time `gorm:"default:CURRENT_TIMESTAMP;"`
 	UserID     string
 	User       User
 	ShowID     uint

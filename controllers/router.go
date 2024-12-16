@@ -17,33 +17,38 @@ func InitRouter() *gin.Engine {
 		ExposeHeaders: []string{"Content-Length"},
 	}))
 
-	apiV1 := router.Group("/v1")
-	authRoutes := apiV1.Group("/auth")
+	authRoutes := router.Group("/auth")
 	{
 		authRoutes.POST("/register", Register)
 		authRoutes.POST("/login", Login)
 		authRoutes.Use(middlewares.AuthorizeJwt()).GET("/me", GetAuthUser)
 	}
 
-	showRoutes := apiV1.Group("/shows").Use(middlewares.AuthorizeJwt())
+	userRoutes := router.Group("/users").Use(middlewares.AuthorizeJwt())
 	{
-		showRoutes.GET("/", GetUserShows)
+		userRoutes.GET("/profile", GetProfile)
+		userRoutes.GET("/:id/profile", GetUserProfile)
+	}
+
+	showRoutes := router.Group("/shows").Use(middlewares.AuthorizeJwt())
+	{
+		showRoutes.GET("", GetUserShows)
 		showRoutes.GET("/:id", GetUserShow)
-		showRoutes.POST("/")
+		showRoutes.POST("", PostUserShow)
 		showRoutes.DELETE("/:id")
 		showRoutes.PATCH("/:id")
 		showRoutes.POST("/:id/seasons")
 		showRoutes.GET("/:id/seasons/:num")
 	}
 
-	seasonRoutes := apiV1.Group("/seasons").Use(middlewares.AuthorizeJwt())
+	seasonRoutes := router.Group("/seasons").Use(middlewares.AuthorizeJwt())
 	{
-		seasonRoutes.GET("/")
+		seasonRoutes.GET("")
 		seasonRoutes.PATCH("/:id")
 		seasonRoutes.DELETE("/:id")
 	}
 
-	statRoutes := apiV1.Group("/stats").Use(middlewares.AuthorizeJwt())
+	statRoutes := router.Group("/stats").Use(middlewares.AuthorizeJwt())
 	{
 		statRoutes.GET("/")
 		statRoutes.GET("/count")
@@ -51,11 +56,11 @@ func InitRouter() *gin.Engine {
 		statRoutes.GET("/grouped-count")
 	}
 
-	searchRoutes := apiV1.Group("/search").Use(middlewares.AuthorizeJwt())
+	searchRoutes := router.Group("/search").Use(middlewares.AuthorizeJwt())
 	{
-		searchRoutes.GET("/images", DiscoverShowsImages)
-		searchRoutes.GET("/shows", DiscoverShows)
-		searchRoutes.GET("/shows/:id", DisplayShow)
+		searchRoutes.GET("/images", GetDiscoverShowsImages)
+		searchRoutes.GET("/shows", GetDiscoverShows)
+		searchRoutes.GET("/shows/:id", GetDisplayShow)
 		searchRoutes.GET("/shows/:id/seasons")
 		searchRoutes.GET("/shows/:id/characters")
 		searchRoutes.GET("/shows/:id/similars")
@@ -65,7 +70,7 @@ func InitRouter() *gin.Engine {
 		searchRoutes.GET("/persons/:id")
 	}
 
-	friendRoutes := apiV1.Group("/friends").Use(middlewares.AuthorizeJwt())
+	friendRoutes := router.Group("/friends").Use(middlewares.AuthorizeJwt())
 	{
 		friendRoutes.GET("/")
 		friendRoutes.POST("/")

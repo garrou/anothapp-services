@@ -1,11 +1,11 @@
 package entities
 
 type Show struct {
-	ID        uint   `gorm:"primaryKey;"`
-	Title     string `gorm:"type:varchar(255);not null;"`
-	Poster    string `gorm:"type:varchar(255);"`
-	Duration  uint   `gorm:"not null;"`
-	Seasons   uint   `gorm:"not null;"`
-	Country   string `gorm:"type:varchar(255);not null;"`
-	ShowKinds []ShowKind
+	ID        uint       `gorm:"primaryKey;" json:"id"`
+	Title     string     `gorm:"type:varchar(255);not null;" json:"title"`
+	Poster    string     `gorm:"type:varchar(255);" json:"poster"`
+	Duration  uint       `gorm:"not null;" json:"duration"`
+	Seasons   uint       `gorm:"not null;" json:"seasons"`
+	Country   string     `gorm:"type:varchar(255);not null;" json:"country"`
+	ShowKinds []ShowKind `json:"kinds"`
 }

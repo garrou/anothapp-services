@@ -9,7 +9,7 @@ type DisplayApiShow struct {
 }
 
 type ApiShow struct {
-	Id     int    `json:"id"`
+	Id     uint   `json:"id"`
 	Title  string `json:"title"`
 	Images struct {
 		Banner string `json:"banner,omitempty"`
@@ -20,12 +20,13 @@ type ApiShow struct {
 	Description string `json:"description"`
 	Episodes    string `json:"episodes"`
 	Seasons     []struct {
-		Number   int `json:"number"`
-		Episodes int `json:"episodes"`
+		Number   uint `json:"number"`
+		Episodes uint `json:"episodes"`
 	} `json:"seasons_details"`
 	Creation  string      `json:"creation"`
+	Country   string      `json:"country"`
 	Genres    interface{} `json:"genres"`
-	Length    string      `json:"length"`
+	Duration  uint        `json:"length"`
 	Status    string      `json:"status"`
 	Notes     interface{} `json:"notes"`
 	Platforms struct {

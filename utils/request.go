@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -11,8 +12,6 @@ import (
 const BaseUrl = "https://api.betaseries.com"
 const DefaultLimit = 20
 const DefaultId = -1
-
-var ApiKey string
 
 func BuildLimit(limit string) int {
 	if limit == "" {
@@ -35,10 +34,11 @@ func BuildId(id string) int {
 }
 
 func addApiKey(url string) string {
+	apiKey := os.Getenv("API_KEY")
 	if strings.Contains(url, "?") {
-		return fmt.Sprintf("%s&key=%s", url, ApiKey)
+		return fmt.Sprintf("%s&key=%s", url, apiKey)
 	}
-	return fmt.Sprintf("%s?key=%s", url, ApiKey)
+	return fmt.Sprintf("%s?key=%s", url, apiKey)
 }
 
 func buildUrl(url string) string {
@@ -46,9 +46,7 @@ func buildUrl(url string) string {
 }
 
 func HttpGet(url string) []byte {
-	apiUrl := buildUrl(url)
-	fullUrl := addApiKey(apiUrl)
-	resp, err := http.Get(fullUrl)
+	resp, err := http.Get(addApiKey(buildUrl(url)))
 
 	if err != nil {
 		panic(err.Error())

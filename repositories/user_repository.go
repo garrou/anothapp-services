@@ -13,7 +13,7 @@ func SaveUser(user entities.User) *gorm.DB {
 
 func FindUserByIdentifier(identifier string) *entities.User {
 	user := &entities.User{}
-	res := database.Db.Find(user, "username = ? OR email = ?", identifier, identifier)
+	res := database.Db.First(user, "username = ? OR email = ?", identifier, identifier)
 
 	if res.Error == nil {
 		return user
@@ -23,7 +23,7 @@ func FindUserByIdentifier(identifier string) *entities.User {
 
 func FindUserByUsername(username string) *entities.User {
 	user := &entities.User{}
-	res := database.Db.Find(user, "username = ?", username)
+	res := database.Db.First(user, "username = ?", username)
 
 	if res.Error == nil {
 		return user
@@ -33,7 +33,7 @@ func FindUserByUsername(username string) *entities.User {
 
 func FindUserByEmail(email string) *entities.User {
 	user := &entities.User{}
-	res := database.Db.Find(user, "email = ?", email)
+	res := database.Db.First(user, "email = ?", email)
 
 	if res.Error == nil {
 		return user
@@ -43,7 +43,7 @@ func FindUserByEmail(email string) *entities.User {
 
 func FindUserById(id string) *entities.User {
 	user := &entities.User{}
-	res := database.Db.Find(user, "id = ?", id)
+	res := database.Db.First(user, "id = ?", id)
 
 	if res.Error == nil {
 		return user
