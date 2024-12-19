@@ -22,7 +22,7 @@ func BuildLimit(limit string) int {
 	return DefaultLimit
 }
 
-func BuildId(id string) *int {
+func BuildNum(id string) *int {
 	if id == "" {
 		return nil
 	}

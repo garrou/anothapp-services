@@ -4,6 +4,7 @@ import (
 	"anothapp-v3/middlewares"
 	"anothapp-v3/models"
 	"anothapp-v3/services"
+	"anothapp-v3/utils"
 	"net/http"
 	"strconv"
 
@@ -53,4 +54,16 @@ func DeleteUserShow(ctx *gin.Context) {
 	} else {
 		ctx.JSON(http.StatusInternalServerError, models.NewResponse("Erreur durant la suppression"))
 	}
+}
+
+func GetSeasonInfo(ctx *gin.Context) {
+	id := utils.BuildNum(ctx.Param("id"))
+	num := utils.BuildNum(ctx.Param("num"))
+
+	if id == nil || num == nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.NewResponse("Requête invalide"))
+		return
+	}
+	userSeasons := services.GetUserSeasonInfos(ctx.GetString("userId"), *id, *num)
+	ctx.JSON(http.StatusOK, userSeasons)
 }

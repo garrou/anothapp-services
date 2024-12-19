@@ -2,29 +2,39 @@ package services
 
 import (
 	"anothapp-v3/entities"
+	"anothapp-v3/models"
 	"anothapp-v3/repositories"
 	"anothapp-v3/utils"
 	"strconv"
 )
 
-func GetUserShows(userId, status string) []entities.Show {
+func GetUserShows(userId, status string) []models.ShowInfo {
+	var userShows []entities.UserShow
 	switch status {
 	case "resume":
-		return repositories.GetUserShowsToResume(userId)
+		userShows = repositories.GetUserShowsToResume(userId)
 	case "not-started":
-		return repositories.GetUserListShows(userId)
+		userShows = repositories.GetUserListShows(userId)
 	case "continue":
-		return repositories.GetUserShowsToContinue(userId)
+		userShows = repositories.GetUserShowsToContinue(userId)
 	case "favorite":
-		return repositories.GetUserShowsFavorite(userId)
+		userShows = repositories.GetUserShowsFavorite(userId)
 	case "shared":
-		// TODO
+	default:
+		userShows = repositories.GetUserShows(userId)
 	}
-	return repositories.GetUserShows(userId)
+	return utils.Map(userShows, func(userShow entities.UserShow) models.ShowInfo {
+		return *models.NewShowInfo(userShow)
+	})
 }
 
-func GetUserShow(userId string, showId int) *entities.Show {
-	return repositories.GetUserShow(userId, showId)
+func GetUserShow(userId string, showId int) *models.ShowInfo {
+	userShow := repositories.GetUserShow(userId, uint(showId))
+
+	if userShow == nil {
+		return nil
+	}
+	return models.NewShowInfo(*userShow)
 }
 
 func PostUserShow(userId string, showId int) bool {
@@ -36,12 +46,12 @@ func PostUserShow(userId string, showId int) bool {
 			return false
 		}
 		if repositories.SaveShow(entities.Show{
-			ID:       uint(apiShow.Id),
-			Title:    apiShow.Title,
-			Poster:   apiShow.GetImageUrl(),
-			Duration: apiShow.Duration,
-			Seasons:  uint(len(apiShow.Seasons)),
-			Country:  apiShow.Country,
+			ID:            apiShow.Id,
+			Title:         apiShow.Title,
+			Poster:        apiShow.GetImageUrl(),
+			Duration:      apiShow.Duration,
+			SeasonsNumber: uint(len(apiShow.Seasons)),
+			Country:       apiShow.Country,
 		}).Error != nil {
 			return false
 		}
@@ -53,10 +63,11 @@ func PostUserShow(userId string, showId int) bool {
 }
 
 func DeleteUserShow(userId string, showId string) bool {
-	id := utils.BuildId(showId)
+	id := utils.BuildNum(showId)
 
 	if id == nil {
 		return false
 	}
-	return repositories.DeleteUserShow(userId, *id).Error == nil
+	result := repositories.DeleteUserShow(userId, *id)
+	return result.Error == nil && result.RowsAffected == 1
 }

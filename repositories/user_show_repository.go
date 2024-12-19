@@ -3,49 +3,55 @@ package repositories
 import (
 	"anothapp-v3/database"
 	"anothapp-v3/entities"
-
 	"gorm.io/gorm"
 )
 
-func GetUserShows(userId string) []entities.Show {
-	var shows []entities.Show
+func GetUserShows(userId string) []entities.UserShow {
+	var shows []entities.UserShow
 	database.Db.Model(&entities.UserShow{}).
-		Select("shows.*").
-		Joins("JOIN shows ON shows.id = user_shows.show_id").
-		Where("user_shows.user_id = ?", userId).
-		Order("user_shows.added_at DESC").
-		Scan(&shows)
+		Joins("Show").
+		Order("added_at DESC").
+		Find(&shows, &entities.UserShow{UserID: userId})
 	return shows
 }
 
-func GetUserShowsToResume(userId string) []entities.Show {
-	var shows []entities.Show
-	database.Db.Table("shows s").
-		Select("s.*, us.favorite, us.added_at, us.continue").
-		Joins("JOIN user_shows us ON s.id = us.show_id").
-		Where(`us.user_id = ? AND us.continue = FALSE AND s.seasons - (
+func GetUserShow(userId string, showId uint) *entities.UserShow {
+	var shows *entities.UserShow
+	res := database.Db.Model(&entities.UserShow{}).
+		Joins("Show").
+		First(&shows, &entities.UserShow{UserID: userId, ShowID: showId})
+
+	if res.Error == nil {
+		return shows
+	}
+	return nil
+}
+
+func GetUserShowsToResume(userId string) []entities.UserShow {
+	var shows []entities.UserShow
+	database.Db.Table("user_shows us").
+		Joins("JOIN shows s ON s.id = us.show_id").
+		Order("title").
+		Find(&shows, `us.user_id = ? AND us.continue = FALSE AND s.seasons_number - (
 			SELECT COUNT(distinct number)
-	        FROM shows
+			FROM shows
 	        JOIN user_seasons ON s.id = user_seasons.show_id 
-	        WHERE user_seasons.user_id = us.user_id and s.id = shows.id) > 0`, userId).
-		Order("s.title").
-		Scan(&shows)
+			WHERE user_seasons.user_id = us.user_id and s.id = shows.id) > 0`, userId)
 	return shows
 }
 
-func GetUserListShows(userId string) []entities.Show {
-	var shows []entities.Show
+func GetUserListShows(userId string) []entities.UserShow {
+	var shows []entities.UserShow
 	database.Db.Model(&entities.UserList{}).
-		Joins("JOIN shows ON shows.id = show_id").
-		Where("user_id = ?", userId).
-		Scan(&shows)
+		Joins("Show").
+		Find(&shows, &entities.UserList{UserID: userId})
 	return shows
 }
 
-func GetUserShowsToContinue(userId string) []entities.Show {
-	var shows []entities.Show
+func GetUserShowsToContinue(userId string) []entities.UserShow {
+	var shows []entities.UserShow
 	database.Db.Table("shows s").
-		Select(`s.*, s.seasons - (
+		Select(`s.*, us.added_at, us.continue, us.favorite, s.seasons - (
 	        SELECT COUNT(distinct user_seasons.number)
 	        FROM shows
 	        JOIN user_seasons ON s.id = user_seasons.show_id 
@@ -54,32 +60,17 @@ func GetUserShowsToContinue(userId string) []entities.Show {
 		Joins("JOIN user_shows us ON s.id = us.show_id").
 		Where(`us.user_id = ? AND us.continue = TRUE`, userId).
 		Order("s.title DESC").
-		Scan(&shows)
+		Find(&shows)
 	return shows
 }
 
-func GetUserShowsFavorite(userId string) []entities.Show {
-	var shows []entities.Show
+func GetUserShowsFavorite(userId string) []entities.UserShow {
+	var shows []entities.UserShow
 	database.Db.Model(&entities.UserShow{}).
-		Joins("JOIN shows ON shows.id = user_shows.show_id").
-		Where(`user_shows.user_id = ? AND user_shows.favorite = TRUE`, userId).
+		Joins("Show").
 		Order("title").
-		Scan(&shows)
+		Find(&shows, &entities.UserShow{UserID: userId, Favorite: true})
 	return shows
-}
-
-func GetUserShow(userId string, showId int) *entities.Show {
-	var shows *entities.Show
-	res := database.Db.Model(&entities.UserShow{}).
-		Select("shows.*").
-		Joins("JOIN shows ON shows.id = user_shows.show_id").
-		Where("user_shows.user_id = ? AND user_shows.show_id = ?", userId, showId).
-		First(&shows)
-
-	if res.Error == nil {
-		return shows
-	}
-	return nil
 }
 
 func SaveUserShow(userShow entities.UserShow) *gorm.DB {

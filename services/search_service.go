@@ -27,7 +27,7 @@ func DiscoverShows(limit string) []models.ApiShow {
 }
 
 func DisplayShow(id string) *models.ApiShow {
-	numId := utils.BuildId(id)
+	numId := utils.BuildNum(id)
 
 	if numId == nil {
 		return nil

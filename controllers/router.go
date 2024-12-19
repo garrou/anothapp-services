@@ -38,7 +38,7 @@ func InitRouter() *gin.Engine {
 		showRoutes.DELETE("/:id", DeleteUserShow)
 		showRoutes.PATCH("/:id")
 		showRoutes.POST("/:id/seasons")
-		showRoutes.GET("/:id/seasons/:num")
+		showRoutes.GET("/:id/seasons/:num", GetSeasonInfo)
 	}
 
 	seasonRoutes := router.Group("/seasons").Use(middlewares.AuthorizeJwt())
