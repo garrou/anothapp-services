@@ -1,100 +1,99 @@
-const UserProfile = require("../models/UserProfile");
-const friendRepository = require("../repositories/friendRepository");
+import UserProfile from '../models/UserProfile.js';
+import { FriendRepository } from "../repositories/friendRepository.js";
 
-const acceptFriend = async (req, res) => {
-    try {
-        const { userId } = req.body;
+export class FriendService {
 
-        if (!userId) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        await friendRepository.acceptFriend(userId, req.user.id);
-        res.status(200).json({ "message": "ok" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+    constructor() {
+        this.friendRepository = new FriendRepository();
     }
-}
 
-const sendFriendRequest = async (req, res) => {
-    try {
-        const { userId } = req.body;
+    /**
+     * @param {string} currentUserId
+     * @param {string} userId
+     * @returns {Promise<void>}
+     */
+    async sendFriendRequest(currentUserId, userId) {
 
         if (!userId) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        const exists = await friendRepository.checkIfRelationExists(req.user.id, userId);
+        const exists = await this.friendRepository.checkIfRelationExists(currentUserId, userId);
 
         if (exists) {
-            return res.status(409).json({ "message": "Vous êtes déjà en relation avec cet utilisateur" });
+            throw new Error("Vous êtes déjà en relation avec cet utilisateur");
         }
-        await friendRepository.sendFriendRequest(req.user.id, userId);
-        res.status(201).json({ "message": "ok" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        await this.friendRepository.sendFriendRequest(currentUserId, userId);
     }
-}
 
-const deleteFriend = async (req, res) => {
-    try {
-        const { userId } = req.params;
+    /**
+     * @param {string} currentUserId
+     * @param {string} userId
+     * @returns {Promise<void>}
+     */
+    async acceptFriend(currentUserId, userId) {
 
         if (!userId) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        await friendRepository.deleteFriend(req.user.id, userId);
-        res.status(200).json({ "message": "ok" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        await this.friendRepository.acceptFriend(userId, currentUserId);
     }
-}
 
-const getFriends = async (req, res) => {
-    try {
-        const { status, serieId } = req.query;
-        const users = await getFriendsByUserIdByStatus(req.user.id, status, serieId);
-        res.status(200).json(status ? { [status]: users } : users);
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+    /**
+     * @param {string} currentUserId
+     * @param {string} userId
+     * @returns {Promise<void>}
+     */
+    async deleteFriend(currentUserId, userId) {
+
+        if (!userId) {
+            throw new Error("Requête invalide");
+        }
+        await this.friendRepository.deleteFriend(currentUserId, userId);
     }
-}
 
-/**
- * @param {string} userId 
- * @param {string} status
- * @param {number?} showId
- * @returns {Friend[] | map<string, Friend[]>}
- */
-const getFriendsByUserIdByStatus = async (userId, status, showId) => {
-    let rows = null;
-    const mapToUser = (arr) => arr.map(user => new UserProfile(user));
-
-    switch (status) {
-        case "send":
-            rows = (await friendRepository.getFriendsRequestsSend(userId));
-            break;
-        case "receive":
-            rows = (await friendRepository.getFriendsRequestsReceive(userId));
-            break;
-        case "friend":
-            rows = (await friendRepository.getFriends(userId));
-            break;
-        case "viewed":
-            if (!showId) throw new Error("Requête invalide");
-            rows = await friendRepository.getFriendsWhoWatchSerie(userId, showId)
-            break;
-        default:
-            return {
-                "send": mapToUser(await friendRepository.getFriendsRequestsSend(userId)),
-                "receive": mapToUser(await friendRepository.getFriendsRequestsReceive(userId)),
-                "friend": mapToUser(await friendRepository.getFriends(userId))
-            }
+    /**
+     * @param {string} currentUserId
+     * @param {string} status
+     * @param {number} serieId
+     * @returns {Promise<void>}
+     */
+    async getFriends(currentUserId, status, serieId) {
+        return this.#getFriendsByUserIdByStatus(currentUserId, status, serieId);
     }
-    return rows ? mapToUser(rows) : [];
-}
 
-module.exports = {
-    deleteFriend,
-    getFriends,
-    acceptFriend,
-    sendFriendRequest
+    /**
+     * @param {string} userId
+     * @param {string} status
+     * @param {number?} showId
+     * @returns {Promise<Friend[]> | Promise<Map<string, Friend[]>}
+     */
+    async #getFriendsByUserIdByStatus(userId, status, showId) {
+        let rows = null;
+        const mapToUser = (arr) => arr.map(user => new UserProfile(user));
+
+        switch (status) {
+            case "send":
+                rows = (await this.friendRepository.getFriendsRequestsSend(userId));
+                break;
+            case "receive":
+                rows = (await this.friendRepository.getFriendsRequestsReceive(userId));
+                break;
+            case "friend":
+                rows = (await this.friendRepository.getFriends(userId));
+                break;
+            case "viewed":
+                if (!showId) {
+                    throw new Error("Requête invalide");
+                }
+                rows = await this.friendRepository.getFriendsWhoWatchSerie(userId, showId)
+                break;
+            default:
+                return {
+                    "send": mapToUser(await this.friendRepository.getFriendsRequestsSend(userId)),
+                    "receive": mapToUser(await this.friendRepository.getFriendsRequestsReceive(userId)),
+                    "friend": mapToUser(await this.friendRepository.getFriends(userId))
+                }
+        }
+        return rows ? mapToUser(rows) : [];
+    }
 }

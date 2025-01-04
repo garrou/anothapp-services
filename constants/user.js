@@ -1,4 +1,4 @@
-module.exports = Object.freeze({
+export default Object.freeze({
     EMAIL_PATTERN: /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/,
     IMAGE_PATTERN: /^https:\/\/pictures\.betaseries\.com\/.*$/,
     MAX_PASSWORD: 50,

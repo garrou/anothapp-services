@@ -1,4 +1,4 @@
-const pool = require('../helpers/db');
+import pool from "../helpers/db.js";
 
 /**
  * @param {string} userId 
@@ -320,7 +320,7 @@ const getSharedShowsWithFriend = async (userId, friendId) => {
     return res["rows"];
 }
 
-module.exports = {
+export default {
     checkShowExistsByUserIdByShowId,
     create,
     deleteByUserIdShowId,

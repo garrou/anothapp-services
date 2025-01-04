@@ -1,4 +1,4 @@
-const pool = require('../helpers/db');
+import pool from "../helpers/db.js";
 
 /**
  * @param {string} userId 
@@ -374,7 +374,7 @@ const getPlatformsByUserId = async (userId, limit = 10) => {
     return res["rows"];
 }
 
-module.exports = {
+export default {
     create,
     getDistinctByUserIdByShowId,
     getNbEpisodesByUserIdGroupByYear,

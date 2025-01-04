@@ -1,13 +1,13 @@
-const Cache = require("node-cache");
+import Cache from "node-cache";
 
-const cache = new Cache({ checkPeriod: 20 });
+const cache = new Cache({ checkperiod: 20 });
 
 /**
  * @param {number} duration 
  * @param {boolean} eachUser
  * @returns (Request, Response, NextFunction)
  */
-module.exports = (duration, eachUser = false) => (req, res, next) => {
+export default (duration, eachUser = false) => (req, res, next) => {
 
     if (req.method !== "GET") {
         return next();

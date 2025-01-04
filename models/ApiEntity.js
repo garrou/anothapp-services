@@ -10,4 +10,4 @@ class ApiEntity {
     }
 }
 
-module.exports = ApiEntity;
+export default ApiEntity;

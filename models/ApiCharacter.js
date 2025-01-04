@@ -11,4 +11,4 @@ class ApiCharacter {
     }
 }
 
-module.exports = ApiCharacter;
+export default ApiCharacter;

@@ -1,4 +1,4 @@
-const pool = require('../helpers/db');
+import pool from "../helpers/db.js";
 
 /**
  * @param {string} email 
@@ -121,7 +121,7 @@ const updateEmail = async (id, email) => {
     client.release();
 }
 
-module.exports = {
+export default {
     createUser,
     getUserByEmail,
     getUserByUsername,

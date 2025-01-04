@@ -1,7 +1,7 @@
-const Season = require("../models/Season");
-const SeasonTimeline = require("../models/SeasonTimeline");
-const seasonRepository = require("../repositories/seasonRepository");
-const userSeasonRepository = require("../repositories/userSeasonRepository");
+import Season from '../models/Season.js';
+import SeasonTimeline from '../models/SeasonTimeline.js';
+import seasonRepository from '../repositories/seasonRepository.js';
+import userSeasonRepository from '../repositories/userSeasonRepository.js';
 
 const MONTHS = ["0", "1", "2", "3", "6", "12", "60"];
 
@@ -54,4 +54,8 @@ const updateBySeasonId = async (req, res) => {
     }
 }
 
-module.exports = { deleteBySeasonId, getSeasons, updateBySeasonId };
+export default {
+    deleteBySeasonId,
+    getSeasons,
+    updateBySeasonId
+};

@@ -1,4 +1,5 @@
-const axios = require("axios");
+import axios from "axios";
+
 const key = process.env.BETASERIES_KEY;
 
 class Param {
@@ -21,11 +22,11 @@ const buildUrl = (url, query, param) => {
 }
 
 /**
- * @param {any?} limit 
+ * @param {string?} limit
  * @returns number
  */
 const buildLimit = (limit) => {
-    return limit === undefined || isNaN(limit) || limit === "" ? 20 : limit;
+    return limit === undefined || isNaN(limit) || limit === "" ? 20 : parseInt(limit);
 }
 
 /**
@@ -60,7 +61,7 @@ const fetchPromises = (url, queryPage, limit) => {
     return promises;
 }
 
-module.exports = {
+export {
     buildLimit,
     buildUrlWithParams,
     fetchPromises,

@@ -1,280 +1,205 @@
-const betaseries = "https://api.betaseries.com";
-const key = process.env.BETASERIES_KEY;
-const axios = require("axios");
-const { ApiShow, ApiShowPreview } = require("../models/ApiShow");
-const ApiEpisode = require("../models/ApiEpisode");
-const Season = require("../models/Season");
-const ApiCharacter = require("../models/ApiCharacter");
-const ApiEntity = require("../models/ApiEntity");
-const ApiShowKind = require("../models/ApiShowKind");
-const ApiPerson = require("../models/ApiPerson");
-const { cumulate } = require("../helpers/utils");
-const platformRepository = require("../repositories/platformRepository");
-const Platform = require("../models/Platform");
-const { buildUrlWithParams, fetchPromises, Param, buildLimit } = require("../helpers/fetch");
+import axios from 'axios';
+import {ApiShow, ApiShowPreview} from '../models/ApiShow.js';
+import ApiEpisode from '../models/ApiEpisode.js';
+import Season from '../models/Season.js';
+import ApiCharacter from '../models/ApiCharacter.js';
+import ApiEntity from '../models/ApiEntity.js';
+import ApiShowKind from '../models/ApiShowKind.js';
+import ApiPerson from '../models/ApiPerson.js';
+import {cumulate} from '../helpers/utils.js';
+import platformRepository from '../repositories/platformRepository.js';
+import Platform from '../models/Platform.js';
+import {buildUrlWithParams, fetchPromises, Param, buildLimit} from '../helpers/fetch.js';
 
-/**
- * @param {limit} limit
- * @returns Promise<ApiShow[]>
- */
-const getShowsToDiscover = async (limit) => {
-    const allShows = [];
-    const url = buildUrlWithParams(`${betaseries}/shows/discover`, [
-        new Param("limit", limit)
-    ]);
-    const results = await Promise.all(fetchPromises(url, "offset", limit));
-    for (const result of results) {
-        const { shows } = result.data;
-        allShows.push(...shows.map(show => new ApiShow(show)));
+const baseUrl = "https://api.betaseries.com";
+const headers = {"X-BetaSeries-Key": process.env.BETASERIES_KEY}
+
+export class SearchService {
+
+    /**
+     * @param {string?} title
+     * @returns {Promise<void>}
+     */
+    async getShows(title) {
+        return title
+            ? this.#getShowsByTitle(title)
+            : this.#getShowsToDiscover(buildLimit());
     }
-    return allShows;
-}
 
-/**
- * 
- * @param {string?} title 
- * @param {string?} platforms 
- * @param {number} limit
- * @returns Promise<ApiShow[]>
- */
-const getShowsByFilters = async (title, platforms, limit) => {
-    const allShows = [];
-    const url = buildUrlWithParams(`${betaseries}/shows/search`, [
-        new Param("title", title),
-        new Param("platforms", platforms),
-        new Param("nbpp", limit)
-    ]);
-    const results = await Promise.all(fetchPromises(url, "page", limit));
-    for (const result of results) {
-        const { shows } = result.data;
-        allShows.push(...shows.map((s) => new ApiShow(s)));
+    /**
+     * @param {number} limit
+     * @returns Promise<ApiShow[]>
+     */
+    async #getShowsToDiscover(limit) {
+        const allShows = [];
+        const url = buildUrlWithParams(`${baseUrl}/shows/discover`, [
+            new Param("limit", limit)
+        ]);
+        const results = await Promise.all(fetchPromises(url, "offset", limit));
+
+        for (const result of results) {
+            const {shows} = result.data;
+            allShows.push(...shows.map(show => new ApiShow(show)));
+        }
+        return allShows;
     }
-    return allShows;
-}
 
-/**
- * @param {string?} title
- * @param {string?} kinds
- * @param {number?} year
- * @param {string?} platforms
- * @param {number} limit
- * @returns Promise<ApiShowPreview[]>
- */
-const getShowsPreviewByFilters = async (title, kinds, year, platforms, limit) => {
-    const allShows = [];
-    const url = buildUrlWithParams(`${betaseries}/search/shows`, [
-        new Param("text", title),
-        new Param("genres", kinds),
-        new Param("limit", limit),
-        new Param("svods", platforms),
-        new Param("creations", year)
-    ]);
-    const results = await Promise.all(fetchPromises(url, "offset", limit));
-    for (const result of results) {
-        const { shows } = result.data;
-        allShows.push(...shows.map((s) => new ApiShowPreview(s)));
+    /**
+     * @param {string?} title
+     * @returns Promise<ApiShowPreview[]>
+     */
+    async #getShowsByTitle(title) {
+        const allShows = [];
+        const numLimit = buildLimit();
+        const url = buildUrlWithParams(`${baseUrl}/search/shows`, [
+            new Param("text", title),
+        ]);
+        const results = await Promise.all(fetchPromises(url, "offset", numLimit));
+
+        for (const result of results) {
+            const {shows} = result.data;
+            allShows.push(...shows.map((s) => new ApiShowPreview(s)));
+        }
+        return allShows;
     }
-    return allShows;
-}
 
-const getImages = async (req, res) => {
-    try {
-        const { limit } = req.query;
-        const shows = await getShowsToDiscover(buildLimit(limit));
-        res.status(200).json(shows.map((s) => s.poster));
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
-    }
-}
-
-const getShows = async (req, res) => {
-    try {
-        const { title, kinds, platforms, limit, year } = req.query;
+    /**
+     * @param {string} limit
+     * @returns {Promise<string[]>}
+     */
+    async getImages(limit) {
         const numLimit = buildLimit(limit);
-        let response = null;
-
-        if (Object.keys(req.query).length > 1) {
-            response = await getShowsByFilters(title, platforms, numLimit);
-        } else {
-            response = await getShowsToDiscover(numLimit);
-        }
-        res.status(200).json(response);
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        const shows = await this.#getShowsToDiscover(numLimit);
+        return shows.map((s) => s.poster);
     }
-}
 
-const getByShowId = async (req, res) => {
-    try {
-        const { showId } = req.params;
-
+    /**
+     * @param {number?} showId
+     * @returns {Promise<ApiShow>}
+     */
+    async getByShowId(showId) {
         if (!showId) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        const resp = await axios.get(`${betaseries}/shows/display?id=${showId}`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
+        const resp = await axios.get(`${baseUrl}/shows/display?id=${showId}`, {
+            headers
         });
-        const { show } = await resp.data;
-        res.status(200).json(new ApiShow(show));
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        const {show} = await resp.data;
+        return new ApiShow(show);
     }
-}
 
-const getSeasonsByShowId = async (req, res) => {
-    try {
-        const { showId } = req.params;
-
+    /**
+     * @param {number?} showId
+     * @returns {Promise<Season[]>}
+     */
+    async getSeasonsByShowId(showId) {
         if (!showId) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        const resp = await axios.get(`${betaseries}/shows/seasons?id=${showId}`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
+        const resp = await axios.get(`${baseUrl}/shows/seasons?id=${showId}`, {
+            headers
         });
-        const { seasons } = await resp.data;
+        const {seasons} = await resp.data;
         const episodes = cumulate(seasons);
-        const mapSeasons = seasons.map((s, i) => new Season(s, `${episodes[i] + 1} - ${episodes[i + 1]}`));
-        res.status(200).json(mapSeasons);
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        return seasons.map((s, i) => new Season(s, `${episodes[i] + 1} - ${episodes[i + 1]}`));
     }
-}
 
-const getEpisodesByShowIdBySeason = async (req, res) => {
-    try {
-        const { showId, num } = req.params;
-
+    /**
+     * @param {number?} showId
+     * @param {number?} num
+     * @returns {Promise<ApiEpisode[]>}
+     */
+    async getEpisodesByShowIdBySeason(showId, num) {
         if (!showId || !num) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        const resp = await axios.get(`${betaseries}/shows/episodes?id=${showId}&season=${num}`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
+        const resp = await axios.get(`${baseUrl}/shows/episodes?id=${showId}&season=${num}`, {
+            headers
         });
-        const { episodes } = await resp.data;
-        res.status(200).json(episodes.map(episode => new ApiEpisode(episode)));
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        const {episodes} = await resp.data;
+        return episodes.map(episode => new ApiEpisode(episode));
     }
-}
 
-const getCharactersByShowId = async (req, res) => {
-    try {
-        const { showId } = req.params;
+    /**
+     * @param {number?} showId
+     * @returns {Promise<ApiCharacter[]>}
+     */
+    async getCharactersByShowId(showId) {
+        if (!showId) {
+            throw new Error("Requête invalide");
+        }
+        const resp = await axios.get(`${baseUrl}/shows/characters?id=${showId}`, {
+            headers
+        });
+        const {characters} = await resp.data;
+        return characters.map(character => new ApiCharacter(character));
+    }
+
+    /**
+     * @param {number?} showId
+     * @returns {Promise<ApiEntity[]>}
+     */
+    async getSimilarsByShowId(showId) {
 
         if (!showId) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        const resp = await axios.get(`${betaseries}/shows/characters?id=${showId}`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
+        const resp = await axios.get(`${baseUrl}/shows/similars?id=${showId}`, {
+            headers
         });
-        const { characters } = await resp.data;
-        res.status(200).json(characters.map(character => new ApiCharacter(character)));
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        const {similars} = await resp.data;
+        return similars.map((s) => new ApiEntity(s["show_id"], s["show_title"]));
     }
-}
 
-const getSimilarsByShowId = async (req, res) => {
-    try {
-        const { showId } = req.params;
-
-        if (!showId) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        const resp = await axios.get(`${betaseries}/shows/similars?id=${showId}`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
+    /**
+     * @returns {Promise<ApiShowKind[]>}
+     */
+    async getKinds() {
+        const resp = await axios.get(`${baseUrl}/shows/genres`, {
+            headers
         });
-        const { similars } = await resp.data;
-        res.status(200).json(similars.map((s) => new ApiEntity(s.show_id, s.show_title)));
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
-    }
-}
-
-const getKinds = async (_, res) => {
-    try {
-        const resp = await axios.get(`${betaseries}/shows/genres`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
-        });
-        const { genres } = await resp.data;
-        const kinds = Object.entries(genres)
+        const {genres} = await resp.data;
+        return Object.entries(genres)
             .map(entry => new ApiShowKind(entry))
             .sort((a, b) => a.name.localeCompare(b.name));
-        res.status(200).json(kinds);
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
     }
-}
 
-const getImagesByShowId = async (req, res) => {
-    try {
-        const { showId } = req.params;
+    /**
+     * @param {number?} showId
+     * @returns {Promise<string[]>}
+     */
+    async getImagesByShowId(showId) {
 
         if (!showId) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        const resp = await axios.get(`${betaseries}/shows/pictures?id=${showId}`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
+        const resp = await axios.get(`${baseUrl}/shows/pictures?id=${showId}`, {
+            headers
         });
-        const { pictures } = await resp.data;
-        res.status(200).json(pictures.map(p => p.url));
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        const {pictures} = await resp.data;
+        return pictures.map(p => p.url);
     }
-}
 
-const getPersonById = async (req, res) => {
-    try {
-        const { personId } = req.params;
-
+    /**
+     * @param {number?} personId
+     * @returns {Promise<ApiPerson>}
+     */
+    async getPersonById(personId) {
         if (!personId) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        const resp = await axios.get(`${betaseries}/persons/person?id=${personId}`, {
-            headers: {
-                "X-BetaSeries-Key": key
-            }
+        const resp = await axios.get(`${baseUrl}/persons/person?id=${personId}`, {
+            headers
         });
-        const { person } = await resp.data;
-        res.status(200).json(new ApiPerson(person));
-    } catch (e) {
-        res.status(500).json({ "message": "Une erreur est survenue " });
+        const {person} = await resp.data;
+        return new ApiPerson(person);
     }
-}
 
-const getPlatforms = async (req, res) => {
-    try {
+    /**
+     * @returns {Promise<Platform[]>}
+     */
+    async getPlatforms() {
         const rows = await platformRepository.getPlatforms();
-        res.status(200).json(rows.map((row) => new Platform(row)));
-    } catch (e) {
-        res.status(500).json({ "message": "Une erreur est survenue " });
+        return rows.map((row) => new Platform(row));
     }
 }
-
-module.exports = {
-    getByShowId,
-    getCharactersByShowId,
-    getEpisodesByShowIdBySeason,
-    getPlatforms,
-    getImages,
-    getImagesByShowId,
-    getKinds,
-    getPersonById,
-    getShows,
-    getSeasonsByShowId,
-    getSimilarsByShowId
-};

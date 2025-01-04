@@ -1,4 +1,4 @@
-const ApiEntity = require("./ApiEntity");
+import ApiEntity from "./ApiEntity.js";
 
 class ApiShowPreview extends ApiEntity {
 
@@ -66,4 +66,4 @@ const getImageUrl = (image) => {
     return null;
 }
 
-module.exports = { ApiShow, ApiShowPreview };
+export { ApiShow, ApiShowPreview };

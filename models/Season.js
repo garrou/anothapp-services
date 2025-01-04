@@ -24,4 +24,4 @@ class Season {
     });
 }
 
-module.exports = Season;
+export default Season;

@@ -1,7 +1,15 @@
-const userRepository = require("../repositories/userRepository");
-const { comparePassword, createHash, uuid, signJwt } = require("../helpers/security");
-const UserProfile = require("../models/UserProfile");
-const { isValidEmail, isValidUsername, isValidPassword, isValidImage, isValidId, isValidChangePassword, isValidChangeEmail } = require("../helpers/validator");
+import userRepository from "../repositories/userRepository.js";
+import { comparePassword, createHash, uuid, signJwt } from "../helpers/security.js";
+import UserProfile from "../models/UserProfile.js";
+import {
+    isValidEmail,
+    isValidUsername,
+    isValidPassword,
+    isValidImage,
+    isValidId,
+    isValidChangePassword,
+    isValidChangeEmail
+} from "../helpers/validator.js";
 
 const checkUser = (_, res) => {
     res.status(200).json({ "message": "ok" });
@@ -201,7 +209,7 @@ const changeEmail = async (userId, email, newEmail) => {
     await userRepository.updateEmail(userId, newEmail);
 }
 
-module.exports = {
+export default {
     changeProfile,
     getUser,
     getProfile,

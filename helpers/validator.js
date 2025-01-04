@@ -1,4 +1,4 @@
-const userConst = require("../constants/user")
+import userConst from "../constants/user.js";
 
 /**
  * @param {string|undefined} username 
@@ -98,7 +98,7 @@ const idValidShow = (serie) => {
     return id && title && kinds && duration && seasons && country;
 }
 
-module.exports = {
+export {
     isValidChangeEmail,
     isValidChangePassword,
     isValidEmail,

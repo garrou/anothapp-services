@@ -1,6 +1,6 @@
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const { v4: uuidv4 } = require("uuid");
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * @param {string} userId 
@@ -38,4 +38,10 @@ const createHash = async (password) => {
  */
 const comparePassword = (password, hash) => bcrypt.compare(password, hash);
 
-module.exports = { signJwt, verifyJwt, uuid, createHash, comparePassword };
+export {
+    signJwt,
+    verifyJwt,
+    uuid,
+    createHash,
+    comparePassword
+};

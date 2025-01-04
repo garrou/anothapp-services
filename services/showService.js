@@ -1,13 +1,14 @@
-const userSeasonRepository = require("../repositories/userSeasonRepository");
-const userShowRepository = require("../repositories/userShowRepository");
-const seasonRepository = require("../repositories/seasonRepository");
-const showRepository = require("../repositories/showRepository");
-const friendRepository = require("../repositories/friendRepository");
-const Season = require("../models/Season");
-const Show = require("../models/Show");
-const { idValidShow } = require("../helpers/validator");
-const { cumulate } = require("../helpers/utils");
-const UserSeason = require("../models/UserSeason");
+import userSeasonRepository from "../repositories/userSeasonRepository.js";
+import userShowRepository from "../repositories/userShowRepository.js";
+import seasonRepository from "../repositories/seasonRepository.js";
+import showRepository from "../repositories/showRepository.js";
+import { FriendRepository } from "../repositories/friendRepository.js";
+import Season from "../models/Season.js";
+import Show from "../models/Show.js";
+import { idValidShow } from "../helpers/validator.js";
+import { cumulate } from "../helpers/utils.js";
+import UserSeason from "../models/UserSeason.js";
+import {getSerieById} from "../helpers/api.js";
 
 /**
  * @param {string} userId
@@ -38,10 +39,9 @@ const addShow = async (req, res) => {
         if (!idValidShow(req.body)) {
             return res.status(400).json({ "message": "Requête invalide" });
         }
-        const { id, title, poster, kinds, duration, seasons, country, list } = req.body;
-        const addInList = !!list;
+        const { id, list } = req.body;
 
-        const exists = await userShowRepository.checkShowExistsByUserIdByShowId(req.user.id, id, addInList);
+        const exists = await userShowRepository.checkShowExistsByUserIdByShowId(req.user.id, id, list);
 
         if (exists) {
             return res.status(409).json({ "message": `Cette série est déjà dans votre ${addInList ? "liste" : "collection"}` });
@@ -49,6 +49,11 @@ const addShow = async (req, res) => {
         const isNewShow = await showRepository.isNewShow(id);
 
         if (isNewShow) {
+            const show = await getSerieById(id);
+
+            if (!idValidShow(show)) {
+                return res.status(400)
+            }
             await showRepository.createShow(id, title, poster, kinds.join(";"), duration, parseInt(seasons), country);
         }
         await userShowRepository.create(req.user.id, id, addInList);
@@ -181,9 +186,7 @@ const updateByShowId = async (req, res) => {
     }
 }
 
-
-
-module.exports = {
+export default {
     addSeasonByShowId,
     addShow,
     deleteByShowId,

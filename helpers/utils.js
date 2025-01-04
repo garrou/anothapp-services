@@ -1,5 +1,3 @@
-const Season = require("../models/Season");
-
 /**
  * @param {Season[]} arr
  * @returns number[]
@@ -10,7 +8,6 @@ const cumulate = (arr) => {
     return result;
 }
 
-
-module.exports = {
+export {
     cumulate,
 }

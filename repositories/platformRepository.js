@@ -1,4 +1,4 @@
-const pool = require('../helpers/db');
+import pool from "../helpers/db.js";
 
 /**
  * @returns Promise<any[]>
@@ -14,6 +14,6 @@ const getPlatforms = async () => {
     return res["rows"];
 }
 
-module.exports = {
+export default {
     getPlatforms
 }

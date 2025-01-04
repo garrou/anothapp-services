@@ -1,4 +1,4 @@
-const ApiEntity = require("./ApiEntity");
+import ApiEntity from "./ApiEntity.js";
 
 class ApiEpisode extends ApiEntity {
 
@@ -14,4 +14,4 @@ class ApiEpisode extends ApiEntity {
     }
 }
 
-module.exports = ApiEpisode;
+export default ApiEpisode;

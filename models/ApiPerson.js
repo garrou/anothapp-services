@@ -51,4 +51,4 @@ class ApiPersonMovie extends ApiIntertainment {
     }
 }
 
-module.exports = ApiPerson;
+export default ApiPerson;

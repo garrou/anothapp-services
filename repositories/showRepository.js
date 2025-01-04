@@ -1,4 +1,4 @@
-const pool = require('../helpers/db');
+import pool from "../helpers/db.js";
 
 /**
  * @param {number} id 
@@ -33,7 +33,7 @@ const createShow = async (id, title, poster, kinds, duration, seasons, country) 
     client.release();
 }
 
-module.exports = {
+export default {
     createShow,
     isNewShow
 }

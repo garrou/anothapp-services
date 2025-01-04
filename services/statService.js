@@ -1,5 +1,5 @@
-const userSeasonRepository = require("../repositories/userSeasonRepository");
-const userShowRepository = require("../repositories/userShowRepository");
+import userSeasonRepository from "../repositories/userSeasonRepository.js";
+import userShowRepository from "../repositories/userShowRepository.js";
 
 const getStats = async (req, res) => {
     try {
@@ -168,7 +168,7 @@ const getNbKindsByUserId = async (userId) => {
         .splice(0, 10);
 }
 
-module.exports = {
+export default {
     getCountByType,
     getCountGroupedByTypeByPeriod,
     getStats,

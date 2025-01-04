@@ -1,4 +1,4 @@
-const pool = require('../helpers/db');
+import pool from "../helpers/db.js";
 
 /**
  * @param {number} id 
@@ -59,7 +59,7 @@ const updateSeason = async (id, userId, plateform) => {
     client.release();
 }
 
-module.exports = {
+export default {
     createSeason,
     deleteSeasonById,
     updateSeason,

@@ -10,4 +10,4 @@ class Platform {
     }
 }
 
-module.exports = Platform;
+export default Platform;

@@ -1,4 +1,4 @@
-const { verifyJwt } = require("../helpers/security");
+import { verifyJwt } from "../helpers/security.js";
 
 const WHITELIST = [
     "/users/login", 
@@ -6,7 +6,7 @@ const WHITELIST = [
     "/search/images",
 ];
 
-const checkJwt = (req, res, next) => {
+export const checkJwt = (req, res, next) => {
 
     if (WHITELIST.some((url) => req.originalUrl.startsWith(url))) {
         return next();
@@ -23,11 +23,9 @@ const checkJwt = (req, res, next) => {
     } 
 
     try {
-        req.user = { id: verifyJwt(token, process.env.JWT_SECRET) };
+        req.userId = verifyJwt(token, process.env.JWT_SECRET);
     } catch (e) {
         return res.status(403).json({ "message": "Utilisateur non autorisé" });
     }
     next();
 }
-
-module.exports = { checkJwt };

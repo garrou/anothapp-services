@@ -1,4 +1,4 @@
-const Platform = require("./Platform");
+import Platform from "./Platform.js";
 
 class UserSeason {
 
@@ -12,4 +12,4 @@ class UserSeason {
     }
 }
 
-module.exports = UserSeason;
+export default UserSeason;

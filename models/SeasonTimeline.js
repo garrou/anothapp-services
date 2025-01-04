@@ -1,4 +1,4 @@
-const Season = require("./Season");
+import Season from "./Season.js";
 
 class SeasonTimeline {
 
@@ -13,4 +13,4 @@ class SeasonTimeline {
     }
 }
 
-module.exports = SeasonTimeline;
+export default SeasonTimeline;

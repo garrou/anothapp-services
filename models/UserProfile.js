@@ -13,4 +13,4 @@ class UserProfile {
     }
 }
 
-module.exports = UserProfile;
+export default UserProfile;

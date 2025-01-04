@@ -9,4 +9,4 @@ class ApiShowKind {
     }
 }
 
-module.exports = ApiShowKind;
+export default ApiShowKind;

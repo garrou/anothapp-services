@@ -1,14 +1,47 @@
-const { Router } = require("express");
-const friendService = require("../services/friendService");
+import { FriendService } from "../services/friendService.js";
 
-const router = Router();
+export class FriendController {
+    constructor() {
+        this.friendService = new FriendService();
+    }
 
-router.get("/", friendService.getFriends);
+    async getFriends(req, res, next) {
+        try {
+            const { status, serieId } = req.query;
+            const users = await this.friendService.getFriends(req.userId, status, serieId);
+            res.status(200).json(status ? { [status]: users } : users);
+        } catch (e) {
+            next(e);
+        }
+    }
 
-router.post("/", friendService.sendFriendRequest);
+    async sendFriendRequest(req, res, next){
+        try {
+            const { userId } = req.body;
+            await this.friendService.sendFriendRequest(req.userId, userId);
+            res.sendStatus(200);
+        } catch (e) {
+            next(e);
+        }
+    }
 
-router.patch("/:userId", friendService.acceptFriend);
+    async acceptFriend(req, res, next){
+        try {
+            const { userId } = req.body;
+            await this.friendService.acceptFriend(req.userId, userId);
+            res.sendStatus(200);
+        } catch (e) {
+            next(e);
+        }
+    }
 
-router.delete("/:userId", friendService.deleteFriend);
-
-module.exports = router;
+    async deleteFriend(req, res, next){
+        try {
+            const { userId } = req.params;
+            await this.friendService.deleteFriend(req.userId, userId);
+            res.sendStatus(204);
+        } catch (e) {
+            next(e);
+        }
+    }
+}
