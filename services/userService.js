@@ -1,6 +1,5 @@
-import userRepository from "../repositories/userRepository.js";
 import { comparePassword, createHash, uuid, signJwt } from "../helpers/security.js";
-import UserProfile from "../models/UserProfile.js";
+import UserProfile from "../models/userProfile.js";
 import {
     isValidEmail,
     isValidUsername,
@@ -10,211 +9,201 @@ import {
     isValidChangePassword,
     isValidChangeEmail
 } from "../helpers/validator.js";
+import UserRepository from "../repositories/userRepository.js";
 
-const checkUser = (_, res) => {
-    res.status(200).json({ "message": "ok" });
-}
+export default class UserService {
+    constructor() {
+        this.userRepository = new UserRepository();
+    }
 
-const getUser = async (req, res) => {
-    try {
-        const { username } = req.body;
-
-        if (!username)
-            return res.status(400).json({ "message": "Requête invalide" });
-
-        const users = (await userRepository.getUserByUsername(username)).reduce((acc, curr) => {
+    /**
+     * @param {string} currentUserId
+     * @param {string?} username
+     * @returns {Promise<UserProfile[]>}
+     */
+    getUser = async (currentUserId, username) => {
+        if (!username) {
+            throw new Error("Requête invalide");
+        }
+        return (await this.userRepository.getUserByUsername(username)).reduce((acc, curr) => {
             const user = new UserProfile(curr);
-            if (user.id !== req.user.id)
+
+            if (user.id !== currentUserId) {
                 acc.push(user);
+            }
             return acc;
         }, []);
-        res.status(200).json(users);
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
     }
-}
 
-const login = async (req, res) => {
-    try {
-        const { identifier, password } = req.body;
+    /**
+     * @param {string?} identifier
+     * @param {string?} password
+     * @returns {Promise<{token: string, id: string, email: string, picture: string, username: string, current: boolean}>}
+     */
+    login = async (identifier, password) => {
+        if (!isValidId(identifier)) {
+            throw new Error("Identifiant incorrect");
+        }
+        const rows = await this.userRepository.getUserByIdentifier(identifier);
 
-        if (!isValidId(identifier))
-            return res.status(400).json({ "message": "Identifiant incorrect" });
-
-        const rows = await userRepository.getUserByIdentifier(identifier);
-
-        if (rows.length === 0)
-            return res.status(400).json({ "message": "Identifiant ou mot de passe incorrect" });
-
+        if (rows.length === 0) {
+            throw new Error("Identifiant ou mot de passe incorrect");
+        }
         const same = await comparePassword(password, rows[0]["password"]);
 
-        if (!same)
-            return res.status(400).json({ "message": "Identifiant ou mot de passe incorrect" });
-
+        if (!same) {
+            throw new Error("Identifiant ou mot de passe incorrect");
+        }
         const token = signJwt(rows[0]["id"], process.env.JWT_SECRET);
         const user = new UserProfile(rows[0], true);
-        res.status(200).json({ "token": token, ...user });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        return {
+            "token": token,
+            ...user,
+        }
     }
-}
 
-const register = async (req, res) => {
-    try {
-        const { email, username, password, confirm } = req.body;
+    /**
+     * @param {string?} email
+     * @param {string?} username
+     * @param {string?} password
+     * @param {string?} confirm
+     * @returns {Promise<void>}
+     */
+    register = async (email, username, password, confirm) => {
         const nameValid = isValidUsername(username);
 
-        if (!nameValid.status)
-            return res.status(400).json({ "message": nameValid.message });
-
+        if (!nameValid.status) {
+            throw new Error(nameValid.message);
+        }
         const emailValid = isValidEmail(email);
 
-        if (!emailValid.status)
-            return res.status(400).json({ "message": emailValid.message });
-
+        if (!emailValid.status) {
+           throw new Error(emailValid.message);
+        }
         const passValid = isValidPassword(password, confirm);
 
-        if (!passValid.status)
-            return res.status(400).json({ "message": passValid.message });
-
-        let resp = await userRepository.getUserByEmail(email);
-
-        if (resp.length > 0)
-            return res.status(409).json({ "message": "Un compte est déjà associé à cet email" });
-
-        resp = await userRepository.getUserByUsername(username, true);
-
-        if (resp.length > 0)
-            return res.status(409).json({ "message": "Un compte est déjà associé à ce nom d'utilisateur" });
-
-        const hash = await createHash(password);
-        await userRepository.createUser(uuid(), email, hash, username);
-        res.status(201).json({ "message": "Compte créé" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
-    }
-}
-
-const setProfilePicture = async (req, res) => {
-    try {
-        const { image } = req.body;
-
-        if (!isValidImage(image))
-            return res.status(400).json({ "message": "Image invalide" });
-
-        await userRepository.updatePicture(req.user.id, image);
-        res.status(200).json({ "message": "Image de profil définie" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
-    }
-}
-
-const getProfile = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const userId = id ?? req.user.id;
-        const rows = await userRepository.getUserById(userId);
-        return rows.length === 1
-            ? res.status(200).json(new UserProfile(rows[0], !id))
-            : res.status(400).json({ "message": "Profil introuvable" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
-    }
-}
-
-const changeProfile = async (req, res) => {
-    try {
-        const { currentPassword, newPassword, confirmPassword, email, newEmail, image } = req.body;
-
-        if (currentPassword && newPassword && confirmPassword) {
-            await changePassword(req.user.id, currentPassword, newPassword, confirmPassword);
-            return res.status(200).json({ "message": "Mot de passe modifié" });
-        } else if (email && newEmail) {
-            await changeEmail(req.user.id, email, newEmail);
-            return res.status(200).json({ "message": "Email modifié" });
-        } else if (image) {
-            await changeImage(req.user.id, image);
-            return res.status(200).json({ "message": "Image de profil définie" });
+        if (!passValid.status) {
+            throw new Error(passValid.message);
         }
-        res.status(400).json({ "message": "Requête invalide" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        let rows = await this.userRepository.getUserByEmail(email);
+
+        if (rows.length > 0) {
+            throw new Error("Un compte est déjà associé à cet email");
+        }
+        rows = await this.userRepository.getUserByUsername(username, true);
+
+        if (rows.length > 0) {
+            throw new Error("Un compte est déjà associé à ce nom d'utilisateur");
+        }
+        const hash = await createHash(password);
+        await this.userRepository.createUser(uuid(), email, hash, username);
+    }
+
+    /**
+     * @param {string} userId
+     * @param {boolean} isCurrentUser
+     * @returns {Promise<UserProfile>}
+     */
+    getProfile = async (userId, isCurrentUser) => {
+        const rows = await this.userRepository.getUserById(userId);
+
+        if (rows.length === 1) {
+            return new UserProfile(rows[0], isCurrentUser);
+        }
+        throw new Error("Profil introuvable");
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {string?} currentPassword
+     * @param {string?} newPassword
+     * @param {string?} confirmPassword
+     * @param {string?} email
+     * @param {string?} newEmail
+     * @param {string?} image
+     * @returns {Promise<string>}
+     */
+    changeProfile = async (currentUserId, currentPassword, newPassword, confirmPassword, email, newEmail, image) => {
+        if (currentPassword && newPassword && confirmPassword) {
+            await this.#changePassword(currentUserId, currentPassword, newPassword, confirmPassword);
+            return "Mot de passe modifié";
+        } else if (email && newEmail) {
+            await this.#changeEmail(currentUserId, email, newEmail);
+            return "Email modifié";
+        } else if (image) {
+            await this.#changeImage(currentUserId, image);
+            return "Image de profil définie";
+        }
+        throw new Error("Requête invalide");
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {string?} image
+     * @returns {Promise<void>}
+     */
+    #changeImage = async (currentUserId, image) => {
+        if (!isValidImage(image)) {
+            throw new Error("Image invalide");
+        }
+        await this.userRepository.updatePicture(currentUserId, image);
+    }
+
+    /**
+     * @param {string} userId
+     * @param {string?} currentPass
+     * @param {string?} newPass
+     * @param {string?} confirmPass
+     * @returns {Promise<void>}
+     */
+    #changePassword = async (userId, currentPass, newPass, confirmPass) => {
+        const changeValid = isValidChangePassword(currentPass, newPass, confirmPass);
+
+        if (!changeValid.status) {
+            throw new Error(changeValid.message);
+        }
+        const rows = await this.userRepository.getUserById(userId);
+
+        if (rows.length === 0) {
+            throw new Error("Utilisateur inconnu");
+        }
+        const same = await comparePassword(currentPass, rows[0]["password"]);
+
+        if (!same) {
+            throw new Error("Mot de passe incorrect");
+        }
+        const hash = await createHash(newPass);
+        await this.userRepository.updatePassword(userId, hash);
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {string?} email
+     * @param {string?} newEmail
+     * @returns {Promise<void>}
+     */
+    #changeEmail = async (currentUserId, email, newEmail) => {
+        const changeValid = isValidChangeEmail(email, newEmail);
+
+        if (!changeValid.status) {
+            throw new Error(changeValid.message);
+        }
+        let rows = await this.userRepository.getUserById(currentUserId);
+
+        if (rows.length === 0) {
+            throw new Error("Utilisateur inconnu");
+        }
+        if (rows[0]["email"] !== email) {
+            throw new Error("Email incorrect");
+        }
+        if (email === newEmail) {
+            throw new Error("Le nouvel mail doit être différent de l'ancien");
+        }
+        rows = await this.userRepository.getUserByEmail(newEmail);
+
+        if (rows.length > 0) {
+            throw new Error("Cet email est déjà associé à un compte");
+        }
+        await this.userRepository.updateEmail(currentUserId, newEmail);
     }
 }
-
-/**
- * @param {string} userId 
- * @param {string} image 
- */
-const changeImage = async (userId, image) => {
-    if (!isValidImage(image))
-       throw new Error("Image invalide");
-
-    await userRepository.updatePicture(userId, image);
-}
-
-/**
- * @param {string} userId
- * @param {string} currentPass 
- * @param {string} newPass 
- * @param {string} confirmPass 
- */
-const changePassword = async (userId, currentPass, newPass, confirmPass) => {
-    const changeValid = isValidChangePassword(currentPass, newPass, confirmPass);
-
-    if (!changeValid.status)
-        throw new Error(changeValid.message);
-
-    const rows = await userRepository.getUserById(userId);
-
-    if (rows.length === 0)
-        throw new Error("Utilisateur inconnu");
-
-    const same = await comparePassword(currentPass, rows[0]["password"]);
-
-    if (!same)
-        throw new Error("Mot de passe incorrect");
-
-    const hash = await createHash(newPass);
-    await userRepository.updatePassword(userId, hash);
-}
-
-/**
- * @param {string} userId 
- * @param {string} email 
- * @param {string} newEmail 
- */
-const changeEmail = async (userId, email, newEmail) => {
-    const changeValid = isValidChangeEmail(email, newEmail);
-
-    if (!changeValid.status)
-        throw new Error(changeValid.message);
-
-    let rows = await userRepository.getUserById(userId);
-
-    if (rows.length === 0)
-        throw new Error("Utilisateur inconnu");
-
-    if (rows[0]["email"] !== email)
-        throw new Error("Email incorrect");
-
-    if (email === newEmail)
-        throw new Error("Le nouveau mail doit être différent de l'ancien");
-    
-    rows = await userRepository.getUserByEmail(newEmail);
-
-    if (rows.length > 0)
-        throw new Error("Cet email est déjà associé à un compte");
-
-    await userRepository.updateEmail(userId, newEmail);
-}
-
-export default {
-    changeProfile,
-    getUser,
-    getProfile,
-    setProfilePicture,
-    register,
-    login,
-    checkUser,
-};

@@ -1,4 +1,4 @@
-import Platform from "./Platform.js";
+import Platform from "./platform.js";
 
 class UserSeason {
 

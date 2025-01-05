@@ -1,67 +1,63 @@
-import pool from "../helpers/db.js";
+import pool from "../config/db.js";
 
-/**
- * @param {number} id 
- * @param {string} userId
- */
-const deleteSeasonById = async (id, userId) => {
-    const client = await pool.connect();
-    await client.query(`
+export default class SeasonRepository {
+
+    /**
+     * @param {string} userId
+     * @param {number} id
+     */
+    deleteSeasonById = async (userId, id) => {
+        const client = await pool.connect();
+        await client.query(`
         DELETE FROM users_seasons
         WHERE id = $1 AND user_id = $2
     `, [id, userId]);
-    client.release();
-}
+        client.release();
+    }
 
-/**
- * @param {number} showId 
- * @param {number} number 
- * @returns Promise<any[]>
- */
-const getSeasonByShowIdByNumber = async (showId, number) => {
-    const client = await pool.connect();
-    const res = await client.query(`
+    /**
+     * @param {number} showId
+     * @param {number} number
+     * @returns Promise<any[]>
+     */
+    getSeasonByShowIdByNumber = async (showId, number) => {
+        const client = await pool.connect();
+        const res = await client.query(`
         SELECT *
         FROM seasons
         WHERE show_id = $1 AND number = $2
     `, [showId, number]);
-    client.release();
-    return res["rows"];
-}
+        client.release();
+        return res["rows"];
+    }
 
-/**
- * @param {number} episodes 
- * @param {number} number 
- * @param {string} image 
- * @param {number} showId
- */
-const createSeason = async (episodes, number, image, showId) => {
-    const client = await pool.connect();
-    await client.query(`
+    /**
+     * @param {number} episodes
+     * @param {number} number
+     * @param {string} image
+     * @param {number} showId
+     */
+    createSeason = async (episodes, number, image, showId) => {
+        const client = await pool.connect();
+        await client.query(`
         INSERT INTO seasons (episodes, number, image, show_id)
         VALUES ($1, $2, $3, $4)
     `, [episodes, number, image, showId]);
-    client.release();
-}
+        client.release();
+    }
 
-/**
- * @param {number} id 
- * @param {string} userId 
- * @param {number} plateform 
- */
-const updateSeason = async (id, userId, plateform) => {
-    const client = await pool.connect();
-    await client.query(`
+    /**
+     * @param {string} userId
+     * @param {number} id
+     * @param {number} platform
+     */
+    updateSeason = async (userId, id, platform) => {
+        const client = await pool.connect();
+        await client.query(`
         UPDATE users_seasons
-        SET platform = $1
+        SET platform_id = $1
         WHERE id = $2 AND user_id = $3
-    `, [plateform, id, userId]);
-    client.release();
-}
-
-export default {
-    createSeason,
-    deleteSeasonById,
-    updateSeason,
-    getSeasonByShowIdByNumber
+    `, [platform, id, userId]);
+        client.release();
+    }
 }

@@ -1,3 +1,3 @@
-import app from "./app.js";
+import app from "./config/app.js";
 
 app.listen();

@@ -1,11 +1,11 @@
-import { SearchService } from "../services/searchService.js";
+import SearchService from "../services/searchService.js";
 
-export class SearchController {
+export default class SearchController {
     constructor() {
         this.searchService = new SearchService();
     }
 
-    async getImages(req, res, next) {
+    getImages = async (req, res, next) => {
         try {
             const { limit } = req.query;
             const images = await this.searchService.getImages(limit);
@@ -15,17 +15,17 @@ export class SearchController {
         }
     }
 
-    async getShows(req, res, next) {
+    getShows = async (req, res, next) => {
         try {
-            const { title } = req.query;
-            const response = await this.searchService.getShows(title);
+            const { title, year, kinds, platforms } = req.query;
+            const response = await this.searchService.getShows(title, year, kinds, platforms);
             res.status(200).json(response);
         } catch (e) {
             next(e);
         }
     }
 
-    async getByShowId(req, res, next) {
+    getByShowId = async (req, res, next) => {
         try {
             const { showId } = req.params;
             const show = await this.searchService.getByShowId(showId);
@@ -35,7 +35,7 @@ export class SearchController {
         }
     }
 
-    async getSeasonsByShowId(req, res, next) {
+    getSeasonsByShowId = async (req, res, next) => {
         try {
             const { showId } = req.params;
             const seasons = await this.searchService.getSeasonsByShowId(showId);
@@ -45,7 +45,7 @@ export class SearchController {
         }
     }
 
-    async getEpisodesByShowIdBySeason(req, res, next) {
+    getEpisodesByShowIdBySeason = async (req, res, next) => {
         try {
             const { showId, num } = req.params;
             const episodes = await this.searchService.getEpisodesByShowIdBySeason(showId, num)
@@ -55,7 +55,7 @@ export class SearchController {
         }
     }
 
-    async getCharactersByShowId(req, res, next) {
+    getCharactersByShowId = async (req, res, next) => {
         try {
             const { showId } = req.params;
             const characters = await this.searchService.getCharactersByShowId(showId);
@@ -65,7 +65,7 @@ export class SearchController {
         }
     }
 
-    async getSimilarsByShowId(req, res, next) {
+    getSimilarsByShowId = async (req, res, next) => {
         try {
             const { showId } = req.params;
             const similars = await this.searchService.getSimilarsByShowId(showId);
@@ -75,7 +75,7 @@ export class SearchController {
         }
     }
 
-    async getKinds(_, res, next) {
+    getKinds = async (_, res, next) => {
         try {
             const kinds = await this.searchService.getKinds();
             res.status(200).json(kinds);
@@ -84,7 +84,7 @@ export class SearchController {
         }
     }
 
-    async getImagesByShowId(req, res, next) {
+    getImagesByShowId = async (req, res, next) => {
         try {
             const { showId } = req.params;
             const pictures = await this.searchService.getImagesByShowId(showId);
@@ -94,7 +94,7 @@ export class SearchController {
         }
     }
 
-    async getPersonById(req, res, next) {
+    getPersonById = async (req, res, next) => {
         try {
             const { personId } = req.params;
             const person = await this.searchService.getPersonById(personId);
@@ -104,12 +104,12 @@ export class SearchController {
         }
     }
 
-    async getPlatforms(req, res) {
+    getPlatforms = async (req, res, next) => {
         try {
-            const rows = await platformRepository.getPlatforms();
-            res.status(200).json(rows.map((row) => new Platform(row)));
+            const platforms = await this.searchService.getPlatforms();
+            res.status(200).json(platforms);
         } catch (e) {
-            res.status(500).json({ "message": "Une erreur est survenue " });
+            next(e);
         }
     }
 }

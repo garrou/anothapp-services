@@ -1,4 +1,4 @@
-import Season from "./Season.js";
+import Season from "./season.js";
 
 class SeasonTimeline {
 

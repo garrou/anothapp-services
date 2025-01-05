@@ -1,4 +1,4 @@
-import ApiEntity from "./ApiEntity.js";
+import ApiEntity from "./apiEntity.js";
 
 class ApiShowPreview extends ApiEntity {
 
@@ -18,11 +18,11 @@ class ApiShow extends ApiEntity {
     constructor(show) {
         super(show.id, show.title);
         this.poster = getImageUrl(show.images);
-        this.duration = show.length ?? 0;
+        this.duration = parseInt(show.length ?? "0");
         this.country = show.country;
         this.description = show.description;
-        this.seasons = show.seasons;
-        this.episodes = show.episodes;
+        this.seasons = parseInt(show.seasons);
+        this.episodes = parseInt(show.episodes);
         this.network = show.network;
         this.note = getNote(show.notes);
         this.status = show.status === "Continuing" ? "En cours" : "Terminée";
@@ -45,7 +45,7 @@ const getPlatforms = (platforms) => platforms ? platforms.map((p) => (
 
 /**
  * @param {Object?} note 
- * @returns number
+ * @returns number|null
  */
 const getNote = (note) => {
     if (Object.keys(note ?? {}).length === 0) return null;
@@ -55,7 +55,7 @@ const getNote = (note) => {
 
 /**
  * @param {Object?} image 
- * @returns string
+ * @returns string|null
  */
 const getImageUrl = (image) => {
     if (Object.keys(image ?? {}).length === 0) return null;

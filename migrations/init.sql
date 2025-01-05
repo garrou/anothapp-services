@@ -45,10 +45,10 @@ CREATE TABLE users_seasons (
     added_at TIMESTAMP DEFAULT NOW(),
     user_id VARCHAR(50),
     show_id INTEGER,
-    platform INTEGER,
+    platform_id INTEGER,
     number INTEGER,
     PRIMARY KEY(id),
-    FOREIGN KEY(platform) REFERENCES platforms(id) ON UPDATE CASCADE,
+    FOREIGN KEY(platform_id) REFERENCES platforms(id) ON UPDATE CASCADE,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(show_id, number) REFERENCES seasons(show_id, number) ON DELETE CASCADE,
     FOREIGN KEY(user_id, show_id) REFERENCES users_shows(user_id, show_id) ON DELETE CASCADE
@@ -72,6 +72,7 @@ CREATE TABLE platforms (
 );
 
 INSERT INTO platforms (id, name, logo) VALUES
+(999, 'Autres', NULL),
 (25, 'ADN', 'https://pictures.betaseries.com/platforms/25.jpg'),
 (1, 'Netflix', 'https://pictures.betaseries.com/platforms/1.jpg'),
 (278, 'Canal+', 'https://pictures.betaseries.com/platforms/278.jpg'),

@@ -1,11 +1,11 @@
-import { FriendService } from "../services/friendService.js";
+import FriendService from "../services/friendService.js";
 
-export class FriendController {
+export default class FriendController {
     constructor() {
         this.friendService = new FriendService();
     }
 
-    async getFriends(req, res, next) {
+    getFriends = async (req, res, next) => {
         try {
             const { status, serieId } = req.query;
             const users = await this.friendService.getFriends(req.userId, status, serieId);
@@ -15,7 +15,7 @@ export class FriendController {
         }
     }
 
-    async sendFriendRequest(req, res, next){
+    sendFriendRequest = async (req, res, next) => {
         try {
             const { userId } = req.body;
             await this.friendService.sendFriendRequest(req.userId, userId);
@@ -25,7 +25,7 @@ export class FriendController {
         }
     }
 
-    async acceptFriend(req, res, next){
+    acceptFriend = async (req, res, next) => {
         try {
             const { userId } = req.body;
             await this.friendService.acceptFriend(req.userId, userId);
@@ -35,7 +35,7 @@ export class FriendController {
         }
     }
 
-    async deleteFriend(req, res, next){
+    deleteFriend = async (req, res, next) => {
         try {
             const { userId } = req.params;
             await this.friendService.deleteFriend(req.userId, userId);

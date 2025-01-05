@@ -1,176 +1,144 @@
-import userSeasonRepository from "../repositories/userSeasonRepository.js";
-import userShowRepository from "../repositories/userShowRepository.js";
+import UserShowRepository from "../repositories/userShowRepository.js";
+import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 
-const getStats = async (req, res) => {
-    try {
-        const { id } = req.query;
-        const userId = id ?? req.user.id;
-        res.status(200).json({
-            "monthTime": await getTimeByUserIdByType(userId, "month"),
-            "totalTime": await getTimeByUserIdByType(userId, "total"),
-            "nbSeries": await getCountByUserIdByType(userId, "shows"),
-            "nbSeasons": await getCountByUserIdByType(userId, "seasons"),
-            "nbEpisodes": await getCountByUserIdByType(userId, "episodes"),
-            "bestMonth": (await getTimeByUserIdByType(userId, "best-month"))[0],
-        });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+export default class StatService {
+    constructor() {
+        this.userShowRepository = new UserShowRepository();
+        this.userSeasonRepository = new UserSeasonRepository();
     }
-}
 
-const getCountByType = async (req, res) => {
-    try {
-        const { type, id } = req.query;
-        const total = await getCountByUserIdByType(id ?? req.user.id, type);
-        res.status(200).json(total);
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+    /**
+     * @param {string} userId
+     * @returns {Promise<{monthTime: *, totalTime: *, nbSeries: *, nbSeasons: *, nbEpisodes: *, bestMonth: *}>}
+     */
+    getStats = async (userId) => {
+        return {
+            "monthTime": await this.getTimeByUserIdByType(userId, "month"),
+            "totalTime": await this.getTimeByUserIdByType(userId, "total"),
+            "nbSeries": await this.getCountByUserIdByType(userId, "shows"),
+            "nbSeasons": await this.getCountByUserIdByType(userId, "seasons"),
+            "nbEpisodes": await this.getCountByUserIdByType(userId, "episodes"),
+            "bestMonth": (await this.getTimeByUserIdByType(userId, "best-month"))[0],
+        }
     }
-}
 
-const getTimeByType = async (req, res) => {
-    try {
-        const { type, id } = req.query;
-        const response = await getTimeByUserIdByType(id ?? req.user.id, type);
-        res.status(200).json(response);
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+    /**
+     * @param {string} currentUserId
+     * @param {string} type
+     * @returns Promise
+     */
+    getCountByUserIdByType = (currentUserId, type) => {
+        switch (type) {
+            case "shows":
+                return this.userShowRepository.getTotalShowsByUserId(currentUserId);
+            case "episodes":
+                return this.userSeasonRepository.getTotalEpisodesByUserId(currentUserId);
+            case "seasons":
+                return this.userSeasonRepository.getTotalSeasonsByUserId(currentUserId);
+            default:
+                throw new Error("Requête invalide");
+        }
     }
-}
 
-const getCountGroupedByTypeByPeriod = async (req, res) => {
-    try {
-        const { type, period, id } = req.query;
-        const response = await getGroupedCountByUserIdByTypeByPeriod(id ?? req.user.id, type, period);
-        res.status(200).json(response);
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+    /**
+     * @param {string} currentUserId
+     * @param {string} type
+     * @returns Promise
+     */
+    getTimeByUserIdByType = (currentUserId, type) => {
+        switch (type) {
+            case "total":
+                return this.userSeasonRepository.getTotalTimeByUserId(currentUserId);
+            case "years":
+                return this.userSeasonRepository.getTimeHourByUserIdGroupByYear(currentUserId);
+            case "month":
+                return this.userSeasonRepository.getTimeCurrentMonthByUserId(currentUserId);
+            case "best-month":
+                return this.userSeasonRepository.getRecordViewingTimeMonth(currentUserId, 1);
+            case "rank":
+                return this.userSeasonRepository.getRankingViewingTimeByShows(currentUserId);
+            default:
+                throw new Error("Requête invalide");
+        }
     }
-}
 
-/**
- * @param {string} userId 
- * @param {string} type 
- * @returns Promise
- */
-const getCountByUserIdByType = (userId, type) => {
-    switch (type) {
-        case "shows":
-            return userShowRepository.getTotalShowsByUserId(userId);
-        case "episodes":
-            return userSeasonRepository.getTotalEpisodesByUserId(userId);
-        case "seasons":
-            return userSeasonRepository.getTotalSeasonsByUserId(userId);
-        default:
-            throw new Error("Requête invalide");
+    /**
+     * @param {string} userId
+     * @param {string} type
+     * @param {string} period
+     * @return Promise
+     */
+    getGroupedCountByUserIdByTypeByPeriod = (userId, type, period) => {
+        switch (type) {
+            case "seasons":
+                return this.#getNbSeasonsByUserIdByPeriod(userId, period);
+            case "episodes":
+                return this.#getNbEpisodesByUserIdByPeriod(userId, period);
+            case "kinds":
+                return this.#getNbKindsByUserId(userId);
+            case "best-months":
+                return this.userSeasonRepository.getRecordViewingTimeMonth(userId);
+            case "countries":
+                return this.userShowRepository.getCountriesByUserId(userId);
+            case "platforms":
+                return this.userSeasonRepository.getPlatformsByUserId(userId);
+            default:
+                throw new Error("Requête invalide");
+        }
     }
-}
 
-/**
- * @param {string} userId 
- * @param {string} type 
- * @returns Promise
- */
-const getTimeByUserIdByType = (userId, type) => {
-    switch (type) {
-        case "total":
-            return userSeasonRepository.getTotalTimeByUserId(userId);
-        case "years":
-            return userSeasonRepository.getTimeHourByUserIdGroupByYear(userId);
-        case "month":
-            return userSeasonRepository.getTimeCurrentMonthByUserId(userId);
-        case "best-month":
-            return userSeasonRepository.getRecordViewingTimeMonth(userId, 1);
-        case "rank":
-            return userSeasonRepository.getRankingViewingTimeByShows(userId);
-        default:
-            throw new Error("Requête invalide");
+    /**
+     * @param {string} userId
+     * @return Promise<{label: string, value: number}[]>
+     */
+    #getNbKindsByUserId = async (userId) => {
+        const kindsMap = new Map();
+        const rows = await this.userShowRepository.getKindsByUserId(userId);
+
+        rows.forEach((row) => row["kinds"]
+            .split(";")
+            .forEach((kind) => {
+                const val = kindsMap.get(kind);
+                !val ? kindsMap.set(kind, 1) : kindsMap.set(kind, val + 1);
+            })
+        );
+        return Array
+            .from(kindsMap, ([kind, occur]) => ({ "label": kind, "value": occur }))
+            .sort((a, b) => b.value - a.value)
+            .splice(0, 10);
     }
-}
 
-/**
- * @param {string} userId 
- * @param {string} type 
- * @param {string} period
- * @return Promise
- */
-const getGroupedCountByUserIdByTypeByPeriod = (userId, type, period) => {
-    switch (type) {
-        case "seasons":
-            return getNbSeasonsByUserIdByPeriod(userId, period);
-        case "episodes":
-            return getNbEpisodesByUserIdByPeriod(userId, period);
-        case "kinds":
-            return getNbKindsByUserId(userId);
-        case "best-months":
-            return userSeasonRepository.getRecordViewingTimeMonth(userId);
-        case "countries":
-            return userShowRepository.getCountriesByUserId(userId);
-        case "platforms":
-            return userSeasonRepository.getPlatformsByUserId(userId);
-        default:
-            throw new Error("Requête invalide");
+    /**
+     * @param {string} userId
+     * @param {string} period
+     * @return Promise
+     */
+    #getNbSeasonsByUserIdByPeriod = (userId, period) => {
+        switch (period) {
+            case "years":
+                return this.userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId);
+            case "year":
+                return this.userSeasonRepository.getNbSeasonsByUserIdGroupByMonthByCurrentYear(userId);
+            case "months":
+                return this.userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId);
+            default:
+                throw new Error("Requête invalide");
+        }
     }
-}
 
-/**
- * @param {string} userId
- * @param {string} period
- * @return Promise
- */
-const getNbSeasonsByUserIdByPeriod = (userId, period) => {
-    switch (period) {
-        case "years":
-            return userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId);
-        case "year":
-            return userSeasonRepository.getNbSeasonsByUserIdGroupByMonthByCurrentYear(userId);
-        case "months":
-            return userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId);
-        default:
-            throw new Error("Requête invalide");
+    /**
+     * @param {string} userId
+     * @param {string} period
+     * @return Promise
+     */
+    #getNbEpisodesByUserIdByPeriod = (userId, period) => {
+        switch (period) {
+            case "years":
+                return this.userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId);
+            case "year":
+                return this.userSeasonRepository.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId);
+            default:
+                throw new Error("Requête invalide");
+        }
     }
-}
-
-/**
- * @param {string} userId
- * @param {string} period 
- * @return Promise
- */
-const getNbEpisodesByUserIdByPeriod = (userId, period) => {
-    switch (period) {
-        case "years":
-            return userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId);
-        case "year":
-            return userSeasonRepository.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId);
-        default:
-            throw new Error("Requête invalide");
-    }
-}
-
-/**
- * @param {string} userId
- * @return Promise<any[]>
- */
-const getNbKindsByUserId = async (userId) => {
-    const kindsMap = new Map();
-    const rows = await userShowRepository.getKindsByUserId(userId);
-
-    rows.forEach((row) => row["kinds"]
-        .split(";")
-        .forEach((kind) => {
-            const val = kindsMap.get(kind);
-            !val ? kindsMap.set(kind, 1) : kindsMap.set(kind, val + 1);
-        })
-    );
-    return Array
-        .from(kindsMap, ([kind, occur]) => ({ "label": kind, "value": occur }))
-        .sort((a, b) => b.value - a.value)
-        .splice(0, 10);
-}
-
-export default {
-    getCountByType,
-    getCountGroupedByTypeByPeriod,
-    getStats,
-    getTimeByType,
 }

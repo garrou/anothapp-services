@@ -1,20 +1,15 @@
-import { Router }  from "express";
-import userService from "../services/userService.js";
+import {Router} from "express";
+import UserController from "../controllers/userController.js";
 
 const router = Router();
+const userController = new UserController();
 
-router.post("/register", userService.register);
+router.post("/search", userController.getUser);
 
-router.post("/login", userService.login);
+router.patch("/me", userController.changeProfile);
 
-router.post("/search", userService.getUser);
+router.get("/profile", userController.getProfile);
 
-router.get("/me", userService.checkUser);
-
-router.patch("/me", userService.changeProfile);
-
-router.get("/profile", userService.getProfile);
-
-router.get("/:id/profile", userService.getProfile);
+router.get("/:id/profile", userController.getProfile);
 
 export default router;

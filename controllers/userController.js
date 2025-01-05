@@ -1,20 +1,37 @@
-import { Router }  from "express";
-import userService from "../services/userService.js";
+import UserService from "../services/userService.js";
 
-const router = Router();
+export default class UserController {
+    constructor() {
+        this.userService = new UserService();
+    }
 
-router.post("/register", userService.register);
+    getUser = async (req, res, next) => {
+        try {
+            const {username} = req.body;
+            const users = await this.userService.getUser(req.userId, username);
+            res.status(200).json(users);
+        } catch (e) {
+            next(e);
+        }
+    }
 
-router.post("/login", userService.login);
+    getProfile = async (req, res, next) => {
+        try {
+            const {id} = req.params;
+            const profile = await this.userService.getProfile(id ?? req.userId, id === req.userId);
+            res.status(200).json(profile);
+        } catch (e) {
+            next(e);
+        }
+    }
 
-router.post("/search", userService.getUser);
-
-router.get("/me", userService.checkUser);
-
-router.patch("/me", userService.changeProfile);
-
-router.get("/profile", userService.getProfile);
-
-router.get("/:id/profile", userService.getProfile);
-
-export default router;
+    changeProfile = async (req, res, next) => {
+        try {
+            const {currentPassword, newPassword, confirmPassword, email, newEmail, image} = req.body;
+            const message = await this.userService.changeProfile(req.userId, currentPassword, newPassword, confirmPassword, email, newEmail, image);
+            res.status(200).json({ message });
+        } catch (e) {
+            next(e);
+        }
+    }
+}

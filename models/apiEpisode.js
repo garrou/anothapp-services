@@ -1,4 +1,4 @@
-import ApiEntity from "./ApiEntity.js";
+import ApiEntity from "./apiEntity.js";
 
 class ApiEpisode extends ApiEntity {
 

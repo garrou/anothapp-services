@@ -1,61 +1,59 @@
-import Season from '../models/Season.js';
-import SeasonTimeline from '../models/SeasonTimeline.js';
-import seasonRepository from '../repositories/seasonRepository.js';
-import userSeasonRepository from '../repositories/userSeasonRepository.js';
+import SeasonRepository from "../repositories/seasonRepository.js";
+import Season from "../models/season.js";
+import SeasonTimeline from "../models/seasonTimeline.js";
+import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 
-const MONTHS = ["0", "1", "2", "3", "6", "12", "60"];
+export default class SeasonService {
 
-const deleteBySeasonId = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        if (!id) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        await seasonRepository.deleteSeasonById(id, req.user.id);
-        res.status(200).json({ "message": "ok" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+    constructor() {
+        this.seasonRepository = new SeasonRepository();
+        this.userSeasonRepository = new UserSeasonRepository();
     }
-}
 
-const getSeasons = async (req, res) => {
-    try {
-        const { year, month } = req.query;
+    /**
+     * @param {string} currentUserId
+     * @param {number} seasonId
+     * @returns {Promise<void>}
+     */
+    deleteBySeasonId = async (currentUserId, seasonId) => {
+        if (!seasonId) {
+            throw new Error("Requête invalide");
+        }
+        await this.seasonRepository.deleteSeasonById(currentUserId, seasonId);
+    }
+
+    /**
+     * @param currentUserId
+     * @param year
+     * @param month
+     * @returns {Promise<SeasonTimeline[] | Season[]>}
+     */
+    getSeasons = async (currentUserId, year, month) => {
+        const MONTHS = ["0", "1", "2", "3", "6", "12", "60"];
         let response = null;
 
         if (MONTHS.includes(month)) {
-            response = (await userSeasonRepository.getViewedByMonthAgo(req.user.id, month))
+            response = (await this.userSeasonRepository.getViewedByMonthAgo(currentUserId, month))
                 .map(row => new SeasonTimeline(row));
         } else if (year) {
-            response = (await userSeasonRepository.getSeasonsByAddedYear(req.user.id, year))
+            response = (await this.userSeasonRepository.getSeasonsByAddedYear(currentUserId, year))
                 .map(obj => new Season(obj));
         } else {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        res.status(200).json(response);
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        return response;
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {number?} seasonId
+     * @param {number} platformId
+     * @returns {Promise<void>}
+     */
+    updateBySeasonId = async (currentUserId, seasonId, platformId) => {
+        if (!seasonId) {
+            throw new Error("Requête invalide")
+        }
+        await this.seasonRepository.updateSeason(currentUserId, seasonId, platformId);
     }
 }
-
-const updateBySeasonId = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { platform } = req.body;
-
-        if (!id) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }
-        await seasonRepository.updateSeason(id, req.user.id, platform);
-        res.status(200).json({ "message": "ok" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
-    }
-}
-
-export default {
-    deleteBySeasonId,
-    getSeasons,
-    updateBySeasonId
-};

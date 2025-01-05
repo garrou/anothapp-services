@@ -12,7 +12,7 @@ export default (duration, eachUser = false) => (req, res, next) => {
     if (req.method !== "GET") {
         return next();
     }
-    const key = eachUser ? `${req.user.id}-${req.originalUrl}` : req.originalUrl;
+    const key = eachUser ? `${req.userId}-${req.originalUrl}` : req.originalUrl;
     const cachedResponse = cache.get(key);
 
     if (cachedResponse) {

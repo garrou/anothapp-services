@@ -11,7 +11,7 @@ const isValidUsername = (username) => {
     if (!userConst.USERNAME_PATTERN.test(username))
         return { 
             status: false, 
-            message: `Username incorrect (${userConst.MIN_USERNAME} - ${userConst.MAX_USERNAME}) sans '@'` 
+            message: `Username incorrect (${userConst.MIN_USERNAME} - ${userConst.MAX_USERNAME})`
         }
 
     return { status: true, message: "ok" };
@@ -93,9 +93,13 @@ const isValidId = (name) => {
     return typeof name === "string";
 }
 
-const idValidShow = (serie) => {
-    const { id, title, kinds, duration, seasons, country } = serie;
-    return id && title && kinds && duration && seasons && country;
+/**
+ * @param {ApiShow} show
+ * @returns {boolean}
+ */
+const idValidShow = (show) => {
+    const { id, title, kinds, duration, seasons, country } = show;
+    return id && title && Array.isArray(kinds) && kinds.length && duration && seasons && country;
 }
 
 export {

@@ -1,4 +1,4 @@
-class ApiShowKind {
+class ApiShow {
 
     /**
      * @param {string[]} array 
@@ -9,4 +9,4 @@ class ApiShowKind {
     }
 }
 
-export default ApiShowKind;
+export default ApiShow;

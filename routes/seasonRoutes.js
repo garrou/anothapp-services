@@ -1,12 +1,13 @@
-import { Router } from "express";
-import seasonService from "../services/seasonService.js";
+import {Router} from "express";
+import SeasonController from "../controllers/seasonController.js";
 
 const router = Router();
+const seasonController = new SeasonController();
 
-router.get("/", seasonService.getSeasons);
+router.get("/", seasonController.getSeasons);
 
-router.delete("/:id", seasonService.deleteBySeasonId);
+router.delete("/:id", seasonController.deleteBySeasonId);
 
-router.patch("/:id", seasonService.updateBySeasonId);
+router.patch("/:id", seasonController.updateBySeasonId);
 
 export default router;

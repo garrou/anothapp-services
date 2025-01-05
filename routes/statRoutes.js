@@ -1,14 +1,15 @@
-import { Router } from "express";
-import statService from "../services/statService.js";
+import {Router} from "express";
+import StatController from "../controllers/statController.js";
 
 const router = Router();
+const statController = new StatController();
 
-router.get("/", statService.getStats);
+router.get("/", statController.getStats);
 
-router.get("/count", statService.getCountByType);
+router.get("/count", statController.getCountByType);
 
-router.get("/time", statService.getTimeByType);
+router.get("/time", statController.getTimeByType);
 
-router.get("/grouped-count", statService.getCountGroupedByTypeByPeriod);
+router.get("/grouped-count", statController.getCountGroupedByTypeByPeriod);
 
 export default router;

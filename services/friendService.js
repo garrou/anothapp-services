@@ -1,7 +1,7 @@
-import UserProfile from '../models/UserProfile.js';
-import { FriendRepository } from "../repositories/friendRepository.js";
+import UserProfile from '../models/userProfile.js';
+import FriendRepository from "../repositories/friendRepository.js";
 
-export class FriendService {
+export default class FriendService {
 
     constructor() {
         this.friendRepository = new FriendRepository();
@@ -12,8 +12,7 @@ export class FriendService {
      * @param {string} userId
      * @returns {Promise<void>}
      */
-    async sendFriendRequest(currentUserId, userId) {
-
+    sendFriendRequest = async (currentUserId, userId) => {
         if (!userId) {
             throw new Error("Requête invalide");
         }
@@ -30,8 +29,7 @@ export class FriendService {
      * @param {string} userId
      * @returns {Promise<void>}
      */
-    async acceptFriend(currentUserId, userId) {
-
+    acceptFriend = async (currentUserId, userId) => {
         if (!userId) {
             throw new Error("Requête invalide");
         }
@@ -43,8 +41,7 @@ export class FriendService {
      * @param {string} userId
      * @returns {Promise<void>}
      */
-    async deleteFriend(currentUserId, userId) {
-
+    deleteFriend = async (currentUserId, userId) => {
         if (!userId) {
             throw new Error("Requête invalide");
         }
@@ -55,17 +52,17 @@ export class FriendService {
      * @param {string} currentUserId
      * @param {string} status
      * @param {number} serieId
-     * @returns {Promise<void>}
+     * @returns {Promise<UserProfile[] | Map<string, UserProfile[]>>}
      */
-    async getFriends(currentUserId, status, serieId) {
-        return this.#getFriendsByUserIdByStatus(currentUserId, status, serieId);
+    getFriends = async (currentUserId, status, serieId) => {
+        return await this.#getFriendsByUserIdByStatus(currentUserId, status, serieId);
     }
 
     /**
      * @param {string} userId
      * @param {string} status
      * @param {number?} showId
-     * @returns {Promise<Friend[]> | Promise<Map<string, Friend[]>}
+     * @returns {Promise<any>}
      */
     async #getFriendsByUserIdByStatus(userId, status, showId) {
         let rows = null;

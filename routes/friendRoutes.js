@@ -1,5 +1,5 @@
-import { Router } from "express";
-import { FriendController } from "../controllers/friendController.js";
+import {Router} from "express";
+import FriendController from "../controllers/friendController.js";
 
 const router = Router();
 const friendController = new FriendController();

@@ -1,13 +1,13 @@
-import pool from "../helpers/db.js";
+import pool from "../config/db.js";
 
-export class FriendRepository {
+export default class FriendRepository {
 
     /**
      * @param {string} userId
      * @param {string} otherId
      * @returns Promise<boolean>
      */
-    async checkIfRelationExists(userId, otherId) {
+    checkIfRelationExists = async (userId, otherId) => {
         const client = await pool.connect();
         const res = await client.query(`
             SELECT COUNT(*) AS total
@@ -23,7 +23,7 @@ export class FriendRepository {
      * @param {string} otherId
      * @returns Promise<boolean>
      */
-    async checkIfAlreadyFriend(userId, otherId) {
+    checkIfAlreadyFriend = async (userId, otherId) => {
         const client = await pool.connect();
         const res = await client.query(`
             SELECT COUNT(*) AS total
@@ -38,7 +38,7 @@ export class FriendRepository {
      * @param {string} userId
      * @param {string} otherId
      */
-    async acceptFriend(userId, otherId) {
+    acceptFriend = async (userId, otherId) => {
         const client = await pool.connect();
         await client.query(`
             UPDATE friends
@@ -52,7 +52,7 @@ export class FriendRepository {
      * @param {string} userId
      * @returns Promise<any[]>
      */
-    async getFriends(userId) {
+    getFriends = async (userId) => {
         const client = await pool.connect();
         const res = await client.query(`
             SELECT u.id, u.email, u.picture, u.username
@@ -68,7 +68,7 @@ export class FriendRepository {
      * @param {string} userId
      * @returns Promise<any[]>
      */
-    async getFriendsRequestsSend(userId) {
+    getFriendsRequestsSend = async (userId) => {
         const client = await pool.connect();
         const res = await client.query(`
             SELECT u.id, u.email, u.picture, u.username
@@ -80,7 +80,12 @@ export class FriendRepository {
         return res["rows"];
     }
 
-    async getFriendsWhoWatchSerie(userId, showId) {
+    /**
+     * @param {string} userId
+     * @param {number} showId
+     * @returns Promise<any[]>
+     */
+    getFriendsWhoWatchSerie = async (userId, showId) => {
         const client = await pool.connect();
         const res = await client.query(`
             SELECT u.id, u.email, u.picture, u.username
@@ -97,7 +102,7 @@ export class FriendRepository {
      * @param {string} userId
      * @returns Promise<any[]>
      */
-    async getFriendsRequestsReceive(userId) {
+    getFriendsRequestsReceive = async (userId) => {
         const client = await pool.connect();
         const res = await client.query(`
             SELECT u.id, u.email, u.picture, u.username
@@ -112,8 +117,9 @@ export class FriendRepository {
     /**
      * @param {string} userId
      * @param {string} otherId
+     * @returns Promise<void>
      */
-    async sendFriendRequest(userId, otherId) {
+    sendFriendRequest = async (userId, otherId) => {
         const client = await pool.connect();
         await client.query(`
             INSERT INTO friends (fst_user_id, sec_user_id)
@@ -125,8 +131,9 @@ export class FriendRepository {
     /**
      * @param {string} userId
      * @param {string} otherId
+     * @returns Promise<void>
      */
-    async deleteFriend(userId, otherId) {
+    deleteFriend = async (userId, otherId) => {
         const client = await pool.connect();
         await client.query(`
             DELETE FROM friends

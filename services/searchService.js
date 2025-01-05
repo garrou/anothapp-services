@@ -1,73 +1,43 @@
 import axios from 'axios';
-import {ApiShow, ApiShowPreview} from '../models/ApiShow.js';
-import ApiEpisode from '../models/ApiEpisode.js';
-import Season from '../models/Season.js';
-import ApiCharacter from '../models/ApiCharacter.js';
-import ApiEntity from '../models/ApiEntity.js';
-import ApiShowKind from '../models/ApiShowKind.js';
-import ApiPerson from '../models/ApiPerson.js';
+import {ApiShow, ApiShowPreview} from '../models/apiShow.js';
+import ApiEpisode from '../models/apiEpisode.js';
+import Season from '../models/season.js';
+import ApiCharacter from '../models/apiCharacter.js';
+import ApiEntity from '../models/apiEntity.js';
+import ApiPerson from '../models/apiPerson.js';
 import {cumulate} from '../helpers/utils.js';
-import platformRepository from '../repositories/platformRepository.js';
-import Platform from '../models/Platform.js';
+import Platform from '../models/platform.js';
 import {buildUrlWithParams, fetchPromises, Param, buildLimit} from '../helpers/fetch.js';
+import PlatformRepository from "../repositories/platformRepository.js";
+import ApiShowKind from "../models/apiShowKind.js";
 
 const baseUrl = "https://api.betaseries.com";
 const headers = {"X-BetaSeries-Key": process.env.BETASERIES_KEY}
 
-export class SearchService {
+export default class SearchService {
+
+    constructor() {
+        this.platformRepository = new PlatformRepository();
+    }
 
     /**
      * @param {string?} title
+     * @param {string?} year
+     * @param {string?} kind
+     * @param {string?} platform
      * @returns {Promise<void>}
      */
-    async getShows(title) {
-        return title
-            ? this.#getShowsByTitle(title)
+    async getShows(title, year, kind, platform) {
+        return title || year || kind || platform
+            ? this.#getShowsByFilters(title, year, kind, platform)
             : this.#getShowsToDiscover(buildLimit());
-    }
-
-    /**
-     * @param {number} limit
-     * @returns Promise<ApiShow[]>
-     */
-    async #getShowsToDiscover(limit) {
-        const allShows = [];
-        const url = buildUrlWithParams(`${baseUrl}/shows/discover`, [
-            new Param("limit", limit)
-        ]);
-        const results = await Promise.all(fetchPromises(url, "offset", limit));
-
-        for (const result of results) {
-            const {shows} = result.data;
-            allShows.push(...shows.map(show => new ApiShow(show)));
-        }
-        return allShows;
-    }
-
-    /**
-     * @param {string?} title
-     * @returns Promise<ApiShowPreview[]>
-     */
-    async #getShowsByTitle(title) {
-        const allShows = [];
-        const numLimit = buildLimit();
-        const url = buildUrlWithParams(`${baseUrl}/search/shows`, [
-            new Param("text", title),
-        ]);
-        const results = await Promise.all(fetchPromises(url, "offset", numLimit));
-
-        for (const result of results) {
-            const {shows} = result.data;
-            allShows.push(...shows.map((s) => new ApiShowPreview(s)));
-        }
-        return allShows;
     }
 
     /**
      * @param {string} limit
      * @returns {Promise<string[]>}
      */
-    async getImages(limit) {
+    getImages = async (limit) => {
         const numLimit = buildLimit(limit);
         const shows = await this.#getShowsToDiscover(numLimit);
         return shows.map((s) => s.poster);
@@ -77,7 +47,7 @@ export class SearchService {
      * @param {number?} showId
      * @returns {Promise<ApiShow>}
      */
-    async getByShowId(showId) {
+    getByShowId = async (showId) => {
         if (!showId) {
             throw new Error("Requête invalide");
         }
@@ -92,7 +62,7 @@ export class SearchService {
      * @param {number?} showId
      * @returns {Promise<Season[]>}
      */
-    async getSeasonsByShowId(showId) {
+    getSeasonsByShowId = async (showId) => {
         if (!showId) {
             throw new Error("Requête invalide");
         }
@@ -109,7 +79,7 @@ export class SearchService {
      * @param {number?} num
      * @returns {Promise<ApiEpisode[]>}
      */
-    async getEpisodesByShowIdBySeason(showId, num) {
+    getEpisodesByShowIdBySeason = async (showId, num) => {
         if (!showId || !num) {
             throw new Error("Requête invalide");
         }
@@ -124,7 +94,7 @@ export class SearchService {
      * @param {number?} showId
      * @returns {Promise<ApiCharacter[]>}
      */
-    async getCharactersByShowId(showId) {
+    getCharactersByShowId = async (showId) => {
         if (!showId) {
             throw new Error("Requête invalide");
         }
@@ -139,7 +109,7 @@ export class SearchService {
      * @param {number?} showId
      * @returns {Promise<ApiEntity[]>}
      */
-    async getSimilarsByShowId(showId) {
+    getSimilarsByShowId = async (showId) => {
 
         if (!showId) {
             throw new Error("Requête invalide");
@@ -152,9 +122,9 @@ export class SearchService {
     }
 
     /**
-     * @returns {Promise<ApiShowKind[]>}
+     * @returns {Promise<ApiShow[]>}
      */
-    async getKinds() {
+    getKinds = async () => {
         const resp = await axios.get(`${baseUrl}/shows/genres`, {
             headers
         });
@@ -168,7 +138,7 @@ export class SearchService {
      * @param {number?} showId
      * @returns {Promise<string[]>}
      */
-    async getImagesByShowId(showId) {
+    getImagesByShowId = async (showId) => {
 
         if (!showId) {
             throw new Error("Requête invalide");
@@ -184,7 +154,7 @@ export class SearchService {
      * @param {number?} personId
      * @returns {Promise<ApiPerson>}
      */
-    async getPersonById(personId) {
+    getPersonById = async (personId) => {
         if (!personId) {
             throw new Error("Requête invalide");
         }
@@ -198,8 +168,51 @@ export class SearchService {
     /**
      * @returns {Promise<Platform[]>}
      */
-    async getPlatforms() {
-        const rows = await platformRepository.getPlatforms();
+    getPlatforms = async () => {
+        const rows = await this.platformRepository.getPlatforms();
         return rows.map((row) => new Platform(row));
+    }
+
+    /**
+     * @param {number} limit
+     * @returns Promise<ApiShow[]>
+     */
+    #getShowsToDiscover = async (limit) => {
+        const allShows = [];
+        const url = buildUrlWithParams(`${baseUrl}/shows/discover`, [
+            new Param("limit", limit)
+        ]);
+        const results = await Promise.all(fetchPromises(url, "offset", limit));
+
+        for (const result of results) {
+            const {shows} = result.data;
+            allShows.push(...shows.map(show => new ApiShow(show)));
+        }
+        return allShows;
+    }
+
+    /**
+     * @param {string?} title
+     * @param {string?} years
+     * @param {string?} kinds
+     * @param {string?} platforms
+     * @returns Promise<ApiShowPreview[]>
+     */
+    #getShowsByFilters = async (title, years, kinds, platforms) => {
+        const allShows = [];
+        const numLimit = buildLimit();
+        const url = buildUrlWithParams(`${baseUrl}/search/shows`, [
+            new Param("text", title),
+            new Param("genres", kinds),
+            new Param("svods", platforms),
+            new Param("creations", years),
+        ]);
+        const results = await Promise.all(fetchPromises(url, "offset", numLimit));
+
+        for (const result of results) {
+            const {shows} = result.data;
+            allShows.push(...shows.map((s) => new ApiShowPreview(s)));
+        }
+        return allShows;
     }
 }

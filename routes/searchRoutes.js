@@ -1,5 +1,5 @@
-import { Router } from "express";
-import { SearchController } from "../controllers/searchController.js";
+import {Router} from "express";
+import SearchController from "../controllers/searchController.js";
 
 const router = Router();
 const searchController = new SearchController();

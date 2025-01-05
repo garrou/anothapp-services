@@ -1,197 +1,201 @@
-import userSeasonRepository from "../repositories/userSeasonRepository.js";
-import userShowRepository from "../repositories/userShowRepository.js";
-import seasonRepository from "../repositories/seasonRepository.js";
-import showRepository from "../repositories/showRepository.js";
-import { FriendRepository } from "../repositories/friendRepository.js";
-import Season from "../models/Season.js";
-import Show from "../models/Show.js";
-import { idValidShow } from "../helpers/validator.js";
-import { cumulate } from "../helpers/utils.js";
-import UserSeason from "../models/UserSeason.js";
-import {getSerieById} from "../helpers/api.js";
+import Season from "../models/season.js";
+import Show from "../models/show.js";
+import {idValidShow} from "../helpers/validator.js";
+import {cumulate} from "../helpers/utils.js";
+import UserSeason from "../models/userSeason.js";
+import ShowRepository from "../repositories/showRepository.js";
+import UserShowRepository from "../repositories/userShowRepository.js";
+import SearchService from "./searchService.js";
+import FriendRepository from "../repositories/friendRepository.js";
+import UserSeasonRepository from "../repositories/userSeasonRepository.js";
+import SeasonRepository from "../repositories/seasonRepository.js";
 
-/**
- * @param {string} userId
- * @param {string} status
- * @param {string?} friendId
- * @returns Promise
- */
-const getShowsByStatus = (userId, status, friendId) => {
-    switch (status) {
-        case "resume":
-            return userShowRepository.getShowsToResumeByUserId(userId);
-        case "not-started":
-            return userShowRepository.getNotStartedShowsByUserId(userId);
-        case "continue":
-            return userShowRepository.getShowsToContinueByUserId(userId);
-        case "favorite":
-            return userShowRepository.getFavoritesByUserId(friendId ?? userId);
-        case "shared":
-            if (!friendId) throw new Error("Requête invalide");
-            return userShowRepository.getSharedShowsWithFriend(userId, friendId);
-        default:
-            throw new Error("Requête invalide");
+export default class ShowService {
+
+    constructor() {
+        this.showRepository = new ShowRepository();
+        this.userShowRepository = new UserShowRepository();
+        this.userSeasonRepository = new UserSeasonRepository();
+        this.searchService = new SearchService();
+        this.friendRepository = new FriendRepository();
+        this.seasonRepository = new SeasonRepository();
     }
-}
 
-const addShow = async (req, res) => {
-    try {
-        if (!idValidShow(req.body)) {
-            return res.status(400).json({ "message": "Requête invalide" });
+    /**
+     * @param {string} userId
+     * @param {string} status
+     * @param {string?} friendId
+     * @returns Promise<any>
+     */
+    #getShowsByStatus = async (userId, status, friendId) => {
+        switch (status) {
+            case "resume":
+                return this.userShowRepository.getShowsToResumeByUserId(userId);
+            case "not-started":
+                return this.userShowRepository.getNotStartedShowsByUserId(userId);
+            case "continue":
+                return this.userShowRepository.getShowsToContinueByUserId(userId);
+            case "favorite":
+                return this.userShowRepository.getFavoritesByUserId(friendId ?? userId);
+            case "shared":
+                if (!friendId) {
+                    throw new Error("Requête invalide");
+                }
+                return this.userShowRepository.getSharedShowsWithFriend(userId, friendId);
+            default:
+                throw new Error("Requête invalide");
         }
-        const { id, list } = req.body;
+    }
 
-        const exists = await userShowRepository.checkShowExistsByUserIdByShowId(req.user.id, id, list);
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @param {boolean} addInList
+     * @returns {Promise<void>}
+     */
+    addShow = async (currentUserId, id, addInList = false) => {
+
+        if (!id) {
+            throw new Error("Requête invalide");
+        }
+        const exists = await this.userShowRepository.checkShowExistsByUserIdByShowId(currentUserId, id, addInList);
 
         if (exists) {
-            return res.status(409).json({ "message": `Cette série est déjà dans votre ${addInList ? "liste" : "collection"}` });
+            throw new Error(`Cette série est déjà dans votre ${addInList ? "liste" : "collection"}`);
         }
-        const isNewShow = await showRepository.isNewShow(id);
+        const isNewShow = await this.showRepository.isNewShow(id);
 
         if (isNewShow) {
-            const show = await getSerieById(id);
+            const show = await this.searchService.getByShowId(id);
 
             if (!idValidShow(show)) {
-                return res.status(400)
+                throw new Error("Série invalide");
             }
-            await showRepository.createShow(id, title, poster, kinds.join(";"), duration, parseInt(seasons), country);
+            const {id, title, poster, kinds, duration, seasons, country} = show;
+            await this.showRepository.createShow(id, title, poster, kinds.join(";"), duration, seasons, country);
         }
-        await userShowRepository.create(req.user.id, id, addInList);
-        res.status(201).json({ "message": "ok" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        await this.userShowRepository.create(currentUserId, id, addInList);
     }
-}
 
-const deleteByShowId = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { list } = req.query;
-        const deleteInList = (/true/i).test(list);
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @param {string} inList
+     * @returns {Promise<void>}
+     */
+    deleteByShowId = async (currentUserId, id, inList) => {
+        const deleteInList = (/true/i).test(inList);
 
         if (!id) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        await userShowRepository.deleteByUserIdShowId(req.user.id, id, deleteInList);
-        res.status(200).json({ "message": "ok" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        await this.userShowRepository.deleteByUserIdShowId(currentUserId, id, deleteInList);
     }
-}
 
-const getShow = async (req, res) => {
-    try {
-        const { id } = req.params;
-
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @returns {Promise<{seasons: Season[], time: number, episodes: number}>}
+     */
+    getShowById = async (currentUserId, id) => {
         if (!id) {
-            return res.status(400).json({ "message": "Requête invalide" });
-        }/*
-        const show = await userShowRepository.getShowByUserIdByShowId(req.user.id, id);
+            throw new Error("Requête invalide");
+        }
+        // const show = await this.userShowRepository.getShowByUserIdByShowId(currentUserId, id);
 
-        if (!show) {
-            return res.status(404).json({ "message": "Série introuvable" });
-        }*/
-        const seasons = await userSeasonRepository.getDistinctByUserIdByShowId(req.user.id, id);
-        const [time, nbEpisodes] = await userSeasonRepository.getTimeEpisodesByUserIdByShowId(req.user.id, id);
+        // if (!show) {
+        //     throw new Error("Série introuvable");
+        // }
+        const seasons = await this.userSeasonRepository.getDistinctByUserIdByShowId(currentUserId, id);
+        const [time, nbEpisodes] = await this.userSeasonRepository.getTimeEpisodesByUserIdByShowId(currentUserId, id);
         const episodes = cumulate(seasons);
         const mapSeasons = seasons.map((s, i) => new Season(s, `${episodes[i] + 1} - ${episodes[i + 1]}`));
-        return res.status(200).json({
+        return {
             // "serie": new Show(show),
             "seasons": mapSeasons,
             "time": time,
             "episodes": nbEpisodes
-        });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        };
     }
-}
 
-const getShows = async (req, res) => {
-    try {
-        const { title, limit, kind, status, friendId, platforms } = req.query;
+    /**
+     * @param {string} currentUserId
+     * @param title
+     * @param limit
+     * @param status
+     * @param friendId
+     * @param platforms
+     * @returns {Promise<Show[]>}
+     */
+    getShows = async (currentUserId, title, limit, status, friendId, platforms) => {
         let rows = null;
 
-        if (friendId && !await friendRepository.checkIfAlreadyFriend(req.user.id, friendId)) {
-            return res.status(400).json({ "message": "Vous n'êtes pas en relation avec cette personne" });
+        if (friendId && !await this.friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
+            throw new Error("Vous n'êtes pas en relation avec cette personne");
         }
         if (title) {
-            rows = await userShowRepository.getShowsByUserIdByTitle(req.user.id, title);
-        } else if (kind) {
-            rows = await userShowRepository.getShowsByUserIdByKind(req.user.id, kind);
+            rows = await this.userShowRepository.getShowsByUserIdByTitle(currentUserId, title);
         } else if (status) {
-            rows = await getShowsByStatus(req.user.id, status, friendId);
+            rows = await this.#getShowsByStatus(currentUserId, status, friendId);
         } else if (platforms) {
             const ids = platforms.split(",").map((p) => parseInt(p));
-            rows = await userShowRepository.getShowsByUserIdByPlatforms(req.user.id, ids);
+            rows = await this.userShowRepository.getShowsByUserIdByPlatforms(currentUserId, ids);
         } else {
-            rows = await userShowRepository.getShowsByUserId(req.user.id, limit);
+            rows = await this.userShowRepository.getShowsByUserId(currentUserId, limit);
         }
-        res.status(200).json(rows.map((row) => new Show(row)));
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        return rows.map((row) => new Show(row));
     }
-}
 
-const addSeasonByShowId = async (req, res) => {
-    try {
-        const { season, serie } = req.body;
-
+    /**
+     * @param {string} currentUserId
+     * @param {any} serie
+     * @param {any} season
+     * @returns {Promise<void>}
+     */
+    addSeasonByShowId = async (currentUserId, serie, season) => {
         if (!serie || !serie.id || !season || !season.number || !season.episodes) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        const rows = await seasonRepository.getSeasonByShowIdByNumber(serie.id, season.number);
+        const rows = await this.seasonRepository.getSeasonByShowIdByNumber(serie.id, season.number);
 
         if (rows.length === 0) {
-            await seasonRepository.createSeason(season.episodes, season.number, season.image ?? serie.poster, serie.id);
+            await this.seasonRepository.createSeason(season.episodes, season.number, season.image ?? serie.poster, serie.id);
         }
-        await userSeasonRepository.create(req.user.id, serie.id, season.number);
-        res.status(201).json({ "message": "ok" });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        await this.userSeasonRepository.create(currentUserId, serie.id, season.number);
     }
-}
 
-const getSeasonInfosByShowIdBySeason = async (req, res) => {
-    try {
-        const { id, num } = req.params;
-
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @param {number?} num
+     * @returns {Promise<UserSeason[]>}
+     */
+    getSeasonInfosByShowIdBySeason = async (currentUserId, id, num) => {
         if (!id || !num) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         }
-        const rows = await userSeasonRepository.getInfosByUserIdByShowId(req.user.id, id, num);
-        // const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(req.user.id, id, num);
-        const seasons = rows.map(row => new UserSeason(row));
-        res.status(200).json(seasons);
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        const rows = await this.userSeasonRepository.getInfosByUserIdByShowId(currentUserId, id, num);
+        // const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(currentUserId, id, num);
+        return rows.map(row => new UserSeason(row));
     }
-}
 
-const updateByShowId = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { favorite, watch } = req.body;
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @param {boolean?} favorite
+     * @param {boolean?} watch
+     * @returns {Promise<boolean|null>}
+     */
+    updateByShowId = async (currentUserId, id, favorite, watch) => {
         let result = null;
 
         if (!id || (!favorite && !watch)) {
-            return res.status(400).json({ "message": "Requête invalide" });
+            throw new Error("Requête invalide");
         } else if (favorite) {
-            result = await userShowRepository.updateFavoriteByUserIdByShowId(req.user.id, id);
+            result = await this.userShowRepository.updateFavoriteByUserIdByShowId(currentUserId, id);
         } else if (watch) {
-            result = await userShowRepository.updateWatchingByUserIdByShowId(req.user.id, id);
+            result = await this.userShowRepository.updateWatchingByUserIdByShowId(currentUserId, id);
         }
-        res.status(200).json({ "value": result });
-    } catch (e) {
-        res.status(500).json({ "message": e.message });
+        return result;
     }
 }
-
-export default {
-    addSeasonByShowId,
-    addShow,
-    deleteByShowId,
-    getSeasonInfosByShowIdBySeason,
-    getShow,
-    getShows,
-    updateByShowId
-};
