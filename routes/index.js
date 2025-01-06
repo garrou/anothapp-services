@@ -11,7 +11,7 @@ import friendRoutes from "./friendRoutes.js";
 
 const router = new Router();
 
-router.use("/auth", authRoutes);
+router.use("/auth", checkJwt, authRoutes);
 router.use("/users", checkJwt, userRoutes);
 router.use("/search", checkJwt, cache(3600), searchRoutes);
 router.use("/shows", checkJwt, showRoutes);

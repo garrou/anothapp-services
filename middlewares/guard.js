@@ -1,6 +1,8 @@
 import { verifyJwt } from "../helpers/security.js";
 
 const WHITELIST = [
+    "/auth/login",
+    "/auth/register",
     "/search/images",
 ];
 
@@ -16,7 +18,7 @@ export const checkJwt = (req, res, next) => {
     }
     const [type, token] = authHeader.split(" ");
 
-    if (type !== "Bearer" || token === null) {
+    if (type !== "Bearer" || !token) {
         return res.status(401).json({ "message": "Utilisateur non connecté" });
     } 
 
