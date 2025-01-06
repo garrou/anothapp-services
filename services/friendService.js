@@ -1,5 +1,6 @@
 import UserProfile from '../models/userProfile.js';
 import FriendRepository from "../repositories/friendRepository.js";
+import ServiceError from "../models/serviceError.js";
 
 export default class FriendService {
 
@@ -14,12 +15,12 @@ export default class FriendService {
      */
     sendFriendRequest = async (currentUserId, userId) => {
         if (!userId) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const exists = await this.friendRepository.checkIfRelationExists(currentUserId, userId);
 
         if (exists) {
-            throw new Error("Vous êtes déjà en relation avec cet utilisateur");
+            throw new ServiceError(409, "Vous êtes déjà en relation avec cet utilisateur");
         }
         await this.friendRepository.sendFriendRequest(currentUserId, userId);
     }
@@ -31,7 +32,7 @@ export default class FriendService {
      */
     acceptFriend = async (currentUserId, userId) => {
         if (!userId) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         await this.friendRepository.acceptFriend(userId, currentUserId);
     }
@@ -43,7 +44,7 @@ export default class FriendService {
      */
     deleteFriend = async (currentUserId, userId) => {
         if (!userId) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         await this.friendRepository.deleteFriend(currentUserId, userId);
     }

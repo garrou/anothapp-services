@@ -1,15 +1,12 @@
-import { comparePassword, createHash, uuid, signJwt } from "../helpers/security.js";
+import { comparePassword, createHash } from "../helpers/security.js";
 import UserProfile from "../models/userProfile.js";
 import {
-    isValidEmail,
-    isValidUsername,
-    isValidPassword,
     isValidImage,
-    isValidId,
     isValidChangePassword,
     isValidChangeEmail
 } from "../helpers/validator.js";
 import UserRepository from "../repositories/userRepository.js";
+import ServiceError from "../models/serviceError.js";
 
 export default class UserService {
     constructor() {
@@ -23,7 +20,7 @@ export default class UserService {
      */
     getUser = async (currentUserId, username) => {
         if (!username) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         return (await this.userRepository.getUserByUsername(username)).reduce((acc, curr) => {
             const user = new UserProfile(curr);
@@ -33,70 +30,6 @@ export default class UserService {
             }
             return acc;
         }, []);
-    }
-
-    /**
-     * @param {string?} identifier
-     * @param {string?} password
-     * @returns {Promise<{token: string, id: string, email: string, picture: string, username: string, current: boolean}>}
-     */
-    login = async (identifier, password) => {
-        if (!isValidId(identifier)) {
-            throw new Error("Identifiant incorrect");
-        }
-        const rows = await this.userRepository.getUserByIdentifier(identifier);
-
-        if (rows.length === 0) {
-            throw new Error("Identifiant ou mot de passe incorrect");
-        }
-        const same = await comparePassword(password, rows[0]["password"]);
-
-        if (!same) {
-            throw new Error("Identifiant ou mot de passe incorrect");
-        }
-        const token = signJwt(rows[0]["id"], process.env.JWT_SECRET);
-        const user = new UserProfile(rows[0], true);
-        return {
-            "token": token,
-            ...user,
-        }
-    }
-
-    /**
-     * @param {string?} email
-     * @param {string?} username
-     * @param {string?} password
-     * @param {string?} confirm
-     * @returns {Promise<void>}
-     */
-    register = async (email, username, password, confirm) => {
-        const nameValid = isValidUsername(username);
-
-        if (!nameValid.status) {
-            throw new Error(nameValid.message);
-        }
-        const emailValid = isValidEmail(email);
-
-        if (!emailValid.status) {
-           throw new Error(emailValid.message);
-        }
-        const passValid = isValidPassword(password, confirm);
-
-        if (!passValid.status) {
-            throw new Error(passValid.message);
-        }
-        let rows = await this.userRepository.getUserByEmail(email);
-
-        if (rows.length > 0) {
-            throw new Error("Un compte est déjà associé à cet email");
-        }
-        rows = await this.userRepository.getUserByUsername(username, true);
-
-        if (rows.length > 0) {
-            throw new Error("Un compte est déjà associé à ce nom d'utilisateur");
-        }
-        const hash = await createHash(password);
-        await this.userRepository.createUser(uuid(), email, hash, username);
     }
 
     /**
@@ -110,7 +43,7 @@ export default class UserService {
         if (rows.length === 1) {
             return new UserProfile(rows[0], isCurrentUser);
         }
-        throw new Error("Profil introuvable");
+        throw new ServiceError(404, "Profil introuvable");
     }
 
     /**
@@ -134,7 +67,7 @@ export default class UserService {
             await this.#changeImage(currentUserId, image);
             return "Image de profil définie";
         }
-        throw new Error("Requête invalide");
+        throw new ServiceError(400, "Requête invalide");
     }
 
     /**
@@ -144,7 +77,7 @@ export default class UserService {
      */
     #changeImage = async (currentUserId, image) => {
         if (!isValidImage(image)) {
-            throw new Error("Image invalide");
+            throw new ServiceError(400, "Image invalide");
         }
         await this.userRepository.updatePicture(currentUserId, image);
     }
@@ -165,12 +98,12 @@ export default class UserService {
         const rows = await this.userRepository.getUserById(userId);
 
         if (rows.length === 0) {
-            throw new Error("Utilisateur inconnu");
+            throw new ServiceError(404, "Utilisateur inconnu");
         }
         const same = await comparePassword(currentPass, rows[0]["password"]);
 
         if (!same) {
-            throw new Error("Mot de passe incorrect");
+            throw new ServiceError(400, "Mot de passe incorrect");
         }
         const hash = await createHash(newPass);
         await this.userRepository.updatePassword(userId, hash);
@@ -186,23 +119,23 @@ export default class UserService {
         const changeValid = isValidChangeEmail(email, newEmail);
 
         if (!changeValid.status) {
-            throw new Error(changeValid.message);
+            throw new ServiceError(400, changeValid.message);
         }
         let rows = await this.userRepository.getUserById(currentUserId);
 
         if (rows.length === 0) {
-            throw new Error("Utilisateur inconnu");
+            throw new ServiceError(404, "Utilisateur inconnu");
         }
         if (rows[0]["email"] !== email) {
-            throw new Error("Email incorrect");
+            throw new ServiceError(400, "Email incorrect");
         }
         if (email === newEmail) {
-            throw new Error("Le nouvel mail doit être différent de l'ancien");
+            throw new ServiceError(400, "Le nouvel mail doit être différent de l'ancien");
         }
         rows = await this.userRepository.getUserByEmail(newEmail);
 
         if (rows.length > 0) {
-            throw new Error("Cet email est déjà associé à un compte");
+            throw new ServiceError(409, "Cet email est déjà associé à un compte");
         }
         await this.userRepository.updateEmail(currentUserId, newEmail);
     }

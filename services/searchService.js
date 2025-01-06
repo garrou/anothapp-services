@@ -10,6 +10,7 @@ import Platform from '../models/platform.js';
 import {buildUrlWithParams, fetchPromises, Param, buildLimit} from '../helpers/fetch.js';
 import PlatformRepository from "../repositories/platformRepository.js";
 import ApiShowKind from "../models/apiShowKind.js";
+import ServiceError from "../models/serviceError.js";
 
 const baseUrl = "https://api.betaseries.com";
 const headers = {"X-BetaSeries-Key": process.env.BETASERIES_KEY}
@@ -49,7 +50,7 @@ export default class SearchService {
      */
     getByShowId = async (showId) => {
         if (!showId) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const resp = await axios.get(`${baseUrl}/shows/display?id=${showId}`, {
             headers
@@ -64,7 +65,7 @@ export default class SearchService {
      */
     getSeasonsByShowId = async (showId) => {
         if (!showId) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const resp = await axios.get(`${baseUrl}/shows/seasons?id=${showId}`, {
             headers
@@ -81,7 +82,7 @@ export default class SearchService {
      */
     getEpisodesByShowIdBySeason = async (showId, num) => {
         if (!showId || !num) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const resp = await axios.get(`${baseUrl}/shows/episodes?id=${showId}&season=${num}`, {
             headers
@@ -96,7 +97,7 @@ export default class SearchService {
      */
     getCharactersByShowId = async (showId) => {
         if (!showId) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const resp = await axios.get(`${baseUrl}/shows/characters?id=${showId}`, {
             headers
@@ -110,9 +111,8 @@ export default class SearchService {
      * @returns {Promise<ApiEntity[]>}
      */
     getSimilarsByShowId = async (showId) => {
-
         if (!showId) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const resp = await axios.get(`${baseUrl}/shows/similars?id=${showId}`, {
             headers
@@ -139,9 +139,8 @@ export default class SearchService {
      * @returns {Promise<string[]>}
      */
     getImagesByShowId = async (showId) => {
-
         if (!showId) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const resp = await axios.get(`${baseUrl}/shows/pictures?id=${showId}`, {
             headers
@@ -156,7 +155,7 @@ export default class SearchService {
      */
     getPersonById = async (personId) => {
         if (!personId) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const resp = await axios.get(`${baseUrl}/persons/person?id=${personId}`, {
             headers

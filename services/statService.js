@@ -1,5 +1,6 @@
 import UserShowRepository from "../repositories/userShowRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
+import ServiceError from "../models/serviceError.js";
 
 export default class StatService {
     constructor() {
@@ -36,7 +37,7 @@ export default class StatService {
             case "seasons":
                 return this.userSeasonRepository.getTotalSeasonsByUserId(currentUserId);
             default:
-                throw new Error("Requête invalide");
+                throw new ServiceError(400, "Requête invalide");
         }
     }
 
@@ -58,7 +59,7 @@ export default class StatService {
             case "rank":
                 return this.userSeasonRepository.getRankingViewingTimeByShows(currentUserId);
             default:
-                throw new Error("Requête invalide");
+                throw new ServiceError(400, "Requête invalide");
         }
     }
 
@@ -83,7 +84,7 @@ export default class StatService {
             case "platforms":
                 return this.userSeasonRepository.getPlatformsByUserId(userId);
             default:
-                throw new Error("Requête invalide");
+                throw new ServiceError(400, "Requête invalide");
         }
     }
 
@@ -122,7 +123,7 @@ export default class StatService {
             case "months":
                 return this.userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId);
             default:
-                throw new Error("Requête invalide");
+                throw new ServiceError(400, "Requête invalide");
         }
     }
 
@@ -138,7 +139,7 @@ export default class StatService {
             case "year":
                 return this.userSeasonRepository.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId);
             default:
-                throw new Error("Requête invalide");
+                throw new ServiceError(400, "Requête invalide");
         }
     }
 }

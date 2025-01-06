@@ -9,6 +9,7 @@ import SearchService from "./searchService.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import SeasonRepository from "../repositories/seasonRepository.js";
+import ServiceError from "../models/serviceError.js";
 
 export default class ShowService {
 
@@ -39,11 +40,11 @@ export default class ShowService {
                 return this.userShowRepository.getFavoritesByUserId(friendId ?? userId);
             case "shared":
                 if (!friendId) {
-                    throw new Error("Requête invalide");
+                    throw new ServiceError(400, "Requête invalide");
                 }
                 return this.userShowRepository.getSharedShowsWithFriend(userId, friendId);
             default:
-                throw new Error("Requête invalide");
+                throw new ServiceError(400, "Requête invalide");
         }
     }
 
@@ -54,14 +55,13 @@ export default class ShowService {
      * @returns {Promise<void>}
      */
     addShow = async (currentUserId, id, addInList = false) => {
-
         if (!id) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const exists = await this.userShowRepository.checkShowExistsByUserIdByShowId(currentUserId, id, addInList);
 
         if (exists) {
-            throw new Error(`Cette série est déjà dans votre ${addInList ? "liste" : "collection"}`);
+            throw new ServiceError(409, `Cette série est déjà dans votre ${addInList ? "liste" : "collection"}`);
         }
         const isNewShow = await this.showRepository.isNewShow(id);
 
@@ -69,7 +69,7 @@ export default class ShowService {
             const show = await this.searchService.getByShowId(id);
 
             if (!idValidShow(show)) {
-                throw new Error("Série invalide");
+                throw new ServiceError(400, "Série invalide");
             }
             const {id, title, poster, kinds, duration, seasons, country} = show;
             await this.showRepository.createShow(id, title, poster, kinds.join(";"), duration, seasons, country);
@@ -87,7 +87,7 @@ export default class ShowService {
         const deleteInList = (/true/i).test(inList);
 
         if (!id) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         await this.userShowRepository.deleteByUserIdShowId(currentUserId, id, deleteInList);
     }
@@ -99,7 +99,7 @@ export default class ShowService {
      */
     getShowById = async (currentUserId, id) => {
         if (!id) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         // const show = await this.userShowRepository.getShowByUserIdByShowId(currentUserId, id);
 
@@ -131,7 +131,7 @@ export default class ShowService {
         let rows = null;
 
         if (friendId && !await this.friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
-            throw new Error("Vous n'êtes pas en relation avec cette personne");
+            throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
         }
         if (title) {
             rows = await this.userShowRepository.getShowsByUserIdByTitle(currentUserId, title);
@@ -154,7 +154,7 @@ export default class ShowService {
      */
     addSeasonByShowId = async (currentUserId, serie, season) => {
         if (!serie || !serie.id || !season || !season.number || !season.episodes) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const rows = await this.seasonRepository.getSeasonByShowIdByNumber(serie.id, season.number);
 
@@ -172,7 +172,7 @@ export default class ShowService {
      */
     getSeasonInfosByShowIdBySeason = async (currentUserId, id, num) => {
         if (!id || !num) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         const rows = await this.userSeasonRepository.getInfosByUserIdByShowId(currentUserId, id, num);
         // const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(currentUserId, id, num);
@@ -190,7 +190,7 @@ export default class ShowService {
         let result = null;
 
         if (!id || (!favorite && !watch)) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         } else if (favorite) {
             result = await this.userShowRepository.updateFavoriteByUserIdByShowId(currentUserId, id);
         } else if (watch) {

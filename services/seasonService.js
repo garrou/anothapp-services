@@ -2,6 +2,7 @@ import SeasonRepository from "../repositories/seasonRepository.js";
 import Season from "../models/season.js";
 import SeasonTimeline from "../models/seasonTimeline.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
+import ServiceError from "../models/serviceError.js";
 
 export default class SeasonService {
 
@@ -17,7 +18,7 @@ export default class SeasonService {
      */
     deleteBySeasonId = async (currentUserId, seasonId) => {
         if (!seasonId) {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         await this.seasonRepository.deleteSeasonById(currentUserId, seasonId);
     }
@@ -39,7 +40,7 @@ export default class SeasonService {
             response = (await this.userSeasonRepository.getSeasonsByAddedYear(currentUserId, year))
                 .map(obj => new Season(obj));
         } else {
-            throw new Error("Requête invalide");
+            throw new ServiceError(400, "Requête invalide");
         }
         return response;
     }
@@ -52,7 +53,7 @@ export default class SeasonService {
      */
     updateBySeasonId = async (currentUserId, seasonId, platformId) => {
         if (!seasonId) {
-            throw new Error("Requête invalide")
+            throw new ServiceError(400, "Requête invalide")
         }
         await this.seasonRepository.updateSeason(currentUserId, seasonId, platformId);
     }

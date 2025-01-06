@@ -1,8 +1,6 @@
 import { verifyJwt } from "../helpers/security.js";
 
 const WHITELIST = [
-    "/users/login", 
-    "/users/register", 
     "/search/images",
 ];
 
