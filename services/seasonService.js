@@ -7,8 +7,8 @@ import ServiceError from "../models/serviceError.js";
 export default class SeasonService {
 
     constructor() {
-        this.seasonRepository = new SeasonRepository();
-        this.userSeasonRepository = new UserSeasonRepository();
+        this._seasonRepository = new SeasonRepository();
+        this._userSeasonRepository = new UserSeasonRepository();
     }
 
     /**
@@ -20,7 +20,7 @@ export default class SeasonService {
         if (!seasonId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        await this.seasonRepository.deleteSeasonById(currentUserId, seasonId);
+        await this._seasonRepository.deleteSeasonById(currentUserId, seasonId);
     }
 
     /**
@@ -34,10 +34,10 @@ export default class SeasonService {
         let response = null;
 
         if (MONTHS.includes(month)) {
-            response = (await this.userSeasonRepository.getViewedByMonthAgo(currentUserId, month))
+            response = (await this._userSeasonRepository.getViewedByMonthAgo(currentUserId, month))
                 .map(row => new SeasonTimeline(row));
         } else if (year) {
-            response = (await this.userSeasonRepository.getSeasonsByAddedYear(currentUserId, year))
+            response = (await this._userSeasonRepository.getSeasonsByAddedYear(currentUserId, year))
                 .map(obj => new Season(obj));
         } else {
             throw new ServiceError(400, "Requête invalide");
@@ -55,6 +55,6 @@ export default class SeasonService {
         if (!seasonId) {
             throw new ServiceError(400, "Requête invalide")
         }
-        await this.seasonRepository.updateSeason(currentUserId, seasonId, platformId);
+        await this._seasonRepository.updateSeason(currentUserId, seasonId, platformId);
     }
 }

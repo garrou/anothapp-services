@@ -10,7 +10,7 @@ import ServiceError from "../models/serviceError.js";
 
 export default class UserService {
     constructor() {
-        this.userRepository = new UserRepository();
+        this._userRepository = new UserRepository();
     }
 
     /**
@@ -22,7 +22,7 @@ export default class UserService {
         if (!username) {
             throw new ServiceError(400, "Requête invalide");
         }
-        return (await this.userRepository.getUserByUsername(username)).reduce((acc, curr) => {
+        return (await this._userRepository.getUserByUsername(username)).reduce((acc, curr) => {
             const user = new UserProfile(curr);
 
             if (user.id !== currentUserId) {
@@ -38,7 +38,7 @@ export default class UserService {
      * @returns {Promise<UserProfile>}
      */
     getProfile = async (userId, isCurrentUser) => {
-        const rows = await this.userRepository.getUserById(userId);
+        const rows = await this._userRepository.getUserById(userId);
 
         if (rows.length === 1) {
             return new UserProfile(rows[0], isCurrentUser);
@@ -79,7 +79,7 @@ export default class UserService {
         if (!isValidImage(image)) {
             throw new ServiceError(400, "Image invalide");
         }
-        await this.userRepository.updatePicture(currentUserId, image);
+        await this._userRepository.updatePicture(currentUserId, image);
     }
 
     /**
@@ -95,7 +95,7 @@ export default class UserService {
         if (!changeValid.status) {
             throw new Error(changeValid.message);
         }
-        const rows = await this.userRepository.getUserById(userId);
+        const rows = await this._userRepository.getUserById(userId);
 
         if (rows.length === 0) {
             throw new ServiceError(404, "Utilisateur inconnu");
@@ -106,7 +106,7 @@ export default class UserService {
             throw new ServiceError(400, "Mot de passe incorrect");
         }
         const hash = await createHash(newPass);
-        await this.userRepository.updatePassword(userId, hash);
+        await this._userRepository.updatePassword(userId, hash);
     }
 
     /**
@@ -121,7 +121,7 @@ export default class UserService {
         if (!changeValid.status) {
             throw new ServiceError(400, changeValid.message);
         }
-        let rows = await this.userRepository.getUserById(currentUserId);
+        let rows = await this._userRepository.getUserById(currentUserId);
 
         if (rows.length === 0) {
             throw new ServiceError(404, "Utilisateur inconnu");
@@ -132,11 +132,11 @@ export default class UserService {
         if (email === newEmail) {
             throw new ServiceError(400, "Le nouvel mail doit être différent de l'ancien");
         }
-        rows = await this.userRepository.getUserByEmail(newEmail);
+        rows = await this._userRepository.getUserByEmail(newEmail);
 
         if (rows.length > 0) {
             throw new ServiceError(409, "Cet email est déjà associé à un compte");
         }
-        await this.userRepository.updateEmail(currentUserId, newEmail);
+        await this._userRepository.updateEmail(currentUserId, newEmail);
     }
 }

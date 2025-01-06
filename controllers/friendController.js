@@ -2,13 +2,13 @@ import FriendService from "../services/friendService.js";
 
 export default class FriendController {
     constructor() {
-        this.friendService = new FriendService();
+        this._friendService = new FriendService();
     }
 
     getFriends = async (req, res, next) => {
         try {
             const { status, serieId } = req.query;
-            const users = await this.friendService.getFriends(req.userId, status, serieId);
+            const users = await this._friendService.getFriends(req.userId, status, serieId);
             res.status(200).json(status ? { [status]: users } : users);
         } catch (e) {
             next(e);
@@ -18,7 +18,7 @@ export default class FriendController {
     sendFriendRequest = async (req, res, next) => {
         try {
             const { userId } = req.body;
-            await this.friendService.sendFriendRequest(req.userId, userId);
+            await this._friendService.sendFriendRequest(req.userId, userId);
             res.sendStatus(200);
         } catch (e) {
             next(e);
@@ -28,7 +28,7 @@ export default class FriendController {
     acceptFriend = async (req, res, next) => {
         try {
             const { userId } = req.body;
-            await this.friendService.acceptFriend(req.userId, userId);
+            await this._friendService.acceptFriend(req.userId, userId);
             res.sendStatus(200);
         } catch (e) {
             next(e);
@@ -38,7 +38,7 @@ export default class FriendController {
     deleteFriend = async (req, res, next) => {
         try {
             const { userId } = req.params;
-            await this.friendService.deleteFriend(req.userId, userId);
+            await this._friendService.deleteFriend(req.userId, userId);
             res.sendStatus(204);
         } catch (e) {
             next(e);

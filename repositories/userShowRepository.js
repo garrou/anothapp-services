@@ -5,14 +5,13 @@ export default class UserShowRepository {
     /**
      * @param {string} userId
      * @param {number} showId
-     * @param {boolean} inList
      * @returns Promise<boolean>
      */
-    checkShowExistsByUserIdByShowId = async (userId, showId, inList) => {
+    checkShowExistsByUserIdByShowId = async (userId, showId) => {
         const client = await pool.connect();
         const res = await client.query(`
             SELECT COUNT(*) AS total
-            FROM ${inList ? "users_list" : "users_shows"}
+            FROM users_shows
             WHERE user_id = $1 AND show_id = $2
         `, [userId, showId]);
         client.release();
@@ -22,12 +21,11 @@ export default class UserShowRepository {
     /**
      * @param {string} userId
      * @param {number} showId
-     * @param {boolean} inList
      */
-    create = async (userId, showId, inList) => {
+    create = async (userId, showId) => {
         const client = await pool.connect();
         await client.query(`
-            INSERT INTO ${inList ? "users_list" : "users_shows"} (user_id, show_id)
+            INSERT INTO users_shows (user_id, show_id)
             VALUES ($1, $2)
         `, [userId, showId]);
         client.release();
@@ -36,13 +34,11 @@ export default class UserShowRepository {
     /**
      * @param {string} userId
      * @param {number} showId
-     * @param {boolean} inList
      */
-    deleteByUserIdShowId = async (userId, showId, inList) => {
+    deleteByUserIdShowId = async (userId, showId) => {
         const client = await pool.connect();
         await client.query(`
-            DELETE
-            FROM ${inList ? "users_list" : "users_shows"}
+            DELETE FROM users_shows
             WHERE user_id = $1 AND show_id = $2
         `, [userId, showId]);
         client.release();
@@ -115,22 +111,6 @@ export default class UserShowRepository {
         `, [userId]);
         client.release();
         return parseInt(res["rows"][0]["total"] ?? 0);
-    }
-
-    /**
-     * @param {string} userId
-     * @returns Promise<any[]>
-     */
-    getNotStartedShowsByUserId = async (userId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
-            SELECT s.*
-            FROM shows s
-            JOIN users_list ul ON ul.show_id = s.id
-            WHERE ul.user_id = $1
-        `, [userId]);
-        client.release();
-        return res["rows"];
     }
 
     /**

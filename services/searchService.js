@@ -11,14 +11,12 @@ import {buildUrlWithParams, fetchPromises, Param, buildLimit} from '../helpers/f
 import PlatformRepository from "../repositories/platformRepository.js";
 import ApiShowKind from "../models/apiShowKind.js";
 import ServiceError from "../models/serviceError.js";
-
-const baseUrl = "https://api.betaseries.com";
-const headers = {"X-BetaSeries-Key": process.env.BETASERIES_KEY}
+import {baseUrl, headers} from "../constants/api.js";
 
 export default class SearchService {
 
     constructor() {
-        this.platformRepository = new PlatformRepository();
+        this._platformRepository = new PlatformRepository();
     }
 
     /**
@@ -168,7 +166,7 @@ export default class SearchService {
      * @returns {Promise<Platform[]>}
      */
     getPlatforms = async () => {
-        const rows = await this.platformRepository.getPlatforms();
+        const rows = await this._platformRepository.getPlatforms();
         return rows.map((row) => new Platform(row));
     }
 

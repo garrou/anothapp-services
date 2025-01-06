@@ -1,6 +1,5 @@
 import axios from "axios";
-
-const key = process.env.BETASERIES_KEY;
+import {headers} from "../constants/api.js";
 
 class Param {
     constructor(name, value) {
@@ -26,11 +25,11 @@ const buildUrl = (url, query, param) => {
  * @returns number
  */
 const buildLimit = (limit) => {
-    return limit === undefined || isNaN(limit) || limit === "" ? 20 : parseInt(limit);
+    return !limit || limit === "" || isNaN(parseInt(limit)) ? 20 : parseInt(limit);
 }
 
 /**
- * @param {number} page 
+ * @param {number} limit
  * @returns number
  */
 const buildPagination = (limit) => {
@@ -56,7 +55,7 @@ const buildUrlWithParams = (url, params) => {
 const fetchPromises = (url, queryPage, limit) => {
     const promises = [];
     for (let page = 1; page <= buildPagination(limit); page += 1) {
-        promises.push(axios.get(buildUrl(url, queryPage, page), { headers: { "X-BetaSeries-Key": key } }));
+        promises.push(axios.get(buildUrl(url, queryPage, page), { headers }));
     }
     return promises;
 }

@@ -5,7 +5,7 @@ import ServiceError from "../models/serviceError.js";
 export default class FriendService {
 
     constructor() {
-        this.friendRepository = new FriendRepository();
+        this._friendRepository = new FriendRepository();
     }
 
     /**
@@ -17,12 +17,12 @@ export default class FriendService {
         if (!userId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const exists = await this.friendRepository.checkIfRelationExists(currentUserId, userId);
+        const exists = await this._friendRepository.checkIfRelationExists(currentUserId, userId);
 
         if (exists) {
             throw new ServiceError(409, "Vous êtes déjà en relation avec cet utilisateur");
         }
-        await this.friendRepository.sendFriendRequest(currentUserId, userId);
+        await this._friendRepository.sendFriendRequest(currentUserId, userId);
     }
 
     /**
@@ -34,7 +34,7 @@ export default class FriendService {
         if (!userId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        await this.friendRepository.acceptFriend(userId, currentUserId);
+        await this._friendRepository.acceptFriend(userId, currentUserId);
     }
 
     /**
@@ -46,7 +46,7 @@ export default class FriendService {
         if (!userId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        await this.friendRepository.deleteFriend(currentUserId, userId);
+        await this._friendRepository.deleteFriend(currentUserId, userId);
     }
 
     /**
@@ -71,25 +71,25 @@ export default class FriendService {
 
         switch (status) {
             case "send":
-                rows = (await this.friendRepository.getFriendsRequestsSend(userId));
+                rows = (await this._friendRepository.getFriendsRequestsSend(userId));
                 break;
             case "receive":
-                rows = (await this.friendRepository.getFriendsRequestsReceive(userId));
+                rows = (await this._friendRepository.getFriendsRequestsReceive(userId));
                 break;
             case "friend":
-                rows = (await this.friendRepository.getFriends(userId));
+                rows = (await this._friendRepository.getFriends(userId));
                 break;
             case "viewed":
                 if (!showId) {
                     throw new Error("Requête invalide");
                 }
-                rows = await this.friendRepository.getFriendsWhoWatchSerie(userId, showId)
+                rows = await this._friendRepository.getFriendsWhoWatchSerie(userId, showId)
                 break;
             default:
                 return {
-                    "send": mapToUser(await this.friendRepository.getFriendsRequestsSend(userId)),
-                    "receive": mapToUser(await this.friendRepository.getFriendsRequestsReceive(userId)),
-                    "friend": mapToUser(await this.friendRepository.getFriends(userId))
+                    "send": mapToUser(await this._friendRepository.getFriendsRequestsSend(userId)),
+                    "receive": mapToUser(await this._friendRepository.getFriendsRequestsReceive(userId)),
+                    "friend": mapToUser(await this._friendRepository.getFriends(userId))
                 }
         }
         return rows ? mapToUser(rows) : [];

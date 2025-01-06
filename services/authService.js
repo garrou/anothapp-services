@@ -6,7 +6,7 @@ import ServiceError from "../models/serviceError.js";
 
 export default class AuthService {
     constructor() {
-        this.userRepository = new UserRepository();
+        this._userRepository = new UserRepository();
     }
 
     /**
@@ -18,7 +18,7 @@ export default class AuthService {
         if (!isValidId(identifier)) {
             throw new ServiceError(400, "Identifiant incorrect");
         }
-        const rows = await this.userRepository.getUserByIdentifier(identifier);
+        const rows = await this._userRepository.getUserByIdentifier(identifier);
 
         if (rows.length === 0) {
             throw new ServiceError(400, "Identifiant ou mot de passe incorrect");
@@ -59,17 +59,17 @@ export default class AuthService {
         if (!passValid.status) {
             throw new ServiceError(400, passValid.message);
         }
-        let rows = await this.userRepository.getUserByEmail(email);
+        let rows = await this._userRepository.getUserByEmail(email);
 
         if (rows.length > 0) {
             throw new ServiceError(409, "Un compte est déjà associé à cet email");
         }
-        rows = await this.userRepository.getUserByUsername(username, true);
+        rows = await this._userRepository.getUserByUsername(username, true);
 
         if (rows.length > 0) {
             throw new ServiceError(409, "Un compte est déjà associé à ce nom d'utilisateur");
         }
         const hash = await createHash(password);
-        await this.userRepository.createUser(uuid(), email, hash, username);
+        await this._userRepository.createUser(uuid(), email, hash, username);
     }
 }
