@@ -4,7 +4,7 @@ class Season {
      * @param {Object} obj
      * @param {string?} interval
      */
-    constructor(obj, interval = null) {
+    constructor(obj, interval = undefined) {
         this.number = obj.number;
         this.episodes = obj.episodes;
         this.image = obj.image;
@@ -12,9 +12,9 @@ class Season {
     }
 
     /**
-     * @param {number} number 
-     * @param {number} episodes 
-     * @param {string} image 
+     * @param {number} number
+     * @param {number} episodes
+     * @param {string} image
      * @return Season
      */
     static from = (number, episodes, image) => new this({

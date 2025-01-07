@@ -3,7 +3,7 @@ import ApiEntity from "./apiEntity.js";
 class ApiEpisode extends ApiEntity {
 
     /**
-     * @param {Object} episode 
+     * @param {Object} episode
      */
     constructor(episode) {
         super(episode.id, episode.title);

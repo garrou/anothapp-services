@@ -1,6 +1,6 @@
 import UserShowRepository from "../repositories/userShowRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
-import ServiceError from "../models/serviceError.js";
+import ServiceError from "../helpers/serviceError.js";
 
 export default class StatService {
     constructor() {
@@ -26,7 +26,7 @@ export default class StatService {
     /**
      * @param {string} currentUserId
      * @param {string} type
-     * @returns Promise
+     * @returns {Promise<number>}
      */
     getCountByUserIdByType = (currentUserId, type) => {
         switch (type) {
@@ -44,7 +44,7 @@ export default class StatService {
     /**
      * @param {string} currentUserId
      * @param {string} type
-     * @returns Promise
+     * @returns {Promise<any>}
      */
     getTimeByUserIdByType = (currentUserId, type) => {
         switch (type) {
@@ -72,11 +72,11 @@ export default class StatService {
     getGroupedCountByUserIdByTypeByPeriod = (userId, type, period) => {
         switch (type) {
             case "seasons":
-                return this.#getNbSeasonsByUserIdByPeriod(userId, period);
+                return this._getNbSeasonsByUserIdByPeriod(userId, period);
             case "episodes":
-                return this.#getNbEpisodesByUserIdByPeriod(userId, period);
+                return this._getNbEpisodesByUserIdByPeriod(userId, period);
             case "kinds":
-                return this.#getNbKindsByUserId(userId);
+                return this._getNbKindsByUserId(userId);
             case "best-months":
                 return this._userSeasonRepository.getRecordViewingTimeMonth(userId);
             case "countries":
@@ -92,7 +92,7 @@ export default class StatService {
      * @param {string} userId
      * @return Promise<{label: string, value: number}[]>
      */
-    #getNbKindsByUserId = async (userId) => {
+    _getNbKindsByUserId = async (userId) => {
         const kindsMap = new Map();
         const rows = await this._userShowRepository.getKindsByUserId(userId);
 
@@ -114,7 +114,7 @@ export default class StatService {
      * @param {string} period
      * @return Promise
      */
-    #getNbSeasonsByUserIdByPeriod = (userId, period) => {
+    _getNbSeasonsByUserIdByPeriod = (userId, period) => {
         switch (period) {
             case "years":
                 return this._userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId);
@@ -132,7 +132,7 @@ export default class StatService {
      * @param {string} period
      * @return Promise
      */
-    #getNbEpisodesByUserIdByPeriod = (userId, period) => {
+    _getNbEpisodesByUserIdByPeriod = (userId, period) => {
         switch (period) {
             case "years":
                 return this._userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId);

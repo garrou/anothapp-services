@@ -1,7 +1,7 @@
 class ApiPerson {
 
     /**
-     * @param {Object} person 
+     * @param {Object} person
      */
     constructor(person) {
         this.id = person.id;
@@ -30,10 +30,10 @@ class ApiIntertainment {
 class ApiPersonShow extends ApiIntertainment {
 
     /**
-     * @param {Object} obj 
+     * @param {Object} obj
      */
     constructor(obj) {
-        const { show } = obj;
+        const {show} = obj;
         super(show);
         this.seasons = show.seasons;
         this.episodes = show.episodes;
@@ -43,10 +43,10 @@ class ApiPersonShow extends ApiIntertainment {
 class ApiPersonMovie extends ApiIntertainment {
 
     /**
-     * @param {Object} obj 
+     * @param {Object} obj
      */
     constructor(obj) {
-        const { movie } = obj;
+        const {movie} = obj;
         super(movie);
     }
 }

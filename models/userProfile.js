@@ -1,7 +1,7 @@
 class UserProfile {
 
     /**
-     * @param {Object} user 
+     * @param {Object} user
      * @param {boolean} current
      */
     constructor(user, current = false) {

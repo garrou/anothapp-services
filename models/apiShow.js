@@ -13,7 +13,7 @@ class ApiShowPreview extends ApiEntity {
 class ApiShow extends ApiEntity {
 
     /**
-     * @param {Object} show 
+     * @param {Object} show
      */
     constructor(show) {
         super(show.id, show.title);
@@ -33,7 +33,7 @@ class ApiShow extends ApiEntity {
 }
 
 /**
- * @param {object} platforms 
+ * @param {object} platforms
  * @return object[]
  */
 const getPlatforms = (platforms) => platforms ? platforms.map((p) => (
@@ -44,8 +44,8 @@ const getPlatforms = (platforms) => platforms ? platforms.map((p) => (
 )) : [];
 
 /**
- * @param {Object?} note 
- * @returns number|null
+ * @param {Object?} note
+ * @returns {number|null}
  */
 const getNote = (note) => {
     if (Object.keys(note ?? {}).length === 0) return null;
@@ -54,7 +54,7 @@ const getNote = (note) => {
 }
 
 /**
- * @param {Object?} image 
+ * @param {Object?} image
  * @returns string|null
  */
 const getImageUrl = (image) => {
@@ -66,4 +66,4 @@ const getImageUrl = (image) => {
     return null;
 }
 
-export { ApiShow, ApiShowPreview };
+export {ApiShow, ApiShowPreview};

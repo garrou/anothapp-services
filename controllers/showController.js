@@ -7,7 +7,7 @@ export default class ShowController {
 
     addShow = async (req, res, next) => {
         try {
-            const { id, list } = req.body;
+            const {id, list} = req.body;
             await this._showService.addShow(req.userId, id, list);
             res.sendStatus(201);
         } catch (e) {
@@ -17,8 +17,8 @@ export default class ShowController {
 
     deleteByShowId = async (req, res, next) => {
         try {
-            const { id } = req.params;
-            const { list } = req.query;
+            const {id} = req.params;
+            const {list} = req.query;
             await this._showService.deleteByShowId(req.userId, id, list);
             res.sendStatus(204);
         } catch (e) {
@@ -28,7 +28,7 @@ export default class ShowController {
 
     getShow = async (req, res, next) => {
         try {
-            const { id } = req.params;
+            const {id} = req.params;
             const response = await this._showService.getShowById(req.userId, id);
             res.status(200).send(response);
         } catch (e) {
@@ -38,7 +38,7 @@ export default class ShowController {
 
     getShows = async (req, res, next) => {
         try {
-            const { title, limit, status, friendId, platforms } = req.query;
+            const {title, limit, status, friendId, platforms} = req.query;
             const shows = await this._showService.getShows(req.userId, title, limit, status, friendId, platforms);
             res.status(200).json(shows);
         } catch (e) {
@@ -48,7 +48,7 @@ export default class ShowController {
 
     addSeasonByShowId = async (req, res, next) => {
         try {
-            const { season, serie } = req.body;
+            const {season, serie} = req.body;
             await this._showService.addSeasonByShowId(req.userId, serie, season);
             res.sendStatus(201);
         } catch (e) {
@@ -58,7 +58,7 @@ export default class ShowController {
 
     getSeasonInfosByShowIdBySeason = async (req, res, next) => {
         try {
-            const { id, num } = req.params;
+            const {id, num} = req.params;
             const infos = await this._showService.getSeasonInfosByShowIdBySeason(req.userId, id, num);
             res.status(200).json(infos);
         } catch (e) {
@@ -68,10 +68,10 @@ export default class ShowController {
 
     updateByShowId = async (req, res, next) => {
         try {
-            const { id } = req.params;
-            const { favorite, watch } = req.body;
+            const {id} = req.params;
+            const {favorite, watch} = req.body;
             const result = await this._showService.updateByShowId(req.userId, id, favorite, watch);
-            res.status(200).json({ "value": result });
+            res.status(200).json({"value": result});
         } catch (e) {
             next(e);
         }

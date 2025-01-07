@@ -7,16 +7,17 @@ import ApiEntity from '../models/apiEntity.js';
 import ApiPerson from '../models/apiPerson.js';
 import {cumulate} from '../helpers/utils.js';
 import Platform from '../models/platform.js';
-import {buildUrlWithParams, fetchPromises, Param, buildLimit} from '../helpers/fetch.js';
+import {Param, FetchHelper} from '../helpers/fetch.js';
 import PlatformRepository from "../repositories/platformRepository.js";
 import ApiShowKind from "../models/apiShowKind.js";
-import ServiceError from "../models/serviceError.js";
-import {baseUrl, headers} from "../constants/api.js";
+import ServiceError from "../helpers/serviceError.js";
 
 export default class SearchService {
 
     constructor() {
         this._platformRepository = new PlatformRepository();
+        this._baseUrl = "https://api.betaseries.com";
+        this._headers = {"X-BetaSeries-Key": process.env.BETASERIES_KEY}
     }
 
     /**
@@ -28,8 +29,8 @@ export default class SearchService {
      */
     async getShows(title, year, kind, platform) {
         return title || year || kind || platform
-            ? this.#getShowsByFilters(title, year, kind, platform)
-            : this.#getShowsToDiscover(buildLimit());
+            ? this._getShowsByFilters(title, year, kind, platform)
+            : this._getShowsToDiscover(FetchHelper.buildLimit());
     }
 
     /**
@@ -37,8 +38,8 @@ export default class SearchService {
      * @returns {Promise<string[]>}
      */
     getImages = async (limit) => {
-        const numLimit = buildLimit(limit);
-        const shows = await this.#getShowsToDiscover(numLimit);
+        const numLimit = FetchHelper.buildLimit(limit);
+        const shows = await this._getShowsToDiscover(numLimit);
         return shows.map((s) => s.poster);
     }
 
@@ -50,8 +51,8 @@ export default class SearchService {
         if (!showId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${baseUrl}/shows/display?id=${showId}`, {
-            headers
+        const resp = await axios.get(`${this._baseUrl}/shows/display?id=${showId}`, {
+            headers: this._headers
         });
         const {show} = await resp.data;
         return new ApiShow(show);
@@ -65,11 +66,11 @@ export default class SearchService {
         if (!showId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${baseUrl}/shows/seasons?id=${showId}`, {
-            headers
+        const resp = await axios.get(`${this._baseUrl}/shows/seasons?id=${showId}`, {
+            headers: this._headers
         });
         const {seasons} = await resp.data;
-        const episodes = cumulate(seasons);
+        const episodes = cumulate(seasons, "episodes");
         return seasons.map((s, i) => new Season(s, `${episodes[i] + 1} - ${episodes[i + 1]}`));
     }
 
@@ -82,8 +83,8 @@ export default class SearchService {
         if (!showId || !num) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${baseUrl}/shows/episodes?id=${showId}&season=${num}`, {
-            headers
+        const resp = await axios.get(`${this._baseUrl}/shows/episodes?id=${showId}&season=${num}`, {
+            headers: this._headers
         });
         const {episodes} = await resp.data;
         return episodes.map(episode => new ApiEpisode(episode));
@@ -97,8 +98,8 @@ export default class SearchService {
         if (!showId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${baseUrl}/shows/characters?id=${showId}`, {
-            headers
+        const resp = await axios.get(`${this._baseUrl}/shows/characters?id=${showId}`, {
+            headers: this._headers
         });
         const {characters} = await resp.data;
         return characters.map(character => new ApiCharacter(character));
@@ -112,8 +113,8 @@ export default class SearchService {
         if (!showId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${baseUrl}/shows/similars?id=${showId}`, {
-            headers
+        const resp = await axios.get(`${this._baseUrl}/shows/similars?id=${showId}`, {
+            headers: this._headers
         });
         const {similars} = await resp.data;
         return similars.map((s) => new ApiEntity(s["show_id"], s["show_title"]));
@@ -123,8 +124,8 @@ export default class SearchService {
      * @returns {Promise<ApiShow[]>}
      */
     getKinds = async () => {
-        const resp = await axios.get(`${baseUrl}/shows/genres`, {
-            headers
+        const resp = await axios.get(`${this._baseUrl}/shows/genres`, {
+            headers: this._headers
         });
         const {genres} = await resp.data;
         return Object.entries(genres)
@@ -140,8 +141,8 @@ export default class SearchService {
         if (!showId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${baseUrl}/shows/pictures?id=${showId}`, {
-            headers
+        const resp = await axios.get(`${this._baseUrl}/shows/pictures?id=${showId}`, {
+            headers: this._headers
         });
         const {pictures} = await resp.data;
         return pictures.map(p => p.url);
@@ -155,8 +156,8 @@ export default class SearchService {
         if (!personId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${baseUrl}/persons/person?id=${personId}`, {
-            headers
+        const resp = await axios.get(`${this._baseUrl}/persons/person?id=${personId}`, {
+            headers: this._headers
         });
         const {person} = await resp.data;
         return new ApiPerson(person);
@@ -172,14 +173,14 @@ export default class SearchService {
 
     /**
      * @param {number} limit
-     * @returns Promise<ApiShow[]>
+     * @returns {Promise<ApiShow[]>}
      */
-    #getShowsToDiscover = async (limit) => {
+    _getShowsToDiscover = async (limit) => {
         const allShows = [];
-        const url = buildUrlWithParams(`${baseUrl}/shows/discover`, [
+        const url = FetchHelper.buildUrlWithParams(`${this._baseUrl}/shows/discover`, [
             new Param("limit", limit)
         ]);
-        const results = await Promise.all(fetchPromises(url, "offset", limit));
+        const results = await Promise.all(FetchHelper.fetchPromises(url, this._headers,"offset", limit));
 
         for (const result of results) {
             const {shows} = result.data;
@@ -193,18 +194,18 @@ export default class SearchService {
      * @param {string?} years
      * @param {string?} kinds
      * @param {string?} platforms
-     * @returns Promise<ApiShowPreview[]>
+     * @returns {Promise<ApiShowPreview[]>}
      */
-    #getShowsByFilters = async (title, years, kinds, platforms) => {
+    _getShowsByFilters = async (title, years, kinds, platforms) => {
         const allShows = [];
-        const numLimit = buildLimit();
-        const url = buildUrlWithParams(`${baseUrl}/search/shows`, [
+        const numLimit = FetchHelper.buildLimit();
+        const url = FetchHelper.buildUrlWithParams(`${this._baseUrl}/search/shows`, [
             new Param("text", title),
             new Param("genres", kinds),
             new Param("svods", platforms),
             new Param("creations", years),
         ]);
-        const results = await Promise.all(fetchPromises(url, "offset", numLimit));
+        const results = await Promise.all(FetchHelper.fetchPromises(url, this._headers,"offset", numLimit));
 
         for (const result of results) {
             const {shows} = result.data;

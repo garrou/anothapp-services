@@ -2,7 +2,7 @@ import SeasonRepository from "../repositories/seasonRepository.js";
 import Season from "../models/season.js";
 import SeasonTimeline from "../models/seasonTimeline.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
-import ServiceError from "../models/serviceError.js";
+import ServiceError from "../helpers/serviceError.js";
 
 export default class SeasonService {
 
@@ -20,7 +20,11 @@ export default class SeasonService {
         if (!seasonId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        await this._seasonRepository.deleteSeasonById(currentUserId, seasonId);
+        const deleted = await this._seasonRepository.deleteSeasonById(currentUserId, seasonId);
+
+        if (!deleted) {
+            throw new ServiceError(500, "Impossible de supprimer la saison");
+        }
     }
 
     /**
@@ -55,6 +59,10 @@ export default class SeasonService {
         if (!seasonId) {
             throw new ServiceError(400, "Requête invalide")
         }
-        await this._seasonRepository.updateSeason(currentUserId, seasonId, platformId);
+        const updated = await this._seasonRepository.updateSeason(currentUserId, seasonId, platformId);
+
+        if (!updated) {
+            throw new ServiceError(500, "Impossible de modifier la saison");
+        }
     }
 }

@@ -3,7 +3,7 @@ import Season from "./season.js";
 class SeasonTimeline {
 
     /**
-     * @param {Object} obj 
+     * @param {Object} obj
      */
     constructor(obj) {
         this.showId = obj.id;

@@ -1,57 +1,54 @@
-import pool from "../config/db.js";
+import db from "../config/db.js";
 
 export default class UserShowRepository {
 
     /**
      * @param {string} userId
      * @param {number} showId
-     * @returns Promise<boolean>
+     * @returns {Promise<boolean>}
      */
     checkShowExistsByUserIdByShowId = async (userId, showId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT COUNT(*) AS total
             FROM users_shows
             WHERE user_id = $1 AND show_id = $2
         `, [userId, showId]);
-        client.release();
-        return parseInt(res["rows"][0]["total"]) === 1;
+        return parseInt(res.rows[0]["total"]) === 1;
     }
 
     /**
      * @param {string} userId
      * @param {number} showId
+     * @returns {Promise<boolean>}
      */
     create = async (userId, showId) => {
-        const client = await pool.connect();
-        await client.query(`
+        const res = await db.query(`
             INSERT INTO users_shows (user_id, show_id)
             VALUES ($1, $2)
         `, [userId, showId]);
-        client.release();
+        return res.rowCount === 1;
     }
 
     /**
      * @param {string} userId
      * @param {number} showId
+     * @returns {Promise<boolean>}
      */
     deleteByUserIdShowId = async (userId, showId) => {
-        const client = await pool.connect();
-        await client.query(`
+        const res = await db.query(`
             DELETE FROM users_shows
             WHERE user_id = $1 AND show_id = $2
         `, [userId, showId]);
-        client.release();
+        return res.rowCount === 1;
     }
 
     /**
      * @param {string} userId
      * @param {number} limit
-     * @returns Promise<any[]>
+     * @returns {Promise<any[]>}
      */
     getShowsByUserId = async (userId, limit = 10) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT s.*, us.favorite, us.added_at, us.continue
             FROM shows s
             JOIN users_shows us ON s.id = us.show_id
@@ -59,8 +56,7 @@ export default class UserShowRepository {
             ORDER BY us.added_at DESC
             LIMIT $2
         `, [userId, limit]);
-        client.release();
-        return res["rows"];
+        return res.rows;
     }
 
     /**
@@ -69,15 +65,13 @@ export default class UserShowRepository {
      * @returns Promise<any>
      */
     getShowByUserIdByShowId = async (userId, id) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT s.*, us.favorite, us.added_at, us.continue
             FROM shows s
             JOIN users_shows us ON s.id = us.show_id
             WHERE us.user_id = $1 AND us.show_id = $2 LIMIT 1
         `, [userId, id]);
-        client.release();
-        return res["rows"][0];
+        return res.rows[0];
     }
 
     /**
@@ -86,16 +80,14 @@ export default class UserShowRepository {
      * @returns Promise<any[]>
      */
     getShowsByUserIdByTitle = async (userId, title) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT s.*, us.favorite, us.added_at, us.continue
             FROM users_shows us
             JOIN shows s ON s.id = us.show_id
             WHERE user_id = $1 AND UPPER(s.title) LIKE UPPER($2)
             ORDER BY us.added_at DESC
         `, [userId, `%${title}%`]);
-        client.release();
-        return res["rows"];
+        return res.rows;
     }
 
     /**
@@ -103,14 +95,12 @@ export default class UserShowRepository {
      * @returns Promise<number>
      */
     getTotalShowsByUserId = async (userId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT COUNT(*) AS total
             FROM users_shows
             WHERE user_id = $1
         `, [userId]);
-        client.release();
-        return parseInt(res["rows"][0]["total"] ?? 0);
+        return parseInt(res.rows[0]["total"] ?? 0);
     }
 
     /**
@@ -118,15 +108,13 @@ export default class UserShowRepository {
      * @param {number} showId
      */
     updateWatchingByUserIdByShowId = async (userId, showId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             UPDATE users_shows
             SET continue = NOT continue
             WHERE user_id = $1 AND show_id = $2
             RETURNING continue
         `, [userId, showId]);
-        client.release();
-        return res["rows"][0]["continue"];
+        return res.rows[0]["continue"];
     }
 
     /**
@@ -135,14 +123,12 @@ export default class UserShowRepository {
      * @return Promise<boolean>
      */
     updateFavoriteByUserIdByShowId = async (userId, showId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             UPDATE users_shows
             SET favorite = NOT favorite
             WHERE user_id = $1 AND show_id = $2 RETURNING favorite
         `, [userId, showId]);
-        client.release();
-        return res["rows"][0]["favorite"];
+        return res.rows[0]["favorite"];
     }
 
     /**
@@ -150,8 +136,7 @@ export default class UserShowRepository {
      * @returns Promise<any[]>
      */
     getShowsToResumeByUserId = async (userId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT s.*, us.favorite, us.added_at, us.continue
             FROM shows s
             JOIN users_shows us ON us.show_id = s.id
@@ -162,8 +147,7 @@ export default class UserShowRepository {
                 WHERE users_seasons.user_id = $1 AND s.id = shows.id) > 0
             ORDER BY s.title
         `, [userId]);
-        client.release();
-        return res["rows"];
+        return res.rows;
     }
 
     /**
@@ -171,15 +155,13 @@ export default class UserShowRepository {
      * @returns Promise<any[]>
      */
     getKindsByUserId = async (userId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT s.kinds
             FROM shows s
             JOIN users_shows us ON us.show_id = s.id
             WHERE us.user_id = $1
         `, [userId]);
-        client.release();
-        return res["rows"];
+        return res.rows;
     }
 
     /**
@@ -188,8 +170,7 @@ export default class UserShowRepository {
      * @returns Promise<any[]>
      */
     getCountriesByUserId = async (userId, limit = 10) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT s.country AS label, COUNT(*) AS value
             FROM shows s
             JOIN users_shows us ON us.show_id = s.id
@@ -198,8 +179,7 @@ export default class UserShowRepository {
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
-        client.release();
-        return res["rows"];
+        return res.rows;
     }
 
     /**
@@ -208,8 +188,7 @@ export default class UserShowRepository {
      * @returns Promise<any[]>
      */
     getShowsByUserIdByPlatforms = async (userId, platforms) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT DISTINCT s.*, us.favorite, us.added_at, us.continue
             FROM shows s
             JOIN users_shows us ON us.show_id = s.id
@@ -217,8 +196,7 @@ export default class UserShowRepository {
             WHERE us.user_id = $1 AND use.platform_id = ANY ($2)
             ORDER BY us.added_at DESC
         `, [userId, platforms]);
-        client.release();
-        return res["rows"];
+        return res.rows;
     }
 
     /**
@@ -226,16 +204,14 @@ export default class UserShowRepository {
      * @return Promise<any[]>
      */
     getFavoritesByUserId = async (userId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT s.*, us.favorite, us.added_at, us.continue
             FROM users_shows us
             JOIN shows s ON s.id = us.show_id
             WHERE us.user_id = $1 AND favorite = TRUE
             ORDER BY s.title
         `, [userId]);
-        client.release();
-        return res["rows"];
+        return res.rows;
     }
 
     /**
@@ -243,10 +219,9 @@ export default class UserShowRepository {
      * @returns Promise<any[]>
      */
     getShowsToContinueByUserId = async (userId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT s.*, s.seasons - (
-                SELECT COUNT(distinct users_seasons.number)
+                SELECT COUNT(DISTINCT users_seasons.number)
                 FROM shows
                 JOIN users_seasons ON s.id = users_seasons.show_id
                 WHERE users_seasons.user_id = $1 AND s.id = shows.id
@@ -256,13 +231,11 @@ export default class UserShowRepository {
             WHERE us.user_id = $1 AND us.continue = TRUE
             ORDER BY s.title
         `, [userId]);
-        client.release();
-        return res["rows"].filter((row) => row.missing > 0);
+        return res.rows.filter((row) => row.missing > 0);
     }
 
     getSharedShowsWithFriend = async (userId, friendId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT s.*
             FROM shows s
             WHERE id in (
@@ -275,7 +248,6 @@ export default class UserShowRepository {
                 WHERE user_id = $2)
             ORDER BY s.title
         `, [userId, friendId]);
-        client.release();
-        return res["rows"];
+        return res.rows;
     }
 }

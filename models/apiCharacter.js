@@ -1,7 +1,7 @@
 class ApiCharacter {
 
     /**
-     * @param {Object} character 
+     * @param {Object} character
      */
     constructor(character) {
         this.id = character.person_id;

@@ -1,7 +1,7 @@
 class Show {
 
     /**
-     * @param {Object} obj 
+     * @param {Object} obj
      */
     constructor(obj) {
         this.id = obj.id;

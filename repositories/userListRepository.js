@@ -1,31 +1,31 @@
-import pool from "../config/db.js";
+import db from "../config/db.js";
 
 export default class UserListRepository {
 
     /**
      * @param {string} userId
      * @param {number} showId
+     * @returns {Promise<boolean>}
      */
     create = async (userId, showId) => {
-        const client = await pool.connect();
-        await client.query(`
+        const res = await db.query(`
             INSERT INTO users_list (user_id, show_id)
             VALUES ($1, $2)
         `, [userId, showId]);
-        client.release();
+        return res.rowCount === 1;
     }
 
     /**
      * @param {string} userId
      * @param {number} showId
+     * @returns {Promise<boolean>}
      */
     deleteByUserIdShowId = async (userId, showId) => {
-        const client = await pool.connect();
-        await client.query(`
+        const res = await db.query(`
             DELETE FROM users_list
             WHERE user_id = $1 AND show_id = $2
         `, [userId, showId]);
-        client.release();
+        return res.rowCount === 1;
     }
 
     /**
@@ -34,14 +34,12 @@ export default class UserListRepository {
      * @returns Promise<boolean>
      */
     checkShowExistsByUserIdByShowId = async (userId, showId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT COUNT(*) AS total
             FROM users_list
             WHERE user_id = $1 AND show_id = $2
         `, [userId, showId]);
-        client.release();
-        return parseInt(res["rows"][0]["total"]) === 1;
+        return parseInt(res.rows[0]["total"]) === 1;
     }
 
     /**
@@ -49,14 +47,12 @@ export default class UserListRepository {
      * @returns Promise<any[]>
      */
     getNotStartedShowsByUserId = async (userId) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT s.*
             FROM shows s
             JOIN users_list ul ON ul.show_id = s.id
             WHERE ul.user_id = $1
         `, [userId]);
-        client.release();
-        return res["rows"];
+        return res.rows;
     }
 }

@@ -1,8 +1,8 @@
 import UserRepository from "../repositories/userRepository.js";
-import {isValidEmail, isValidId, isValidPassword, isValidUsername} from "../helpers/validator.js";
-import {comparePassword, createHash, signJwt, uuid} from "../helpers/security.js";
 import UserProfile from "../models/userProfile.js";
-import ServiceError from "../models/serviceError.js";
+import ServiceError from "../helpers/serviceError.js";
+import SecurityHelper from "../helpers/security.js";
+import Validator from "../helpers/validator.js";
 
 export default class AuthService {
     constructor() {
@@ -15,7 +15,7 @@ export default class AuthService {
      * @returns {Promise<{token: string, id: string, email: string, picture: string, username: string, current: boolean}>}
      */
     login = async (identifier, password) => {
-        if (!isValidId(identifier)) {
+        if (!Validator.isValidId(identifier)) {
             throw new ServiceError(400, "Identifiant incorrect");
         }
         const rows = await this._userRepository.getUserByIdentifier(identifier);
@@ -23,12 +23,12 @@ export default class AuthService {
         if (rows.length === 0) {
             throw new ServiceError(400, "Identifiant ou mot de passe incorrect");
         }
-        const same = await comparePassword(password, rows[0]["password"]);
+        const same = await SecurityHelper.comparePassword(password, rows[0]["password"]);
 
         if (!same) {
             throw new ServiceError(400, "Identifiant ou mot de passe incorrect");
         }
-        const token = signJwt(rows[0]["id"], process.env.JWT_SECRET);
+        const token = SecurityHelper.signJwt(rows[0]["id"], process.env.JWT_SECRET);
         const user = new UserProfile(rows[0], true);
         return {
             "token": token,
@@ -44,17 +44,17 @@ export default class AuthService {
      * @returns {Promise<void>}
      */
     register = async (email, username, password, confirm) => {
-        const nameValid = isValidUsername(username);
+        const nameValid = Validator.isValidUsername(username);
 
         if (!nameValid.status) {
             throw new ServiceError(400, nameValid.message);
         }
-        const emailValid = isValidEmail(email);
+        const emailValid = Validator.isValidEmail(email);
 
         if (!emailValid.status) {
             throw new ServiceError(400, emailValid.message);
         }
-        const passValid = isValidPassword(password, confirm);
+        const passValid = Validator.isValidPassword(password, confirm);
 
         if (!passValid.status) {
             throw new ServiceError(400, passValid.message);
@@ -69,7 +69,11 @@ export default class AuthService {
         if (rows.length > 0) {
             throw new ServiceError(409, "Un compte est déjà associé à ce nom d'utilisateur");
         }
-        const hash = await createHash(password);
-        await this._userRepository.createUser(uuid(), email, hash, username);
+        const hash = await SecurityHelper.createHash(password);
+        const created = await this._userRepository.createUser(SecurityHelper.generateUuid(), email, hash, username);
+
+        if (!created) {
+            throw new ServiceError(500, "Impossible de créer le compte");
+        }
     }
 }

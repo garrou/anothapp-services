@@ -1,11 +1,11 @@
 import Cache from "node-cache";
 
-const cache = new Cache({ checkperiod: 20 });
+const cache = new Cache({checkperiod: 20});
 
 /**
- * @param {number} duration 
+ * @param {number} duration
  * @param {boolean} eachUser
- * @returns (Request, Response, NextFunction)
+ * @returns {Request, Response, NextFunction}
  */
 export default (duration, eachUser = false) => (req, res, next) => {
 

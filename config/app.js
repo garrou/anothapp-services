@@ -6,28 +6,28 @@ import {errorHandler} from "../middlewares/error.js";
 class App {
     constructor() {
         this.app = express();
-        this.#setupCors();
-        this.#setupMiddleware();
-        this.#setupRoutes();
-        this.#setupErrorHandler();
+        this._setupCors();
+        this._setupMiddleware();
+        this._setupRoutes();
+        this._setupErrorHandler();
     }
 
-    #setupErrorHandler() {
+    _setupErrorHandler() {
         this.app.use(errorHandler);
     }
 
-    #setupMiddleware() {
+    _setupMiddleware() {
         this.app.use(express.json());
     }
 
-    #setupCors() {
+    _setupCors() {
         this.app.use(cors({
             origins: [process.env.ORIGIN],
             allowedHeaders: ["Authorization", "Content-Type"]
         }));
     }
 
-    #setupRoutes() {
+    _setupRoutes() {
         this.app.use("/", routes);
     }
 

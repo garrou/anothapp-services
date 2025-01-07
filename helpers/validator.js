@@ -1,114 +1,136 @@
-import userConst from "../constants/user.js";
+class ValidatorStatus {
+    constructor(valid, message = "") {
+        this.status = valid;
+        this.message = message;
+    }
+}
 
-/**
- * @param {string|undefined} username 
- * @returns object
- */
-const isValidUsername = (username) => {
-    if (typeof username !== "string") 
-        return { status: false, message: "Username incorrect" };
+export default class Validator {
 
-    if (!userConst.USERNAME_PATTERN.test(username))
-        return { 
-            status: false, 
-            message: `Username incorrect (${userConst.MIN_USERNAME} - ${userConst.MAX_USERNAME})`
+    static get emailPattern() {
+        return /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/
+    }
+
+    static get imagePattern() {
+        return /^https:\/\/pictures\.betaseries\.com\/.*$/
+    }
+
+    static get maxPassword() {
+        return 50;
+    }
+
+    static get minPassword() {
+        return 8;
+    }
+
+    static get maxUsername() {
+        return 25;
+    }
+
+    static get minUsername() {
+        return 3;
+    }
+
+    static get passwordPattern() {
+        return /^.{8,50}$/;
+    }
+
+    static get usernamePattern() {
+        return /^[^@]{3,25}$/;
+    }
+
+    /**
+     * @param {string?} username
+     * @returns {ValidatorStatus}
+     */
+    static isValidUsername = (username) => {
+        if (typeof username !== "string" || !this.usernamePattern.test(username)) {
+            return new ValidatorStatus(false, `Username incorrect (${this.minUsername} - ${this.maxUsername})`);
         }
+        return new ValidatorStatus(true);
+    }
 
-    return { status: true, message: "ok" };
-}
+    /**
+     * @param {string?} email
+     * @returns {ValidatorStatus}
+     */
+    static isValidEmail = (email) => {
+        if (typeof email !== "string" || !this.emailPattern.test(email)) {
+            return new ValidatorStatus(false, "Email incorrect");
+        }
+        return new ValidatorStatus(true);
+    }
 
-/**
- * @param {string|undefined} email 
- * @returns object
- */
-const isValidEmail = (email) => {
-    if (typeof email !== "string" || !userConst.EMAIL_PATTERN.test(email))
-        return { status: false, message: "Email incorrect" };
+    /**
+     * @param {string?} password
+     * @param {string?} confirm
+     * @returns {ValidatorStatus}
+     */
+    static isValidPassword = (password, confirm) => {
+        if (typeof password !== "string") {
+            return new ValidatorStatus(false, "Mot de passe incorrect");
+        }
+        if (password !== confirm) {
+            return new ValidatorStatus(false, "Mots de passe différents");
+        }
+        if (!this.passwordPattern.test(password)) {
+            return new ValidatorStatus(false, `Mot de passe incorrect (${this.minPassword} - ${this.maxPassword})`);
+        }
+        return new ValidatorStatus(true);
+    }
 
-    return { status: true, message: "ok" };
-}
+    /**
+     * @param {string|undefined} oldPass
+     * @param {string|undefined} newPass
+     * @param {string|undefined} confPass
+     * @returns {ValidatorStatus}
+     */
+    static isValidChangePassword = (oldPass, newPass, confPass) => {
+        if (typeof oldPass !== "string") {
+            return new ValidatorStatus(false, "Mot de passe incorrect");
+        }
+        if (oldPass === newPass) {
+            return new ValidatorStatus(false, "Le nouvel mot de passe doit être différent de l'ancien ");
+        }
+        return this.isValidPassword(newPass, confPass);
+    }
 
-/**
- * @param {string|undefined} password
- * @param {string|undefined} confirm
- * @returns object
- */
-const isValidPassword = (password, confirm) => {
-    if (typeof password !== "string") 
-        return { status: false, message: "Mot de passe incorrect" };
+    /**
+     * @param {string|undefined} oldEmail
+     * @param {string|undefined} newEmail
+     * @returns {ValidatorStatus}
+     */
+    static isValidChangeEmail = (oldEmail, newEmail) => {
+        if (oldEmail === newEmail) {
+            return new ValidatorStatus(false, "Le nouvel mail doit être différent");
+        }
+        return this.isValidEmail(newEmail);
+    }
 
-    if (password !== confirm)
-        return { status: false, message: "Mots de passe différents" };
-    
-    if (!userConst.PASSWORD_PATTERN.test(password))
-        return { 
-            status: false, 
-            message: `Mot de passe incorrect (${userConst.MIN_PASSWORD} - ${userConst.MAX_PASSWORD})` 
-        };
+    /**
+     * @param {string?} image
+     * @returns {boolean}
+     */
+    static isValidImage = (image) => {
+        return typeof image === "string"
+            && image.length > 0
+            && this.imagePattern.test(image);
+    }
 
-    return { status: true, message: "ok" };
-}
+    /**
+     * @param {string?} name
+     * @returns {boolean}
+     */
+    static isValidId = (name) => {
+        return typeof name === "string";
+    }
 
-/**
- * @param {string|undefined} oldPass 
- * @param {string|undefined} newPass 
- * @param {string|undefined} confPass 
- * @returns object
- */
-const isValidChangePassword = (oldPass, newPass, confPass) => {
-    if (typeof oldPass !== "string")
-        return { status: false, message: "Mot de passe incorrect" };
-
-    if (oldPass === newPass)
-        return { status: false, message: "Le nouveau mot de passe doit être différent de l'ancien "};
-
-    return isValidPassword(newPass, confPass);
-}
-
-/**
- * @param {string|undefined} oldEmail 
- * @param {string|undefined} newEmail
- * @returns object
- */
-const isValidChangeEmail = (oldEmail, newEmail) => {
-    if (typeof oldEmail !== "string")
-        return { status: false, message: "Email incorrect" };
-
-    if (oldEmail === newEmail)
-        return { status: false, message: "Le nouveau mail doit être différent" };
-
-    return isValidEmail(newEmail);
-}
-
-/**
- * @param {string|undefined} image 
- */
-const isValidImage = (image) => {
-    return typeof image === "string" 
-        && image.length > 0 
-        && userConst.IMAGE_PATTERN.test(image);
-}
-
-const isValidId = (name) => {
-    return typeof name === "string";
-}
-
-/**
- * @param {ApiShow} show
- * @returns {boolean}
- */
-const idValidShow = (show) => {
-    const { id, title, kinds, duration, seasons, country } = show;
-    return id && title && Array.isArray(kinds) && kinds.length && duration && seasons && country;
-}
-
-export {
-    isValidChangeEmail,
-    isValidChangePassword,
-    isValidEmail,
-    isValidId,
-    isValidImage,
-    isValidUsername,
-    isValidPassword,
-    idValidShow
+    /**
+     * @param {ApiShow} show
+     * @returns {boolean}
+     */
+    static idValidShow = (show) => {
+        const {id, title, kinds, duration, seasons, country} = show;
+        return id && title && Array.isArray(kinds) && kinds.length && duration && seasons && country;
+    }
 }

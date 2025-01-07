@@ -29,7 +29,7 @@ export default class UserController {
         try {
             const {currentPassword, newPassword, confirmPassword, email, newEmail, image} = req.body;
             const message = await this._userService.changeProfile(req.userId, currentPassword, newPassword, confirmPassword, email, newEmail, image);
-            res.status(200).json({ message });
+            res.status(200).json({message});
         } catch (e) {
             next(e);
         }

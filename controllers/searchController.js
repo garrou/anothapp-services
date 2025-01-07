@@ -7,7 +7,7 @@ export default class SearchController {
 
     getImages = async (req, res, next) => {
         try {
-            const { limit } = req.query;
+            const {limit} = req.query;
             const images = await this._searchService.getImages(limit);
             res.status(200).json(images);
         } catch (e) {
@@ -17,7 +17,7 @@ export default class SearchController {
 
     getShows = async (req, res, next) => {
         try {
-            const { title, year, kinds, platforms } = req.query;
+            const {title, year, kinds, platforms} = req.query;
             const response = await this._searchService.getShows(title, year, kinds, platforms);
             res.status(200).json(response);
         } catch (e) {
@@ -27,7 +27,7 @@ export default class SearchController {
 
     getByShowId = async (req, res, next) => {
         try {
-            const { showId } = req.params;
+            const {showId} = req.params;
             const show = await this._searchService.getByShowId(showId);
             res.status(200).json(show);
         } catch (e) {
@@ -37,7 +37,7 @@ export default class SearchController {
 
     getSeasonsByShowId = async (req, res, next) => {
         try {
-            const { showId } = req.params;
+            const {showId} = req.params;
             const seasons = await this._searchService.getSeasonsByShowId(showId);
             res.status(200).json(seasons);
         } catch (e) {
@@ -47,7 +47,7 @@ export default class SearchController {
 
     getEpisodesByShowIdBySeason = async (req, res, next) => {
         try {
-            const { showId, num } = req.params;
+            const {showId, num} = req.params;
             const episodes = await this._searchService.getEpisodesByShowIdBySeason(showId, num)
             res.status(200).json(episodes);
         } catch (e) {
@@ -57,7 +57,7 @@ export default class SearchController {
 
     getCharactersByShowId = async (req, res, next) => {
         try {
-            const { showId } = req.params;
+            const {showId} = req.params;
             const characters = await this._searchService.getCharactersByShowId(showId);
             res.status(200).json(characters);
         } catch (e) {
@@ -67,7 +67,7 @@ export default class SearchController {
 
     getSimilarsByShowId = async (req, res, next) => {
         try {
-            const { showId } = req.params;
+            const {showId} = req.params;
             const similars = await this._searchService.getSimilarsByShowId(showId);
             res.status(200).json(similars);
         } catch (e) {
@@ -86,7 +86,7 @@ export default class SearchController {
 
     getImagesByShowId = async (req, res, next) => {
         try {
-            const { showId } = req.params;
+            const {showId} = req.params;
             const pictures = await this._searchService.getImagesByShowId(showId);
             res.status(200).json(pictures);
         } catch (e) {
@@ -96,7 +96,7 @@ export default class SearchController {
 
     getPersonById = async (req, res, next) => {
         try {
-            const { personId } = req.params;
+            const {personId} = req.params;
             const person = await this._searchService.getPersonById(personId);
             res.status(200).json(person);
         } catch (e) {

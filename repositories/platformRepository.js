@@ -1,17 +1,15 @@
-import pool from "../config/db.js";
+import db from "../config/db.js";
 
 export default class PlatformRepository {
     /**
-     * @returns Promise<any[]>
+     * @returns {Promise<any[]>}
      */
     getPlatforms = async () => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT id AS pid, name, logo
             FROM platforms
             ORDER BY name
         `);
-        client.release();
-        return res["rows"];
+        return res.rows;
     }
 }

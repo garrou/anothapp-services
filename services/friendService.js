@@ -1,6 +1,6 @@
 import UserProfile from '../models/userProfile.js';
 import FriendRepository from "../repositories/friendRepository.js";
-import ServiceError from "../models/serviceError.js";
+import ServiceError from "../helpers/serviceError.js";
 
 export default class FriendService {
 
@@ -22,7 +22,11 @@ export default class FriendService {
         if (exists) {
             throw new ServiceError(409, "Vous êtes déjà en relation avec cet utilisateur");
         }
-        await this._friendRepository.sendFriendRequest(currentUserId, userId);
+        const send = await this._friendRepository.sendFriendRequest(currentUserId, userId);
+
+        if (!send) {
+            throw new ServiceError(500, "Impossible de demander cet utilisateur");
+        }
     }
 
     /**
@@ -34,7 +38,11 @@ export default class FriendService {
         if (!userId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        await this._friendRepository.acceptFriend(userId, currentUserId);
+        const accepted = await this._friendRepository.acceptFriend(userId, currentUserId);
+
+        if (!accepted) {
+            throw new ServiceError(500, "Impossible d'accepter cette demande");
+        }
     }
 
     /**
@@ -46,7 +54,11 @@ export default class FriendService {
         if (!userId) {
             throw new ServiceError(400, "Requête invalide");
         }
-        await this._friendRepository.deleteFriend(currentUserId, userId);
+        const deleted = await this._friendRepository.deleteFriend(currentUserId, userId);
+
+        if (!deleted) {
+            throw new ServiceError(500, "Impossible de supprimer cet ami");
+        }
     }
 
     /**
@@ -56,7 +68,7 @@ export default class FriendService {
      * @returns {Promise<UserProfile[] | Map<string, UserProfile[]>>}
      */
     getFriends = async (currentUserId, status, serieId) => {
-        return await this.#getFriendsByUserIdByStatus(currentUserId, status, serieId);
+        return await this._getFriendsByUserIdByStatus(currentUserId, status, serieId);
     }
 
     /**
@@ -65,7 +77,7 @@ export default class FriendService {
      * @param {number?} showId
      * @returns {Promise<any>}
      */
-    async #getFriendsByUserIdByStatus(userId, status, showId) {
+    async _getFriendsByUserIdByStatus(userId, status, showId) {
         let rows = null;
         const mapToUser = (arr) => arr.map(user => new UserProfile(user));
 

@@ -1,20 +1,18 @@
-import pool from "../config/db.js";
+import db from "../config/db.js";
 
 export default class ShowRepository {
 
     /**
      * @param {number} id
-     * @returns Promise<boolean>
+     * @returns {Promise<boolean>}
      */
     isNewShow = async (id) => {
-        const client = await pool.connect();
-        const res = await client.query(`
+        const res = await db.query(`
             SELECT COUNT(*) AS total
             FROM shows
             WHERE id = $1
         `, [id]);
-        client.release();
-        return parseInt(res["rows"][0]["total"]) === 0;
+        return parseInt(res.rows[0]["total"]) === 0;
     }
 
     /**
@@ -25,13 +23,13 @@ export default class ShowRepository {
      * @param {number} duration
      * @param {number} seasons
      * @param {string} country
+     * @returns {Promise<boolean>}
      */
     createShow = async (id, title, poster, kinds, duration, seasons, country) => {
-        const client = await pool.connect();
-        await client.query(`
+        const res = await db.query(`
             INSERT INTO shows (id, title, poster, kinds, duration, seasons, country)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         `, [id, title, poster, kinds, duration, seasons, country]);
-        client.release();
+        return res.rowCount === 1;
     }
 }

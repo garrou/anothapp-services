@@ -1,7 +1,7 @@
 class ApiShow {
 
     /**
-     * @param {string[]} array 
+     * @param {string[]} array
      */
     constructor(array) {
         this.value = array[0];
