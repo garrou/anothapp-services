@@ -1,4 +1,3 @@
-import UserProfile from '../models/userProfile.js';
 import FriendRepository from "../repositories/friendRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 
@@ -78,32 +77,24 @@ export default class FriendService {
      * @returns {Promise<any>}
      */
     async _getFriendsByUserIdByStatus(userId, status, showId) {
-        let rows = null;
-        const mapToUser = (arr) => arr.map(user => new UserProfile(user));
-
         switch (status) {
             case "send":
-                rows = (await this._friendRepository.getFriendsRequestsSend(userId));
-                break;
+                return await this._friendRepository.getFriendsRequestsSend(userId);
             case "receive":
-                rows = (await this._friendRepository.getFriendsRequestsReceive(userId));
-                break;
+                return await this._friendRepository.getFriendsRequestsReceive(userId);
             case "friend":
-                rows = (await this._friendRepository.getFriends(userId));
-                break;
+                return await this._friendRepository.getFriends(userId);
             case "viewed":
                 if (!showId) {
                     throw new Error("Requête invalide");
                 }
-                rows = await this._friendRepository.getFriendsWhoWatchSerie(userId, showId)
-                break;
+                return await this._friendRepository.getFriendsWhoWatchSerie(userId, showId);
             default:
                 return {
-                    "send": mapToUser(await this._friendRepository.getFriendsRequestsSend(userId)),
-                    "receive": mapToUser(await this._friendRepository.getFriendsRequestsReceive(userId)),
-                    "friend": mapToUser(await this._friendRepository.getFriends(userId))
+                    "send": await this._friendRepository.getFriendsRequestsSend(userId),
+                    "receive": await this._friendRepository.getFriendsRequestsReceive(userId),
+                    "friend": await this._friendRepository.getFriends(userId)
                 }
         }
-        return rows ? mapToUser(rows) : [];
     }
 }

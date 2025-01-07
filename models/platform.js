@@ -1,4 +1,4 @@
-class Platform {
+export default class Platform {
 
     /**
      * @param {Object} obj
@@ -9,5 +9,3 @@ class Platform {
         this.logo = obj.logo;
     }
 }
-
-export default Platform;

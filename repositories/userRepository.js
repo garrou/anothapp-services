@@ -1,23 +1,26 @@
 import db from "../config/db.js";
+import User from "../models/user.js";
 
 export default class UserRepository {
 
     /**
      * @param {string} email
-     * @returns {Promise<any[]>}
+     * @returns {Promise<User|null>}
      */
     getUserByEmail = async (email) => {
         const res = await db.query(`
             SELECT id, email, picture, password, username
             FROM users
-            WHERE UPPER(email) = UPPER($1) LIMIT 1
+            WHERE UPPER(email) = UPPER($1) 
+            LIMIT 1
         `, [email]);
-        return res.rows;
+        return res.rowCount === 1 ? new User(res.rows[0]) : null;
     }
 
     /**
      * @param {string} username
      * @param {boolean} strict
+     * @returns {Promise<User[]>}
      */
     getUserByUsername = async (username, strict = false) => {
         const param = strict ? [`${username}`, 1] : [`%${username}%`, 10]
@@ -25,27 +28,28 @@ export default class UserRepository {
             SELECT id, email, picture, password, username
             FROM users
             WHERE UPPER(username) LIKE UPPER($1)
-                LIMIT $2
+            LIMIT $2
         `, param);
-        return res.rows;
+        return res.rows.map((row) => new User(row));
     }
 
     /**
      * @param {string} identifier
+     * @returns {Promise<User|null>}
      */
     getUserByIdentifier = async (identifier) => {
         const res = await db.query(`
             SELECT id, email, picture, password, username
             FROM users
-            WHERE UPPER(username) = UPPER($1)
-               OR UPPER(email) = UPPER($1) LIMIT 1
+            WHERE UPPER(username) = UPPER($1) OR UPPER(email) = UPPER($1) 
+            LIMIT 1
         `, [identifier]);
-        return res.rows;
+        return res.rowCount === 1 ? new User(res.rows[0]) : null;
     }
 
     /**
      * @param {string} id
-     * @returns {Promise<any[]>}
+     * @returns {Promise<User|null>}
      */
     getUserById = async (id) => {
         const res = await db.query(`
@@ -53,7 +57,7 @@ export default class UserRepository {
             FROM users
             WHERE id = $1
         `, [id]);
-        return res.rows;
+        return res.rowCount === 1 ? new User(res.rows[0]) : null;
     }
 
     /**

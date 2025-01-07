@@ -1,4 +1,8 @@
 import db from "../config/db.js";
+import {cumulate} from "../helpers/utils.js";
+import Season from "../models/season.js";
+import UserSeason from "../models/userSeason.js";
+import SeasonTimeline from "../models/seasonTimeline.js";
 
 export default class UserSeasonRepository {
 
@@ -19,7 +23,7 @@ export default class UserSeasonRepository {
     /**
      * @param {string} userId
      * @param {number} showId
-     * @returns {Promise<any[]>}
+     * @returns {Promise<Season[]>}
      */
     getDistinctByUserIdByShowId = async (userId, showId) => {
         const res = await db.query(`
@@ -31,14 +35,15 @@ export default class UserSeasonRepository {
             WHERE users_seasons.user_id = $1 AND users_seasons.show_id = $2
             ORDER BY users_seasons.number
         `, [userId, showId]);
-        return res.rows;
+        const episodes = cumulate(res.rows, "episodes");
+        return res.rows.map((row, i) => new Season(row, `${episodes[i] + 1} - ${episodes[i + 1]}`));
     }
 
     /**
      * @param {string} userId
      * @param {number} showId
      * @param {number} number
-     * @returns {Promise<any[]>}
+     * @returns {Promise<UserSeason[]>}
      */
     getInfosByUserIdByShowId = async (userId, showId, number) => {
         const res = await db.query(`
@@ -48,7 +53,7 @@ export default class UserSeasonRepository {
             WHERE user_id = $1 AND show_id = $2 AND number = $3
             ORDER BY added_at
         `, [userId, showId, number]);
-        return res.rows;
+        return res.rows.map((row) => new UserSeason(row));
     }
 
     /**
@@ -213,7 +218,7 @@ export default class UserSeasonRepository {
     /**
      * @param {string} userId
      * @param {number} month
-     * @returns {Promise<any[]>}
+     * @returns {Promise<SeasonTimeline[]>}
      */
     getViewedByMonthAgo = async (userId, month) => {
         const res = await db.query(`
@@ -224,7 +229,7 @@ export default class UserSeasonRepository {
             WHERE us.user_id = $1
             ORDER BY added_at DESC
         `, [userId, month]);
-        return res.rows;
+        return res.rows.map((row) => new SeasonTimeline(row));
     }
 
     /**
@@ -278,7 +283,7 @@ export default class UserSeasonRepository {
             WHERE users_seasons.user_id = $1 AND EXTRACT(year FROM added_at) = $2
             ORDER BY added_at, number
         `, [userId, year]);
-        return res.rows;
+        return res.rows.map((row) => new Season(row));
     }
 
     /**
@@ -296,6 +301,10 @@ export default class UserSeasonRepository {
         return res.rows;
     }
 
+    /**
+     * @param {string} userId
+     * @returns {Promise<any>}
+     */
     getNbEpisodesByUserIdGroupByMonthByCurrentYear = async (userId)  => {
         const res = await db.query(`
             SELECT EXTRACT(MONTH FROM added_at) AS num, TO_CHAR(added_at, 'Mon') AS label, SUM(episodes) AS value

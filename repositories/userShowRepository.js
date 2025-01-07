@@ -1,4 +1,5 @@
 import db from "../config/db.js";
+import UserShow from "../models/userShow.js";
 
 export default class UserShowRepository {
 
@@ -45,7 +46,7 @@ export default class UserShowRepository {
     /**
      * @param {string} userId
      * @param {number} limit
-     * @returns {Promise<any[]>}
+     * @returns {Promise<UserShow[]>}
      */
     getShowsByUserId = async (userId, limit = 10) => {
         const res = await db.query(`
@@ -56,28 +57,29 @@ export default class UserShowRepository {
             ORDER BY us.added_at DESC
             LIMIT $2
         `, [userId, limit]);
-        return res.rows;
+        return res.rows.map((row) => new UserShow(row));
     }
 
     /**
      * @param {string} userId
      * @param {string} id
-     * @returns Promise<any>
+     * @returns {Promise<UserShow|null>}
      */
     getShowByUserIdByShowId = async (userId, id) => {
         const res = await db.query(`
             SELECT s.*, us.favorite, us.added_at, us.continue
             FROM shows s
             JOIN users_shows us ON s.id = us.show_id
-            WHERE us.user_id = $1 AND us.show_id = $2 LIMIT 1
+            WHERE us.user_id = $1 AND us.show_id = $2 
+            LIMIT 1
         `, [userId, id]);
-        return res.rows[0];
+        return res.rowCount === 1 ? new UserShow(res.rows[0]) : null;
     }
 
     /**
      * @param {string} userId
      * @param {string} title
-     * @returns Promise<any[]>
+     * @returns Promise<UserShow[]>
      */
     getShowsByUserIdByTitle = async (userId, title) => {
         const res = await db.query(`
@@ -87,7 +89,7 @@ export default class UserShowRepository {
             WHERE user_id = $1 AND UPPER(s.title) LIKE UPPER($2)
             ORDER BY us.added_at DESC
         `, [userId, `%${title}%`]);
-        return res.rows;
+        return res.rows.map((row) => new UserShow(row));
     }
 
     /**
@@ -106,6 +108,7 @@ export default class UserShowRepository {
     /**
      * @param {string} userId
      * @param {number} showId
+     * @returns {Promise<boolean>}
      */
     updateWatchingByUserIdByShowId = async (userId, showId) => {
         const res = await db.query(`
@@ -133,7 +136,7 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
-     * @returns Promise<any[]>
+     * @returns Promise<UserShow[]>
      */
     getShowsToResumeByUserId = async (userId) => {
         const res = await db.query(`
@@ -147,7 +150,7 @@ export default class UserShowRepository {
                 WHERE users_seasons.user_id = $1 AND s.id = shows.id) > 0
             ORDER BY s.title
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new UserShow(row));
     }
 
     /**
@@ -185,7 +188,7 @@ export default class UserShowRepository {
     /**
      * @param {string} userId
      * @param {number[]} platforms
-     * @returns Promise<any[]>
+     * @returns Promise<UserShow[]>
      */
     getShowsByUserIdByPlatforms = async (userId, platforms) => {
         const res = await db.query(`
@@ -196,12 +199,12 @@ export default class UserShowRepository {
             WHERE us.user_id = $1 AND use.platform_id = ANY ($2)
             ORDER BY us.added_at DESC
         `, [userId, platforms]);
-        return res.rows;
+        return res.rows.map((row) => new UserShow(row));
     }
 
     /**
      * @param {string} userId
-     * @return Promise<any[]>
+     * @return Promise<UserShow[]>
      */
     getFavoritesByUserId = async (userId) => {
         const res = await db.query(`
@@ -211,12 +214,12 @@ export default class UserShowRepository {
             WHERE us.user_id = $1 AND favorite = TRUE
             ORDER BY s.title
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new UserShow(row));
     }
 
     /**
      * @param {string} userId
-     * @returns Promise<any[]>
+     * @returns Promise<UserShow[]>
      */
     getShowsToContinueByUserId = async (userId) => {
         const res = await db.query(`
@@ -231,9 +234,20 @@ export default class UserShowRepository {
             WHERE us.user_id = $1 AND us.continue = TRUE
             ORDER BY s.title
         `, [userId]);
-        return res.rows.filter((row) => row.missing > 0);
+        return res.rows.reduce((acc, row) => {
+            if (row.missing > 0) {
+                acc.push(new UserShow(row));
+            }
+            return acc;
+        }, []);
     }
 
+    /**
+     *
+     * @param {string} userId
+     * @param {string} friendId
+     * @returns {Promise<UserShow[]>}
+     */
     getSharedShowsWithFriend = async (userId, friendId) => {
         const res = await db.query(`
             SELECT s.*
@@ -248,6 +262,6 @@ export default class UserShowRepository {
                 WHERE user_id = $2)
             ORDER BY s.title
         `, [userId, friendId]);
-        return res.rows;
+        return res.rows.map((row) => new UserShow(row));
     }
 }

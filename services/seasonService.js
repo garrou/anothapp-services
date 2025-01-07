@@ -1,6 +1,4 @@
 import SeasonRepository from "../repositories/seasonRepository.js";
-import Season from "../models/season.js";
-import SeasonTimeline from "../models/seasonTimeline.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 
@@ -35,18 +33,13 @@ export default class SeasonService {
      */
     getSeasons = async (currentUserId, year, month) => {
         const MONTHS = ["0", "1", "2", "3", "6", "12", "60"];
-        let response = null;
 
         if (MONTHS.includes(month)) {
-            response = (await this._userSeasonRepository.getViewedByMonthAgo(currentUserId, month))
-                .map(row => new SeasonTimeline(row));
+            return await this._userSeasonRepository.getViewedByMonthAgo(currentUserId, month);
         } else if (year) {
-            response = (await this._userSeasonRepository.getSeasonsByAddedYear(currentUserId, year))
-                .map(obj => new Season(obj));
-        } else {
-            throw new ServiceError(400, "Requête invalide");
+            return await this._userSeasonRepository.getSeasonsByAddedYear(currentUserId, year);
         }
-        return response;
+        throw new ServiceError(400, "Requête invalide");
     }
 
     /**

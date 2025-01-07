@@ -1,4 +1,5 @@
 import db from "../config/db.js";
+import Show from "../models/show.js";
 
 export default class ShowRepository {
 
@@ -31,5 +32,18 @@ export default class ShowRepository {
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         `, [id, title, poster, kinds, duration, seasons, country]);
         return res.rowCount === 1;
+    }
+
+    /**
+     * @param {number} id
+     * @returns {Promise<Show|null>}
+     */
+    getShow = async (id) => {
+        const res = await db.query(`
+            SELECT id, title, poster, kinds, duration, seasons, country
+            FROM shows
+            WHERE id = $1
+        `, [id])
+        return res.rowCount === 1 ? new Show(res.rows[0]) : null;
     }
 }

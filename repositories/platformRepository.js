@@ -1,8 +1,9 @@
 import db from "../config/db.js";
+import Platform from "../models/platform.js";
 
 export default class PlatformRepository {
     /**
-     * @returns {Promise<any[]>}
+     * @returns {Promise<Platform[]>}
      */
     getPlatforms = async () => {
         const res = await db.query(`
@@ -10,6 +11,6 @@ export default class PlatformRepository {
             FROM platforms
             ORDER BY name
         `);
-        return res.rows;
+        return res.rows.map((row) => new Platform(row));
     }
 }

@@ -1,4 +1,5 @@
 import db from "../config/db.js";
+import UserProfile from "../models/userProfile.js";
 
 export default class FriendRepository {
 
@@ -46,7 +47,7 @@ export default class FriendRepository {
 
     /**
      * @param {string} userId
-     * @returns {Promise<any[]>}
+     * @returns {Promise<UserProfile[]>}
      */
     getFriends = async (userId) => {
         const res = await db.query(`
@@ -55,12 +56,12 @@ export default class FriendRepository {
             JOIN users u ON id = fst_user_id OR id = sec_user_id
             WHERE (fst_user_id = $1 OR sec_user_id = $1) AND accepted = TRUE AND id <> $1
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new UserProfile(row));
     }
 
     /**
      * @param {string} userId
-     * @returns {Promise<any[]>}
+     * @returns {Promise<UserProfile[]>}
      */
     getFriendsRequestsSend = async (userId) => {
         const res = await db.query(`
@@ -69,13 +70,13 @@ export default class FriendRepository {
             JOIN users u ON id = sec_user_id
             WHERE fst_user_id = $1 AND accepted = FALSE
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new UserProfile(row));
     }
 
     /**
      * @param {string} userId
      * @param {number} showId
-     * @returns {Promise<any[]>}
+     * @returns {Promise<UserProfile[]>}
      */
     getFriendsWhoWatchSerie = async (userId, showId) => {
         const res = await db.query(`
@@ -85,12 +86,12 @@ export default class FriendRepository {
             JOIN friends f ON u.id = f.fst_user_id OR u.id = f.sec_user_id
             WHERE (f.fst_user_id = $1 OR f.sec_user_id = $1) AND f.accepted = TRUE AND u.id <> $1
         `, [userId, showId]);
-        return res.rows;
+        return res.rows.map((row) => new UserProfile(row));
     }
 
     /**
      * @param {string} userId
-     * @returns {Promise<any[]>}
+     * @returns {Promise<UserProfile[]>}
      */
     getFriendsRequestsReceive = async (userId) => {
         const res = await db.query(`
@@ -99,7 +100,7 @@ export default class FriendRepository {
             JOIN users u ON id = fst_user_id
             WHERE sec_user_id = $1 AND accepted = FALSE
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new UserProfile(row));
     }
 
     /**

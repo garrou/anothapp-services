@@ -1,4 +1,5 @@
 import db from "../config/db.js";
+import Show from "../models/show.js";
 
 export default class UserListRepository {
 
@@ -44,7 +45,7 @@ export default class UserListRepository {
 
     /**
      * @param {string} userId
-     * @returns Promise<any[]>
+     * @returns Promise<Show[]>
      */
     getNotStartedShowsByUserId = async (userId) => {
         const res = await db.query(`
@@ -53,6 +54,6 @@ export default class UserListRepository {
             JOIN users_list ul ON ul.show_id = s.id
             WHERE ul.user_id = $1
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new Show(row));
     }
 }

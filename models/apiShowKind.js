@@ -1,4 +1,4 @@
-class ApiShow {
+export default class ApiShow {
 
     /**
      * @param {string[]} array
@@ -8,5 +8,3 @@ class ApiShow {
         this.name = array[1];
     }
 }
-
-export default ApiShow;

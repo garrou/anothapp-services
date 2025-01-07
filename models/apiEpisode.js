@@ -1,6 +1,6 @@
 import ApiEntity from "./apiEntity.js";
 
-class ApiEpisode extends ApiEntity {
+export default class ApiEpisode extends ApiEntity {
 
     /**
      * @param {Object} episode
@@ -13,5 +13,3 @@ class ApiEpisode extends ApiEntity {
         this.date = episode.date;
     }
 }
-
-export default ApiEpisode;

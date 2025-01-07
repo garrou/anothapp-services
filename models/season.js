@@ -1,4 +1,4 @@
-class Season {
+export default class Season {
 
     /**
      * @param {Object} obj
@@ -23,5 +23,3 @@ class Season {
         image
     });
 }
-
-export default Season;

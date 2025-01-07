@@ -56,7 +56,7 @@ export class FetchHelper {
      */
     static fetchPromises = (url, headers, queryPage, limit) => {
         const promises = [];
-        for (let page = 1; page <= this.buildPagination(limit); page += 1) {
+        for (let page = 0; page <= this.buildPagination(limit); page += 1) {
             promises.push(axios.get(this.buildUrl(url, queryPage, page), { headers }));
         }
         return promises;

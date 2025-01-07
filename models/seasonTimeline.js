@@ -1,6 +1,6 @@
 import Season from "./season.js";
 
-class SeasonTimeline {
+export default class SeasonTimeline {
 
     /**
      * @param {Object} obj
@@ -12,5 +12,3 @@ class SeasonTimeline {
         this.season = Season.from(obj.number, obj.episodes, obj.image ?? obj.poster);
     }
 }
-
-export default SeasonTimeline;

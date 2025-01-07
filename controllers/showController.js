@@ -8,8 +8,8 @@ export default class ShowController {
     addShow = async (req, res, next) => {
         try {
             const {id, list} = req.body;
-            await this._showService.addShow(req.userId, id, list);
-            res.sendStatus(201);
+            const show = await this._showService.addShow(req.userId, id, list);
+            res.status(201).json(show);
         } catch (e) {
             next(e);
         }

@@ -1,4 +1,5 @@
 import db from "../config/db.js";
+import Season from "../models/season.js";
 
 export default class SeasonRepository {
 
@@ -18,7 +19,7 @@ export default class SeasonRepository {
     /**
      * @param {number} showId
      * @param {number} number
-     * @returns {Promise<any[]>}
+     * @returns {Promise<Season[]>}
      */
     getSeasonByShowIdByNumber = async (showId, number) => {
         const res = await db.query(`
@@ -26,7 +27,7 @@ export default class SeasonRepository {
             FROM seasons
             WHERE show_id = $1 AND number = $2
         `, [showId, number]);
-        return res.rows;
+        return res.rows.map((row) => new Season(row));
     }
 
     /**

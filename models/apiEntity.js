@@ -1,4 +1,4 @@
-class ApiEntity {
+export default class ApiEntity {
 
     /**
      * @param {number} id
@@ -9,5 +9,3 @@ class ApiEntity {
         this.title = title;
     }
 }
-
-export default ApiEntity;

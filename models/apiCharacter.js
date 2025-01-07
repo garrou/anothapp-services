@@ -1,4 +1,4 @@
-class ApiCharacter {
+export default class ApiCharacter {
 
     /**
      * @param {Object} character
@@ -10,5 +10,3 @@ class ApiCharacter {
         this.picture = character.picture;
     }
 }
-
-export default ApiCharacter;

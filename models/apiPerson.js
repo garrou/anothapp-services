@@ -1,4 +1,4 @@
-class ApiPerson {
+export default class ApiPerson {
 
     /**
      * @param {Object} person
@@ -50,5 +50,3 @@ class ApiPersonMovie extends ApiIntertainment {
         super(movie);
     }
 }
-
-export default ApiPerson;

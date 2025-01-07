@@ -1,6 +1,6 @@
 import Platform from "./platform.js";
 
-class UserSeason {
+export default class UserSeason {
 
     /**
      * @param {Object} obj
@@ -11,5 +11,3 @@ class UserSeason {
         this.platform = new Platform(obj);
     }
 }
-
-export default UserSeason;

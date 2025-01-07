@@ -18,11 +18,9 @@ export default class UserService {
         if (!username) {
             throw new ServiceError(400, "Requête invalide");
         }
-        return (await this._userRepository.getUserByUsername(username)).reduce((acc, curr) => {
-            const user = new UserProfile(curr);
-
+        return (await this._userRepository.getUserByUsername(username)).reduce((acc, user) => {
             if (user.id !== currentUserId) {
-                acc.push(user);
+                acc.push(new UserProfile(user));
             }
             return acc;
         }, []);
@@ -34,10 +32,10 @@ export default class UserService {
      * @returns {Promise<UserProfile>}
      */
     getProfile = async (userId, isCurrentUser) => {
-        const rows = await this._userRepository.getUserById(userId);
+        const user = await this._userRepository.getUserById(userId);
 
-        if (rows.length === 1) {
-            return new UserProfile(rows[0], isCurrentUser);
+        if (user) {
+            return new UserProfile(user, isCurrentUser);
         }
         throw new ServiceError(404, "Profil introuvable");
     }
@@ -95,12 +93,12 @@ export default class UserService {
         if (!changeValid.status) {
             throw new Error(changeValid.message);
         }
-        const rows = await this._userRepository.getUserById(userId);
+        const user = await this._userRepository.getUserById(userId);
 
-        if (rows.length === 0) {
+        if (!user) {
             throw new ServiceError(404, "Utilisateur inconnu");
         }
-        const same = await SecurityHelper.comparePassword(currentPass, rows[0]["password"]);
+        const same = await SecurityHelper.comparePassword(currentPass, user.password);
 
         if (!same) {
             throw new ServiceError(400, "Mot de passe incorrect");
@@ -125,20 +123,20 @@ export default class UserService {
         if (!changeValid.status) {
             throw new ServiceError(400, changeValid.message);
         }
-        let rows = await this._userRepository.getUserById(currentUserId);
+        let user = await this._userRepository.getUserById(currentUserId);
 
-        if (rows.length === 0) {
+        if (!user) {
             throw new ServiceError(404, "Utilisateur inconnu");
         }
-        if (rows[0]["email"] !== email) {
+        if (user.email !== email) {
             throw new ServiceError(400, "Email incorrect");
         }
         if (email === newEmail) {
             throw new ServiceError(400, "Le nouvel mail doit être différent de l'ancien");
         }
-        rows = await this._userRepository.getUserByEmail(newEmail);
+        user = await this._userRepository.getUserByEmail(newEmail);
 
-        if (rows.length > 0) {
+        if (user) {
             throw new ServiceError(409, "Cet email est déjà associé à un compte");
         }
         const updated = await this._userRepository.updateEmail(currentUserId, newEmail);

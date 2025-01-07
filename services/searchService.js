@@ -6,7 +6,6 @@ import ApiCharacter from '../models/apiCharacter.js';
 import ApiEntity from '../models/apiEntity.js';
 import ApiPerson from '../models/apiPerson.js';
 import {cumulate} from '../helpers/utils.js';
-import Platform from '../models/platform.js';
 import {Param, FetchHelper} from '../helpers/fetch.js';
 import PlatformRepository from "../repositories/platformRepository.js";
 import ApiShowKind from "../models/apiShowKind.js";
@@ -17,7 +16,7 @@ export default class SearchService {
     constructor() {
         this._platformRepository = new PlatformRepository();
         this._baseUrl = "https://api.betaseries.com";
-        this._headers = {"X-BetaSeries-Key": process.env.BETASERIES_KEY}
+        this._headers = {"X-BetaSeries-Key": process.env.BETASERIES_KEY};
     }
 
     /**
@@ -27,7 +26,7 @@ export default class SearchService {
      * @param {string?} platform
      * @returns {Promise<void>}
      */
-    async getShows(title, year, kind, platform) {
+    getShows = async (title, year, kind, platform) => {
         return title || year || kind || platform
             ? this._getShowsByFilters(title, year, kind, platform)
             : this._getShowsToDiscover(FetchHelper.buildLimit());
@@ -44,14 +43,14 @@ export default class SearchService {
     }
 
     /**
-     * @param {number?} showId
+     * @param {number?} id
      * @returns {Promise<ApiShow>}
      */
-    getByShowId = async (showId) => {
-        if (!showId) {
+    getByShowId = async (id) => {
+        if (!id) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${this._baseUrl}/shows/display?id=${showId}`, {
+        const resp = await axios.get(`${this._baseUrl}/shows/display?id=${id}`, {
             headers: this._headers
         });
         const {show} = await resp.data;
@@ -59,14 +58,14 @@ export default class SearchService {
     }
 
     /**
-     * @param {number?} showId
+     * @param {number?} id
      * @returns {Promise<Season[]>}
      */
-    getSeasonsByShowId = async (showId) => {
-        if (!showId) {
+    getSeasonsByShowId = async (id) => {
+        if (!id) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${this._baseUrl}/shows/seasons?id=${showId}`, {
+        const resp = await axios.get(`${this._baseUrl}/shows/seasons?id=${id}`, {
             headers: this._headers
         });
         const {seasons} = await resp.data;
@@ -75,15 +74,15 @@ export default class SearchService {
     }
 
     /**
-     * @param {number?} showId
+     * @param {number?} id
      * @param {number?} num
      * @returns {Promise<ApiEpisode[]>}
      */
-    getEpisodesByShowIdBySeason = async (showId, num) => {
-        if (!showId || !num) {
+    getEpisodesByShowIdBySeason = async (id, num) => {
+        if (!id || !num) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${this._baseUrl}/shows/episodes?id=${showId}&season=${num}`, {
+        const resp = await axios.get(`${this._baseUrl}/shows/episodes?id=${id}&season=${num}`, {
             headers: this._headers
         });
         const {episodes} = await resp.data;
@@ -91,14 +90,14 @@ export default class SearchService {
     }
 
     /**
-     * @param {number?} showId
+     * @param {number?} id
      * @returns {Promise<ApiCharacter[]>}
      */
-    getCharactersByShowId = async (showId) => {
-        if (!showId) {
+    getCharactersByShowId = async (id) => {
+        if (!id) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${this._baseUrl}/shows/characters?id=${showId}`, {
+        const resp = await axios.get(`${this._baseUrl}/shows/characters?id=${id}`, {
             headers: this._headers
         });
         const {characters} = await resp.data;
@@ -106,14 +105,14 @@ export default class SearchService {
     }
 
     /**
-     * @param {number?} showId
+     * @param {number?} id
      * @returns {Promise<ApiEntity[]>}
      */
-    getSimilarsByShowId = async (showId) => {
-        if (!showId) {
+    getSimilarsByShowId = async (id) => {
+        if (!id) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${this._baseUrl}/shows/similars?id=${showId}`, {
+        const resp = await axios.get(`${this._baseUrl}/shows/similars?id=${id}`, {
             headers: this._headers
         });
         const {similars} = await resp.data;
@@ -134,14 +133,14 @@ export default class SearchService {
     }
 
     /**
-     * @param {number?} showId
+     * @param {number?} id
      * @returns {Promise<string[]>}
      */
-    getImagesByShowId = async (showId) => {
-        if (!showId) {
+    getImagesByShowId = async (id) => {
+        if (!id) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${this._baseUrl}/shows/pictures?id=${showId}`, {
+        const resp = await axios.get(`${this._baseUrl}/shows/pictures?id=${id}`, {
             headers: this._headers
         });
         const {pictures} = await resp.data;
@@ -149,14 +148,14 @@ export default class SearchService {
     }
 
     /**
-     * @param {number?} personId
+     * @param {number?} id
      * @returns {Promise<ApiPerson>}
      */
-    getPersonById = async (personId) => {
-        if (!personId) {
+    getPersonById = async (id) => {
+        if (!id) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const resp = await axios.get(`${this._baseUrl}/persons/person?id=${personId}`, {
+        const resp = await axios.get(`${this._baseUrl}/persons/person?id=${id}`, {
             headers: this._headers
         });
         const {person} = await resp.data;
@@ -167,8 +166,7 @@ export default class SearchService {
      * @returns {Promise<Platform[]>}
      */
     getPlatforms = async () => {
-        const rows = await this._platformRepository.getPlatforms();
-        return rows.map((row) => new Platform(row));
+        return await this._platformRepository.getPlatforms();
     }
 
     /**
@@ -204,6 +202,7 @@ export default class SearchService {
             new Param("genres", kinds),
             new Param("svods", platforms),
             new Param("creations", years),
+            new Param("limit", numLimit),
         ]);
         const results = await Promise.all(FetchHelper.fetchPromises(url, this._headers,"offset", numLimit));
 

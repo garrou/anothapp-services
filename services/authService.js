@@ -18,18 +18,18 @@ export default class AuthService {
         if (!Validator.isValidId(identifier)) {
             throw new ServiceError(400, "Identifiant incorrect");
         }
-        const rows = await this._userRepository.getUserByIdentifier(identifier);
+        const found = await this._userRepository.getUserByIdentifier(identifier);
 
-        if (rows.length === 0) {
+        if (!found) {
             throw new ServiceError(400, "Identifiant ou mot de passe incorrect");
         }
-        const same = await SecurityHelper.comparePassword(password, rows[0]["password"]);
+        const same = await SecurityHelper.comparePassword(password, found.password);
 
         if (!same) {
             throw new ServiceError(400, "Identifiant ou mot de passe incorrect");
         }
-        const token = SecurityHelper.signJwt(rows[0]["id"], process.env.JWT_SECRET);
-        const user = new UserProfile(rows[0], true);
+        const token = SecurityHelper.signJwt(found.id, process.env.JWT_SECRET);
+        const user = new UserProfile(found, true);
         return {
             "token": token,
             ...user,
@@ -59,14 +59,14 @@ export default class AuthService {
         if (!passValid.status) {
             throw new ServiceError(400, passValid.message);
         }
-        let rows = await this._userRepository.getUserByEmail(email);
+        const user = await this._userRepository.getUserByEmail(email);
 
-        if (rows.length > 0) {
+        if (user) {
             throw new ServiceError(409, "Un compte est déjà associé à cet email");
         }
-        rows = await this._userRepository.getUserByUsername(username, true);
+        const users = await this._userRepository.getUserByUsername(username, true);
 
-        if (rows.length > 0) {
+        if (users.length > 0) {
             throw new ServiceError(409, "Un compte est déjà associé à ce nom d'utilisateur");
         }
         const hash = await SecurityHelper.createHash(password);

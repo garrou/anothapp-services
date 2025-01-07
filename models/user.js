@@ -1,14 +1,12 @@
-export default class UserProfile {
-
+export default class User {
     /**
      * @param {Object} user
-     * @param {boolean} current
      */
-    constructor(user, current = false) {
+    constructor(user) {
         this.id = user.id;
         this.email = user.email;
         this.picture = user.picture;
         this.username = user.username;
-        this.current = current;
+        this.password = user.password;
     }
 }

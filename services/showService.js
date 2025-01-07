@@ -1,7 +1,3 @@
-import Season from "../models/season.js";
-import Show from "../models/show.js";
-import {cumulate} from "../helpers/utils.js";
-import UserSeason from "../models/userSeason.js";
 import ShowRepository from "../repositories/showRepository.js";
 import UserShowRepository from "../repositories/userShowRepository.js";
 import SearchService from "./searchService.js";
@@ -19,7 +15,7 @@ export default class ShowService {
         this._userShowRepository = new UserShowRepository();
         this._userListRepository = new UserListRepository();
         this._userSeasonRepository = new UserSeasonRepository();
-        this.searchService = new SearchService();
+        this._searchService = new SearchService();
         this._friendRepository = new FriendRepository();
         this._seasonRepository = new SeasonRepository();
     }
@@ -28,7 +24,7 @@ export default class ShowService {
      * @param {string} userId
      * @param {string} status
      * @param {string?} friendId
-     * @returns {Promise<any>}
+     * @returns {Promise<UserShow[]|Show[]>}
      */
     _getShowsByStatus = async (userId, status, friendId) => {
         switch (status) {
@@ -52,25 +48,25 @@ export default class ShowService {
 
     /**
      * @param {string} currentUserId
-     * @param {number?} id
+     * @param {number?} showId
      * @param {boolean} addInList
-     * @returns {Promise<void>}
+     * @returns {Promise<Show|ApiShow>}
      */
-    addShow = async (currentUserId, id, addInList = false) => {
-        if (!id) {
+    addShow = async (currentUserId, showId, addInList = false) => {
+        if (!showId) {
             throw new ServiceError(400, "Requite invalide");
         }
         const exists = addInList
-            ? await this._userListRepository.checkShowExistsByUserIdByShowId(currentUserId, id)
-            : await this._userShowRepository.checkShowExistsByUserIdByShowId(currentUserId, id);
+            ? await this._userListRepository.checkShowExistsByUserIdByShowId(currentUserId, showId)
+            : await this._userShowRepository.checkShowExistsByUserIdByShowId(currentUserId, showId);
 
         if (exists) {
             throw new ServiceError(409, `Cette série est déjà dans votre ${addInList ? "liste" : "collection"}`);
         }
-        const isNewShow = await this._showRepository.isNewShow(id);
+        let show = await this._showRepository.getShow(showId);
 
-        if (isNewShow) {
-            const show = await this.searchService.getByShowId(id);
+        if (!show) {
+            show = await this._searchService.getByShowId(showId);
 
             if (!Validator.idValidShow(show)) {
                 throw new ServiceError(400, "Série invalide");
@@ -82,11 +78,14 @@ export default class ShowService {
                 throw new ServiceError(500, "Impossible de créer la série");
             }
         }
-        if (addInList) {
-            await this._userListRepository.create(currentUserId, id);
-        } else {
-            await this._userShowRepository.create(currentUserId, id);
+        const added = addInList
+            ? await this._userListRepository.create(currentUserId, showId)
+            : await this._userShowRepository.create(currentUserId, showId);
+
+        if (!added) {
+            throw new ServiceError(500, "Impossible d'ajouter la série");
         }
+        return show;
     }
 
     /**
@@ -126,11 +125,9 @@ export default class ShowService {
         // }
         const seasons = await this._userSeasonRepository.getDistinctByUserIdByShowId(currentUserId, id);
         const [time, nbEpisodes] = await this._userSeasonRepository.getTimeEpisodesByUserIdByShowId(currentUserId, id);
-        const episodes = cumulate(seasons, "episodes");
-        const mapSeasons = seasons.map((s, i) => new Season(s, `${episodes[i] + 1} - ${episodes[i + 1]}`));
         return {
-            // "serie": new Show(show),
-            "seasons": mapSeasons,
+            // "serie": new UserShow(show),
+            "seasons": seasons,
             "time": time,
             "episodes": nbEpisodes
         };
@@ -138,30 +135,26 @@ export default class ShowService {
 
     /**
      * @param {string} currentUserId
-     * @param title
-     * @param limit
-     * @param status
-     * @param friendId
-     * @param platforms
-     * @returns {Promise<Show[]>}
+     * @param {string?} title
+     * @param {number?} limit
+     * @param {string?} status
+     * @param {string?} friendId
+     * @param {string?} platforms
+     * @returns {Promise<UserShow[]|Show[]>}
      */
     getShows = async (currentUserId, title, limit, status, friendId, platforms) => {
-        let rows = null;
-
         if (friendId && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
             throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
         }
         if (title) {
-            rows = await this._userShowRepository.getShowsByUserIdByTitle(currentUserId, title);
+            return await this._userShowRepository.getShowsByUserIdByTitle(currentUserId, title);
         } else if (status) {
-            rows = await this._getShowsByStatus(currentUserId, status, friendId);
+            return await this._getShowsByStatus(currentUserId, status, friendId);
         } else if (platforms) {
             const ids = platforms.split(",").map((p) => parseInt(p));
-            rows = await this._userShowRepository.getShowsByUserIdByPlatforms(currentUserId, ids);
-        } else {
-            rows = await this._userShowRepository.getShowsByUserId(currentUserId, limit);
+            return await this._userShowRepository.getShowsByUserIdByPlatforms(currentUserId, ids);
         }
-        return rows.map((row) => new Show(row));
+        return await this._userShowRepository.getShowsByUserId(currentUserId, limit);
     }
 
     /**
@@ -174,9 +167,9 @@ export default class ShowService {
         if (!serie || !serie.id || !season || !season.number || !season.episodes) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const rows = await this._seasonRepository.getSeasonByShowIdByNumber(serie.id, season.number);
+        const seasons = await this._seasonRepository.getSeasonByShowIdByNumber(serie.id, season.number);
 
-        if (rows.length === 0) {
+        if (seasons.length === 0) {
             await this._seasonRepository.createSeason(season.episodes, season.number, season.image ?? serie.poster, serie.id);
         }
         const added = await this._userSeasonRepository.create(currentUserId, serie.id, season.number);
@@ -196,9 +189,8 @@ export default class ShowService {
         if (!id || !num) {
             throw new ServiceError(400, "Requête invalide");
         }
-        const rows = await this._userSeasonRepository.getInfosByUserIdByShowId(currentUserId, id, num);
         // const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(currentUserId, id, num);
-        return rows.map(row => new UserSeason(row));
+        return await this._userSeasonRepository.getInfosByUserIdByShowId(currentUserId, id, num);
     }
 
     /**
