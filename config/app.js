@@ -5,34 +5,34 @@ import {errorHandler} from "../middlewares/error.js";
 
 class App {
     constructor() {
-        this.app = express();
-        this._setupCors();
-        this._setupMiddleware();
-        this._setupRoutes();
-        this._setupErrorHandler();
+        this._app = express();
+        this.#setupCors();
+        this.#setupMiddleware();
+        this.#setupRoutes();
+        this.#setupErrorHandler();
     }
 
-    _setupErrorHandler() {
-        this.app.use(errorHandler);
+    #setupErrorHandler() {
+        this._app.use(errorHandler);
     }
 
-    _setupMiddleware() {
-        this.app.use(express.json());
+    #setupMiddleware() {
+        this._app.use(express.json());
     }
 
-    _setupCors() {
-        this.app.use(cors({
+    #setupCors() {
+        this._app.use(cors({
             origins: [process.env.ORIGIN],
             allowedHeaders: ["Authorization", "Content-Type"]
         }));
     }
 
-    _setupRoutes() {
-        this.app.use("/", routes);
+    #setupRoutes() {
+        this._app.use("/", routes);
     }
 
     listen() {
-        this.app.listen(process.env.PORT);
+        this._app.listen(process.env.PORT);
     }
 }
 

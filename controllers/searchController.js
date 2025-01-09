@@ -17,8 +17,8 @@ export default class SearchController {
 
     getShows = async (req, res, next) => {
         try {
-            const {title, year, kinds, platforms} = req.query;
-            const response = await this._searchService.getShows(title, year, kinds, platforms);
+            const {title, year, kinds, platforms, limit} = req.query;
+            const response = await this._searchService.getShows(title, year, kinds, platforms, limit);
             res.status(200).json(response);
         } catch (e) {
             next(e);

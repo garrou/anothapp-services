@@ -1,5 +1,6 @@
 import FriendRepository from "../repositories/friendRepository.js";
 import ServiceError from "../helpers/serviceError.js";
+import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 
 export default class FriendService {
 
@@ -14,7 +15,7 @@ export default class FriendService {
      */
     sendFriendRequest = async (currentUserId, userId) => {
         if (!userId) {
-            throw new ServiceError(400, "Requête invalide");
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         const exists = await this._friendRepository.checkIfRelationExists(currentUserId, userId);
 
@@ -35,7 +36,7 @@ export default class FriendService {
      */
     acceptFriend = async (currentUserId, userId) => {
         if (!userId) {
-            throw new ServiceError(400, "Requête invalide");
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         const accepted = await this._friendRepository.acceptFriend(userId, currentUserId);
 
@@ -51,7 +52,7 @@ export default class FriendService {
      */
     deleteFriend = async (currentUserId, userId) => {
         if (!userId) {
-            throw new ServiceError(400, "Requête invalide");
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         const deleted = await this._friendRepository.deleteFriend(currentUserId, userId);
 
@@ -67,7 +68,7 @@ export default class FriendService {
      * @returns {Promise<UserProfile[] | Map<string, UserProfile[]>>}
      */
     getFriends = async (currentUserId, status, serieId) => {
-        return await this._getFriendsByUserIdByStatus(currentUserId, status, serieId);
+        return await this.#getFriendsByUserIdByStatus(currentUserId, status, serieId);
     }
 
     /**
@@ -76,7 +77,7 @@ export default class FriendService {
      * @param {number?} showId
      * @returns {Promise<any>}
      */
-    async _getFriendsByUserIdByStatus(userId, status, showId) {
+    async #getFriendsByUserIdByStatus(userId, status, showId) {
         switch (status) {
             case "send":
                 return await this._friendRepository.getFriendsRequestsSend(userId);
@@ -86,7 +87,7 @@ export default class FriendService {
                 return await this._friendRepository.getFriends(userId);
             case "viewed":
                 if (!showId) {
-                    throw new Error("Requête invalide");
+                    throw new ServiceError(400, ERROR_INVALID_REQUEST);
                 }
                 return await this._friendRepository.getFriendsWhoWatchSerie(userId, showId);
             default:

@@ -38,8 +38,8 @@ export default class ShowController {
 
     getShows = async (req, res, next) => {
         try {
-            const {title, limit, status, friendId, platforms} = req.query;
-            const shows = await this._showService.getShows(req.userId, title, limit, status, friendId, platforms);
+            const {title, status, friendId, platforms, countries, kinds} = req.query;
+            const shows = await this._showService.getShows(req.userId, title, status, friendId, platforms, countries, kinds);
             res.status(200).json(shows);
         } catch (e) {
             next(e);
@@ -48,8 +48,8 @@ export default class ShowController {
 
     addSeasonByShowId = async (req, res, next) => {
         try {
-            const {season, serie} = req.body;
-            await this._showService.addSeasonByShowId(req.userId, serie, season);
+            const {id, num} = req.body;
+            await this._showService.addSeason(req.userId, id, num);
             res.sendStatus(201);
         } catch (e) {
             next(e);

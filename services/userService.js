@@ -3,6 +3,7 @@ import UserRepository from "../repositories/userRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
+import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 
 export default class UserService {
     constructor() {
@@ -16,7 +17,7 @@ export default class UserService {
      */
     getUser = async (currentUserId, username) => {
         if (!username) {
-            throw new ServiceError(400, "Requête invalide");
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         return (await this._userRepository.getUserByUsername(username)).reduce((acc, user) => {
             if (user.id !== currentUserId) {
@@ -52,16 +53,16 @@ export default class UserService {
      */
     changeProfile = async (currentUserId, currentPassword, newPassword, confirmPassword, email, newEmail, image) => {
         if (currentPassword && newPassword && confirmPassword) {
-            await this._changePassword(currentUserId, currentPassword, newPassword, confirmPassword);
+            await this.#changePassword(currentUserId, currentPassword, newPassword, confirmPassword);
             return "Mot de passe modifié";
         } else if (email && newEmail) {
-            await this._changeEmail(currentUserId, email, newEmail);
+            await this.#changeEmail(currentUserId, email, newEmail);
             return "Email modifié";
         } else if (image) {
-            await this._changeImage(currentUserId, image);
+            await this.#changeImage(currentUserId, image);
             return "Image de profil définie";
         }
-        throw new ServiceError(400, "Requête invalide");
+        throw new ServiceError(400, ERROR_INVALID_REQUEST);
     }
 
     /**
@@ -69,7 +70,7 @@ export default class UserService {
      * @param {string?} image
      * @returns {Promise<void>}
      */
-    _changeImage = async (currentUserId, image) => {
+    #changeImage = async (currentUserId, image) => {
         if (!Validator.isValidImage(image)) {
             throw new ServiceError(400, "Image invalide");
         }
@@ -87,7 +88,7 @@ export default class UserService {
      * @param {string?} confirmPass
      * @returns {Promise<void>}
      */
-    _changePassword = async (userId, currentPass, newPass, confirmPass) => {
+    #changePassword = async (userId, currentPass, newPass, confirmPass) => {
         const changeValid = Validator.isValidChangePassword(currentPass, newPass, confirmPass);
 
         if (!changeValid.status) {
@@ -117,7 +118,7 @@ export default class UserService {
      * @param {string?} newEmail
      * @returns {Promise<void>}
      */
-    _changeEmail = async (currentUserId, email, newEmail) => {
+    #changeEmail = async (currentUserId, email, newEmail) => {
         const changeValid = Validator.isValidChangeEmail(email, newEmail);
 
         if (!changeValid.status) {

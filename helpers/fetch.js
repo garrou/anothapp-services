@@ -1,4 +1,5 @@
 import axios from "axios";
+import {DEFAULT_LIMIT, MAX_LIMIT} from "../constants/fetch.js";
 
 export class Param {
     constructor(name, value) {
@@ -15,7 +16,7 @@ export class FetchHelper {
      * @param {any} param
      * @returns {string}
      */
-    static buildUrl = (url, query, param) => {
+    static #buildUrl = (url, query, param) => {
         return param === undefined || param === ""
             ? url
             : url.concat(`${url.includes("?") ? "&" : "?"}${query}=${param}`);
@@ -26,16 +27,31 @@ export class FetchHelper {
      * @returns {number}
      */
     static buildLimit = (limit) => {
-        return !limit || limit === "" || isNaN(parseInt(limit)) ? 20 : parseInt(limit);
+        if (!limit || limit === "") {
+            return DEFAULT_LIMIT;
+        }
+        const num = parseInt(limit);
+
+        if (isNaN(num) || num < 0) {
+            return DEFAULT_LIMIT;
+        }
+        return num;
     }
 
     /**
      * @param {number} limit
-     * @returns {number}
+     * @returns {number[]}
      */
-    static buildPagination = (limit) => {
-        const page = Math.round(limit / 100);
-        return page > 0 ? page : 1;
+    static #splitLimit(limit) {
+        const chunks = [];
+        let remaining = limit;
+
+        while (remaining > 0) {
+            const chunk = Math.min(remaining, MAX_LIMIT);
+            chunks.push(chunk);
+            remaining -= chunk;
+        }
+        return chunks;
     }
 
     /**
@@ -44,7 +60,7 @@ export class FetchHelper {
      * @returns string
      */
     static buildUrlWithParams = (url, params) => {
-        return params.reduce((acc, curr) => this.buildUrl(acc, curr.name, curr.value), url);
+        return params.reduce((acc, curr) => this.#buildUrl(acc, curr.name, curr.value), url);
     }
 
     /**
@@ -52,12 +68,14 @@ export class FetchHelper {
      * @param {Object} headers
      * @param {string} queryPage
      * @param {number} limit
-     * @returns Promise[]
+     * @returns {Promise[]}
      */
     static fetchPromises = (url, headers, queryPage, limit) => {
         const promises = [];
-        for (let page = 0; page <= this.buildPagination(limit); page += 1) {
-            promises.push(axios.get(this.buildUrl(url, queryPage, page), { headers }));
+        const limits = this.#splitLimit(limit);
+
+        for (let page = 0; page < limits.length; page += 1) {
+            promises.push(axios.get(this.#buildUrl(this.#buildUrl(url, queryPage, page), "limit", limits[page]), { headers }));
         }
         return promises;
     }

@@ -7,6 +7,8 @@ import SeasonRepository from "../repositories/seasonRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import UserListRepository from "../repositories/userListRepository.js";
 import Validator from "../helpers/validator.js";
+import ParserHelper from "../helpers/parser.js";
+import {ERROR_FAILED_ADD_SEASON, ERROR_INVALID_REQUEST} from "../constants/errors.js";
 
 export default class ShowService {
 
@@ -26,7 +28,7 @@ export default class ShowService {
      * @param {string?} friendId
      * @returns {Promise<UserShow[]|Show[]>}
      */
-    _getShowsByStatus = async (userId, status, friendId) => {
+    #getShowsByStatus = async (userId, status, friendId) => {
         switch (status) {
             case "resume":
                 return this._userShowRepository.getShowsToResumeByUserId(userId);
@@ -38,11 +40,11 @@ export default class ShowService {
                 return this._userShowRepository.getFavoritesByUserId(friendId ?? userId);
             case "shared":
                 if (!friendId) {
-                    throw new ServiceError(400, "Requête invalide");
+                    throw new ServiceError(400, ERROR_INVALID_REQUEST);
                 }
                 return this._userShowRepository.getSharedShowsWithFriend(userId, friendId);
             default:
-                throw new ServiceError(400, "Requête invalide");
+                throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
     }
 
@@ -54,7 +56,7 @@ export default class ShowService {
      */
     addShow = async (currentUserId, showId, addInList = false) => {
         if (!showId) {
-            throw new ServiceError(400, "Requite invalide");
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         const exists = addInList
             ? await this._userListRepository.checkShowExistsByUserIdByShowId(currentUserId, showId)
@@ -98,7 +100,7 @@ export default class ShowService {
         const deleteInList = (/true/i).test(inList);
 
         if (!id) {
-            throw new ServiceError(400, "Requête invalide");
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         const deleted = deleteInList
             ? await this._userListRepository.deleteByUserIdShowId(currentUserId, id)
@@ -116,7 +118,7 @@ export default class ShowService {
      */
     getShowById = async (currentUserId, id) => {
         if (!id) {
-            throw new ServiceError(400, "Requête invalide");
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         // const show = await this._userShowRepository.getShowByUserIdByShowId(currentUserId, id);
 
@@ -136,46 +138,68 @@ export default class ShowService {
     /**
      * @param {string} currentUserId
      * @param {string?} title
-     * @param {number?} limit
      * @param {string?} status
      * @param {string?} friendId
      * @param {string?} platforms
+     * @param {string?} countries
+     * @param {string?} kinds
      * @returns {Promise<UserShow[]|Show[]>}
      */
-    getShows = async (currentUserId, title, limit, status, friendId, platforms) => {
+    getShows = async (currentUserId, title, status, friendId, platforms, countries, kinds) => {
         if (friendId && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
             throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
         }
-        if (title) {
-            return await this._userShowRepository.getShowsByUserIdByTitle(currentUserId, title);
-        } else if (status) {
-            return await this._getShowsByStatus(currentUserId, status, friendId);
-        } else if (platforms) {
-            const ids = platforms.split(",").map((p) => parseInt(p));
-            return await this._userShowRepository.getShowsByUserIdByPlatforms(currentUserId, ids);
+        if (status) {
+            return await this.#getShowsByStatus(currentUserId, status, friendId);
         }
-        return await this._userShowRepository.getShowsByUserId(currentUserId, limit);
+        return await this._userShowRepository.getShowsByUserId(
+            currentUserId,
+            title,
+            ParserHelper.splitAndToNumber(platforms),
+            ParserHelper.splitAndToNotNull(countries),
+            ParserHelper.splitAndToNotNull(kinds)
+        );
     }
 
     /**
      * @param {string} currentUserId
-     * @param {any} serie
-     * @param {any} season
+     * @param {number?} id
+     * @param {number?} num
      * @returns {Promise<void>}
      */
-    addSeasonByShowId = async (currentUserId, serie, season) => {
-        if (!serie || !serie.id || !season || !season.number || !season.episodes) {
-            throw new ServiceError(400, "Requête invalide");
+    addSeason = async (currentUserId, id, num) => {
+        if (!id || !num) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const seasons = await this._seasonRepository.getSeasonByShowIdByNumber(serie.id, season.number);
+        const hasShow = await this._userShowRepository.checkShowExistsByUserIdByShowId(currentUserId, id);
 
-        if (seasons.length === 0) {
-            await this._seasonRepository.createSeason(season.episodes, season.number, season.image ?? serie.poster, serie.id);
+        if (!hasShow) {
+            throw new ServiceError(400, "Cette série n'est pas dans votre collection");
         }
-        const added = await this._userSeasonRepository.create(currentUserId, serie.id, season.number);
+        const existingSeason = await this._seasonRepository.getSeasonByShowIdByNumber(id, num);
+
+        if (existingSeason) {
+            const added = await this._userSeasonRepository.create(currentUserId, id, num);
+
+            if (!added) {
+                throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
+            }
+            return;
+        }
+        const season = await this._searchService.getSeasonByShowIdByNumber(id, num);
+
+        if (!season) {
+            throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
+        }
+        const created = await this._seasonRepository.createSeason(season.episodes, season.number, season.image, id);
+
+        if (!created) {
+            throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
+        }
+        const added = await this._userSeasonRepository.create(currentUserId, id, num);
 
         if (!added) {
-            throw new ServiceError(500, "Impossible d'ajouter la saison");
+            throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
         }
     }
 
@@ -187,7 +211,7 @@ export default class ShowService {
      */
     getSeasonInfosByShowIdBySeason = async (currentUserId, id, num) => {
         if (!id || !num) {
-            throw new ServiceError(400, "Requête invalide");
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         // const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(currentUserId, id, num);
         return await this._userSeasonRepository.getInfosByUserIdByShowId(currentUserId, id, num);
@@ -204,7 +228,7 @@ export default class ShowService {
         let result = null;
 
         if (!id || (!favorite && !watch)) {
-            throw new ServiceError(400, "Requête invalide");
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         } else if (favorite) {
             result = await this._userShowRepository.updateFavoriteByUserIdByShowId(currentUserId, id);
         } else if (watch) {

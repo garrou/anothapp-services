@@ -1,6 +1,7 @@
 import UserShowRepository from "../repositories/userShowRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import ServiceError from "../helpers/serviceError.js";
+import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 
 export default class StatService {
     constructor() {
@@ -37,7 +38,7 @@ export default class StatService {
             case "seasons":
                 return this._userSeasonRepository.getTotalSeasonsByUserId(currentUserId);
             default:
-                throw new ServiceError(400, "Requête invalide");
+                throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
     }
 
@@ -59,7 +60,7 @@ export default class StatService {
             case "rank":
                 return this._userSeasonRepository.getRankingViewingTimeByShows(currentUserId);
             default:
-                throw new ServiceError(400, "Requête invalide");
+                throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
     }
 
@@ -72,11 +73,11 @@ export default class StatService {
     getGroupedCountByUserIdByTypeByPeriod = (userId, type, period) => {
         switch (type) {
             case "seasons":
-                return this._getNbSeasonsByUserIdByPeriod(userId, period);
+                return this.#getNbSeasonsByUserIdByPeriod(userId, period);
             case "episodes":
-                return this._getNbEpisodesByUserIdByPeriod(userId, period);
+                return this.#getNbEpisodesByUserIdByPeriod(userId, period);
             case "kinds":
-                return this._getNbKindsByUserId(userId);
+                return this.#getNbKindsByUserId(userId);
             case "best-months":
                 return this._userSeasonRepository.getRecordViewingTimeMonth(userId);
             case "countries":
@@ -84,7 +85,7 @@ export default class StatService {
             case "platforms":
                 return this._userSeasonRepository.getPlatformsByUserId(userId);
             default:
-                throw new ServiceError(400, "Requête invalide");
+                throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
     }
 
@@ -92,7 +93,7 @@ export default class StatService {
      * @param {string} userId
      * @return Promise<{label: string, value: number}[]>
      */
-    _getNbKindsByUserId = async (userId) => {
+    #getNbKindsByUserId = async (userId) => {
         const kindsMap = new Map();
         const rows = await this._userShowRepository.getKindsByUserId(userId);
 
@@ -114,7 +115,7 @@ export default class StatService {
      * @param {string} period
      * @return Promise
      */
-    _getNbSeasonsByUserIdByPeriod = (userId, period) => {
+    #getNbSeasonsByUserIdByPeriod = (userId, period) => {
         switch (period) {
             case "years":
                 return this._userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId);
@@ -123,7 +124,7 @@ export default class StatService {
             case "months":
                 return this._userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId);
             default:
-                throw new ServiceError(400, "Requête invalide");
+                throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
     }
 
@@ -132,14 +133,14 @@ export default class StatService {
      * @param {string} period
      * @return Promise
      */
-    _getNbEpisodesByUserIdByPeriod = (userId, period) => {
+    #getNbEpisodesByUserIdByPeriod = (userId, period) => {
         switch (period) {
             case "years":
                 return this._userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId);
             case "year":
                 return this._userSeasonRepository.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId);
             default:
-                throw new ServiceError(400, "Requête invalide");
+                throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
     }
 }

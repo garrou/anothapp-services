@@ -39,7 +39,25 @@ const transaction = async (callback) => {
     }
 }
 
+/**
+ * @param {string} column
+ * @param {string} condition
+ * @param {string} operator
+ * @param {number} from
+ * @param {number} to
+ * @returns {string}
+ */
+const generateCondition = (column, condition, operator, from, to) => {
+    let sql = "";
+
+    for (let i = from; i < from + to; i++) {
+        sql += ` ${column} ${condition} $${i} ${operator}`;
+    }
+    return sql === "" ? "TRUE" : sql.substring(0, sql.length - operator.length);
+}
+
 export default {
+    generateCondition,
     query,
     transaction,
 }

@@ -1,3 +1,12 @@
+import {
+    EMAIL_PATTERN,
+    IMAGE_PATTERN,
+    MAX_PASSWORD,
+    MAX_USERNAME,
+    MIN_PASSWORD,
+    MIN_USERNAME
+} from "../constants/validation.js";
+
 class ValidatorStatus {
     constructor(valid, message = "") {
         this.status = valid;
@@ -7,45 +16,13 @@ class ValidatorStatus {
 
 export default class Validator {
 
-    static get emailPattern() {
-        return /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/
-    }
-
-    static get imagePattern() {
-        return /^https:\/\/pictures\.betaseries\.com\/.*$/
-    }
-
-    static get maxPassword() {
-        return 50;
-    }
-
-    static get minPassword() {
-        return 8;
-    }
-
-    static get maxUsername() {
-        return 25;
-    }
-
-    static get minUsername() {
-        return 3;
-    }
-
-    static get passwordPattern() {
-        return /^.{8,50}$/;
-    }
-
-    static get usernamePattern() {
-        return /^[^@]{3,25}$/;
-    }
-
     /**
      * @param {string?} username
      * @returns {ValidatorStatus}
      */
     static isValidUsername = (username) => {
-        if (typeof username !== "string" || !this.usernamePattern.test(username)) {
-            return new ValidatorStatus(false, `Username incorrect (${this.minUsername} - ${this.maxUsername})`);
+        if (typeof username !== "string" || username.length < MIN_USERNAME || username.length > MAX_USERNAME) {
+            return new ValidatorStatus(false, `Username incorrect (${MIN_USERNAME} - ${MAX_USERNAME})`);
         }
         return new ValidatorStatus(true);
     }
@@ -55,7 +32,7 @@ export default class Validator {
      * @returns {ValidatorStatus}
      */
     static isValidEmail = (email) => {
-        if (typeof email !== "string" || !this.emailPattern.test(email)) {
+        if (typeof email !== "string" || !EMAIL_PATTERN.test(email)) {
             return new ValidatorStatus(false, "Email incorrect");
         }
         return new ValidatorStatus(true);
@@ -73,8 +50,8 @@ export default class Validator {
         if (password !== confirm) {
             return new ValidatorStatus(false, "Mots de passe différents");
         }
-        if (!this.passwordPattern.test(password)) {
-            return new ValidatorStatus(false, `Mot de passe incorrect (${this.minPassword} - ${this.maxPassword})`);
+        if (!password.length < MIN_PASSWORD || password.length > MAX_PASSWORD) {
+            return new ValidatorStatus(false, `Mot de passe incorrect (${MIN_PASSWORD} - ${MAX_PASSWORD})`);
         }
         return new ValidatorStatus(true);
     }
@@ -114,15 +91,7 @@ export default class Validator {
     static isValidImage = (image) => {
         return typeof image === "string"
             && image.length > 0
-            && this.imagePattern.test(image);
-    }
-
-    /**
-     * @param {string?} name
-     * @returns {boolean}
-     */
-    static isValidId = (name) => {
-        return typeof name === "string";
+            && IMAGE_PATTERN.test(image);
     }
 
     /**

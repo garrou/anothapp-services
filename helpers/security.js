@@ -5,17 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 export default class SecurityHelper {
 
     /**
-     * @returns {string[]}
-     */
-    static get whiteList() {
-        return [
-            "/auth/login",
-            "/auth/register",
-            "/search/images",
-        ];
-    }
-
-    /**
      * @param {string} userId
      * @param {string} secret
      * @returns {string}

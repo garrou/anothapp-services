@@ -1,14 +1,16 @@
 import SecurityHelper from "../helpers/security.js";
+import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {WHITELIST} from "../constants/security.js";
 
 export const checkJwt = (req, res, next) => {
 
-    if (SecurityHelper.whiteList.some((url) => req.originalUrl.startsWith(url))) {
+    if (WHITELIST.some((url) => req.originalUrl.startsWith(url))) {
         return next();
     }
     const authHeader = req.headers["authorization"];
 
     if (!authHeader) {
-        return res.status(400).json({"message": "Requête invalide"});
+        return res.status(400).json({"message": ERROR_INVALID_REQUEST});
     }
     const [type, token] = authHeader.split(" ");
 

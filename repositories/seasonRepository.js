@@ -19,7 +19,7 @@ export default class SeasonRepository {
     /**
      * @param {number} showId
      * @param {number} number
-     * @returns {Promise<Season[]>}
+     * @returns {Promise<Season|null>}
      */
     getSeasonByShowIdByNumber = async (showId, number) => {
         const res = await db.query(`
@@ -27,7 +27,7 @@ export default class SeasonRepository {
             FROM seasons
             WHERE show_id = $1 AND number = $2
         `, [showId, number]);
-        return res.rows.map((row) => new Season(row));
+        return res.rowCount === 1 ? new Season(res.rows[0]) : null;
     }
 
     /**

@@ -34,7 +34,7 @@ CREATE TABLE users_shows (
 CREATE TABLE seasons (
     number INTEGER NOT NULL,
     episodes INTEGER NOT NULL,
-    image VARCHAR(255) NOT NULL,
+    image VARCHAR(255),
     show_id INTEGER,
     FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
     PRIMARY KEY(number, show_id)

@@ -3,6 +3,7 @@ import UserProfile from "../models/userProfile.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
+import {ERROR_LOGIN_PASSWORD} from "../constants/errors.js";
 
 export default class AuthService {
     constructor() {
@@ -15,18 +16,15 @@ export default class AuthService {
      * @returns {Promise<{token: string, id: string, email: string, picture: string, username: string, current: boolean}>}
      */
     login = async (identifier, password) => {
-        if (!Validator.isValidId(identifier)) {
-            throw new ServiceError(400, "Identifiant incorrect");
-        }
         const found = await this._userRepository.getUserByIdentifier(identifier);
 
         if (!found) {
-            throw new ServiceError(400, "Identifiant ou mot de passe incorrect");
+            throw new ServiceError(400, ERROR_LOGIN_PASSWORD);
         }
         const same = await SecurityHelper.comparePassword(password, found.password);
 
         if (!same) {
-            throw new ServiceError(400, "Identifiant ou mot de passe incorrect");
+            throw new ServiceError(400, ERROR_LOGIN_PASSWORD);
         }
         const token = SecurityHelper.signJwt(found.id, process.env.JWT_SECRET);
         const user = new UserProfile(found, true);
