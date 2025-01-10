@@ -48,7 +48,7 @@ export default class SearchController {
     getEpisodesByShowIdBySeason = async (req, res, next) => {
         try {
             const {showId, num} = req.params;
-            const episodes = await this._searchService.getEpisodesByShowIdBySeason(showId, num)
+            const episodes = await this._searchService.getEpisodesByShowIdBySeason(showId, num);
             res.status(200).json(episodes);
         } catch (e) {
             next(e);

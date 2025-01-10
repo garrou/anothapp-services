@@ -75,7 +75,8 @@ export class FetchHelper {
         const limits = this.#splitLimit(limit);
 
         for (let page = 0; page < limits.length; page += 1) {
-            promises.push(axios.get(this.#buildUrl(this.#buildUrl(url, queryPage, page), "limit", limits[page]), { headers }));
+            const currUrl = this.#buildUrl(this.#buildUrl(url, queryPage, page), "limit", limits[page]);
+            promises.push(axios.get(currUrl, { headers }));
         }
         return promises;
     }
