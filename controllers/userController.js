@@ -18,7 +18,8 @@ export default class UserController {
     getProfile = async (req, res, next) => {
         try {
             const {id} = req.params;
-            const profile = await this._userService.getProfile(id ?? req.userId, id === req.userId);
+            const isCurrentUser = !id || id === req.userId;
+            const profile = await this._userService.getProfile(id ?? req.userId, isCurrentUser);
             res.status(200).json(profile);
         } catch (e) {
             next(e);
