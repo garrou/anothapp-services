@@ -37,8 +37,8 @@ export default class StatController {
 
     getCountGroupedByTypeByPeriod = async (req, res, next) => {
         try {
-            const {type, period, id} = req.query;
-            const response = await this._statService.getGroupedCountByUserIdByTypeByPeriod(id ?? req.userId, type, period);
+            const {type, period, id, limit} = req.query;
+            const response = await this._statService.getGroupedCountByUserIdByTypeByPeriod(id ?? req.userId, type, period, limit);
             res.status(200).json(response);
         } catch (e) {
             next(e);

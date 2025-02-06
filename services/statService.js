@@ -68,9 +68,10 @@ export default class StatService {
      * @param {string} userId
      * @param {string} type
      * @param {string} period
+     * @param {number?} limit
      * @return Promise
      */
-    getGroupedCountByUserIdByTypeByPeriod = (userId, type, period) => {
+    getGroupedCountByUserIdByTypeByPeriod = (userId, type, period, limit) => {
         switch (type) {
             case "seasons":
                 return this.#getNbSeasonsByUserIdByPeriod(userId, period);
@@ -79,11 +80,11 @@ export default class StatService {
             case "kinds":
                 return this.#getNbKindsByUserId(userId);
             case "best-months":
-                return this._userSeasonRepository.getRecordViewingTimeMonth(userId);
+                return this._userSeasonRepository.getRecordViewingTimeMonth(userId, limit);
             case "countries":
-                return this._userShowRepository.getCountriesByUserId(userId);
+                return this._userShowRepository.getCountriesByUserId(userId, limit);
             case "platforms":
-                return this._userSeasonRepository.getPlatformsByUserId(userId);
+                return this._userSeasonRepository.getPlatformsByUserId(userId, limit);
             default:
                 throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
