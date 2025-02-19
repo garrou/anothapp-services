@@ -69,7 +69,7 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
-     * @param {string} id
+     * @param {number} id
      * @returns {Promise<UserShow|null>}
      */
     getShowByUserIdByShowId = async (userId, id) => {

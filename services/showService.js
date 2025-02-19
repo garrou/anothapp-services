@@ -171,9 +171,9 @@ export default class ShowService {
         if (!id || !num) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const hasShow = await this._userShowRepository.checkShowExistsByUserIdByShowId(currentUserId, id);
+        const show = await this._userShowRepository.getShowByUserIdByShowId(currentUserId, id);
 
-        if (!hasShow) {
+        if (!show) {
             throw new ServiceError(400, "Cette série n'est pas dans votre collection");
         }
         const existingSeason = await this._seasonRepository.getSeasonByShowIdByNumber(id, num);
@@ -191,7 +191,7 @@ export default class ShowService {
         if (!season) {
             throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
         }
-        const created = await this._seasonRepository.createSeason(season.episodes, season.number, season.image, id);
+        const created = await this._seasonRepository.createSeason(season.episodes, season.number, season.image ?? show.poster, id);
 
         if (!created) {
             throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
