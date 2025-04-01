@@ -130,8 +130,8 @@ export default class ShowService {
         return {
             // "serie": new UserShow(show),
             "seasons": seasons,
-            "time": time,
-            "episodes": nbEpisodes
+            "time": isNaN(time) ? 0 : time,
+            "episodes": isNaN(nbEpisodes) ? 0 : nbEpisodes
         };
     }
 
@@ -150,9 +150,9 @@ export default class ShowService {
             throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
         }
         if (status) {
-            return await this.#getShowsByStatus(currentUserId, status, friendId);
+            return this.#getShowsByStatus(currentUserId, status, friendId);
         }
-        return await this._userShowRepository.getShowsByUserId(
+        return this._userShowRepository.getShowsByUserId(
             currentUserId,
             title,
             ParserHelper.splitAndToNumber(platforms),

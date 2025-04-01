@@ -3,7 +3,7 @@ export default class Show {
         this.id = obj.id;
         this.title = obj.title;
         this.poster = obj.poster;
-        this.kinds = obj.kinds;
+        this.kinds = obj.kinds.split(";");
         this.duration = obj.duration;
         this.seasons = obj.seasons;
         this.country = obj.country;
