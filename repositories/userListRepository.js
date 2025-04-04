@@ -47,7 +47,7 @@ export default class UserListRepository {
      * @param {string} userId
      * @returns Promise<Show[]>
      */
-    getNotStartedShowsByUserId = async (userId) => {
+    getListShowsByUserId = async (userId) => {
         const res = await db.query(`
             SELECT s.*
             FROM shows s

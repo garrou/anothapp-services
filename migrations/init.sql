@@ -8,7 +8,7 @@ CREATE TABLE platforms (
 );
 
 INSERT INTO platforms (id, name, logo) VALUES
-(999, 'Autres', NULL),
+(999, 'Autres', ''),
 (25, 'ADN', 'https://pictures.betaseries.com/platforms/25.jpg'),
 (1, 'Netflix', 'https://pictures.betaseries.com/platforms/1.jpg'),
 (278, 'Canal+', 'https://pictures.betaseries.com/platforms/278.jpg'),

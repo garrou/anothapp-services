@@ -30,10 +30,10 @@ export default class ShowService {
      */
     #getShowsByStatus = async (userId, status, friendId) => {
         switch (status) {
-            case "resume":
+            case "stopped":
                 return this._userShowRepository.getShowsToResumeByUserId(userId);
-            case "not-started":
-                return this._userListRepository.getNotStartedShowsByUserId(userId);
+            case "watchlist":
+                return this._userListRepository.getListShowsByUserId(userId);
             case "continue":
                 return this._userShowRepository.getShowsToContinueByUserId(userId);
             case "favorite":

@@ -210,9 +210,7 @@ export default class UserShowRepository {
             ORDER BY s.title
         `, [userId]);
         return res.rows.reduce((acc, row) => {
-            if (row.missing > 0) {
-                acc.push(new UserShow(row));
-            }
+            if (row.missing > 0) acc.push(new UserShow(row));
             return acc;
         }, []);
     }
