@@ -37,11 +37,11 @@ export default class SeasonRepository {
      * @param {number} showId
      * @returns {Promise<boolean>}
      */
-    createSeason = async (episodes, number, image, showId, platformId = 999) => {
+    createSeason = async (episodes, number, image, showId) => {
         const res = await db.query(`
-            INSERT INTO seasons (episodes, number, image, show_id, platform_id)
-            VALUES ($1, $2, $3, $4, $5)
-        `, [episodes, number, image, showId, platformId]);
+            INSERT INTO seasons (episodes, number, image, show_id)
+            VALUES ($1, $2, $3, $4)
+        `, [episodes, number, image, showId]);
         return res.rowCount === 1;
     }
 

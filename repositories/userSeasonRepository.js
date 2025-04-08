@@ -10,13 +10,14 @@ export default class UserSeasonRepository {
      * @param {string} userId
      * @param {number} showId
      * @param {number} number
+     * @param {number} platform
      * @returns {Promise<boolean>}
      */
-    create = async (userId, showId, number) => {
+    create = async (userId, showId, number, platform = 999) => {
         const res = await db.query(`
-            INSERT INTO users_seasons (user_id, show_id, number)
-            VALUES ($1, $2, $3)
-        `, [userId, showId, number]);
+            INSERT INTO users_seasons (user_id, show_id, number, platform_id)
+            VALUES ($1, $2, $3, $4)
+        `, [userId, showId, number, platform]);
         return res.rowCount === 1;
     }
 
