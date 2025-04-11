@@ -20,7 +20,7 @@ export default class StatService {
             "nbSeries": await this.getCountByUserIdByType(userId, "shows"),
             "nbSeasons": await this.getCountByUserIdByType(userId, "seasons"),
             "nbEpisodes": await this.getCountByUserIdByType(userId, "episodes"),
-            "bestMonth": (await this.getTimeByUserIdByType(userId, "best-month"))[0],
+            "bestMonth": await this.getTimeByUserIdByType(userId, "best-month"),
         }
     }
 

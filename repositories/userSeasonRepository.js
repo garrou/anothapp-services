@@ -268,7 +268,11 @@ export default class UserSeasonRepository {
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
-        return res.rows.reverse();
+        const record = res.rows.reverse()[0];
+        return {
+            label: record?.label ?? "Aucun",
+            value: record?.value ? parseInt(record.value) : 0
+        }
     }
 
     /**

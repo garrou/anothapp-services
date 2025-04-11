@@ -50,7 +50,7 @@ export default class Validator {
         if (password !== confirm) {
             return new ValidatorStatus(false, "Mots de passe différents");
         }
-        if (!password.length < MIN_PASSWORD || password.length > MAX_PASSWORD) {
+        if (password.length < MIN_PASSWORD || password.length > MAX_PASSWORD) {
             return new ValidatorStatus(false, `Mot de passe incorrect (${MIN_PASSWORD} - ${MAX_PASSWORD})`);
         }
         return new ValidatorStatus(true);
