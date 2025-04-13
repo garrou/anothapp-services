@@ -3,6 +3,7 @@ import {cumulate} from "../helpers/utils.js";
 import Season from "../models/season.js";
 import UserSeason from "../models/userSeason.js";
 import SeasonTimeline from "../models/seasonTimeline.js";
+import Stat from "../models/stat.js";
 
 export default class UserSeasonRepository {
 
@@ -110,7 +111,7 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
-     * @returns {Promise<any[]>}
+     * @returns {Promise<Stat[]>}
      */
     getNbSeasonsByUserIdGroupByYear = async (userId) => {
         const res = await db.query(`
@@ -122,12 +123,12 @@ export default class UserSeasonRepository {
             GROUP BY label
             ORDER BY label
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new Stat(row));
     }
 
     /**
      * @param {string} userId
-     * @returns {Promise<any[]>}
+     * @returns {Promise<Stat[]>}
      */
     getTimeHourByUserIdGroupByYear = async (userId) => {
         const res = await db.query(`
@@ -139,7 +140,7 @@ export default class UserSeasonRepository {
             GROUP BY label
             ORDER BY label
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new Stat(row));
     }
 
     /**
@@ -159,7 +160,7 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
-     * @returns {Promise<any[]>}
+     * @returns {Promise<Stat[]>}
      */
     getNbSeasonsByUserIdGroupByMonth = async (userId) => {
         const res = await db.query(`
@@ -169,12 +170,12 @@ export default class UserSeasonRepository {
             GROUP BY num, label
             ORDER BY num
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new Stat(row));
     }
 
     /**
      * @param {string} userId
-     * @returns {Promise<any[]>}
+     * @returns {Promise<Stat[]>}
      */
     getNbEpisodesByUserIdGroupByYear = async (userId) => {
         const res = await db.query(`
@@ -186,7 +187,7 @@ export default class UserSeasonRepository {
             GROUP BY label
             ORDER BY label
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new Stat(row));
     }
 
     /**
@@ -236,7 +237,7 @@ export default class UserSeasonRepository {
     /**
      * @param {string} userId
      * @param {number} limit
-     * @returns Promise<any[]>
+     * @returns Promise<Stat[]>
      */
     getRankingViewingTimeByShows = async (userId, limit = 10) => {
         const res = await db.query(`
@@ -249,13 +250,13 @@ export default class UserSeasonRepository {
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
-        return res.rows;
+        return res.rows.map((row) => new Stat(row));
     }
 
     /**
      * @param {string} userId
      * @param {number} limit
-     * @returns Promise<any>
+     * @returns Promise<Stat[]>
      */
     getRecordViewingTimeMonth = async (userId, limit = 10) => {
         const res = await db.query(`
@@ -268,17 +269,13 @@ export default class UserSeasonRepository {
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
-        const record = res.rows.reverse()[0];
-        return {
-            label: record?.label ?? "Aucun",
-            value: record?.value ? parseInt(record.value) : 0
-        }
+        return res.rows.reverse().map((row) => new Stat(row));
     }
 
     /**
      * @param {string} userId
      * @param {number} year
-     * @returns Promise<any[]>
+     * @returns Promise<Season[]>
      */
     getSeasonsByAddedYear = async (userId, year) => {
         const res = await db.query(`
@@ -293,7 +290,7 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
-     * @returns Promise<any[]>
+     * @returns Promise<Stat[]>
      */
     getNbSeasonsByUserIdGroupByMonthByCurrentYear = async (userId)  => {
         const res = await db.query(`
@@ -303,12 +300,12 @@ export default class UserSeasonRepository {
             GROUP BY num, label
             ORDER BY num
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new Stat(row));
     }
 
     /**
      * @param {string} userId
-     * @returns {Promise<any>}
+     * @returns {Promise<Stat[]>}
      */
     getNbEpisodesByUserIdGroupByMonthByCurrentYear = async (userId)  => {
         const res = await db.query(`
@@ -319,13 +316,13 @@ export default class UserSeasonRepository {
             GROUP BY num, label
             ORDER BY num
         `, [userId]);
-        return res.rows;
+        return res.rows.map((row) => new Stat(row));
     }
 
     /**
      * @param {string} userId
      * @param {number} limit
-     * @returns Promise<any[]>
+     * @returns Promise<Stat[]>
      */
     getPlatformsByUserId = async (userId, limit = 10) => {
         const res = await db.query(`
@@ -337,6 +334,6 @@ export default class UserSeasonRepository {
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
-        return res.rows;
+        return res.rows.map((row) => new Stat(row));
     }
 }

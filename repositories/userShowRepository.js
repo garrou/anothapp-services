@@ -1,4 +1,5 @@
 import db from "../config/db.js";
+import Stat from "../models/stat.js";
 import UserShow from "../models/userShow.js";
 
 export default class UserShowRepository {
@@ -162,7 +163,7 @@ export default class UserShowRepository {
     /**
      * @param {string} userId
      * @param {number} limit
-     * @returns Promise<any[]>
+     * @returns Promise<Stat[]>
      */
     getCountriesByUserId = async (userId, limit = 10) => {
         const res = await db.query(`
@@ -174,7 +175,7 @@ export default class UserShowRepository {
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
-        return res.rows;
+        return res.rows.map((row) => new Stat(row));
     }
 
     /**

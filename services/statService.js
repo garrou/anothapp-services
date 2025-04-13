@@ -2,6 +2,7 @@ import UserShowRepository from "../repositories/userShowRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import Stat from "../models/stat.js";
 
 export default class StatService {
     constructor() {
@@ -20,7 +21,7 @@ export default class StatService {
             "nbSeries": await this.getCountByUserIdByType(userId, "shows"),
             "nbSeasons": await this.getCountByUserIdByType(userId, "seasons"),
             "nbEpisodes": await this.getCountByUserIdByType(userId, "episodes"),
-            "bestMonth": await this.getTimeByUserIdByType(userId, "best-month"),
+            "bestMonth": (await this.getTimeByUserIdByType(userId, "best-month"))[0],
         }
     }
 
@@ -106,7 +107,7 @@ export default class StatService {
             })
         );
         return Array
-            .from(kindsMap, ([kind, occur]) => ({ "label": kind, "value": occur }))
+            .from(kindsMap, ([kind, occur]) => Stat.from(kind, occur))
             .sort((a, b) => b.value - a.value)
             .splice(0, 10);
     }
