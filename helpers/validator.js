@@ -98,8 +98,8 @@ export default class Validator {
      * @param {ApiShow} show
      * @returns {boolean}
      */
-    static idValidShow = (show) => {
-        const {id, title, kinds, duration, seasons, country} = show;
-        return id && title && Array.isArray(kinds) && kinds.length && duration && seasons && country;
+    static isValidShow = (show) => {
+        const {id, title, kinds, seasons} = show;
+        return !!id && !!title && Array.isArray(kinds) && !!kinds.length && !!seasons;
     }
 }

@@ -70,7 +70,7 @@ export default class ShowService {
         if (!show) {
             show = await this._searchService.getByShowId(showId);
 
-            if (!Validator.idValidShow(show)) {
+            if (!Validator.isValidShow(show)) {      
                 throw new ServiceError(400, "Série invalide");
             }
             const {id, title, poster, kinds, duration, seasons, country} = show;
