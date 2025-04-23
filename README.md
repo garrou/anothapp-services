@@ -1,13 +1,13 @@
 # anothapp-services
 
+## Environment file
+
+Copy .env.template in a .env file with your values.
+
 ## Docker
+
+In .env file set POSTGRES_HOST=db
 
 ```sh
 docker-compose up -d --build
 ```
-
-## Versions
-
-[V1](https://github.com/garrou/anothapp-services/tree/v1)
-
-[V2](https://github.com/garrou/anothapp-services)
