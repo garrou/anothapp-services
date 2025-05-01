@@ -4,7 +4,7 @@ export default class ApiPerson {
      * @param {Object} person
      */
     constructor(person) {
-        this.id = person.id;
+        this.id = parseInt(person.id);
         this.name = person.name;
         this.birthday = person.birthday;
         this.deathday = person.deathday;
@@ -12,17 +12,17 @@ export default class ApiPerson {
         this.description = person.description;
         this.poster = person.poster;
         this.series = person.shows.map(show => new ApiPersonShow(show)).sort((a, b) => b.creation - a.creation);
-        this.movies = person.movies.map(movie => new ApiPersonMovie(movie)).sort((a, b) => b.productionYear - a.productionYear);
+        //this.movies = person.movies.map(movie => new ApiPersonMovie(movie)).sort((a, b) => b.productionYear - a.productionYear);
     }
 }
 
 class ApiIntertainment {
 
     constructor(obj) {
-        this.id = obj.id;
+        this.id = parseInt(obj.id);
         this.name = obj.name;
         this.title = obj.title;
-        this.creation = obj.creation;
+        this.creation = parseInt(obj.creation);
         this.poster = obj.poster;
     }
 }
@@ -35,8 +35,8 @@ class ApiPersonShow extends ApiIntertainment {
     constructor(obj) {
         const {show} = obj;
         super(show);
-        this.seasons = show.seasons;
-        this.episodes = show.episodes;
+        this.seasons = parseInt(show.seasons);
+        this.episodes = parseInt(show.episodes);
     }
 }
 
