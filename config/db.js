@@ -17,7 +17,7 @@ const pool =  new pg.Pool({
  * @returns {Promise<any>}
  */
 const query = async (query, params = []) => {
-    return await pool.query(query, params);
+    return pool.query(query, params);
 }
 
 /**

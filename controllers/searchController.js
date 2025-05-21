@@ -104,7 +104,7 @@ export default class SearchController {
         }
     }
 
-    getPlatforms = async (req, res, next) => {
+    getPlatforms = async (_, res, next) => {
         try {
             const platforms = await this._searchService.getPlatforms();
             res.status(200).json(platforms);

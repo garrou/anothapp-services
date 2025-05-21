@@ -68,7 +68,7 @@ export default class FriendService {
      * @returns {Promise<UserProfile[] | Map<string, UserProfile[]>>}
      */
     getFriends = async (currentUserId, status, serieId) => {
-        return await this.#getFriendsByUserIdByStatus(currentUserId, status, serieId);
+        return this.#getFriendsByUserIdByStatus(currentUserId, status, serieId);
     }
 
     /**
@@ -80,16 +80,16 @@ export default class FriendService {
     async #getFriendsByUserIdByStatus(userId, status, showId) {
         switch (status) {
             case "send":
-                return await this._friendRepository.getFriendsRequestsSend(userId);
+                return this._friendRepository.getFriendsRequestsSend(userId);
             case "receive":
-                return await this._friendRepository.getFriendsRequestsReceive(userId);
+                return this._friendRepository.getFriendsRequestsReceive(userId);
             case "friend":
-                return await this._friendRepository.getFriends(userId);
+                return this._friendRepository.getFriends(userId);
             case "viewed":
                 if (!showId) {
                     throw new ServiceError(400, ERROR_INVALID_REQUEST);
                 }
-                return await this._friendRepository.getFriendsWhoWatchSerie(userId, showId);
+                return this._friendRepository.getFriendsWhoWatchSerie(userId, showId);
             default:
                 return {
                     "send": await this._friendRepository.getFriendsRequestsSend(userId),
