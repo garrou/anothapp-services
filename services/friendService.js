@@ -79,11 +79,11 @@ export default class FriendService {
      */
     async #getFriendsByUserIdByStatus(userId, status, showId) {
         switch (status) {
-            case "send":
+            case "sent":
                 return this._friendRepository.getFriendsRequestsSend(userId);
-            case "receive":
+            case "received":
                 return this._friendRepository.getFriendsRequestsReceive(userId);
-            case "friend":
+            case "friends":
                 return this._friendRepository.getFriends(userId);
             case "viewed":
                 if (!showId) {
@@ -92,9 +92,9 @@ export default class FriendService {
                 return this._friendRepository.getFriendsWhoWatchSerie(userId, showId);
             default:
                 return {
-                    "send": await this._friendRepository.getFriendsRequestsSend(userId),
-                    "receive": await this._friendRepository.getFriendsRequestsReceive(userId),
-                    "friend": await this._friendRepository.getFriends(userId)
+                    "sent": await this._friendRepository.getFriendsRequestsSend(userId),
+                    "received": await this._friendRepository.getFriendsRequestsReceive(userId),
+                    "friends": await this._friendRepository.getFriends(userId)
                 }
         }
     }
