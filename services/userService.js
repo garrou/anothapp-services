@@ -15,11 +15,11 @@ export default class UserService {
      * @param {string?} username
      * @returns {Promise<UserProfile[]>}
      */
-    getUser = async (currentUserId, username) => {
+    getUsers = async (currentUserId, username) => {
         if (!username) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        return (await this._userRepository.getUserByUsername(username)).reduce((acc, user) => {
+        return (await this._userRepository.getUsersByUsername(username)).reduce((acc, user) => {
             if (user.id !== currentUserId) {
                 acc.push(new UserProfile(user));
             }

@@ -22,7 +22,7 @@ export default class UserRepository {
      * @param {boolean} strict
      * @returns {Promise<User[]>}
      */
-    getUserByUsername = async (username, strict = false) => {
+    getUsersByUsername = async (username, strict = false) => {
         const param = strict ? [`${username}`, 1] : [`%${username}%`, 10]
         const res = await db.query(`
             SELECT id, email, picture, password, username

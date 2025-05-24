@@ -5,10 +5,10 @@ export default class UserController {
         this._userService = new UserService();
     }
 
-    getUser = async (req, res, next) => {
+    getUsers = async (req, res, next) => {
         try {
-            const {username} = req.body;
-            const users = await this._userService.getUser(req.userId, username);
+            const {username} = req.query;
+            const users = await this._userService.getUsers(req.userId, username);
             res.status(200).json(users);
         } catch (e) {
             next(e);

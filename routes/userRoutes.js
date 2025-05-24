@@ -4,7 +4,7 @@ import UserController from "../controllers/userController.js";
 const router = Router();
 const userController = new UserController();
 
-router.post("/search", userController.getUser);
+router.get("/", userController.getUsers);
 
 router.patch("/me", userController.changeProfile);
 
