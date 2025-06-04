@@ -29,8 +29,8 @@ export default class SeasonController {
     updateBySeasonId = async (req, res, next) => {
         try {
             const {id} = req.params;
-            const {platform} = req.body;
-            await this._seasonService.updateBySeasonId(req.userId, id, platform);
+            const {platform, viewedAt} = req.body;
+            await this._seasonService.updateBySeasonId(req.userId, id, platform, viewedAt);
             res.sendStatus(200);
         } catch (e) {
             next(e);

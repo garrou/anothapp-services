@@ -49,14 +49,15 @@ export default class SeasonRepository {
      * @param {string} userId
      * @param {number} id
      * @param {number} platform
+     * @param {string} viewedAt
      * @returns {Promise<boolean>}
      */
-    updateSeason = async (userId, id, platform) => {
+    updateSeason = async (userId, id, platform, viewedAt) => {
         const res = await db.query(`
             UPDATE users_seasons
-            SET platform_id = $1
+            SET platform_id = $1, added_at = $4
             WHERE id = $2 AND user_id = $3
-        `, [platform, id, userId]);
+        `, [platform, id, userId, viewedAt]);
         return res.rowCount === 1;
     }
 }

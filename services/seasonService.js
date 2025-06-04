@@ -46,14 +46,15 @@ export default class SeasonService {
     /**
      * @param {string} currentUserId
      * @param {number?} seasonId
-     * @param {number} platformId
+     * @param {number?} platformId
+     * @param {string?} viewedAt
      * @returns {Promise<void>}
      */
-    updateBySeasonId = async (currentUserId, seasonId, platformId) => {
-        if (!seasonId) {
+    updateBySeasonId = async (currentUserId, seasonId, platformId, viewedAt) => {
+        if (!seasonId || !platformId || !viewedAt) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST)
         }
-        const updated = await this._seasonRepository.updateSeason(currentUserId, seasonId, platformId);
+        const updated = await this._seasonRepository.updateSeason(currentUserId, seasonId, platformId, viewedAt);
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier la saison");
