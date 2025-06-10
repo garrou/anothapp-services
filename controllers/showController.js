@@ -69,8 +69,8 @@ export default class ShowController {
     updateByShowId = async (req, res, next) => {
         try {
             const {id} = req.params;
-            const {favorite, watch} = req.body;
-            const result = await this._showService.updateByShowId(req.userId, id, favorite, watch);
+            const {favorite, watch, addedAt} = req.body;
+            const result = await this._showService.updateByShowId(req.userId, id, favorite, watch, addedAt);
             res.status(200).json({"value": result});
         } catch (e) {
             next(e);

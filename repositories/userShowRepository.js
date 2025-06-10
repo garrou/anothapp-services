@@ -129,6 +129,21 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
+     * @param {number} showId
+     * @param {string} addedAt
+     * @returns {Promise<boolean>}
+     */
+    updateAddedAtByUserIdByShowId = async (userId, showId, addedAt) => {
+        const res = await db.query(`
+            UPDATE users_shows
+            SET added_at = $3
+            WHERE user_id = $1 AND show_id = $2
+        `, [userId, showId, addedAt]);
+        return res.rowCount === 1;
+    }
+
+    /**
+     * @param {string} userId
      * @returns Promise<UserShow[]>
      */
     getShowsToResumeByUserId = async (userId) => {

@@ -222,17 +222,26 @@ export default class ShowService {
      * @param {number?} id
      * @param {boolean?} favorite
      * @param {boolean?} watch
-     * @returns {Promise<boolean|null>}
+     * @param {string?} addedAt
+     * @returns {Promise<boolean>}
      */
-    updateByShowId = async (currentUserId, id, favorite, watch) => {
+    updateByShowId = async (currentUserId, id, favorite, watch, addedAt) => {
         let result = null;
 
-        if (!id || (!favorite && !watch)) {
+        if (!id) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
-        } else if (favorite) {
+        }
+        if (favorite) {
             result = await this._userShowRepository.updateFavoriteByUserIdByShowId(currentUserId, id);
         } else if (watch) {
             result = await this._userShowRepository.updateWatchingByUserIdByShowId(currentUserId, id);
+        } else if (addedAt) {
+            if (Validator.isInFuture(addedAt)) {
+                throw new ServiceError(400, "Date invalide");
+            }
+            result = await this._userShowRepository.updateAddedAtByUserIdByShowId(currentUserId, id, addedAt);
+        } else {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         return result;
     }

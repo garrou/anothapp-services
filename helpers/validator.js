@@ -95,6 +95,12 @@ export default class Validator {
     }
 
     /**
+     * @param {string} date
+     * @returns {boolean}
+     */
+    static isInFuture = (date) => new Date(date) > new Date();
+
+    /**
      * @param {ApiShow} show
      * @returns {boolean}
      */
