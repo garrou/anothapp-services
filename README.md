@@ -2,7 +2,7 @@
 
 ## Environment file
 
-Copy .env.template in a .env file with your values.
+Copy template.env in a .env file with your values.
 
 ## Docker
 
