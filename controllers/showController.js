@@ -38,8 +38,7 @@ export default class ShowController {
 
     getShows = async (req, res, next) => {
         try {
-            const {title, status, friendId, platforms, countries, kinds} = req.query;
-            const shows = await this._showService.getShows(req.userId, title, status, friendId, platforms, countries, kinds);
+            const shows = await this._showService.getShows(req.userId, req.query);
             res.status(200).json(shows);
         } catch (e) {
             next(e);
@@ -68,9 +67,7 @@ export default class ShowController {
 
     updateByShowId = async (req, res, next) => {
         try {
-            const {id} = req.params;
-            const {favorite, watch, addedAt} = req.body;
-            const result = await this._showService.updateByShowId(req.userId, id, favorite, watch, addedAt);
+            const result = await this._showService.updateByShowId(req.userId, req.params.id, req.body);
             res.status(200).json({"value": result});
         } catch (e) {
             next(e);

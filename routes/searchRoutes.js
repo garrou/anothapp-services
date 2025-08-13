@@ -24,6 +24,8 @@ router.get("/kinds", searchController.getKinds);
 
 router.get("/platforms", searchController.getPlatforms);
 
+router.get("/notes", searchController.getNotes);
+
 router.get("/persons/:personId", searchController.getPersonById);
 
 export default router;

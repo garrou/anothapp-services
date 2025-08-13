@@ -137,15 +137,11 @@ export default class ShowService {
 
     /**
      * @param {string} currentUserId
-     * @param {string?} title
-     * @param {string?} status
-     * @param {string?} friendId
-     * @param {string?} platforms
-     * @param {string?} countries
-     * @param {string?} kinds
+     * @param {Object} query
      * @returns {Promise<UserShow[]|Show[]>}
      */
-    getShows = async (currentUserId, title, status, friendId, platforms, countries, kinds) => {
+    getShows = async (currentUserId, query) => {
+        const { title, status, friendId, platforms, countries, kinds, notes } = query;
         if (friendId && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
             throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
         }
@@ -157,7 +153,8 @@ export default class ShowService {
             title,
             ParserHelper.splitAndToNumber(platforms),
             ParserHelper.splitAndToNotNull(countries),
-            ParserHelper.splitAndToNotNull(kinds)
+            ParserHelper.splitAndToNotNull(kinds),
+            ParserHelper.splitAndToNumber(notes),
         );
     }
 
@@ -220,13 +217,12 @@ export default class ShowService {
     /**
      * @param {string} currentUserId
      * @param {number?} id
-     * @param {boolean?} favorite
-     * @param {boolean?} watch
-     * @param {string?} addedAt
+     * @param {Object} body
      * @returns {Promise<boolean>}
      */
-    updateByShowId = async (currentUserId, id, favorite, watch, addedAt) => {
+    updateByShowId = async (currentUserId, id, body) => {
         let result = null;
+        const {favorite, watch, addedAt, note} = body;
 
         if (!id) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
@@ -240,6 +236,8 @@ export default class ShowService {
                 throw new ServiceError(400, "Date invalide");
             }
             result = await this._userShowRepository.updateAddedAtByUserIdByShowId(currentUserId, id, addedAt);
+        } else if (note) {
+            result = await this._userShowRepository.updateNoteByUserIdByShowId(currentUserId, id, note);
         } else {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }

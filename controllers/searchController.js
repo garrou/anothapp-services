@@ -112,4 +112,13 @@ export default class SearchController {
             next(e);
         }
     }
+
+    getNotes = async (_, res, next) => {
+        try {
+            const notes = await this._searchService.getNotes();
+            res.status(200).json(notes);
+        } catch (e) {
+            next(e);
+        }
+    }
 }

@@ -50,21 +50,31 @@ export default class UserShowRepository {
      * @param {number[]} platforms
      * @param {string[]} countries
      * @param {string[]} kinds
+     * @param {number[]} notes
      * @returns {Promise<UserShow[]>}
      */
-    getShowsByUserId = async (userId, title, platforms, countries, kinds) => {
+    getShowsByUserId = async (userId, title, platforms, countries, kinds, notes) => {
         const res = await db.query(`
-            SELECT DISTINCT s.*, us.favorite, us.added_at, us.continue
+            SELECT DISTINCT s.*, us.*
             FROM shows s
             JOIN users_shows us ON s.id = us.show_id
             LEFT JOIN users_seasons use ON us.user_id = use.user_id AND us.show_id = use.show_id
+            LEFT JOIN notes n ON n.id = us.note_id
             WHERE us.user_id = $1
             AND (COALESCE($2, '') = '' OR s.title ILIKE $2)
             AND (CARDINALITY($3::INT[]) = 0 OR use.platform_id = ANY ($3))
             AND (CARDINALITY($4::VARCHAR[]) = 0 OR s.country ILIKE ANY ($4))
-            AND (${db.generateCondition("s.kinds", "ILIKE", "AND", 5, kinds.length)})
+            AND (CARDINALITY($5::INT[]) = 0 OR us.note_id = ANY ($5))
+            AND (${db.generateCondition("s.kinds", "ILIKE", "AND", 6, kinds.length)})
             ORDER BY us.added_at DESC
-        `, [userId, title ? `%${title}%` : null, platforms, countries, ...kinds.map((kind) => `%${kind}%`)]);
+        `, [
+            userId,
+            title ? `%${title}%` : null,
+            platforms,
+            countries,
+            notes,
+            ...kinds.map((kind) => `%${kind}%`),
+        ]);
         return res.rows.map((row) => new UserShow(row));
     }
 
@@ -75,7 +85,7 @@ export default class UserShowRepository {
      */
     getShowByUserIdByShowId = async (userId, id) => {
         const res = await db.query(`
-            SELECT s.*, us.favorite, us.added_at, us.continue
+            SELECT s.*, us.*
             FROM shows s
             JOIN users_shows us ON s.id = us.show_id
             WHERE us.user_id = $1 AND us.show_id = $2 
@@ -143,12 +153,27 @@ export default class UserShowRepository {
     }
 
     /**
+     * @param userId
+     * @param showId
+     * @param note
+     * @returns {Promise<boolean>}
+     */
+    updateNoteByUserIdByShowId = async (userId, showId, note) => {
+        const res = await db.query(`
+            UPDATE users_shows
+            SET note_id = $3
+            WHERE user_id = $1 AND show_id = $2
+        `, [userId, showId, note]);
+        return res.rowCount === 1;
+    }
+
+    /**
      * @param {string} userId
      * @returns Promise<UserShow[]>
      */
     getShowsToResumeByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT s.*, us.favorite, us.added_at, us.continue
+            SELECT s.*, us.*
             FROM shows s
             JOIN users_shows us ON us.show_id = s.id
             WHERE us.user_id = $1 AND us.continue = FALSE AND s.seasons - (
@@ -199,7 +224,7 @@ export default class UserShowRepository {
      */
     getFavoritesByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT s.*, us.favorite, us.added_at, us.continue
+            SELECT s.*, us.*
             FROM users_shows us
             JOIN shows s ON s.id = us.show_id
             WHERE us.user_id = $1 AND favorite = TRUE
@@ -252,5 +277,20 @@ export default class UserShowRepository {
             ORDER BY s.title
         `, [userId, friendId]);
         return res.rows.map((row) => new UserShow(row));
+    }
+
+    /**
+     * @param userId
+     * @returns {Promise<Stat[]>}
+     */
+    getNotesByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT n.name as label, COUNT(*) AS value
+            FROM users_shows us
+            JOIN notes n ON n.id = us.note_id
+            WHERE us.user_id = $1
+            GROUP BY name
+        `, [userId]);
+        return res.rows.map((row) => new Stat(row));
     }
 }

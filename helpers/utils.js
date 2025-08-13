@@ -9,6 +9,9 @@ const cumulate = (arr, attribute) => {
     return result;
 }
 
+const isDevMode = () => process.env.MODE === 'dev';
+
 export {
     cumulate,
+    isDevMode,
 }

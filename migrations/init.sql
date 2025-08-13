@@ -25,6 +25,18 @@ INSERT INTO platforms (id, name, logo) VALUES
 (17, 'M6+', 'https://pictures.betaseries.com/platforms/17.jpg'),
 (27, 'france.tv', 'https://pictures.betaseries.com/platforms/27.jpg');
 
+CREATE TABLE notes (
+    id INTEGER,
+    name VARCHAR(25) UNIQUE NOT NULL,
+    PRIMARY KEY(id)
+);
+
+INSERT INTO notes (id, name) VALUES
+(1, 'Nul'),
+(2, 'Moyen'),
+(3, 'Bon'),
+(4, 'Excellent');
+
 CREATE TABLE users (
     id VARCHAR(50),
     username VARCHAR(25) UNIQUE NOT NULL,
@@ -51,8 +63,10 @@ CREATE TABLE users_shows (
     user_id VARCHAR(50),
     show_id INTEGER,
     favorite BOOLEAN NOT NULL DEFAULT FALSE,
+    note_id INTEGER,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE,
+    FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE SET NULL,
     PRIMARY KEY(user_id, show_id)
 );
 

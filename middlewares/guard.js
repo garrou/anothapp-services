@@ -1,9 +1,13 @@
 import SecurityHelper from "../helpers/security.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import {WHITELIST} from "../constants/security.js";
+import {isDevMode} from "../helpers/utils.js";
 
 export const checkJwt = (req, res, next) => {
 
+    if (isDevMode()) {
+        console.log(Date.now(), req.originalUrl, req.query);
+    }
     if (WHITELIST.some((url) => req.originalUrl.startsWith(url))) {
         return next();
     }

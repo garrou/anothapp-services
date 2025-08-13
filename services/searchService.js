@@ -11,11 +11,13 @@ import PlatformRepository from "../repositories/platformRepository.js";
 import ApiShowKind from "../models/apiShowKind.js";
 import ServiceError from "../helpers/serviceError.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import NoteRepository from "../repositories/noteRepository.js";
 
 export default class SearchService {
 
     constructor() {
         this._platformRepository = new PlatformRepository();
+        this._noteRepository = new NoteRepository();
         this._baseUrl = "https://api.betaseries.com";
         this._headers = {"X-BetaSeries-Key": process.env.BETASERIES_KEY};
     }
@@ -182,6 +184,13 @@ export default class SearchService {
      */
     getPlatforms = async () => {
         return this._platformRepository.getPlatforms();
+    }
+
+    /**
+     * @returns {Promise<Note[]>}
+     */
+    getNotes = async () => {
+        return this._noteRepository.getNotes();
     }
 
     /**
