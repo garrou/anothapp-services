@@ -34,8 +34,9 @@ CREATE TABLE notes (
 INSERT INTO notes (id, name) VALUES
 (1, 'Nul'),
 (2, 'Moyen'),
-(3, 'Bon'),
-(4, 'Excellent');
+(3, 'Bien'),
+(4, 'Très bien'),
+(5, 'Excellent');
 
 CREATE TABLE users (
     id VARCHAR(50),

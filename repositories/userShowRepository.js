@@ -285,11 +285,12 @@ export default class UserShowRepository {
      */
     getNotesByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT n.name as label, COUNT(*) AS value
+            SELECT n.id, n.name as label, COUNT(*) AS value
             FROM users_shows us
             JOIN notes n ON n.id = us.note_id
             WHERE us.user_id = $1
-            GROUP BY name
+            GROUP BY id
+            ORDER BY id
         `, [userId]);
         return res.rows.map((row) => new Stat(row));
     }
