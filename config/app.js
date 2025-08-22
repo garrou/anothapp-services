@@ -23,7 +23,8 @@ class App {
     #setupCors() {
         this._app.use(cors({
             origins: [process.env.ORIGIN],
-            allowedHeaders: ["Authorization", "Content-Type"]
+            allowedHeaders: ["Authorization", "Content-Type"],
+            exposedHeaders: ["Content-Disposition", "Content-Length", "Content-Type"]
         }));
     }
 

@@ -1,7 +1,7 @@
 import db from "../config/db.js";
 import {cumulate} from "../helpers/utils.js";
 import Season from "../models/season.js";
-import UserSeason from "../models/userSeason.js";
+import {PartialUserSeason, UserSeason} from "../models/userSeason.js";
 import SeasonTimeline from "../models/seasonTimeline.js";
 import Stat from "../models/stat.js";
 
@@ -43,9 +43,24 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
+     * @returns {Promise<UserSeason[]>}
+     */
+    getUserSeasonsByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT us.id, us.added_at, us.show_id, us.number, p.name as platform
+            FROM users_seasons us
+            JOIN platforms p on us.platform_id = p.id
+            WHERE us.user_id = $1
+            ORDER BY us.show_id, us.number, us.added_at
+        `, [userId]);
+        return res.rows.map((row) => new UserSeason(row));
+    }
+
+    /**
+     * @param {string} userId
      * @param {number} showId
      * @param {number} number
-     * @returns {Promise<UserSeason[]>}
+     * @returns {Promise<PartialUserSeason[]>}
      */
     getInfosByUserIdByShowId = async (userId, showId, number) => {
         const res = await db.query(`
@@ -55,7 +70,7 @@ export default class UserSeasonRepository {
             WHERE user_id = $1 AND show_id = $2 AND number = $3
             ORDER BY added_at
         `, [userId, showId, number]);
-        return res.rows.map((row) => new UserSeason(row));
+        return res.rows.map((row) => new PartialUserSeason(row));
     }
 
     /**
