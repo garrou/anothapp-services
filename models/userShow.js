@@ -16,5 +16,6 @@ export default class UserShow {
         this.watch = obj.continue;
         this.seasons = obj.seasons;
         this.note = obj.note_id;
+        this.finished = obj.finished;
     }
 }

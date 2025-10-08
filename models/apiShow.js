@@ -28,7 +28,7 @@ class ApiShow extends ApiEntity {
         this.episodes = parseInt(show.episodes);
         this.network = show.network ?? UNKNOW;
         this.note = getNote(show.notes);
-        this.status = show.status === "Continuing" ? "En cours" : "Terminée";
+        this.finished = show.status === "Ended";
         this.creation = parseInt(show.creation);
         this.kinds = Object.values(show.genres);
         this.platforms = getPlatforms(show.platforms?.svods);

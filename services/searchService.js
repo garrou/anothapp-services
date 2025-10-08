@@ -28,7 +28,7 @@ export default class SearchService {
      * @param {string?} kind
      * @param {string?} platform
      * @param {string?} limit
-     * @returns {Promise<ApiShow[]|ApiShowPreview[ ]>}
+     * @returns {Promise<ApiShow[]|ApiShowPreview[]>}
      */
     getShows = async (title, year, kind, platform, limit) => {
         return title || year || kind || platform
