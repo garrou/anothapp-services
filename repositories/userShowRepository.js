@@ -235,6 +235,21 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
+     * @return Promise<UserShow[]>
+     */
+    getShowsWithNextEpisode = async (userId) => {
+        const res = await db.query(`
+            SELECT s.*, us.*
+            FROM users_shows us
+            JOIN shows s ON s.id = us.show_id
+            WHERE us.user_id = $1 AND s.next_episode != '' AND us.continue = TRUE
+            ORDER BY next_episode
+        `, [userId]);
+        return res.rows.map((row) => new UserShow(row));
+    }
+
+    /**
+     * @param {string} userId
      * @returns Promise<UserShow[]>
      */
     getShowsToContinueByUserId = async (userId) => {

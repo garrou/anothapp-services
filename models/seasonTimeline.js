@@ -8,7 +8,7 @@ export default class SeasonTimeline {
     constructor(obj) {
         this.showId = obj.id;
         this.showTitle = obj.title;
-        this.addedAt = obj.added_at;
+        this.addedAt = obj["added_at"];
         this.season = Season.from(obj.number, obj.episodes, obj.image ?? obj.poster);
     }
 }

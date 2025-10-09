@@ -38,6 +38,8 @@ export default class ShowService {
                 return this._userShowRepository.getShowsToContinueByUserId(userId);
             case "favorite":
                 return this._userShowRepository.getFavoritesByUserId(friendId ?? userId);
+            case "next":
+                return this._userShowRepository.getShowsWithNextEpisode(userId);
             case "shared":
                 if (!friendId) {
                     throw new ServiceError(400, ERROR_INVALID_REQUEST);

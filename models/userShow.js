@@ -11,11 +11,12 @@ export default class UserShow {
         this.favorite = obj.favorite;
         this.missing = obj.missing;
         this.duration = obj.duration;
-        this.addedAt = obj.added_at;
+        this.addedAt = obj["added_at"];
         this.country = obj.country;
         this.watch = obj.continue;
         this.seasons = obj.seasons;
-        this.note = obj.note_id;
+        this.note = obj["note_id"];
         this.finished = obj.finished;
+        this.nextEpisode = obj["next_episode"];
     }
 }

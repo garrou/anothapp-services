@@ -56,7 +56,7 @@ CREATE TABLE shows (
     seasons INTEGER NOT NULL,
     country VARCHAR(50) NOT NULL,
     finished BOOLEAN NOT NULL DEFAULT FALSE,
-    next_episode DATE,
+    next_episode VARCHAR(10),
     PRIMARY KEY(id)
 );
 
