@@ -62,7 +62,7 @@ export default class AuthService {
         if (user) {
             throw new ServiceError(409, "Un compte est déjà associé à cet email");
         }
-        const users = await this._userRepository.getUserByUsername(username, true);
+        const users = await this._userRepository.getUsersByUsername(username, true);
 
         if (users.length > 0) {
             throw new ServiceError(409, "Un compte est déjà associé à ce nom d'utilisateur");
