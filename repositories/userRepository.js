@@ -1,5 +1,6 @@
 import db from "../config/db.js";
 import User from "../models/user.js";
+import ServiceError from "../helpers/serviceError.js";
 
 export default class UserRepository {
 
@@ -9,7 +10,7 @@ export default class UserRepository {
      */
     getUserByEmail = async (email) => {
         const res = await db.query(`
-            SELECT id, email, picture, password, username
+            SELECT *
             FROM users
             WHERE UPPER(email) = UPPER($1) 
             LIMIT 1
@@ -25,7 +26,7 @@ export default class UserRepository {
     getUsersByUsername = async (username, strict = false) => {
         const param = strict ? [`${username}`, 1] : [`%${username}%`, 10]
         const res = await db.query(`
-            SELECT id, email, picture, password, username
+            SELECT *
             FROM users
             WHERE UPPER(username) LIKE UPPER($1)
             LIMIT $2
@@ -39,7 +40,7 @@ export default class UserRepository {
      */
     getUserByIdentifier = async (identifier) => {
         const res = await db.query(`
-            SELECT id, email, picture, password, username
+            SELECT *
             FROM users
             WHERE UPPER(username) = UPPER($1) OR UPPER(email) = UPPER($1) 
             LIMIT 1
@@ -53,7 +54,7 @@ export default class UserRepository {
      */
     getUserById = async (id) => {
         const res = await db.query(`
-            SELECT id, email, picture, password, username
+            SELECT *
             FROM users
             WHERE id = $1
         `, [id]);
@@ -77,43 +78,19 @@ export default class UserRepository {
 
     /**
      * @param {string} id
-     * @param {string} picture
+     * @param {string} field
+     * @param {string} value
      * @returns {Promise<boolean>}
      */
-    updatePicture = async (id, picture) => {
+    updateField = async (id, field, value) => {
+        if (!User.isValidField(field)) {
+            throw new ServiceError(400, `Champ incorrect : ${field}`);
+        }
         const res = await db.query(`
             UPDATE users
-            SET picture = $1
+            SET ${field} = $1
             WHERE id = $2
-        `, [picture, id]);
-        return res.rowCount === 1;
-    }
-
-    /**
-     * @param {string} id
-     * @param {string} hash
-     * @returns {Promise<boolean>}
-     */
-    updatePassword = async (id, hash) => {
-        const res = await db.query(`
-            UPDATE users
-            SET password = $1
-            WHERE id = $2
-        `, [hash, id]);
-        return res.rowCount === 1;
-    }
-
-    /**
-     * @param {string} id
-     * @param {string} email
-     * @returns {Promise<boolean>}
-     */
-    updateEmail = async (id, email) => {
-        const res = await db.query(`
-            UPDATE users
-            SET email = $1
-            WHERE id = $2
-        `, [email, id]);
+        `, [value, id]);
         return res.rowCount === 1;
     }
 }

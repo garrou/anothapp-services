@@ -11,6 +11,14 @@ export default class UserService {
     }
 
     /**
+     * {string} userId
+     * @returns {Promise<User>}
+     */
+    getUser = async (userId) => {
+        return this._userRepository.getUserById(userId);
+    }
+
+    /**
      * @param {string} currentUserId
      * @param {string?} username
      * @returns {Promise<UserProfile[]>}
@@ -43,38 +51,49 @@ export default class UserService {
 
     /**
      * @param {string} currentUserId
-     * @param {string?} currentPassword
-     * @param {string?} newPassword
-     * @param {string?} confirmPassword
-     * @param {string?} email
-     * @param {string?} newEmail
-     * @param {string?} image
+     * @param {UserUpdate} userUpdate
      * @returns {Promise<string>}
      */
-    changeProfile = async (currentUserId, currentPassword, newPassword, confirmPassword, email, newEmail, image) => {
-        if (currentPassword && newPassword && confirmPassword) {
-            await this.#changePassword(currentUserId, currentPassword, newPassword, confirmPassword);
+    updateUser = async (currentUserId, userUpdate) => {
+        if (userUpdate.isPasswordUpdate()) {
+            await this.#changePassword(currentUserId, userUpdate.currentPassword, userUpdate.newPassword, userUpdate.confirmPassword);
             return "Mot de passe modifié";
-        } else if (email && newEmail) {
-            await this.#changeEmail(currentUserId, email, newEmail);
+        } else if (userUpdate.isEmailUpdate()) {
+            await this.#changeEmail(currentUserId, userUpdate.email, userUpdate.newEmail);
             return "Email modifié";
-        } else if (image) {
-            await this.#changeImage(currentUserId, image);
+        } else if (userUpdate.image) {
+            await this.#changeImage(currentUserId, userUpdate.image);
             return "Image de profil définie";
+        } else if (userUpdate.lastExport) {
+            await this.#changeLastExport(currentUserId, userUpdate.lastExport);
+            return "Date de dernier export modifiée";
         }
         throw new ServiceError(400, ERROR_INVALID_REQUEST);
     }
 
     /**
      * @param {string} currentUserId
-     * @param {string?} image
+     * @param {string} lastExport
+     * @returns {Promise<void>}
+     */
+    #changeLastExport = async (currentUserId, lastExport) => {
+        const updated = await this._userRepository.updateField(currentUserId, "last_export", lastExport);
+
+        if (!updated) {
+            throw new ServiceError(500, "Impossible de modifier la date");
+        }
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {string} image
      * @returns {Promise<void>}
      */
     #changeImage = async (currentUserId, image) => {
         if (!Validator.isValidImage(image)) {
             throw new ServiceError(400, "Image invalide");
         }
-        const updated = await this._userRepository.updatePicture(currentUserId, image);
+        const updated = await this._userRepository.updateField(currentUserId, "picture", image);
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier l'image");
@@ -83,9 +102,9 @@ export default class UserService {
 
     /**
      * @param {string} userId
-     * @param {string?} currentPass
-     * @param {string?} newPass
-     * @param {string?} confirmPass
+     * @param {string} currentPass
+     * @param {string} newPass
+     * @param {string} confirmPass
      * @returns {Promise<void>}
      */
     #changePassword = async (userId, currentPass, newPass, confirmPass) => {
@@ -105,7 +124,7 @@ export default class UserService {
             throw new ServiceError(400, "Mot de passe incorrect");
         }
         const hash = await SecurityHelper.createHash(newPass);
-        const updated = await this._userRepository.updatePassword(userId, hash);
+        const updated = await this._userRepository.updateField(userId, "password", hash);
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier le mot de passe");
@@ -114,8 +133,8 @@ export default class UserService {
 
     /**
      * @param {string} currentUserId
-     * @param {string?} email
-     * @param {string?} newEmail
+     * @param {string} email
+     * @param {string} newEmail
      * @returns {Promise<void>}
      */
     #changeEmail = async (currentUserId, email, newEmail) => {
@@ -133,14 +152,14 @@ export default class UserService {
             throw new ServiceError(400, "Email incorrect");
         }
         if (email === newEmail) {
-            throw new ServiceError(400, "Le nouvel mail doit être différent de l'ancien");
+            throw new ServiceError(400, "Le nouvel email doit être différent de l'ancien");
         }
         user = await this._userRepository.getUserByEmail(newEmail);
 
         if (user) {
             throw new ServiceError(409, "Cet email est déjà associé à un compte");
         }
-        const updated = await this._userRepository.updateEmail(currentUserId, newEmail);
+        const updated = await this._userRepository.updateField(currentUserId, "email", newEmail);
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier l'email");

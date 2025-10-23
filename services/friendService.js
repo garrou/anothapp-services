@@ -31,14 +31,15 @@ export default class FriendService {
 
     /**
      * @param {string} currentUserId
-     * @param {string} userId
+     * @param {string} bodyUserId
+     * @param {string} paramUserId
      * @returns {Promise<void>}
      */
-    acceptFriend = async (currentUserId, userId) => {
-        if (!userId) {
+    acceptFriend = async (currentUserId, bodyUserId, paramUserId) => {
+        if (!bodyUserId || bodyUserId !== paramUserId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const accepted = await this._friendRepository.acceptFriend(userId, currentUserId);
+        const accepted = await this._friendRepository.acceptFriend(bodyUserId, currentUserId);
 
         if (!accepted) {
             throw new ServiceError(500, "Impossible d'accepter cette demande");

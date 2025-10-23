@@ -3,6 +3,9 @@ import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import {ExportData, ExportShow} from "../models/exportData.js";
 import StatService from "./statService.js";
 import UserService from "./userService.js";
+import ServiceError from "../helpers/serviceError.js";
+import {TOO_MUCH_EXPORT_REQUEST} from "../constants/errors.js";
+import UserUpdate from "../models/userUpdate.js";
 
 export default class SettingService {
 
@@ -18,7 +21,11 @@ export default class SettingService {
      * @returns {Promise<[string, ExportData]>}
      */
     exportData = async (userId) => {
-        const user = await this._userService.getProfile(userId, true);
+        const user = await this._userService.getUser(userId);
+
+        if (!user.canExport()) {
+            throw new ServiceError(400, TOO_MUCH_EXPORT_REQUEST);
+        }
         const shows = await this._userShowRepository.getShowsByUserId(userId, undefined, [], [], [], []);
         const seasons = await this._userSeasonRepository.getUserSeasonsByUserId(userId);
         const stats = await this._statService.getStats(userId);
@@ -33,8 +40,10 @@ export default class SettingService {
             }
             exportedData.shows.push(exportedShow);
         }
-        const timestamp = new Date().toISOString().split('T')[0];
-        const filename = `user-data-${userId}-${timestamp}.json`;
+        const timestamp = new Date().toISOString();
+        await this._userService.updateUser(userId, new UserUpdate({ lastExport: timestamp }));
+        const date = timestamp.split('T')[0];
+        const filename = `user-data-${userId}-${date}.json`;
         return [filename, exportedData];
     }
 }

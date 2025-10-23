@@ -1,11 +1,13 @@
+import UserProfile from "./userProfile.js";
+
 class ExportData {
 
     /**
-     * @param {UserProfile} user
+     * @param {User} user
      * @param {Object} stats
      */
     constructor(user, stats) {
-        this.user = user;
+        this.user = new UserProfile(user, true);
         this.stats = stats;
         this.shows = [];
     }

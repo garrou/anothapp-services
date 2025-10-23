@@ -1,4 +1,5 @@
 import UserService from "../services/userService.js";
+import UserUpdate from "../models/userUpdate.js";
 
 export default class UserController {
     constructor() {
@@ -28,8 +29,7 @@ export default class UserController {
 
     changeProfile = async (req, res, next) => {
         try {
-            const {currentPassword, newPassword, confirmPassword, email, newEmail, image} = req.body;
-            const message = await this._userService.changeProfile(req.userId, currentPassword, newPassword, confirmPassword, email, newEmail, image);
+            const message = await this._userService.updateUser(req.userId, new UserUpdate(req.body));
             res.status(200).json({message});
         } catch (e) {
             next(e);

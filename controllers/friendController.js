@@ -1,5 +1,3 @@
-import { ERROR_INVALID_REQUEST } from "../constants/errors.js";
-import ServiceError from "../helpers/serviceError.js";
 import FriendService from "../services/friendService.js";
 
 export default class FriendController {
@@ -29,13 +27,7 @@ export default class FriendController {
 
     acceptFriend = async (req, res, next) => {
         try {
-            const {userId} = req.body;
-            const id = req.params.userId;
-
-            if (userId !== id) {
-                throw ServiceError(400, ERROR_INVALID_REQUEST);
-            }
-            await this._friendService.acceptFriend(req.userId, userId);
+            await this._friendService.acceptFriend(req.userId, req.body.userId, req.params.userId);
             res.sendStatus(200);
         } catch (e) {
             next(e);

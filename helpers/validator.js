@@ -67,7 +67,7 @@ export default class Validator {
             return new ValidatorStatus(false, "Mot de passe incorrect");
         }
         if (oldPass === newPass) {
-            return new ValidatorStatus(false, "Le nouvel mot de passe doit être différent de l'ancien ");
+            return new ValidatorStatus(false, "Le nouveau mot de passe doit être différent de l'ancien ");
         }
         return this.isValidPassword(newPass, confPass);
     }
@@ -79,7 +79,7 @@ export default class Validator {
      */
     static isValidChangeEmail = (oldEmail, newEmail) => {
         if (oldEmail === newEmail) {
-            return new ValidatorStatus(false, "Le nouvel mail doit être différent");
+            return new ValidatorStatus(false, "Le nouvel email doit être différent");
         }
         return this.isValidEmail(newEmail);
     }

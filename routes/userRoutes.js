@@ -10,6 +10,6 @@ router.patch("/me", userController.changeProfile);
 
 router.get("/profile", userController.getProfile);
 
-router.get("/:id/profile", userController.getProfile);
+router.get("/:id", userController.getProfile);
 
 export default router;

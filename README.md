@@ -1,13 +1,11 @@
 # anothapp-services
 
-## Environment file
+## Local dev
 
 Copy template.env in a .env file with your values.
 
 ## Docker
 
-In .env file set POSTGRES_HOST=db
-
 ```sh
-docker-compose up -d --build
+docker-compose up -d
 ```
