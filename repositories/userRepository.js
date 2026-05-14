@@ -62,17 +62,16 @@ export default class UserRepository {
     }
 
     /**
-     * @param {string} id
      * @param {string} email
      * @param {string} password
      * @param {string} username
      * @returns {Promise<boolean>}
      */
-    createUser = async (id, email, password, username) => {
+    createUser = async (email, password, username) => {
         const res = await db.query(`
-            INSERT INTO users (id, email, password, username)
-            VALUES ($1, $2, $3, $4)
-        `, [id, email, password, username]);
+            INSERT INTO users (email, password, username)
+            VALUES ($1, $2, $3)
+        `, [email, password, username]);
         return res.rowCount === 1;
     }
 

@@ -68,7 +68,7 @@ export default class AuthService {
             throw new ServiceError(409, "Un compte est déjà associé à ce nom d'utilisateur");
         }
         const hash = await SecurityHelper.createHash(password);
-        const created = await this._userRepository.createUser(SecurityHelper.generateUuid(), email, hash, username);
+        const created = await this._userRepository.createUser(email, hash, username);
 
         if (!created) {
             throw new ServiceError(500, "Impossible de créer le compte");

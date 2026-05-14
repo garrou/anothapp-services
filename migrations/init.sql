@@ -1,4 +1,4 @@
-SET client_encoding = "UTF8";
+SET client_encoding = 'UTF8';
 
 CREATE TABLE platforms (
     id INTEGER,
@@ -39,7 +39,7 @@ INSERT INTO notes (id, name) VALUES
 (5, 'Excellent');
 
 CREATE TABLE users (
-    id VARCHAR(50),
+    id UUID DEFAULT gen_random_uuid(),
     username VARCHAR(25) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
@@ -64,13 +64,13 @@ CREATE TABLE shows (
 CREATE TABLE users_shows (
     continue BOOLEAN NOT NULL DEFAULT TRUE,
     added_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    user_id VARCHAR(50),
+    user_id UUID,
     show_id INTEGER,
     favorite BOOLEAN NOT NULL DEFAULT FALSE,
     note_id INTEGER,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE,
-    FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE SET NULL,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE SET NULL,
     PRIMARY KEY(user_id, show_id)
 );
 
@@ -79,38 +79,43 @@ CREATE TABLE seasons (
     episodes INTEGER NOT NULL,
     image VARCHAR(255),
     show_id INTEGER,
-    FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
+    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY(number, show_id)
 );
 
 CREATE TABLE users_seasons (
     id SERIAL,
     added_at TIMESTAMP DEFAULT NOW(),
-    user_id VARCHAR(50),
+    user_id UUID,
     show_id INTEGER,
     platform_id INTEGER,
     number INTEGER,
     PRIMARY KEY(id),
     FOREIGN KEY(platform_id) REFERENCES platforms(id) ON UPDATE CASCADE,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY(show_id, number) REFERENCES seasons(show_id, number) ON DELETE CASCADE,
-    FOREIGN KEY(user_id, show_id) REFERENCES users_shows(user_id, show_id) ON DELETE CASCADE
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(show_id, number) REFERENCES seasons(show_id, number) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(user_id, show_id) REFERENCES users_shows(user_id, show_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE friends (
-    fst_user_id VARCHAR(50),
-    sec_user_id VARCHAR(50),
+    fst_user_id UUID,
+    sec_user_id UUID,
     friend_at TIMESTAMP DEFAULT NOW(),
     accepted BOOLEAN DEFAULT FALSE,
     PRIMARY KEY(fst_user_id, sec_user_id),
-    FOREIGN KEY(fst_user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY(sec_user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY(fst_user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(sec_user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE users_list (
-    user_id VARCHAR(50),
+    user_id UUID,
     show_id INTEGER,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY(user_id, show_id)
 );
+
+CREATE INDEX idx_users_shows_user_id ON users_shows(user_id);
+CREATE INDEX idx_users_seasons_user_id ON users_seasons(user_id);
+CREATE INDEX idx_friends_sec_user_id ON friends(sec_user_id);
+CREATE INDEX idx_users_list_user_id ON users_list(user_id);
