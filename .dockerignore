@@ -1,4 +1,5 @@
 node_modules/
+pgdata/
 .git/
 .env
 template.env
