@@ -11,11 +11,12 @@ export default class UserShowRepository {
      */
     checkShowExistsByUserIdByShowId = async (userId, showId) => {
         const res = await db.query(`
-            SELECT COUNT(*) AS total
-            FROM users_shows
-            WHERE user_id = $1 AND show_id = $2
+            SELECT EXISTS(
+                SELECT 1 FROM users_shows
+                WHERE user_id = $1 AND show_id = $2
+            ) AS exists
         `, [userId, showId]);
-        return parseInt(res.rows[0]["total"]) === 1;
+        return res.rows[0]["exists"];
     }
 
     /**
@@ -177,10 +178,10 @@ export default class UserShowRepository {
             FROM shows s
             JOIN users_shows us ON us.show_id = s.id
             WHERE us.user_id = $1 AND us.continue = FALSE AND s.seasons - (
-                SELECT COUNT(distinct users_seasons.number)
-                FROM shows
-                JOIN users_seasons ON s.id = users_seasons.show_id
-                WHERE users_seasons.user_id = $1 AND s.id = shows.id) > 0
+                SELECT COUNT(DISTINCT users_seasons.number)
+                FROM users_seasons
+                WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
+            ) > 0
             ORDER BY s.title
         `, [userId]);
         return res.rows.map((row) => new UserShow(row));
@@ -242,7 +243,7 @@ export default class UserShowRepository {
             SELECT s.*, us.*
             FROM users_shows us
             JOIN shows s ON s.id = us.show_id
-            WHERE us.user_id = $1 AND s.next_episode != '' AND us.continue = TRUE
+            WHERE us.user_id = $1 AND NULLIF(s.next_episode, '') IS NOT NULL AND us.continue = TRUE
             ORDER BY next_episode
         `, [userId]);
         return res.rows.map((row) => new UserShow(row));
@@ -254,21 +255,21 @@ export default class UserShowRepository {
      */
     getShowsToContinueByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT s.*, s.seasons - (
-                SELECT COUNT(DISTINCT users_seasons.number)
-                FROM shows
-                JOIN users_seasons ON s.id = users_seasons.show_id
-                WHERE users_seasons.user_id = $1 AND s.id = shows.id
-            ) as missing, us.added_at, us.continue, us.favorite
-            FROM shows s
-            JOIN users_shows us ON s.id = us.show_id
-            WHERE us.user_id = $1 AND us.continue = TRUE
-            ORDER BY s.title
+            SELECT *
+            FROM (
+                SELECT s.*, us.added_at, us.continue, us.favorite, s.seasons - (
+                    SELECT COUNT(DISTINCT users_seasons.number)
+                    FROM users_seasons
+                    WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
+                ) AS missing
+                FROM shows s
+                JOIN users_shows us ON s.id = us.show_id
+                WHERE us.user_id = $1 AND us.continue = TRUE
+            ) sub
+            WHERE missing > 0
+            ORDER BY title
         `, [userId]);
-        return res.rows.reduce((acc, row) => {
-            if (row.missing > 0) acc.push(new UserShow(row));
-            return acc;
-        }, []);
+        return res.rows.map((row) => new UserShow(row));
     }
 
     /**
@@ -281,14 +282,8 @@ export default class UserShowRepository {
         const res = await db.query(`
             SELECT s.*
             FROM shows s
-            WHERE id in (
-                SELECT show_id
-                FROM users_shows
-                WHERE user_id = $1
-                INTERSECT
-                SELECT show_id
-                FROM users_shows
-                WHERE user_id = $2)
+            JOIN users_shows us1 ON s.id = us1.show_id AND us1.user_id = $1
+            JOIN users_shows us2 ON s.id = us2.show_id AND us2.user_id = $2
             ORDER BY s.title
         `, [userId, friendId]);
         return res.rows.map((row) => new UserShow(row));
