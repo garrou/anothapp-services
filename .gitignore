@@ -2,3 +2,4 @@ node_modules/
 pgdata/
 .env
 .DS_Store
+.idea
