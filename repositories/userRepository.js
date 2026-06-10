@@ -24,14 +24,13 @@ export default class UserRepository {
      * @returns {Promise<User[]>}
      */
     getUsersByUsername = async (username, strict = false) => {
-        const param = strict ? [`${username}`, 1] : [`%${username}%`, 10]
-        const res = await db.query(`
-            SELECT *
-            FROM users
-            WHERE UPPER(username) LIKE UPPER($1)
-            LIMIT $2
-        `, param);
-        return res.rows.map((row) => new User(row));
+        const query = strict
+        ? `SELECT * FROM users WHERE UPPER(username) = UPPER($1) LIMIT 1`
+        : `SELECT * FROM users WHERE UPPER(username) LIKE UPPER($1) LIMIT $2`;
+
+    const params = strict ? [username] : [`%${username}%`, 10];
+    const res = await db.query(query, params);
+    return res.rows.map((row) => new User(row));
     }
 
     /**

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import routes from "../routes/index.js";
 import {errorHandler} from "../middlewares/error.js";
+import { limiter } from "../middlewares/rateLimit.js";
 
 class App {
     constructor() {
@@ -18,6 +19,7 @@ class App {
 
     #setupMiddleware() {
         this._app.use(express.json());
+        this._app.use(limiter);
     }
 
     #setupCors() {

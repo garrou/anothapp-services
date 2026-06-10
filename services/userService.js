@@ -14,9 +14,7 @@ export default class UserService {
      * {string} userId
      * @returns {Promise<User>}
      */
-    getUser = async (userId) => {
-        return this._userRepository.getUserById(userId);
-    }
+    getUser = async (userId) => this._userRepository.getUserById(userId);
 
     /**
      * @param {string} currentUserId
