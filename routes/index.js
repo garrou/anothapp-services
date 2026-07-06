@@ -9,6 +9,7 @@ import seasonRoutes from "./seasonRoutes.js";
 import statRoutes from "./statRoutes.js";
 import friendRoutes from "./friendRoutes.js";
 import settingsRoutes from "./settingsRoutes.js";
+import platformRoutes from "./platformRoutes.js";
 
 const router = new Router();
 
@@ -20,6 +21,7 @@ router.use("/seasons", checkJwt, seasonRoutes);
 router.use("/stats", checkJwt, cache(600, true), statRoutes);
 router.use("/friends", checkJwt, friendRoutes);
 router.use("/settings", checkJwt, settingsRoutes);
+router.use("/platforms", checkJwt, platformRoutes);
 
 router.use("*", (req, res) => {
     res.status(404).json({ message: "Not found" });

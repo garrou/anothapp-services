@@ -115,6 +115,14 @@ CREATE TABLE users_list (
     PRIMARY KEY(user_id, show_id)
 );
 
+CREATE TABLE users_platforms (
+    user_id UUID,
+    platform_id INTEGER,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(platform_id) REFERENCES platforms(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    PRIMARY KEY(user_id, platform_id)
+);
+
 CREATE INDEX idx_users_shows_user_id ON users_shows(user_id);
 CREATE INDEX idx_users_seasons_user_id ON users_seasons(user_id);
 CREATE INDEX idx_friends_sec_user_id ON friends(sec_user_id);
