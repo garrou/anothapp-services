@@ -239,7 +239,7 @@ export default class UserSeasonRepository {
      */
     getViewedByMonthAgo = async (userId, month) => {
         const res = await db.query(`
-            SELECT s.id, s.title, s.poster, se.image, se.episodes, us.number, us.added_at
+            SELECT s.id, s.title, s.poster, se.image, se.episodes, us.number, us.added_at, us.platform_id
             FROM users_seasons us
             JOIN seasons se ON se.show_id = us.show_id
             JOIN shows s ON s.id = se.show_id AND se.number = us.number AND added_at >= DATE_TRUNC('month', CURRENT_DATE) - $2 * INTERVAL '1 month'
