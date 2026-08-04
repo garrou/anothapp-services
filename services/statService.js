@@ -22,6 +22,18 @@ export default class StatService {
             "nbSeasons": await this.getCountByUserIdByType(userId, "seasons"),
             "nbEpisodes": await this.getCountByUserIdByType(userId, "episodes"),
             "bestMonth": (await this.getTimeByUserIdByType(userId, "best-month"))[0],
+            "seasonsMonthCurrentYear": await this.getGroupedCountByUserIdByTypeByPeriod(userId, { type: "seasons", period: "year" }),
+            "episodesMonthCurrentYear": await this.getGroupedCountByUserIdByTypeByPeriod(userId, { type: "episodes", period: "year" }),
+            "timeYears": await this.getTimeByUserIdByType(userId, "years"),
+            "seasonsYears": await this.getGroupedCountByUserIdByTypeByPeriod(userId, { type: "seasons", period: "years" }),
+            "episodesYears": await this.getGroupedCountByUserIdByTypeByPeriod(userId, { type: "episodes", period: "years" }),
+            "seasonsMonths": await this.getGroupedCountByUserIdByTypeByPeriod(userId, { type: "seasons", period: "months" }),
+            "bestMonths": await this.getGroupedCountByUserIdByTypeByPeriod(userId, { type: "best-months" }),
+            "seriesRankingTime": await this.getTimeByUserIdByType(userId, "rank"),
+            "seriesKinds": await this.getGroupedCountByUserIdByTypeByPeriod(userId, { type: "kinds" }),
+            "seasonsPlatforms": await this.getGroupedCountByUserIdByTypeByPeriod(userId, { type: "platforms" }),
+            "seriesCountries": await this.getGroupedCountByUserIdByTypeByPeriod(userId, { type: "countries", limit: 200 }),
+            "seriesNotes": await this.getGroupedCountByUserIdByTypeByPeriod(userId, { type: "notes" })
         }
     }
 
