@@ -36,13 +36,22 @@ export default class AuthController {
         }
     }
 
-    logout = (req, res, next) => {
+    logout = async (req, res, next) => {
         try {
+            const refreshToken = req.cookies["refresh_token"];
+            await this._authService.logout(refreshToken);
+
             res.clearCookie("access_token", {
                 httpOnly: true,
                 secure: isProdMode(),
                 sameSite: "lax",
                 path: "/",
+            });
+            res.clearCookie("refresh_token", {
+                httpOnly: true,
+                secure: isProdMode(),
+                sameSite: "lax",
+                path: "/auth/refresh",
             });
             res.sendStatus(204);
         } catch (e) {

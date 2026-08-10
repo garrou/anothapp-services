@@ -44,6 +44,25 @@ export default class AuthService {
     /**
      * @param {string} token 
      */
+    logout = async (token) => {
+        if (!token) {
+            return;
+        }
+        const found = await this._refreshTokenRepository.find(SecurityHelper.hashToken(token));
+
+        if (!found) {
+            return;
+        }
+        const revoked = await this._refreshTokenRepository.revoke(found.id);
+
+        if (!revoked) {
+            throw new ServiceError(500, "Erreur durant la déconnexion");
+        }
+    }
+
+    /**
+     * @param {string} token 
+     */
     refreshToken = async (token) => {
         const found = await this._refreshTokenRepository.find(SecurityHelper.hashToken(token));
 
