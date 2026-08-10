@@ -48,6 +48,17 @@ CREATE TABLE users (
     PRIMARY KEY(id)
 );
 
+CREATE TABLE refresh_tokens (
+    id UUID DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    revoked_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY(id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE shows (
     id INTEGER,
     title VARCHAR(255) UNIQUE NOT NULL,

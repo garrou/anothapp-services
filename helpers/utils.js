@@ -11,7 +11,10 @@ const cumulate = (arr, attribute) => {
 
 const isDevMode = () => process.env.MODE === 'dev';
 
+const isProdMode = () => !isDevMode();
+
 export {
     cumulate,
     isDevMode,
+    isProdMode
 }
