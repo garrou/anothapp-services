@@ -91,4 +91,17 @@ export default class UserRepository {
         `, [value, id]);
         return res.rowCount === 1;
     }
+
+    /**
+     * @param {string} id
+     * @returns {Promise<boolean>}
+     */
+    markExported = async (id) => {
+        const res = await db.query(`
+            UPDATE users
+            SET last_export = NOW()
+            WHERE id = $1 AND (last_export IS NULL OR last_export <= NOW() - INTERVAL '1 day')
+        `, [id]);
+        return res.rowCount === 1;
+    }
 }

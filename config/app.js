@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import routes from "../routes/index.js";
 import {errorHandler} from "../middlewares/error.js";
 import { limiter } from "../middlewares/rateLimit.js";
@@ -19,14 +20,14 @@ class App {
 
     #setupMiddleware() {
         this._app.use(express.json());
+        this._app.use(cookieParser());
         this._app.use(limiter);
     }
 
     #setupCors() {
         this._app.use(cors({
-            origins: [process.env.ORIGIN],
-            allowedHeaders: ["Authorization", "Content-Type"],
-            exposedHeaders: ["Content-Disposition", "Content-Length", "Content-Type"]
+            origin: process.env.ORIGIN,
+            credentials: true
         }));
     }
 

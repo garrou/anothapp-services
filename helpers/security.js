@@ -1,14 +1,45 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import ServiceError from "../helpers/serviceError.js";
+import { ERROR_TOKEN_EXPIRED, ERROR_TOKEN_INVALID } from '../constants/errors.js';
 
 export default class SecurityHelper {
+
+    static jwtTokenExpires = 15 * 60 * 1000;
+
+    static refreshTokenExpires = 30 * 24 * 60 * 60 * 1000;
+
+    /**
+     * @param {string} token 
+     * @returns {string}
+     */
+    static hashToken = (token) => crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
 
     /**
      * @param {string} userId
      * @param {string} secret
      * @returns {string}
      */
-    static signJwt = (userId, secret) => jwt.sign(userId, secret);
+    static signJwt = (userId, secret) => jwt.sign({ sub: userId }, secret, { expiresIn: "15m" });
+
+    /**
+     * @returns {string}
+     */
+    static generateRefreshToken = () => crypto.randomBytes(64).toString("hex");
+
+    /**
+     * @param {string?} authHeader
+     * @returns {string?}
+     */
+    static extractBearerToken = (authHeader) => {
+        if (!authHeader) return undefined;
+        const [type, token] = authHeader.split(" ");
+        return type === "Bearer" && token ? token : undefined;
+    };
 
     /**
      *
@@ -16,7 +47,16 @@ export default class SecurityHelper {
      * @param {string} secret
      * @returns {any}
      */
-    static verifyJwt = (token, secret) => jwt.verify(token, secret);
+    static verifyJwt = (token, secret) => {
+        try {
+            return jwt.verify(token, secret);
+        } catch (e) {
+            if (e instanceof jwt.TokenExpiredError) {
+                throw new ServiceError(401, ERROR_TOKEN_EXPIRED);
+            }
+            throw new ServiceError(401, ERROR_TOKEN_INVALID);
+        }
+    };
 
     /**
      * @param {string} password
@@ -33,5 +73,4 @@ export default class SecurityHelper {
      * @returns {Promise<boolean>}
      */
     static comparePassword = (password, hash) => bcrypt.compare(password, hash);
-
 }
