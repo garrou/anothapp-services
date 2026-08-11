@@ -22,13 +22,13 @@ export default class RefreshTokenRepository {
      * @returns {RefreshToken}
      */
     find = async (hashToken) => {
-        const res = await this._db.query(`
+        const res = await db.query(`
             SELECT *
             FROM refresh_tokens
             WHERE token_hash = $1 AND expires_at > NOW() AND revoked_at IS NULL
             LIMIT 1
         `, [hashToken]);
-        return res.rowCount === 1 ? RefreshToken(res.rows[0]) : null;
+        return res.rowCount === 1 ? new RefreshToken(res.rows[0]) : null;
     }
 
     /**
@@ -36,7 +36,7 @@ export default class RefreshTokenRepository {
      * @returns {boolean}
      */
     revoke = async (tokenId) => {
-        const res = await this._db.query(`
+        const res = await db.query(`
             UPDATE refresh_tokens
             SET revoked_at = NOW()
             WHERE id = $1

@@ -17,6 +17,12 @@ export default class UserService {
     getUser = async (userId) => this._userRepository.getUserById(userId);
 
     /**
+     * @param {string} userId
+     * @returns {Promise<boolean>}
+     */
+    markExported = (userId) => this._userRepository.markExported(userId);
+
+    /**
      * @param {string} currentUserId
      * @param {string?} username
      * @returns {Promise<UserProfile[]>}

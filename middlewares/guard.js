@@ -10,7 +10,7 @@ export const checkJwt = (req, res, next) => {
     if (WHITELIST.some((url) => req.originalUrl.startsWith(url))) {
         return next();
     }
-    const accessToken = req.cookies["access_token"];
+    const accessToken = req.cookies["access_token"] ?? SecurityHelper.extractBearerToken(req.headers["authorization"]);
 
     if (!accessToken) {
         return res.status(401).json({"message": "Utilisateur non connecté"});
@@ -20,7 +20,7 @@ export const checkJwt = (req, res, next) => {
         const jwt = SecurityHelper.verifyJwt(accessToken, process.env.JWT_SECRET);
         req.userId = jwt.sub;
     } catch (e) {
-        return res.status(403).json({"message": e.message});
+        return next(e);
     }
     next();
 }

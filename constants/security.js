@@ -1,6 +1,8 @@
 export const WHITELIST = [
     "/auth/login",
     "/auth/register",
+    "/auth/refresh",
+    "/auth/logout",
     "/search/images",
 ];
 

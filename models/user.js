@@ -11,12 +11,6 @@ export default class User {
         this.lastExport = user["last_export"];
     }
 
-    canExport() {
-        if (!this.lastExport) return true;
-        const yesterday = new Date().setDate(new Date().getDate() - 1);
-        return new Date(this.lastExport) <= yesterday;
-    }
-
     /**
      * @param {string} field
      * @return boolean

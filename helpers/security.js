@@ -32,6 +32,16 @@ export default class SecurityHelper {
     static generateRefreshToken = () => crypto.randomBytes(64).toString("hex");
 
     /**
+     * @param {string?} authHeader
+     * @returns {string?}
+     */
+    static extractBearerToken = (authHeader) => {
+        if (!authHeader) return undefined;
+        const [type, token] = authHeader.split(" ");
+        return type === "Bearer" && token ? token : undefined;
+    };
+
+    /**
      *
      * @param {string} token
      * @param {string} secret
