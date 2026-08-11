@@ -50,7 +50,7 @@ export default class AuthController {
             }
             const { accessToken, refreshToken: newRefreshToken } = await this._authService.refreshToken(refreshToken);
 
-            this._setAuthCookies(res, accessToken, newRefreshToken);
+            this.#setAuthCookies(res, accessToken, newRefreshToken);
 
             if (this.#isNativeClient(req)) {
                 return res.status(200).json({ token: accessToken, refreshToken: newRefreshToken });
