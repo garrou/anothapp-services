@@ -86,7 +86,7 @@ export default class AuthController {
             secure: isProdMode(),
             sameSite,
             maxAge: SecurityHelper.refreshTokenExpires,
-            path: "/auth/refresh",
+            path: SecurityHelper.refreshPath
         });
     }
 
@@ -94,7 +94,7 @@ export default class AuthController {
         const sameSite = isProdMode() ? "none" : "lax";
 
         res.clearCookie("access_token", { httpOnly: true, secure: isProdMode(), sameSite, path: "/" });
-        res.clearCookie("refresh_token", { httpOnly: true, secure: isProdMode(), sameSite, path: "/auth/refresh" });
+        res.clearCookie("refresh_token", { httpOnly: true, secure: isProdMode(), sameSite, path: SecurityHelper.refreshPath });
     }
 
     #isNativeClient = (req) => req.headers["x-client-type"] === "ios";

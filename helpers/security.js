@@ -3,12 +3,15 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import ServiceError from "../helpers/serviceError.js";
 import { ERROR_TOKEN_EXPIRED, ERROR_TOKEN_INVALID } from '../constants/errors.js';
+import { isProdMode } from './utils.js';
 
 export default class SecurityHelper {
 
     static jwtTokenExpires = 15 * 60 * 1000;
 
     static refreshTokenExpires = 30 * 24 * 60 * 60 * 1000;
+
+    static refreshPath = isProdMode() ? "/api/auth/refresh" : "/auth/refresh";
 
     /**
      * @param {string} token 
