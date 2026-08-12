@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Actions
     steps:
       - name: Deploy via SSH (git pull + npm install)
         uses: appleboy/ssh-action@v1.0.3
