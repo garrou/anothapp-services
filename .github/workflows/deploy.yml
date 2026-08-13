@@ -18,8 +18,14 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd ${{ secrets.ALWAYSDATA_APP_PATH }}
+            BEFORE=$(git rev-parse HEAD)
             git pull origin main
-            npm install --omit=dev
+            AFTER=$(git rev-parse HEAD)
+            if git diff --name-only $BEFORE $AFTER | grep -qE '^package(-lock)?\.json$'; then
+              npm install --omit=dev
+            else
+              echo "skip npm install"
+            fi
 
       - name: Restart app via alwaysdata API
         run: |
