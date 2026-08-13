@@ -38,6 +38,10 @@ class App {
     listen() {
         this._app.listen(process.env.PORT);
     }
+
+    get app() {
+        return this._app;
+    }
 }
 
 export default new App();

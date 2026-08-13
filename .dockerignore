@@ -3,3 +3,5 @@ pgdata/
 .git/
 .env
 template.env
+**/*.test.js
+vitest.config.js

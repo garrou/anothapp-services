@@ -19,6 +19,9 @@ export default class AuthService {
      * @returns {Promise<Object>}
      */
     login = async (identifier, password) => {
+        if (typeof identifier !== "string" || typeof password !== "string") {
+            throw new ServiceError(400, "Identifiant ou mot de passe incorrect");
+        }
         const found = await this._userRepository.getUserByIdentifier(identifier);
         const hashToCompare = found?.password ?? DUMMY_HASH;
         const same = await SecurityHelper.comparePassword(password, hashToCompare);
