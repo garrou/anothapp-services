@@ -108,6 +108,32 @@ CREATE TABLE users_seasons (
     FOREIGN KEY(user_id, show_id) REFERENCES users_shows(user_id, show_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE episodes (
+    id INTEGER,
+    title VARCHAR(255) NOT NULL,
+    number INTEGER NOT NULL,
+    season INTEGER NOT NULL,
+    code VARCHAR(10) NOT NULL,
+    global INTEGER NOT NULL,
+    length INTEGER NOT NULL,
+    date DATE,
+    show_id INTEGER,
+    FOREIGN KEY(show_id, season) REFERENCES seasons(show_id, number) ON DELETE CASCADE ON UPDATE CASCADE,
+    PRIMARY KEY(id)
+);
+
+CREATE TABLE users_episodes (
+    id SERIAL,
+    added_at TIMESTAMP DEFAULT NOW(),
+    user_id UUID,
+    episode_id INTEGER,
+    platform_id INTEGER,
+    PRIMARY KEY(id),
+    FOREIGN KEY(platform_id) REFERENCES platforms(id) ON UPDATE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(episode_id) REFERENCES episodes(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE friends (
     fst_user_id UUID,
     sec_user_id UUID,
@@ -136,5 +162,6 @@ CREATE TABLE users_platforms (
 
 CREATE INDEX idx_users_shows_user_id ON users_shows(user_id);
 CREATE INDEX idx_users_seasons_user_id ON users_seasons(user_id);
+CREATE INDEX idx_users_episodes_user_id ON users_episodes(user_id);
 CREATE INDEX idx_friends_sec_user_id ON friends(sec_user_id);
 CREATE INDEX idx_users_list_user_id ON users_list(user_id);

@@ -7,9 +7,11 @@ export default class ApiEpisode extends ApiEntity {
      */
     constructor(episode) {
         super(episode.id, episode.title);
+        this.number = episode.episode;
+        this.season = episode.season;
         this.code = episode.code;
         this.global = episode.global;
-        this.description = episode.description;
+        this.length = episode.length;
         this.date = episode.date;
     }
 }

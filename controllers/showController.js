@@ -65,6 +65,26 @@ export default class ShowController {
         }
     }
 
+    addEpisodeByShowId = async (req, res, next) => {
+        try {
+            const {id, episodeId} = req.body;
+            await this._showService.addEpisode(req.userId, id, episodeId);
+            res.sendStatus(201);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    getEpisodesByShowIdBySeason = async (req, res, next) => {
+        try {
+            const {id, num} = req.params;
+            const episodes = await this._showService.getEpisodesByShowIdBySeason(req.userId, id, num);
+            res.status(200).json(episodes);
+        } catch (e) {
+            next(e);
+        }
+    }
+
     updateByShowId = async (req, res, next) => {
         try {
             const result = await this._showService.updateByShowId(req.userId, req.params.id, req.body);

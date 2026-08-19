@@ -30,6 +30,7 @@ const userListRepoMocks = vi.hoisted(() => ({
 const searchServiceMocks = vi.hoisted(() => ({
     getByShowId: vi.fn(),
     getSeasonByShowIdByNumber: vi.fn(),
+    getEpisodesByShowIdBySeason: vi.fn(),
 }));
 const friendRepoMocks = vi.hoisted(() => ({
     checkIfAlreadyFriend: vi.fn(),
@@ -43,6 +44,15 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
 const seasonRepoMocks = vi.hoisted(() => ({
     getSeasonByShowIdByNumber: vi.fn(),
     createSeason: vi.fn(),
+}));
+const episodeRepoMocks = vi.hoisted(() => ({
+    hasEpisodesByShowIdBySeason: vi.fn(),
+    createEpisode: vi.fn(),
+    getEpisodeById: vi.fn(),
+    getEpisodesWithWatchedStatus: vi.fn(),
+}));
+const userEpisodeRepoMocks = vi.hoisted(() => ({
+    create: vi.fn(),
 }));
 
 vi.mock("../repositories/showRepository.js", () => ({
@@ -65,6 +75,12 @@ vi.mock("../repositories/userSeasonRepository.js", () => ({
 }));
 vi.mock("../repositories/seasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return seasonRepoMocks; }),
+}));
+vi.mock("../repositories/episodeRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return episodeRepoMocks; }),
+}));
+vi.mock("../repositories/userEpisodeRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return userEpisodeRepoMocks; }),
 }));
 
 const validShow = {
@@ -251,6 +267,9 @@ describe("ShowService.addSeason", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         showService = new ShowService();
+        // episodes already populated by default: keeps the pre-existing tests
+        // focused on the season logic, episode population is covered below
+        episodeRepoMocks.hasEpisodesByShowIdBySeason.mockResolvedValue(true);
     });
 
     it("rejects with a 400 when id or num is missing", async () => {
@@ -297,6 +316,128 @@ describe("ShowService.addSeason", () => {
         await expect(showService.addSeason("user-1", 42, 1)).rejects.toThrow(
             "Impossible d'ajouter la saison"
         );
+    });
+
+    it("populates the episodes table when they aren't stored locally yet", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(true);
+        episodeRepoMocks.hasEpisodesByShowIdBySeason.mockResolvedValue(false);
+        searchServiceMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
+            { id: 1001, title: "Ep 1", number: 1, season: 1, code: "S01E01", global: 1, length: 21, date: "2024-01-01" },
+            { id: 1002, title: "Ep 2", number: 2, season: 1, code: "S01E02", global: 2, length: 21, date: "2024-01-08" },
+        ]);
+
+        await expect(showService.addSeason("user-1", 42, 1)).resolves.toBeUndefined();
+
+        expect(episodeRepoMocks.createEpisode).toHaveBeenCalledTimes(2);
+        expect(episodeRepoMocks.createEpisode).toHaveBeenCalledWith(
+            1001, "Ep 1", 1, 1, "S01E01", 1, 21, "2024-01-01", 42
+        );
+    });
+
+    it("does not fetch episodes again when they are already stored locally", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(true);
+        episodeRepoMocks.hasEpisodesByShowIdBySeason.mockResolvedValue(true);
+
+        await expect(showService.addSeason("user-1", 42, 1)).resolves.toBeUndefined();
+
+        expect(searchServiceMocks.getEpisodesByShowIdBySeason).not.toHaveBeenCalled();
+        expect(episodeRepoMocks.createEpisode).not.toHaveBeenCalled();
+    });
+
+    it("does not block adding the season when episode population fails", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(true);
+        episodeRepoMocks.hasEpisodesByShowIdBySeason.mockRejectedValue(new Error("db down"));
+
+        await expect(showService.addSeason("user-1", 42, 1)).resolves.toBeUndefined();
+        expect(userSeasonRepoMocks.create).toHaveBeenCalledWith("user-1", 42, 1);
+    });
+});
+
+describe("ShowService.addEpisode", () => {
+    let showService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        showService = new ShowService();
+    });
+
+    it("rejects with a 400 when id or episodeId is missing", async () => {
+        await expect(showService.addEpisode("user-1", undefined, 1001)).rejects.toThrow("Requête invalide");
+        await expect(showService.addEpisode("user-1", 42, undefined)).rejects.toThrow("Requête invalide");
+    });
+
+    it("rejects with a 400 when the show isn't in the user's collection", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue(null);
+
+        await expect(showService.addEpisode("user-1", 42, 1001)).rejects.toThrow(
+            "Cette série n'est pas dans votre collection"
+        );
+    });
+
+    it("rejects with a 400 when the episode doesn't exist locally", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42 });
+        episodeRepoMocks.getEpisodeById.mockResolvedValue(null);
+
+        await expect(showService.addEpisode("user-1", 42, 1001)).rejects.toThrow("Requête invalide");
+    });
+
+    it("rejects with a 400 when the episode belongs to another show", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42 });
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 99 });
+
+        await expect(showService.addEpisode("user-1", 42, 1001)).rejects.toThrow("Requête invalide");
+    });
+
+    it("marks the episode as watched when everything checks out", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42 });
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 42 });
+        userEpisodeRepoMocks.create.mockResolvedValue(true);
+
+        await expect(showService.addEpisode("user-1", 42, 1001)).resolves.toBeUndefined();
+        expect(userEpisodeRepoMocks.create).toHaveBeenCalledWith("user-1", 1001);
+    });
+
+    it("throws a 500 when marking the episode as watched fails", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42 });
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 42 });
+        userEpisodeRepoMocks.create.mockResolvedValue(false);
+
+        await expect(showService.addEpisode("user-1", 42, 1001)).rejects.toThrow(
+            "Impossible d'ajouter l'épisode"
+        );
+    });
+});
+
+describe("ShowService.getEpisodesByShowIdBySeason", () => {
+    let showService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        showService = new ShowService();
+    });
+
+    it("rejects with a 400 when id or num is missing", async () => {
+        await expect(showService.getEpisodesByShowIdBySeason("user-1", undefined, 1)).rejects.toThrow(
+            "Requête invalide"
+        );
+        await expect(showService.getEpisodesByShowIdBySeason("user-1", 42, undefined)).rejects.toThrow(
+            "Requête invalide"
+        );
+    });
+
+    it("delegates to the repository", async () => {
+        episodeRepoMocks.getEpisodesWithWatchedStatus.mockResolvedValue(["episode-with-status"]);
+
+        const result = await showService.getEpisodesByShowIdBySeason("user-1", 42, 1);
+
+        expect(result).toEqual(["episode-with-status"]);
+        expect(episodeRepoMocks.getEpisodesWithWatchedStatus).toHaveBeenCalledWith("user-1", 42, 1);
     });
 });
 

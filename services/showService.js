@@ -4,11 +4,13 @@ import SearchService from "./searchService.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import SeasonRepository from "../repositories/seasonRepository.js";
+import EpisodeRepository from "../repositories/episodeRepository.js";
+import UserEpisodeRepository from "../repositories/userEpisodeRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import UserListRepository from "../repositories/userListRepository.js";
 import Validator from "../helpers/validator.js";
 import ParserHelper from "../helpers/parser.js";
-import {ERROR_FAILED_ADD_SEASON, ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {ERROR_FAILED_ADD_SEASON, ERROR_FAILED_ADD_EPISODE, ERROR_INVALID_REQUEST} from "../constants/errors.js";
 
 export default class ShowService {
 
@@ -20,6 +22,8 @@ export default class ShowService {
         this._searchService = new SearchService();
         this._friendRepository = new FriendRepository();
         this._seasonRepository = new SeasonRepository();
+        this._episodeRepository = new EpisodeRepository();
+        this._userEpisodeRepository = new UserEpisodeRepository();
     }
 
     /**
@@ -178,6 +182,7 @@ export default class ShowService {
         const existingSeason = await this._seasonRepository.getSeasonByShowIdByNumber(id, num);
 
         if (existingSeason) {
+            await this.#populateEpisodes(id, num);
             const added = await this._userSeasonRepository.create(currentUserId, id, num);
 
             if (!added) {
@@ -195,11 +200,77 @@ export default class ShowService {
         if (!created) {
             throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
         }
+        await this.#populateEpisodes(id, num);
         const added = await this._userSeasonRepository.create(currentUserId, id, num);
 
         if (!added) {
             throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
         }
+    }
+
+    /**
+     * Best-effort population of the episodes table when a season is added.
+     * Never blocks addSeason: watching episode by episode stays optional.
+     * @param {number} showId
+     * @param {number} num
+     * @returns {Promise<void>}
+     */
+    #populateEpisodes = async (showId, num) => {
+        try {
+            const hasEpisodes = await this._episodeRepository.hasEpisodesByShowIdBySeason(showId, num);
+
+            if (hasEpisodes) {
+                return;
+            }
+            const episodes = await this._searchService.getEpisodesByShowIdBySeason(showId, num);
+
+            await Promise.all(episodes.map((episode) => this._episodeRepository.createEpisode(
+                episode.id, episode.title, episode.number, episode.season,
+                episode.code, episode.global, episode.length, episode.date, showId
+            )));
+        } catch (e) {
+            console.error("Impossible de récupérer les épisodes de la saison", showId, num, e);
+        }
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @param {number?} episodeId
+     * @returns {Promise<void>}
+     */
+    addEpisode = async (currentUserId, id, episodeId) => {
+        if (!id || !episodeId) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const show = await this._userShowRepository.getShowByUserIdByShowId(currentUserId, id);
+
+        if (!show) {
+            throw new ServiceError(400, "Cette série n'est pas dans votre collection");
+        }
+        const episode = await this._episodeRepository.getEpisodeById(episodeId);
+
+        if (!episode || episode.showId !== Number(id)) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const added = await this._userEpisodeRepository.create(currentUserId, episodeId);
+
+        if (!added) {
+            throw new ServiceError(500, ERROR_FAILED_ADD_EPISODE);
+        }
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @param {number?} num
+     * @returns {Promise<UserEpisode[]>}
+     */
+    getEpisodesByShowIdBySeason = async (currentUserId, id, num) => {
+        if (!id || !num) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        return this._episodeRepository.getEpisodesWithWatchedStatus(currentUserId, id, num);
     }
 
     /**
