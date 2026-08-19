@@ -7,8 +7,8 @@ export default class ShowController {
 
     addShow = async (req, res, next) => {
         try {
-            const {id, list} = req.body;
-            const show = await this._showService.addShow(req.userId, id, list);
+            const {id} = req.body;
+            const show = await this._showService.addShow(req.userId, id);
             res.status(201).json(show);
         } catch (e) {
             next(e);
@@ -18,8 +18,7 @@ export default class ShowController {
     deleteByShowId = async (req, res, next) => {
         try {
             const {id} = req.params;
-            const {list} = req.query;
-            await this._showService.deleteByShowId(req.userId, id, list);
+            await this._showService.deleteByShowId(req.userId, id);
             res.sendStatus(204);
         } catch (e) {
             next(e);

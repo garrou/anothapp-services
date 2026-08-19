@@ -21,12 +21,6 @@ const userShowRepoMocks = vi.hoisted(() => ({
     updateAddedAtByUserIdByShowId: vi.fn(),
     updateNoteByUserIdByShowId: vi.fn(),
 }));
-const userListRepoMocks = vi.hoisted(() => ({
-    checkShowExistsByUserIdByShowId: vi.fn(),
-    create: vi.fn(),
-    deleteByUserIdShowId: vi.fn(),
-    getListShowsByUserId: vi.fn(),
-}));
 const searchServiceMocks = vi.hoisted(() => ({
     getByShowId: vi.fn(),
     getSeasonByShowIdByNumber: vi.fn(),
@@ -60,9 +54,6 @@ vi.mock("../repositories/showRepository.js", () => ({
 }));
 vi.mock("../repositories/userShowRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userShowRepoMocks; }),
-}));
-vi.mock("../repositories/userListRepository.js", () => ({
-    default: vi.fn().mockImplementation(function () { return userListRepoMocks; }),
 }));
 vi.mock("./searchService.js", () => ({
     default: vi.fn().mockImplementation(function () { return searchServiceMocks; }),
@@ -108,16 +99,8 @@ describe("ShowService.addShow", () => {
     it("rejects with a 409 when the show is already in the collection", async () => {
         userShowRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(true);
 
-        await expect(showService.addShow("user-1", 42, false)).rejects.toThrow(
+        await expect(showService.addShow("user-1", 42)).rejects.toThrow(
             "Cette série est déjà dans votre collection"
-        );
-    });
-
-    it("rejects with a 409 when the show is already in the watchlist", async () => {
-        userListRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(true);
-
-        await expect(showService.addShow("user-1", 42, true)).rejects.toThrow(
-            "Cette série est déjà dans votre liste"
         );
     });
 
@@ -126,7 +109,7 @@ describe("ShowService.addShow", () => {
         showRepoMocks.getShow.mockResolvedValue(validShow);
         userShowRepoMocks.create.mockResolvedValue(true);
 
-        const result = await showService.addShow("user-1", 42, false);
+        const result = await showService.addShow("user-1", 42);
 
         expect(result).toEqual(validShow);
         expect(searchServiceMocks.getByShowId).not.toHaveBeenCalled();
@@ -140,7 +123,7 @@ describe("ShowService.addShow", () => {
         showRepoMocks.createShow.mockResolvedValue(true);
         userShowRepoMocks.create.mockResolvedValue(true);
 
-        const result = await showService.addShow("user-1", 42, false);
+        const result = await showService.addShow("user-1", 42);
 
         expect(searchServiceMocks.getByShowId).toHaveBeenCalledWith(42);
         expect(showRepoMocks.createShow).toHaveBeenCalledWith(
@@ -154,7 +137,7 @@ describe("ShowService.addShow", () => {
         showRepoMocks.getShow.mockResolvedValue(null);
         searchServiceMocks.getByShowId.mockResolvedValue({ id: 42, title: "" });
 
-        await expect(showService.addShow("user-1", 42, false)).rejects.toThrow("Série invalide");
+        await expect(showService.addShow("user-1", 42)).rejects.toThrow("Série invalide");
         expect(showRepoMocks.createShow).not.toHaveBeenCalled();
     });
 
@@ -163,7 +146,7 @@ describe("ShowService.addShow", () => {
         showRepoMocks.getShow.mockResolvedValue(validShow);
         userShowRepoMocks.create.mockResolvedValue(false);
 
-        await expect(showService.addShow("user-1", 42, false)).rejects.toThrow(
+        await expect(showService.addShow("user-1", 42)).rejects.toThrow(
             "Impossible d'ajouter la série"
         );
     });
@@ -178,30 +161,22 @@ describe("ShowService.deleteByShowId", () => {
     });
 
     it("rejects with a 400 when no id is given", async () => {
-        await expect(showService.deleteByShowId("user-1", undefined, "false")).rejects.toThrow(
+        await expect(showService.deleteByShowId("user-1", undefined)).rejects.toThrow(
             "Requête invalide"
         );
     });
 
-    it("deletes from the collection when inList is not 'true'", async () => {
+    it("deletes the show from the collection", async () => {
         userShowRepoMocks.deleteByUserIdShowId.mockResolvedValue(true);
 
-        await expect(showService.deleteByShowId("user-1", 42, "false")).resolves.toBeUndefined();
+        await expect(showService.deleteByShowId("user-1", 42)).resolves.toBeUndefined();
         expect(userShowRepoMocks.deleteByUserIdShowId).toHaveBeenCalledWith("user-1", 42);
-        expect(userListRepoMocks.deleteByUserIdShowId).not.toHaveBeenCalled();
-    });
-
-    it("deletes from the watchlist when inList is 'true' (case-insensitive)", async () => {
-        userListRepoMocks.deleteByUserIdShowId.mockResolvedValue(true);
-
-        await expect(showService.deleteByShowId("user-1", 42, "TRUE")).resolves.toBeUndefined();
-        expect(userListRepoMocks.deleteByUserIdShowId).toHaveBeenCalledWith("user-1", 42);
     });
 
     it("throws a 500 when nothing was deleted", async () => {
         userShowRepoMocks.deleteByUserIdShowId.mockResolvedValue(false);
 
-        await expect(showService.deleteByShowId("user-1", 42, "false")).rejects.toThrow(
+        await expect(showService.deleteByShowId("user-1", 42)).rejects.toThrow(
             "Impossible de supprimer la série"
         );
     });
@@ -357,6 +332,32 @@ describe("ShowService.addSeason", () => {
         await expect(showService.addSeason("user-1", 42, 1)).resolves.toBeUndefined();
         expect(userSeasonRepoMocks.create).toHaveBeenCalledWith("user-1", 42, 1);
     });
+
+    it("does not block adding the season when the BetaSeries episodes call fails", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(true);
+        episodeRepoMocks.hasEpisodesByShowIdBySeason.mockResolvedValue(false);
+        searchServiceMocks.getEpisodesByShowIdBySeason.mockRejectedValue(new Error("BetaSeries down"));
+
+        await expect(showService.addSeason("user-1", 42, 1)).resolves.toBeUndefined();
+        expect(episodeRepoMocks.createEpisode).not.toHaveBeenCalled();
+        expect(userSeasonRepoMocks.create).toHaveBeenCalledWith("user-1", 42, 1);
+    });
+
+    it("does not block adding the season when one of the episode inserts fails", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(true);
+        episodeRepoMocks.hasEpisodesByShowIdBySeason.mockResolvedValue(false);
+        searchServiceMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
+            { id: 1001, title: "Ep 1", number: 1, season: 1, code: "S01E01", global: 1, length: 21, date: "2024-01-01" },
+        ]);
+        episodeRepoMocks.createEpisode.mockRejectedValue(new Error("constraint violation"));
+
+        await expect(showService.addSeason("user-1", 42, 1)).resolves.toBeUndefined();
+        expect(userSeasonRepoMocks.create).toHaveBeenCalledWith("user-1", 42, 1);
+    });
 });
 
 describe("ShowService.addEpisode", () => {
@@ -411,6 +412,15 @@ describe("ShowService.addEpisode", () => {
         await expect(showService.addEpisode("user-1", 42, 1001)).rejects.toThrow(
             "Impossible d'ajouter l'épisode"
         );
+    });
+
+    it("matches the episode's show even when id arrives as a string (route/body param)", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42 });
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 42 });
+        userEpisodeRepoMocks.create.mockResolvedValue(true);
+
+        await expect(showService.addEpisode("user-1", "42", 1001)).resolves.toBeUndefined();
+        expect(userEpisodeRepoMocks.create).toHaveBeenCalledWith("user-1", 1001);
     });
 });
 

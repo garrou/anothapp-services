@@ -7,7 +7,6 @@ import SeasonRepository from "../repositories/seasonRepository.js";
 import EpisodeRepository from "../repositories/episodeRepository.js";
 import UserEpisodeRepository from "../repositories/userEpisodeRepository.js";
 import ServiceError from "../helpers/serviceError.js";
-import UserListRepository from "../repositories/userListRepository.js";
 import Validator from "../helpers/validator.js";
 import ParserHelper from "../helpers/parser.js";
 import {ERROR_FAILED_ADD_SEASON, ERROR_FAILED_ADD_EPISODE, ERROR_INVALID_REQUEST} from "../constants/errors.js";
@@ -17,7 +16,6 @@ export default class ShowService {
     constructor() {
         this._showRepository = new ShowRepository();
         this._userShowRepository = new UserShowRepository();
-        this._userListRepository = new UserListRepository();
         this._userSeasonRepository = new UserSeasonRepository();
         this._searchService = new SearchService();
         this._friendRepository = new FriendRepository();
@@ -36,8 +34,6 @@ export default class ShowService {
         switch (status) {
             case "stopped":
                 return this._userShowRepository.getShowsToResumeByUserId(userId);
-            case "watchlist":
-                return this._userListRepository.getListShowsByUserId(userId);
             case "continue":
                 return this._userShowRepository.getShowsToContinueByUserId(userId);
             case "favorite":
@@ -57,26 +53,23 @@ export default class ShowService {
     /**
      * @param {string} currentUserId
      * @param {number?} showId
-     * @param {boolean} addInList
      * @returns {Promise<Show|ApiShow>}
      */
-    addShow = async (currentUserId, showId, addInList = false) => {
+    addShow = async (currentUserId, showId) => {
         if (!showId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const exists = addInList
-            ? await this._userListRepository.checkShowExistsByUserIdByShowId(currentUserId, showId)
-            : await this._userShowRepository.checkShowExistsByUserIdByShowId(currentUserId, showId);
+        const exists = await this._userShowRepository.checkShowExistsByUserIdByShowId(currentUserId, showId);
 
         if (exists) {
-            throw new ServiceError(409, `Cette série est déjà dans votre ${addInList ? "liste" : "collection"}`);
+            throw new ServiceError(409, "Cette série est déjà dans votre collection");
         }
         let show = await this._showRepository.getShow(showId);
 
         if (!show) {
             show = await this._searchService.getByShowId(showId);
 
-            if (!Validator.isValidShow(show)) {      
+            if (!Validator.isValidShow(show)) {
                 throw new ServiceError(400, "Série invalide");
             }
             const {id, title, poster, kinds, duration, seasons, country} = show;
@@ -86,9 +79,7 @@ export default class ShowService {
                 throw new ServiceError(500, "Impossible de créer la série");
             }
         }
-        const added = addInList
-            ? await this._userListRepository.create(currentUserId, showId)
-            : await this._userShowRepository.create(currentUserId, showId);
+        const added = await this._userShowRepository.create(currentUserId, showId);
 
         if (!added) {
             throw new ServiceError(500, "Impossible d'ajouter la série");
@@ -99,18 +90,13 @@ export default class ShowService {
     /**
      * @param {string} currentUserId
      * @param {number?} id
-     * @param {string} inList
      * @returns {Promise<void>}
      */
-    deleteByShowId = async (currentUserId, id, inList) => {
-        const deleteInList = (/true/i).test(inList);
-
+    deleteByShowId = async (currentUserId, id) => {
         if (!id) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const deleted = deleteInList
-            ? await this._userListRepository.deleteByUserIdShowId(currentUserId, id)
-            : await this._userShowRepository.deleteByUserIdShowId(currentUserId, id);
+        const deleted = await this._userShowRepository.deleteByUserIdShowId(currentUserId, id);
 
         if (!deleted) {
             throw new ServiceError(500, "Impossible de supprimer la série");

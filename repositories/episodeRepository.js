@@ -65,7 +65,7 @@ export default class EpisodeRepository {
         const res = await db.query(`
             SELECT * FROM (
                 SELECT DISTINCT ON (e.id) e.id, e.title, e.number, e.season, e.code, e.global, e.length, e.date,
-                       ue.id AS user_episode_id, ue.added_at
+                       ue.added_at
                 FROM episodes e
                 LEFT JOIN users_episodes ue ON ue.episode_id = e.id AND ue.user_id = $1
                 WHERE e.show_id = $2 AND e.season = $3
@@ -78,14 +78,14 @@ export default class EpisodeRepository {
 
     /**
      * @param {string} userId
-     * @param {number} id
+     * @param {number} episodeId
      * @returns {Promise<boolean>}
      */
-    deleteEpisodeById = async (userId, id) => {
+    deleteEpisodeById = async (userId, episodeId) => {
         const res = await db.query(`
             DELETE FROM users_episodes
-            WHERE id = $1 AND user_id = $2
-        `, [id, userId]);
-        return res.rowCount === 1;
+            WHERE episode_id = $1 AND user_id = $2
+        `, [episodeId, userId]);
+        return res.rowCount > 0;
     }
 }
