@@ -89,4 +89,4 @@ describe("SecurityHelper.createHash / comparePassword", () => {
         const same = await SecurityHelper.comparePassword("wrongpassword", hash);
         expect(same).toBe(false);
     });
-});
+}); 
