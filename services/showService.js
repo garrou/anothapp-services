@@ -115,7 +115,7 @@ export default class ShowService {
         const show = await this._userShowRepository.getShowByUserIdByShowId(currentUserId, id);
 
         if (!show) {
-            throw new Error("Série introuvable");
+            throw new ServiceError(404, "Série introuvable");
         }
         const seasons = await this._userSeasonRepository.getDistinctByUserIdByShowId(currentUserId, id);
         const [time, nbEpisodes] = await this._userSeasonRepository.getTimeEpisodesByUserIdByShowId(currentUserId, id);
@@ -271,6 +271,19 @@ export default class ShowService {
         }
         // const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(currentUserId, id, num);
         return await this._userSeasonRepository.getInfosByUserIdByShowId(currentUserId, id, num);
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @param {number?} episodeId
+     * @returns {Promise<PartialUserEpisode[]>}
+     */
+    getEpisodeInfosByShowIdByEpisode = async (currentUserId, id, episodeId) => {
+        if (!id || !episodeId) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        return await this._userEpisodeRepository.getViewingsByUserIdByEpisodeId(currentUserId, episodeId);
     }
 
     /**

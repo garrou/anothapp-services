@@ -84,6 +84,16 @@ export default class ShowController {
         }
     }
 
+    getEpisodeInfosByShowIdByEpisode = async (req, res, next) => {
+        try {
+            const {id, episodeId} = req.params;
+            const infos = await this._showService.getEpisodeInfosByShowIdByEpisode(req.userId, id, episodeId);
+            res.status(200).json(infos);
+        } catch (e) {
+            next(e);
+        }
+    }
+
     updateByShowId = async (req, res, next) => {
         try {
             const result = await this._showService.updateByShowId(req.userId, req.params.id, req.body);

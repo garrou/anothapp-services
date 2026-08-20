@@ -1,6 +1,6 @@
 import db from "../config/db.js";
 import Episode from "../models/episode.js";
-import UserEpisode from "../models/userEpisode.js";
+import {UserEpisode} from "../models/userEpisode.js";
 
 export default class EpisodeRepository {
 
@@ -78,14 +78,30 @@ export default class EpisodeRepository {
 
     /**
      * @param {string} userId
-     * @param {number} episodeId
+     * @param {number} id
      * @returns {Promise<boolean>}
      */
-    deleteEpisodeById = async (userId, episodeId) => {
+    deleteEpisodeById = async (userId, id) => {
         const res = await db.query(`
             DELETE FROM users_episodes
-            WHERE episode_id = $1 AND user_id = $2
-        `, [episodeId, userId]);
-        return res.rowCount > 0;
+            WHERE id = $1 AND user_id = $2
+        `, [id, userId]);
+        return res.rowCount === 1;
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} id
+     * @param {number} platform
+     * @param {string} viewedAt
+     * @returns {Promise<boolean>}
+     */
+    updateEpisode = async (userId, id, platform, viewedAt) => {
+        const res = await db.query(`
+            UPDATE users_episodes
+            SET platform_id = $1, added_at = $4
+            WHERE id = $2 AND user_id = $3
+        `, [platform, id, userId, viewedAt]);
+        return res.rowCount === 1;
     }
 }

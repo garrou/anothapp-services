@@ -1,4 +1,18 @@
-export default class UserEpisode {
+import Platform from "./platform.js";
+
+class PartialUserEpisode {
+
+    /**
+     * @param {Object} obj
+     */
+    constructor(obj) {
+        this.id = obj.id;
+        this.addedAt = obj["added_at"];
+        this.platform = new Platform(obj);
+    }
+}
+
+class UserEpisode {
 
     /**
      * @param {Object} obj
@@ -15,4 +29,9 @@ export default class UserEpisode {
         this.date = obj.date;
         this.watched = obj["added_at"] != null;
     }
+}
+
+export {
+    UserEpisode,
+    PartialUserEpisode,
 }

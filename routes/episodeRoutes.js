@@ -6,4 +6,6 @@ const episodeController = new EpisodeController();
 
 router.delete("/:id", episodeController.deleteByEpisodeId);
 
+router.patch("/:id", episodeController.updateByEpisodeId);
+
 export default router;
