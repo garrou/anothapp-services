@@ -239,7 +239,9 @@ export default class ShowService {
         if (!episode || episode.showId !== Number(id)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const added = await this._userEpisodeRepository.create(currentUserId, episodeId);
+        const seasonViewings = await this._userSeasonRepository.getInfosByUserIdByShowId(currentUserId, id, episode.season);
+        const platform = seasonViewings.length ? seasonViewings[seasonViewings.length - 1].platform.id : undefined;
+        const added = await this._userEpisodeRepository.create(currentUserId, episodeId, platform);
 
         if (!added) {
             throw new ServiceError(500, ERROR_FAILED_ADD_EPISODE);

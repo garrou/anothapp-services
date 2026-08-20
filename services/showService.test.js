@@ -395,18 +395,34 @@ describe("ShowService.addEpisode", () => {
         await expect(showService.addEpisode("user-1", 42, 1001)).rejects.toThrow("Requête invalide");
     });
 
-    it("marks the episode as watched when everything checks out", async () => {
+    it("marks the episode as watched with no explicit platform when the season has no viewing", async () => {
         userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42 });
-        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 42 });
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 42, season: 1 });
+        userSeasonRepoMocks.getInfosByUserIdByShowId.mockResolvedValue([]);
         userEpisodeRepoMocks.create.mockResolvedValue(true);
 
         await expect(showService.addEpisode("user-1", 42, 1001)).resolves.toBeUndefined();
-        expect(userEpisodeRepoMocks.create).toHaveBeenCalledWith("user-1", 1001);
+        expect(userSeasonRepoMocks.getInfosByUserIdByShowId).toHaveBeenCalledWith("user-1", 42, 1);
+        expect(userEpisodeRepoMocks.create).toHaveBeenCalledWith("user-1", 1001, undefined);
+    });
+
+    it("defaults the episode's platform to the season's most recent viewing platform", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42 });
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 42, season: 1 });
+        userSeasonRepoMocks.getInfosByUserIdByShowId.mockResolvedValue([
+            { id: 1, platform: { id: 1, name: "Netflix" } },
+            { id: 2, platform: { id: 3, name: "Prime Video" } },
+        ]);
+        userEpisodeRepoMocks.create.mockResolvedValue(true);
+
+        await expect(showService.addEpisode("user-1", 42, 1001)).resolves.toBeUndefined();
+        expect(userEpisodeRepoMocks.create).toHaveBeenCalledWith("user-1", 1001, 3);
     });
 
     it("throws a 500 when marking the episode as watched fails", async () => {
         userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42 });
-        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 42 });
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 42, season: 1 });
+        userSeasonRepoMocks.getInfosByUserIdByShowId.mockResolvedValue([]);
         userEpisodeRepoMocks.create.mockResolvedValue(false);
 
         await expect(showService.addEpisode("user-1", 42, 1001)).rejects.toThrow(
@@ -416,11 +432,12 @@ describe("ShowService.addEpisode", () => {
 
     it("matches the episode's show even when id arrives as a string (route/body param)", async () => {
         userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42 });
-        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 42 });
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1001, showId: 42, season: 1 });
+        userSeasonRepoMocks.getInfosByUserIdByShowId.mockResolvedValue([]);
         userEpisodeRepoMocks.create.mockResolvedValue(true);
 
         await expect(showService.addEpisode("user-1", "42", 1001)).resolves.toBeUndefined();
-        expect(userEpisodeRepoMocks.create).toHaveBeenCalledWith("user-1", 1001);
+        expect(userEpisodeRepoMocks.create).toHaveBeenCalledWith("user-1", 1001, undefined);
     });
 });
 
