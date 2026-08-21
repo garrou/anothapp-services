@@ -13,4 +13,19 @@ export default class PlatformRepository {
         `);
         return res.rows.map((row) => new Platform(row));
     }
+
+    /**
+     * @param {number} id
+     * @param {string} name
+     * @param {string} logo
+     * @returns {Promise<boolean>}
+     */
+    upsertPlatform = async (id, name, logo) => {
+        const res = await db.query(`
+            INSERT INTO platforms (id, name, logo)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, logo = EXCLUDED.logo
+        `, [id, name, logo]);
+        return res.rowCount === 1;
+    }
 }

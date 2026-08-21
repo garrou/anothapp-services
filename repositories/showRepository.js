@@ -46,4 +46,40 @@ export default class ShowRepository {
         `, [id])
         return res.rowCount === 1 ? new Show(res.rows[0]) : null;
     }
+
+    /**
+     * @returns {Promise<any[]>}
+     */
+    getAllShows = async () => {
+        const res = await db.query(`
+            SELECT id, title, poster, kinds, duration, seasons, country, finished, next_episode
+            FROM shows
+        `);
+        return res.rows;
+    }
+
+    /**
+     * @param {number} id
+     * @param {{poster: string, kinds: string, duration: number, seasons: number, country: string, finished: boolean, nextEpisode: string}} fields
+     * @returns {Promise<boolean>}
+     */
+    updateShow = async (id, {poster, kinds, duration, seasons, country, finished, nextEpisode}) => {
+        const res = await db.query(`
+            UPDATE shows
+            SET poster = $2, kinds = $3, duration = $4, seasons = $5, country = $6, finished = $7, next_episode = $8
+            WHERE id = $1
+        `, [id, poster, kinds, duration, seasons, country, finished, nextEpisode]);
+        return res.rowCount === 1;
+    }
+
+    /**
+     * @param {number} id
+     * @returns {Promise<boolean>}
+     */
+    deleteShow = async (id) => {
+        const res = await db.query(`
+            DELETE FROM shows WHERE id = $1
+        `, [id]);
+        return res.rowCount === 1;
+    }
 }
