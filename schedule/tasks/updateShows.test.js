@@ -54,6 +54,21 @@ describe("updateShows", () => {
         expect(showRepoMocks.deleteShow).not.toHaveBeenCalled();
     });
 
+    it("updates a show whose kinds changed", async () => {
+        showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
+        betaseriesMocks.fetchShow.mockResolvedValue({
+            ...unchangedApiShow,
+            genres: {28: "Drame", 10765: "Science-Fiction"},
+        });
+
+        const result = await updateShows();
+
+        expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, expect.objectContaining({
+            kinds: "Drame;Science-Fiction",
+        }));
+        expect(result.updated).toEqual([dbShow]);
+    });
+
     it("updates a show whose poster changed", async () => {
         showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
         betaseriesMocks.fetchShow.mockResolvedValue({

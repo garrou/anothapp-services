@@ -26,6 +26,7 @@ const compareShow = async (show) => {
     const nextEpisode = finished ? "" : await betaseries.fetchNextEpisodeDate(show.id);
 
     const unchanged = show.poster === poster
+        && show.kinds === kinds
         && show.seasons === seasons
         && show.country === country
         && show.duration === duration
