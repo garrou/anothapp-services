@@ -6,7 +6,7 @@ describe("formatReport", () => {
         const report = formatReport({
             shows: {
                 updated: [{id: 1, title: "Show A"}],
-                deleted: [],
+                toDelete: [],
                 failed: [],
             },
             seasons: {
@@ -20,6 +20,19 @@ describe("formatReport", () => {
         expect(report).toContain("1 saison(s) mise(s) à jour");
         expect(report).toContain("[série 1 - saison 2]");
         expect(report).toContain("1 saison(s) supprimée(s)");
+        expect(report).not.toContain("à supprimer");
+    });
+
+    it("flags shows to delete without saying they were deleted", () => {
+        const report = formatReport({
+            shows: {
+                updated: [],
+                toDelete: [{id: 2, title: "Show B"}],
+                failed: [],
+            },
+        });
+        expect(report).toContain("1 série(s) à supprimer (non supprimées automatiquement, à vérifier)");
+        expect(report).toContain("[2 - Show B]");
     });
 
     it("formats platforms and tokens results", () => {

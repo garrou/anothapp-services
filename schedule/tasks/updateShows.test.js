@@ -49,7 +49,7 @@ describe("updateShows", () => {
 
         const result = await updateShows();
 
-        expect(result).toEqual({updated: [], deleted: [], failed: []});
+        expect(result).toEqual({updated: [], toDelete: [], failed: []});
         expect(showRepoMocks.updateShow).not.toHaveBeenCalled();
         expect(showRepoMocks.deleteShow).not.toHaveBeenCalled();
     });
@@ -85,15 +85,15 @@ describe("updateShows", () => {
         expect(result.updated).toEqual([dbShow]);
     });
 
-    it("deletes a show that no longer exists on BetaSeries", async () => {
+    it("flags a show that no longer exists on BetaSeries instead of deleting it", async () => {
         showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
         betaseriesMocks.fetchShow.mockResolvedValue(null);
 
         const result = await updateShows();
 
-        expect(showRepoMocks.deleteShow).toHaveBeenCalledWith(42);
+        expect(showRepoMocks.deleteShow).not.toHaveBeenCalled();
         expect(showRepoMocks.updateShow).not.toHaveBeenCalled();
-        expect(result.deleted).toEqual([dbShow]);
+        expect(result.toDelete).toEqual([dbShow]);
     });
 
     it("does not fetch the next episode when the show is finished, and clears it", async () => {

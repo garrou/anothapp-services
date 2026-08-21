@@ -6,11 +6,13 @@ const formatReport = (results) => {
     const lines = [];
 
     if (results.shows) {
-        const {updated, deleted, failed} = results.shows;
+        const {updated, toDelete, failed} = results.shows;
         lines.push(`${updated.length} série(s) mise(s) à jour`);
         updated.forEach((s) => lines.push(`    [${s.id} - ${s.title}]`));
-        lines.push(`${deleted.length} série(s) supprimée(s)`);
-        deleted.forEach((s) => lines.push(`    [${s.id} - ${s.title}]`));
+        if (toDelete.length > 0) {
+            lines.push(`${toDelete.length} série(s) à supprimer (non supprimées automatiquement, à vérifier)`);
+            toDelete.forEach((s) => lines.push(`    [${s.id} - ${s.title}]`));
+        }
         if (failed.length > 0) {
             lines.push(`${failed.length} série(s) en erreur`);
             failed.forEach((s) => lines.push(`    [${s.id} - ${s.title}] ${s.error}`));
