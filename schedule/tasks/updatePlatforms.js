@@ -1,5 +1,8 @@
 import PlatformRepository from "../../repositories/platformRepository.js";
 import betaseries from "../lib/betaseries.js";
+import mapWithConcurrency from "../lib/concurrency.js";
+
+const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
 
 /**
  * Syncs the `platforms` table with BetaSeries' catalog (adds new platforms, refreshes
@@ -11,15 +14,20 @@ import betaseries from "../lib/betaseries.js";
 const updatePlatforms = async () => {
     const platformRepository = new PlatformRepository();
     const platforms = await betaseries.fetchPlatforms();
+    const results = await mapWithConcurrency(platforms, CONCURRENCY, (platform) =>
+        platformRepository.upsertPlatform(platform.id, platform.name, platform.logo ?? "")
+    );
+
     let upserted = 0;
     const failed = [];
 
-    for (const platform of platforms) {
-        try {
-            await platformRepository.upsertPlatform(platform.id, platform.name, platform.logo ?? "");
+    for (let i = 0; i < platforms.length; i += 1) {
+        const result = results[i];
+
+        if (result.status === "rejected") {
+            failed.push({id: platforms[i].id, name: platforms[i].name, error: result.reason?.message ?? String(result.reason)});
+        } else {
             upserted += 1;
-        } catch (error) {
-            failed.push({id: platform.id, name: platform.name, error: error.message});
         }
     }
     return {upserted, failed};

@@ -38,7 +38,9 @@ const compareShow = async (show) => {
 
 /**
  * Compares every show in database against the BetaSeries API and applies the changes:
- * updates shows that changed, deletes shows that no longer exist on BetaSeries.
+ * updates shows that changed, deletes shows that no longer exist on BetaSeries. The DB
+ * writes run through the same bounded pool as the API comparisons - the pg pool already
+ * allows up to 20 connections at once (config/db.js), so this is safe to parallelize too.
  * @returns {Promise<{updated: any[], deleted: any[], failed: any[]}>}
  */
 const updateShows = async () => {
@@ -46,21 +48,35 @@ const updateShows = async () => {
     const shows = await showRepository.getAllShows();
     const comparisons = await mapWithConcurrency(shows, CONCURRENCY, compareShow);
 
-    const updated = [];
-    const deleted = [];
     const failed = [];
+    const toApply = [];
 
     for (let i = 0; i < shows.length; i += 1) {
-        const show = shows[i];
         const result = comparisons[i];
 
         if (result.status === "rejected") {
-            failed.push({id: show.id, title: show.title, error: result.reason?.message ?? String(result.reason)});
-        } else if (result.value?.deleted) {
-            await showRepository.deleteShow(show.id);
-            deleted.push(show);
+            failed.push({id: shows[i].id, title: shows[i].title, error: result.reason?.message ?? String(result.reason)});
         } else if (result.value) {
-            await showRepository.updateShow(show.id, result.value);
+            toApply.push({show: shows[i], changes: result.value});
+        }
+    }
+
+    const applied = await mapWithConcurrency(toApply, CONCURRENCY, ({show, changes}) =>
+        changes.deleted ? showRepository.deleteShow(show.id) : showRepository.updateShow(show.id, changes)
+    );
+
+    const updated = [];
+    const deleted = [];
+
+    for (let i = 0; i < toApply.length; i += 1) {
+        const {show, changes} = toApply[i];
+        const result = applied[i];
+
+        if (result.status === "rejected") {
+            failed.push({id: show.id, title: show.title, error: result.reason?.message ?? String(result.reason)});
+        } else if (changes.deleted) {
+            deleted.push(show);
+        } else {
             updated.push(show);
         }
     }
