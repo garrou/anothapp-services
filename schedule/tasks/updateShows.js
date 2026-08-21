@@ -6,6 +6,18 @@ import {getImageUrl} from "../../models/apiShow.js";
 const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
 
 /**
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
+ */
+const sameKinds = (a, b) => {
+    if (a === b) return true;
+    const sortedA = a.split(";").filter(Boolean).sort();
+    const sortedB = b.split(";").filter(Boolean).sort();
+    return sortedA.length === sortedB.length && sortedA.every((kind, i) => kind === sortedB[i]);
+};
+
+/**
  * @param {Object} show a row from the `shows` table
  * @returns {Promise<{deleted: true}|{deleted: false, poster: string, kinds: string, duration: number, seasons: number, country: string, finished: boolean, nextEpisode: string}|null>}
  *          null when nothing changed
@@ -26,7 +38,7 @@ const compareShow = async (show) => {
     const nextEpisode = finished ? "" : await betaseries.fetchNextEpisodeDate(show.id);
 
     const unchanged = show.poster === poster
-        && show.kinds === kinds
+        && sameKinds(show.kinds, kinds)
         && show.seasons === seasons
         && show.country === country
         && show.duration === duration

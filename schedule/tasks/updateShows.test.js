@@ -54,6 +54,16 @@ describe("updateShows", () => {
         expect(showRepoMocks.deleteShow).not.toHaveBeenCalled();
     });
 
+    it("treats the same genres in a different order as unchanged", async () => {
+        showRepoMocks.getAllShows.mockResolvedValue([{...dbShow, kinds: "Policier;Drame"}]);
+        betaseriesMocks.fetchShow.mockResolvedValue(unchangedApiShow); // computes "Drame;Policier"
+
+        const result = await updateShows();
+
+        expect(result).toEqual({updated: [], toDelete: [], failed: []});
+        expect(showRepoMocks.updateShow).not.toHaveBeenCalled();
+    });
+
     it("updates a show whose kinds changed", async () => {
         showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
         betaseriesMocks.fetchShow.mockResolvedValue({
