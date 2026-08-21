@@ -64,4 +64,4 @@ const getImageUrl = (image) => {
     return "";
 }
 
-export {ApiShow, ApiShowPreview};
+export {ApiShow, ApiShowPreview, getImageUrl};

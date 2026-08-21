@@ -43,4 +43,16 @@ export default class RefreshTokenRepository {
         `, [tokenId]);
         return res.rowCount === 1;
     }
+
+    /**
+     * @param {number} days
+     * @returns {Promise<number>} number of tokens deleted
+     */
+    deleteRevokedOlderThanDays = async (days) => {
+        const res = await db.query(`
+            DELETE FROM refresh_tokens
+            WHERE revoked_at IS NOT NULL AND revoked_at < NOW() - ($1 * INTERVAL '1 day')
+        `, [days]);
+        return res.rowCount;
+    }
 }
