@@ -9,6 +9,7 @@ const showRepoMocks = vi.hoisted(() => ({
 const betaseriesMocks = vi.hoisted(() => ({
     fetchShow: vi.fn(),
     fetchNextEpisodeDate: vi.fn(),
+    fetchSeasons: vi.fn(),
 }));
 
 vi.mock("../../repositories/showRepository.js", () => ({
@@ -31,7 +32,6 @@ const dbShow = {
 const unchangedApiShow = {
     genres: {28: "Drame", 80: "Policier"},
     images: {poster: "https://img/old.jpg"},
-    seasons_details: [1, 2, 3, 4, 5],
     status: "Running",
     length: "45",
     country: "US",
@@ -41,6 +41,7 @@ describe("updateShows", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         betaseriesMocks.fetchNextEpisodeDate.mockResolvedValue("2024-01-01");
+        betaseriesMocks.fetchSeasons.mockResolvedValue([1, 2, 3, 4, 5]);
     });
 
     it("does nothing when the show is unchanged", async () => {
@@ -92,6 +93,18 @@ describe("updateShows", () => {
             poster: "https://img/new.jpg",
             deleted: false,
         }));
+        expect(result.updated).toEqual([dbShow]);
+    });
+
+    it("syncs the season count against fetchSeasons(), not the display endpoint's own count", async () => {
+        showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
+        betaseriesMocks.fetchShow.mockResolvedValue(unchangedApiShow);
+        betaseriesMocks.fetchSeasons.mockResolvedValue([1, 2, 3, 4, 5, 6]);
+
+        const result = await updateShows();
+
+        expect(betaseriesMocks.fetchSeasons).toHaveBeenCalledWith(42);
+        expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, expect.objectContaining({seasons: 6}));
         expect(result.updated).toEqual([dbShow]);
     });
 

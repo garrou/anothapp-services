@@ -30,9 +30,6 @@ const compareShowSeasons = async (seasons) => {
 };
 
 /**
- * Compares every season in database against the BetaSeries API and applies the changes.
- * Must run after updateShows(): a show deleted there cascades its seasons away, so this
- * only needs to catch season-count mismatches on shows that are still around.
  * @returns {Promise<{updated: any[], deleted: any[], failed: any[]}>}
  */
 const updateSeasons = async () => {

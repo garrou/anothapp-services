@@ -30,12 +30,15 @@ const compareShow = async (show) => {
     }
     const kinds = Object.values(current.genres ?? {}).join(";");
     const poster = getImageUrl(current.images);
-    const seasons = (current.seasons_details ?? []).length;
     const finished = current.status === "Ended";
     const parsedDuration = parseInt(current.length ?? "0");
     const duration = parsedDuration || show.duration;
     const country = current.country || show.country;
-    const nextEpisode = finished ? "" : await betaseries.fetchNextEpisodeDate(show.id);
+    const [currentSeasons, nextEpisode] = await Promise.all([
+        betaseries.fetchSeasons(show.id),
+        finished ? Promise.resolve("") : betaseries.fetchNextEpisodeDate(show.id),
+    ]);
+    const seasons = currentSeasons.length;
 
     const unchanged = show.poster === poster
         && sameKinds(show.kinds, kinds)

@@ -3,7 +3,6 @@ import RefreshTokenRepository from "../../repositories/refreshTokenRepository.js
 const REVOKED_RETENTION_DAYS = parseInt(process.env.REVOKED_TOKEN_RETENTION_DAYS ?? "7", 10);
 
 /**
- * Deletes refresh tokens that were revoked more than REVOKED_TOKEN_RETENTION_DAYS days ago.
  * @returns {Promise<{deleted: number}>}
  */
 const cleanupRefreshTokens = async () => {
