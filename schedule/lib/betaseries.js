@@ -2,6 +2,8 @@ import BetaseriesClient from "../../helpers/betaseriesClient.js";
 
 const client = new BetaseriesClient();
 
+const seasonsCache = new Map();
+
 /**
  * BetaSeries returns `"show": []` (an empty array instead of an object) when the id no
  * longer exists, so that's how a deleted show is detected.
@@ -18,8 +20,13 @@ const fetchShow = async (id) => {
  * @returns {Promise<Object[]>}
  */
 const fetchSeasons = async (id) => {
+    if (seasonsCache.has(id)) {
+        return seasonsCache.get(id);
+    }
     const data = await client.get(`/shows/seasons?id=${id}`);
-    return data.seasons ?? [];
+    const seasons = data.seasons ?? [];
+    seasonsCache.set(id, seasons);
+    return seasons;
 };
 
 /**

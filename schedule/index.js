@@ -6,8 +6,6 @@ import cleanupRefreshTokens from "./tasks/cleanupRefreshTokens.js";
 import sendTelegramMessage from "./lib/notify.js";
 import {formatReport} from "./lib/report.js";
 
-// Order matters: updateShows must run before updateSeasons, since a show it deletes
-// cascades its seasons away, and updateSeasons only needs to check what's left.
 const TASKS = {
     shows: updateShows,
     seasons: updateSeasons,
