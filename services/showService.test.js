@@ -44,7 +44,20 @@ const seasonRepoMocks = vi.hoisted(() => ({
     getSeasonByShowIdByNumber: vi.fn(),
     createSeason: vi.fn(),
 }));
+const userRepoMocks = vi.hoisted(() => ({
+    hasEpisodeTrackingEnabled: vi.fn(),
+}));
+const episodeServiceMocks = vi.hoisted(() => ({
+    trackSeason: vi.fn(),
+    getBySeasonForUser: vi.fn(),
+}));
 
+vi.mock("../repositories/userRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
+}));
+vi.mock("./episodeService.js", () => ({
+    default: vi.fn().mockImplementation(function () { return episodeServiceMocks; }),
+}));
 vi.mock("../repositories/showRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return showRepoMocks; }),
 }));
@@ -297,6 +310,28 @@ describe("ShowService.addSeason", () => {
         await expect(showService.addSeason("user-1", 42, 1)).rejects.toThrow(
             "Impossible d'ajouter la saison"
         );
+    });
+
+    it("does not create episode placeholders when episode tracking is disabled", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(true);
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        await showService.addSeason("user-1", 42, 1);
+
+        expect(episodeServiceMocks.trackSeason).not.toHaveBeenCalled();
+    });
+
+    it("creates episode placeholders when episode tracking is enabled", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(true);
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+
+        await showService.addSeason("user-1", 42, 1);
+
+        expect(episodeServiceMocks.trackSeason).toHaveBeenCalledWith("user-1", 42, 1);
     });
 });
 

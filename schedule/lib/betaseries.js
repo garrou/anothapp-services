@@ -30,6 +30,16 @@ const fetchSeasons = async (id) => {
 };
 
 /**
+ * @param {number} showId
+ * @param {number} seasonNumber
+ * @returns {Promise<Object[]>}
+ */
+const fetchEpisodes = async (showId, seasonNumber) => {
+    const data = await client.get(`/shows/episodes?id=${showId}&season=${seasonNumber}`);
+    return data.episodes ?? [];
+};
+
+/**
  * @param {number} id
  * @returns {Promise<string>} empty string when there is no upcoming episode
  */
@@ -49,6 +59,7 @@ const fetchPlatforms = async () => {
 export default {
     fetchShow,
     fetchSeasons,
+    fetchEpisodes,
     fetchNextEpisodeDate,
     fetchPlatforms,
 };

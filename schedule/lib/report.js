@@ -29,6 +29,15 @@ const formatReport = (results) => {
             failed.forEach((s) => lines.push(`    [série ${s.showId}] ${s.error}`));
         }
     }
+    if (results.episodes) {
+        const {synced, deleted, failed} = results.episodes;
+        lines.push(`${synced} épisode(s) synchronisé(s)`);
+        lines.push(`${deleted} épisode(s) supprimé(s)`);
+        if (failed.length > 0) {
+            lines.push(`${failed.length} groupe(s) d'épisodes en erreur`);
+            failed.forEach((e) => lines.push(`    [série ${e.showId} - saison ${e.seasonNumber}] ${e.error}`));
+        }
+    }
     if (results.platforms) {
         const {upserted, failed} = results.platforms;
         lines.push(`${upserted} plateforme(s) synchronisée(s)`);

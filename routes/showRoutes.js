@@ -18,4 +18,6 @@ router.post("/:id/seasons", showController.addSeasonByShowId);
 
 router.get("/:id/seasons/:num", showController.getSeasonInfosByShowIdBySeason);
 
+router.get("/:id/seasons/:num/episodes", showController.getEpisodesByShowIdBySeason);
+
 export default router;

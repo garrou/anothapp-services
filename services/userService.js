@@ -1,5 +1,6 @@
 import UserProfile from "../models/userProfile.js";
 import UserRepository from "../repositories/userRepository.js";
+import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
@@ -8,6 +9,7 @@ import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 export default class UserService {
     constructor() {
         this._userRepository = new UserRepository();
+        this._episodeService = new EpisodeService();
     }
 
     /**
@@ -71,8 +73,27 @@ export default class UserService {
         } else if (userUpdate.lastExport) {
             await this.#changeLastExport(currentUserId, userUpdate.lastExport);
             return "Date de dernier export modifiée";
+        } else if (userUpdate.isEpisodeTrackingUpdate()) {
+            await this.#changeEpisodeTracking(currentUserId, userUpdate.episodeTrackingEnabled);
+            return userUpdate.episodeTrackingEnabled ? "Suivi des épisodes activé" : "Suivi des épisodes désactivé";
         }
         throw new ServiceError(400, ERROR_INVALID_REQUEST);
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {boolean} enabled
+     * @returns {Promise<void>}
+     */
+    #changeEpisodeTracking = async (currentUserId, enabled) => {
+        const updated = await this._userRepository.updateField(currentUserId, "episode_tracking_enabled", enabled);
+
+        if (!updated) {
+            throw new ServiceError(500, "Impossible de modifier le suivi des épisodes");
+        }
+        if (enabled) {
+            await this._episodeService.backfillForUser(currentUserId);
+        }
     }
 
     /**

@@ -11,5 +11,8 @@ export default class ApiEpisode extends ApiEntity {
         this.global = episode.global;
         this.description = episode.description;
         this.date = episode.date;
+        this.season = episode.season;
+        this.number = episode.episode;
+        this.length = episode.length;
     }
 }

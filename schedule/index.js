@@ -1,6 +1,7 @@
 import "dotenv/config";
 import updateShows from "./tasks/updateShows.js";
 import updateSeasons from "./tasks/updateSeasons.js";
+import updateEpisodes from "./tasks/updateEpisodes.js";
 import updatePlatforms from "./tasks/updatePlatforms.js";
 import cleanupRefreshTokens from "./tasks/cleanupRefreshTokens.js";
 import sendTelegramMessage from "./lib/notify.js";
@@ -9,6 +10,7 @@ import {formatReport} from "./lib/report.js";
 const TASKS = {
     shows: updateShows,
     seasons: updateSeasons,
+    episodes: updateEpisodes,
     platforms: updatePlatforms,
     tokens: cleanupRefreshTokens,
 };
