@@ -89,7 +89,7 @@ describe("EpisodeService.addViewing", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         episodeService = new EpisodeService();
-        userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({ showId: 42, number: 1 });
+        userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({ showId: 42, number: 1, platformId: 999 });
         userEpisodeRepoMocks.existsForViewing.mockResolvedValue(false);
         userEpisodeRepoMocks.create.mockResolvedValue(true);
     });
@@ -140,7 +140,7 @@ describe("EpisodeService.addViewing", () => {
         episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1, showId: 42, seasonNumber: 1, date: past });
 
         await expect(episodeService.addViewing("user-1", 7, 1)).resolves.toBeUndefined();
-        expect(userEpisodeRepoMocks.create).toHaveBeenCalledWith("user-1", 7, 1, expect.any(String));
+        expect(userEpisodeRepoMocks.create).toHaveBeenCalledWith("user-1", 7, 1, expect.any(String), 999);
     });
 
     it("throws a 500 when creation fails", async () => {
@@ -239,7 +239,7 @@ describe("EpisodeService.backfillForUser", () => {
 
     it("backfills every already-aired episode of every tracked viewing", async () => {
         userSeasonRepoMocks.getUserSeasonsByUserId.mockResolvedValue([
-            { id: 7, showId: 42, number: 1, addedAt: "2023-05-01" },
+            { id: 7, showId: 42, number: 1, addedAt: "2023-05-01", platformId: 999 },
         ]);
         const past = new Date(Date.now() - 86400000).toISOString();
         episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
@@ -249,13 +249,13 @@ describe("EpisodeService.backfillForUser", () => {
 
         await episodeService.backfillForUser("user-1");
 
-        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 1, "2023-05-01");
-        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 2, "2023-05-01");
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 1, "2023-05-01", 999);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 2, "2023-05-01", 999);
     });
 
     it("skips episodes that haven't aired yet", async () => {
         userSeasonRepoMocks.getUserSeasonsByUserId.mockResolvedValue([
-            { id: 7, showId: 42, number: 1, addedAt: "2023-05-01" },
+            { id: 7, showId: 42, number: 1, addedAt: "2023-05-01", platformId: 999 },
         ]);
         const future = new Date(Date.now() + 86400000).toISOString();
         episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
@@ -270,7 +270,7 @@ describe("EpisodeService.backfillForUser", () => {
 
     it("fetches and stores episodes from BetaSeries when none exist locally yet", async () => {
         userSeasonRepoMocks.getUserSeasonsByUserId.mockResolvedValue([
-            { id: 7, showId: 42, number: 1, addedAt: "2023-05-01" },
+            { id: 7, showId: 42, number: 1, addedAt: "2023-05-01", platformId: 999 },
         ]);
         const past = new Date(Date.now() - 86400000).toISOString();
         episodeRepoMocks.getEpisodesByShowIdBySeason
@@ -285,6 +285,6 @@ describe("EpisodeService.backfillForUser", () => {
         expect(episodeRepoMocks.upsertEpisode).toHaveBeenCalledWith(
             1, 42, 1, 1, "Pilot", "S01E01", 1, 45, past
         );
-        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 1, "2023-05-01");
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 1, "2023-05-01", 999);
     });
 });

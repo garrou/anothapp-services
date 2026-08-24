@@ -26,13 +26,15 @@ export default class UserSeasonRepository {
     /**
      * @param {string} userId
      * @param {number} id
-     * @returns {Promise<{showId: number, number: number}|null>} the show/number of that viewing if owned by userId
+     * @returns {Promise<{showId: number, number: number, platformId: number}|null>} the show/number/platform of that viewing if owned by userId
      */
     getOwnedSeasonViewing = async (userId, id) => {
         const res = await db.query(`
-            SELECT show_id, number FROM users_seasons WHERE id = $1 AND user_id = $2
+            SELECT show_id, number, platform_id FROM users_seasons WHERE id = $1 AND user_id = $2
         `, [id, userId]);
-        return res.rowCount === 1 ? {showId: res.rows[0]["show_id"], number: res.rows[0]["number"]} : null;
+        return res.rowCount === 1
+            ? {showId: res.rows[0]["show_id"], number: res.rows[0]["number"], platformId: res.rows[0]["platform_id"]}
+            : null;
     }
 
     /**
@@ -60,7 +62,7 @@ export default class UserSeasonRepository {
      */
     getUserSeasonsByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT us.id, us.added_at, us.show_id, us.number, p.name as platform
+            SELECT us.id, us.added_at, us.show_id, us.number, us.platform_id, p.name as platform
             FROM users_seasons us
             JOIN platforms p on us.platform_id = p.id
             WHERE us.user_id = $1

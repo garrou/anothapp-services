@@ -8,13 +8,14 @@ export default class UserEpisodeRepository {
      * @param {number} userSeasonId
      * @param {number} episodeId
      * @param {string} watchedAt
+     * @param {number} platformId
      * @returns {Promise<boolean>}
      */
-    create = async (userId, userSeasonId, episodeId, watchedAt) => {
+    create = async (userId, userSeasonId, episodeId, watchedAt, platformId) => {
         const res = await db.query(`
-            INSERT INTO users_episodes (user_id, users_seasons_id, episode_id, watched_at)
-            VALUES ($1, $2, $3, $4)
-        `, [userId, userSeasonId, episodeId, watchedAt]);
+            INSERT INTO users_episodes (user_id, users_seasons_id, episode_id, watched_at, platform_id)
+            VALUES ($1, $2, $3, $4, $5)
+        `, [userId, userSeasonId, episodeId, watchedAt, platformId]);
         return res.rowCount === 1;
     }
 
@@ -23,16 +24,17 @@ export default class UserEpisodeRepository {
      * @param {number} userSeasonId
      * @param {number} episodeId
      * @param {string} watchedAt
+     * @param {number} platformId
      * @returns {Promise<void>}
      */
-    createIfMissing = async (userId, userSeasonId, episodeId, watchedAt) => {
+    createIfMissing = async (userId, userSeasonId, episodeId, watchedAt, platformId) => {
         await db.query(`
-            INSERT INTO users_episodes (user_id, users_seasons_id, episode_id, watched_at)
-            SELECT $1, $2, $3, $4
+            INSERT INTO users_episodes (user_id, users_seasons_id, episode_id, watched_at, platform_id)
+            SELECT $1, $2, $3, $4, $5
             WHERE NOT EXISTS (
                 SELECT 1 FROM users_episodes WHERE users_seasons_id = $2 AND episode_id = $3
             )
-        `, [userId, userSeasonId, episodeId, watchedAt]);
+        `, [userId, userSeasonId, episodeId, watchedAt, platformId]);
     }
 
     /**

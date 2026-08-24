@@ -22,6 +22,7 @@ class UserSeason {
         this.number = obj.number;
         this.addedAt = obj["added_at"];
         this.platform = obj.platform;
+        this.platformId = obj["platform_id"];
         this.showId = obj["show_id"];
     }
 }

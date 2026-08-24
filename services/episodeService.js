@@ -54,7 +54,7 @@ export default class EpisodeService {
             const aired = episodes.filter((e) => e.date && !Validator.isInFuture(e.date));
 
             await Promise.all(aired.map((episode) =>
-                this._userEpisodeRepository.createIfMissing(userId, season.id, episode.id, season.addedAt)
+                this._userEpisodeRepository.createIfMissing(userId, season.id, episode.id, season.addedAt, season.platformId)
             ));
         });
     }
@@ -105,7 +105,9 @@ export default class EpisodeService {
         if (exists) {
             throw new ServiceError(409, "Cet épisode a déjà été visionné pour ce visionnage");
         }
-        const created = await this._userEpisodeRepository.create(userId, userSeasonId, episodeId, new Date().toISOString());
+        const created = await this._userEpisodeRepository.create(
+            userId, userSeasonId, episodeId, new Date().toISOString(), season.platformId
+        );
 
         if (!created) {
             throw new ServiceError(500, "Impossible d'ajouter le visionnage");
