@@ -57,12 +57,29 @@ describe("EpisodeService.getByUserSeasonId", () => {
 
     it("returns the checklist for an owned viewing", async () => {
         userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({ showId: 42, number: 1 });
+        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([{ id: 1 }]);
         userEpisodeRepoMocks.getByUserSeasonId.mockResolvedValue(["episode-checklist"]);
 
         const result = await episodeService.getByUserSeasonId("user-1", 7);
 
         expect(result).toEqual(["episode-checklist"]);
         expect(userEpisodeRepoMocks.getByUserSeasonId).toHaveBeenCalledWith(7, 42, 1);
+    });
+
+    it("syncs episodes from BetaSeries first when the season was just added and none exist locally yet", async () => {
+        userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({ showId: 42, number: 1 });
+        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([]);
+        searchServiceMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
+            { id: 1, title: "Pilot", code: "S01E01", global: 1, number: 1, length: 45, date: "2020-01-01" },
+        ]);
+        userEpisodeRepoMocks.getByUserSeasonId.mockResolvedValue(["episode-checklist"]);
+
+        const result = await episodeService.getByUserSeasonId("user-1", 7);
+
+        expect(episodeRepoMocks.upsertEpisode).toHaveBeenCalledWith(
+            1, 42, 1, 1, "Pilot", "S01E01", 1, 45, "2020-01-01"
+        );
+        expect(result).toEqual(["episode-checklist"]);
     });
 });
 

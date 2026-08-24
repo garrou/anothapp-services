@@ -33,12 +33,12 @@ export default class EpisodeService {
         }
         const apiEpisodes = await this._searchService.getEpisodesByShowIdBySeason(showId, seasonNumber);
 
-        for (const episode of apiEpisodes) {
-            await this._episodeRepository.upsertEpisode(
+        await Promise.all(apiEpisodes.map((episode) =>
+            this._episodeRepository.upsertEpisode(
                 episode.id, showId, seasonNumber, episode.number, episode.title,
                 episode.code, episode.global, episode.length, episode.date
-            );
-        }
+            )
+        ));
         return this._episodeRepository.getEpisodesByShowIdBySeason(showId, seasonNumber);
     }
 
@@ -53,9 +53,9 @@ export default class EpisodeService {
             const episodes = await this.#ensureEpisodesExist(season.showId, season.number);
             const aired = episodes.filter((e) => e.date && !Validator.isInFuture(e.date));
 
-            for (const episode of aired) {
-                await this._userEpisodeRepository.createIfMissing(userId, season.id, episode.id, season.addedAt);
-            }
+            await Promise.all(aired.map((episode) =>
+                this._userEpisodeRepository.createIfMissing(userId, season.id, episode.id, season.addedAt)
+            ));
         });
     }
 
@@ -73,6 +73,7 @@ export default class EpisodeService {
         if (!season) {
             throw new ServiceError(400, "Ce visionnage n'est pas dans votre collection");
         }
+        await this.#ensureEpisodesExist(season.showId, season.number);
         return this._userEpisodeRepository.getByUserSeasonId(userSeasonId, season.showId, season.number);
     }
 
