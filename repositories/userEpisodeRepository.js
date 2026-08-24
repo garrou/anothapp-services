@@ -43,6 +43,26 @@ export default class UserEpisodeRepository {
 
     /**
      * @param {string} userId
+     * @param {number} showId
+     * @returns {Promise<[number, number]>} watched time and count of watched episodes
+     */
+    getWatchedTimeAndCountByShowId = async (userId, showId) => {
+        const res = await db.query(`
+            SELECT SUM(COALESCE(e.length, s.duration)) AS time, COUNT(*) AS episodes
+            FROM users_episodes ue
+            JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
+            JOIN users_seasons us ON us.id = ue.users_seasons_id
+            WHERE ue.user_id = $1 AND us.show_id = $2
+        `, [userId, showId]);
+        const row = res.rows[0];
+        return [parseInt(row["time"] ?? 0), parseInt(row["episodes"] ?? 0)];
+    }
+
+    /**
+     * Records a viewing of an episode for a specific season viewing, defaulting its
+     * platform to the one the season itself was viewed on.
+     * @param {string} userId
      * @param {number} userSeasonId
      * @param {number} episodeId
      * @param {string} watchedAt
@@ -58,6 +78,8 @@ export default class UserEpisodeRepository {
     }
 
     /**
+     * Same as create, but a no-op when a row already exists for that (episode, viewing)
+     * pair - used for backfilling history without duplicating on repeated runs.
      * @param {string} userId
      * @param {number} userSeasonId
      * @param {number} episodeId

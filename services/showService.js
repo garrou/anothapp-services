@@ -132,7 +132,10 @@ export default class ShowService {
         //     throw new Error("Série introuvable");
         // }
         const seasons = await this._userSeasonRepository.getDistinctByUserIdByShowId(currentUserId, id);
-        const [time, nbEpisodes] = await this._userSeasonRepository.getTimeEpisodesByUserIdByShowId(currentUserId, id);
+        const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
+        const [time, nbEpisodes] = episodeTrackingEnabled
+            ? await this._episodeService.getWatchedTimeAndCountByShowId(currentUserId, id)
+            : await this._userSeasonRepository.getTimeEpisodesByUserIdByShowId(currentUserId, id);
         return {
             // "serie": new UserShow(show),
             "seasons": seasons,

@@ -49,6 +49,7 @@ const userRepoMocks = vi.hoisted(() => ({
 }));
 const episodeServiceMocks = vi.hoisted(() => ({
     getWatchedTimeByShowIdBySeasonNumber: vi.fn(),
+    getWatchedTimeAndCountByShowId: vi.fn(),
 }));
 vi.mock("../repositories/userRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
@@ -382,5 +383,40 @@ describe("ShowService.getSeasonWatchedTime", () => {
 
         expect(result).toBe(90);
         expect(episodeServiceMocks.getWatchedTimeByShowIdBySeasonNumber).toHaveBeenCalledWith("user-1", 42, 1);
+    });
+});
+
+describe("ShowService.getShowById", () => {
+    let showService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        showService = new ShowService();
+        userSeasonRepoMocks.getDistinctByUserIdByShowId.mockResolvedValue(["season"]);
+    });
+
+    it("rejects with a 400 when no id is given", async () => {
+        await expect(showService.getShowById("user-1", undefined)).rejects.toThrow("Requête invalide");
+    });
+
+    it("uses the season-level estimate when episode tracking is disabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+        userSeasonRepoMocks.getTimeEpisodesByUserIdByShowId.mockResolvedValue([600, 10]);
+
+        const result = await showService.getShowById("user-1", 42);
+
+        expect(result).toEqual({seasons: ["season"], time: 600, episodes: 10});
+        expect(episodeServiceMocks.getWatchedTimeAndCountByShowId).not.toHaveBeenCalled();
+    });
+
+    it("uses the actual watched episodes when episode tracking is enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        episodeServiceMocks.getWatchedTimeAndCountByShowId.mockResolvedValue([135, 3]);
+
+        const result = await showService.getShowById("user-1", 42);
+
+        expect(result).toEqual({seasons: ["season"], time: 135, episodes: 3});
+        expect(episodeServiceMocks.getWatchedTimeAndCountByShowId).toHaveBeenCalledWith("user-1", 42);
+        expect(userSeasonRepoMocks.getTimeEpisodesByUserIdByShowId).not.toHaveBeenCalled();
     });
 });

@@ -61,6 +61,18 @@ export default class EpisodeService {
     }
 
     /**
+     * @param {string} userId
+     * @param {number?} showId
+     * @returns {Promise<[number, number]>} watched time and count of watched episodes
+     */
+    getWatchedTimeAndCountByShowId = async (userId, showId) => {
+        if (!showId) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        return this._userEpisodeRepository.getWatchedTimeAndCountByShowId(userId, showId);
+    }
+
+    /**
      * @param {number} showId
      * @param {number} seasonNumber
      * @returns {Promise<Episode[]>}
@@ -83,6 +95,9 @@ export default class EpisodeService {
     }
 
     /**
+     * Backfills history: for every season viewing a user already has, marks every
+     * already-aired episode of that season watched, dated at the viewing's added_at.
+     * Idempotent - never duplicates a row already created for a given viewing/episode.
      * @param {string} userId
      * @returns {Promise<void>}
      */

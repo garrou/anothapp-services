@@ -15,6 +15,7 @@ const userEpisodeRepoMocks = vi.hoisted(() => ({
     getByUserSeasonId: vi.fn(),
     getViewedByMonthAgo: vi.fn(),
     getWatchedTimeByShowIdBySeasonNumber: vi.fn(),
+    getWatchedTimeAndCountByShowId: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
     getUserSeasonsByUserId: vi.fn(),
@@ -110,6 +111,30 @@ describe("EpisodeService.getWatchedTimeByShowIdBySeasonNumber", () => {
 
         expect(result).toBe(135);
         expect(userEpisodeRepoMocks.getWatchedTimeByShowIdBySeasonNumber).toHaveBeenCalledWith("user-1", 42, 1);
+    });
+});
+
+describe("EpisodeService.getWatchedTimeAndCountByShowId", () => {
+    let episodeService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        episodeService = new EpisodeService();
+    });
+
+    it("rejects with a 400 when showId is missing", async () => {
+        await expect(episodeService.getWatchedTimeAndCountByShowId("user-1", undefined)).rejects.toThrow(
+            "Requête invalide"
+        );
+    });
+
+    it("returns the total watched time and episode count", async () => {
+        userEpisodeRepoMocks.getWatchedTimeAndCountByShowId.mockResolvedValue([135, 3]);
+
+        const result = await episodeService.getWatchedTimeAndCountByShowId("user-1", 42);
+
+        expect(result).toEqual([135, 3]);
+        expect(userEpisodeRepoMocks.getWatchedTimeAndCountByShowId).toHaveBeenCalledWith("user-1", 42);
     });
 });
 
