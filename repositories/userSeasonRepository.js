@@ -12,14 +12,27 @@ export default class UserSeasonRepository {
      * @param {number} showId
      * @param {number} number
      * @param {number} platform
-     * @returns {Promise<boolean>}
+     * @returns {Promise<number|null>} the created row's id, or null on failure
      */
     create = async (userId, showId, number, platform = 999) => {
         const res = await db.query(`
             INSERT INTO users_seasons (user_id, show_id, number, platform_id)
             VALUES ($1, $2, $3, $4)
+            RETURNING id
         `, [userId, showId, number, platform]);
-        return res.rowCount === 1;
+        return res.rowCount === 1 ? res.rows[0]["id"] : null;
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} id
+     * @returns {Promise<{showId: number, number: number}|null>} the show/number of that viewing if owned by userId
+     */
+    getOwnedSeasonViewing = async (userId, id) => {
+        const res = await db.query(`
+            SELECT show_id, number FROM users_seasons WHERE id = $1 AND user_id = $2
+        `, [id, userId]);
+        return res.rowCount === 1 ? {showId: res.rows[0]["show_id"], number: res.rows[0]["number"]} : null;
     }
 
     /**

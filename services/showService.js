@@ -4,8 +4,6 @@ import SearchService from "./searchService.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import SeasonRepository from "../repositories/seasonRepository.js";
-import UserRepository from "../repositories/userRepository.js";
-import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import UserListRepository from "../repositories/userListRepository.js";
 import Validator from "../helpers/validator.js";
@@ -22,8 +20,6 @@ export default class ShowService {
         this._searchService = new SearchService();
         this._friendRepository = new FriendRepository();
         this._seasonRepository = new SeasonRepository();
-        this._userRepository = new UserRepository();
-        this._episodeService = new EpisodeService();
     }
 
     /**
@@ -199,9 +195,6 @@ export default class ShowService {
         if (!added) {
             throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
         }
-        if (await this._userRepository.hasEpisodeTrackingEnabled(currentUserId)) {
-            await this._episodeService.trackSeason(currentUserId, id, num);
-        }
     }
 
     /**
@@ -216,16 +209,6 @@ export default class ShowService {
         }
         // const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(currentUserId, id, num);
         return await this._userSeasonRepository.getInfosByUserIdByShowId(currentUserId, id, num);
-    }
-
-    /**
-     * @param {string} currentUserId
-     * @param {number?} id
-     * @param {number?} num
-     * @returns {Promise<UserEpisode[]>}
-     */
-    getEpisodesByShowIdBySeason = async (currentUserId, id, num) => {
-        return this._episodeService.getBySeasonForUser(currentUserId, id, num);
     }
 
     /**

@@ -20,25 +20,22 @@ CREATE TABLE episodes (
 
 CREATE INDEX idx_episodes_show_season ON episodes(show_id, season_number);
 
--- Per-user watch state. Multiple rows per (user_id, episode_id) represent rewatches.
--- `watched_at IS NULL` is a placeholder row created when a season is added while
--- tracking is enabled, meaning "tracked but not watched yet". The partial unique
--- index guarantees at most one such placeholder per (user, episode).
 CREATE TABLE users_episodes (
     id SERIAL,
-    watched_at TIMESTAMP DEFAULT NULL,
+    watched_at TIMESTAMP NOT NULL DEFAULT NOW(),
     user_id UUID NOT NULL,
     episode_id INTEGER NOT NULL,
+    users_seasons_id INTEGER NOT NULL,
     platform_id INTEGER,
     PRIMARY KEY(id),
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY(episode_id) REFERENCES episodes(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY(platform_id) REFERENCES platforms(id) ON UPDATE CASCADE
+    FOREIGN KEY(users_seasons_id) REFERENCES users_seasons(id) ON DELETE CASCADE,
+    FOREIGN KEY(platform_id) REFERENCES platforms(id) ON UPDATE CASCADE,
+    UNIQUE(episode_id, users_seasons_id)
 );
 
 CREATE INDEX idx_users_episodes_user_id ON users_episodes(user_id);
-
-CREATE UNIQUE INDEX idx_users_episodes_unwatched_unique
-    ON users_episodes(user_id, episode_id) WHERE watched_at IS NULL;
+CREATE INDEX idx_users_episodes_users_seasons_id ON users_episodes(users_seasons_id);
 
 ALTER TABLE users ADD COLUMN episode_tracking_enabled BOOLEAN NOT NULL DEFAULT FALSE;

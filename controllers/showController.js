@@ -65,16 +65,6 @@ export default class ShowController {
         }
     }
 
-    getEpisodesByShowIdBySeason = async (req, res, next) => {
-        try {
-            const {id, num} = req.params;
-            const episodes = await this._showService.getEpisodesByShowIdBySeason(req.userId, id, num);
-            res.status(200).json(episodes);
-        } catch (e) {
-            next(e);
-        }
-    }
-
     updateByShowId = async (req, res, next) => {
         try {
             const result = await this._showService.updateByShowId(req.userId, req.params.id, req.body);

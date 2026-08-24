@@ -1,5 +1,6 @@
 import SeasonRepository from "../repositories/seasonRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
+import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 
@@ -8,6 +9,7 @@ export default class SeasonService {
     constructor() {
         this._seasonRepository = new SeasonRepository();
         this._userSeasonRepository = new UserSeasonRepository();
+        this._episodeService = new EpisodeService();
     }
 
     /**
@@ -24,6 +26,25 @@ export default class SeasonService {
         if (!deleted) {
             throw new ServiceError(500, "Impossible de supprimer la saison");
         }
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @returns {Promise<UserEpisode[]>}
+     */
+    getEpisodesBySeasonId = async (currentUserId, id) => {
+        return this._episodeService.getByUserSeasonId(currentUserId, id);
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @param {number?} episodeId
+     * @returns {Promise<void>}
+     */
+    addEpisodeViewing = async (currentUserId, id, episodeId) => {
+        return this._episodeService.addViewing(currentUserId, id, episodeId);
     }
 
     /**

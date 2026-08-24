@@ -4,8 +4,8 @@ import EpisodeController from "../controllers/episodeController.js";
 const router = Router();
 const episodeController = new EpisodeController();
 
-router.post("/:id/watch", episodeController.watchByEpisodeId);
+router.patch("/:id", episodeController.updateViewing);
 
-router.delete("/:id/watch", episodeController.unwatchByEpisodeId);
+router.delete("/:id", episodeController.deleteViewing);
 
 export default router;

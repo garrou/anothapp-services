@@ -26,6 +26,26 @@ export default class SeasonController {
         }
     }
 
+    getEpisodesBySeasonId = async (req, res, next) => {
+        try {
+            const {id} = req.params;
+            const episodes = await this._seasonService.getEpisodesBySeasonId(req.userId, id);
+            res.status(200).json(episodes);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    addEpisodeViewing = async (req, res, next) => {
+        try {
+            const {id, episodeId} = req.params;
+            await this._seasonService.addEpisodeViewing(req.userId, id, episodeId);
+            res.sendStatus(201);
+        } catch (e) {
+            next(e);
+        }
+    }
+
     updateBySeasonId = async (req, res, next) => {
         try {
             const {id} = req.params;

@@ -43,96 +43,107 @@ export default class EpisodeService {
     }
 
     /**
-     * Creates the per-episode checklist for a user when a season is added while
-     * episode tracking is enabled.
-     * @param {string} userId
-     * @param {number} showId
-     * @param {number} seasonNumber
-     * @returns {Promise<void>}
-     */
-    trackSeason = async (userId, showId, seasonNumber) => {
-        const episodes = await this.#ensureEpisodesExist(showId, seasonNumber);
-        await this._userEpisodeRepository.createPlaceholders(userId, episodes.map((e) => e.id));
-    }
-
-    /**
-     * Marks every season a user already tracks as watched at the episode level too,
-     * using each viewing's added_at date as a best-effort watch date - a season
-     * rewatched N times backfills N watched rows per episode, not just one. Idempotent.
      * @param {string} userId
      * @returns {Promise<void>}
      */
     backfillForUser = async (userId) => {
         const seasons = await this._userSeasonRepository.getUserSeasonsByUserId(userId);
-        const groups = new Map();
 
-        for (const season of seasons) {
-            const key = `${season.showId}:${season.number}`;
+        await mapWithConcurrency(seasons, CONCURRENCY, async (season) => {
+            const episodes = await this.#ensureEpisodesExist(season.showId, season.number);
+            const aired = episodes.filter((e) => e.date && !Validator.isInFuture(e.date));
 
-            if (!groups.has(key)) {
-                groups.set(key, {showId: season.showId, number: season.number, watchedDates: []});
-            }
-            groups.get(key).watchedDates.push(season.addedAt);
-        }
-
-        await mapWithConcurrency([...groups.values()], CONCURRENCY, async (group) => {
-            const episodes = await this.#ensureEpisodesExist(group.showId, group.number);
-            const watchedDates = group.watchedDates.sort();
-
-            for (const episode of episodes) {
-                await this._userEpisodeRepository.topUpWatched(userId, episode.id, watchedDates);
+            for (const episode of aired) {
+                await this._userEpisodeRepository.createIfMissing(userId, season.id, episode.id, season.addedAt);
             }
         });
     }
 
     /**
      * @param {string} userId
-     * @param {number?} showId
-     * @param {number?} seasonNumber
+     * @param {number?} userSeasonId
      * @returns {Promise<UserEpisode[]>}
      */
-    getBySeasonForUser = async (userId, showId, seasonNumber) => {
-        if (!showId || !seasonNumber) {
+    getByUserSeasonId = async (userId, userSeasonId) => {
+        if (!userSeasonId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        return this._userEpisodeRepository.getBySeasonForUser(userId, showId, seasonNumber);
+        const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
+
+        if (!season) {
+            throw new ServiceError(400, "Ce visionnage n'est pas dans votre collection");
+        }
+        return this._userEpisodeRepository.getByUserSeasonId(userSeasonId, season.showId, season.number);
     }
 
     /**
      * @param {string} userId
+     * @param {number?} userSeasonId
      * @param {number?} episodeId
-     * @returns {Promise<number>} new view count
+     * @returns {Promise<void>}
      */
-    watch = async (userId, episodeId) => {
-        if (!episodeId) {
+    addViewing = async (userId, userSeasonId, episodeId) => {
+        if (!userSeasonId || !episodeId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
+
+        if (!season) {
+            throw new ServiceError(400, "Ce visionnage n'est pas dans votre collection");
         }
         const episode = await this._episodeRepository.getEpisodeById(episodeId);
 
-        if (!episode) {
-            throw new ServiceError(404, "Épisode introuvable");
+        if (!episode || episode.showId !== season.showId || episode.seasonNumber !== season.number) {
+            throw new ServiceError(400, "Cet épisode ne fait pas partie de cette saison");
         }
         if (!episode.date || Validator.isInFuture(episode.date)) {
             throw new ServiceError(400, "Cet épisode n'est pas encore diffusé");
         }
-        await this._userEpisodeRepository.watch(userId, episodeId);
-        return this._userEpisodeRepository.getViews(userId, episodeId);
+        const exists = await this._userEpisodeRepository.existsForViewing(userSeasonId, episodeId);
+
+        if (exists) {
+            throw new ServiceError(409, "Cet épisode a déjà été visionné pour ce visionnage");
+        }
+        const created = await this._userEpisodeRepository.create(userId, userSeasonId, episodeId, new Date().toISOString());
+
+        if (!created) {
+            throw new ServiceError(500, "Impossible d'ajouter le visionnage");
+        }
     }
 
     /**
      * @param {string} userId
-     * @param {number?} episodeId
-     * @returns {Promise<number>} new view count
+     * @param {number?} id
+     * @param {string?} watchedAt
+     * @returns {Promise<void>}
      */
-    unwatch = async (userId, episodeId) => {
-        if (!episodeId) {
+    updateViewing = async (userId, id, watchedAt) => {
+        if (!id || !watchedAt) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const removed = await this._userEpisodeRepository.unwatch(userId, episodeId);
-
-        if (!removed) {
-            throw new ServiceError(400, "Aucun visionnage à supprimer");
+        if (Validator.isInFuture(watchedAt)) {
+            throw new ServiceError(400, "Date de visionnage invalide");
         }
-        return this._userEpisodeRepository.getViews(userId, episodeId);
+        const updated = await this._userEpisodeRepository.updateWatchedAt(userId, id, watchedAt);
+
+        if (!updated) {
+            throw new ServiceError(500, "Impossible de modifier le visionnage");
+        }
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number?} id
+     * @returns {Promise<void>}
+     */
+    deleteViewing = async (userId, id) => {
+        if (!id) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const deleted = await this._userEpisodeRepository.deleteById(userId, id);
+
+        if (!deleted) {
+            throw new ServiceError(500, "Impossible de supprimer le visionnage");
+        }
     }
 }
