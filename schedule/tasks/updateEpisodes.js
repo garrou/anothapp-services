@@ -14,9 +14,6 @@ const fetchGroup = async (group) => {
 };
 
 /**
- * Resyncs every show/season pair that already has episodes stored locally - titles,
- * dates (an unannounced episode's date becomes known once it airs), etc. - and removes
- * episodes no longer returned by BetaSeries.
  * @returns {Promise<{synced: number, deleted: number, failed: any[]}>}
  */
 const updateEpisodes = async () => {

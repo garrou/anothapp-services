@@ -130,7 +130,6 @@ export default class UserEpisodeStatRepository {
     }
 
     /**
-     * Daily watch counts, for a GitHub-style contribution heatmap.
      * @param {string} userId
      * @returns {Promise<{date: string, value: number}[]>}
      */
