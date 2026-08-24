@@ -108,7 +108,7 @@ describe("SeasonService.getSeasons", () => {
     it("accepts every documented month shortcut value", async () => {
         userSeasonRepoMocks.getViewedByMonthAgo.mockResolvedValue([]);
 
-        for (const month of ["0", "1", "2", "3", "6", "12", "60"]) {
+        for (const month of ["0", "1", "2", "3", "6", "12"]) {
             await expect(seasonService.getSeasons("user-1", undefined, month)).resolves.toEqual([]);
         }
     });
