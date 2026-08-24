@@ -45,7 +45,7 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     picture VARCHAR(255),
     last_export TIMESTAMP,
-    episode_tracking_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    episode_tracking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     PRIMARY KEY(id)
 );
 

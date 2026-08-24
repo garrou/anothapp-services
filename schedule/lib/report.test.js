@@ -40,13 +40,13 @@ describe("formatReport", () => {
             episodes: {
                 synced: 12,
                 deleted: 2,
-                failed: [{showId: 1, seasonNumber: 2, error: "boom"}],
+                failed: [{showId: 1, error: "boom"}],
             },
         });
         expect(report).toContain("12 épisode(s) synchronisé(s)");
         expect(report).toContain("2 épisode(s) supprimé(s)");
-        expect(report).toContain("1 groupe(s) d'épisodes en erreur");
-        expect(report).toContain("[série 1 - saison 2] boom");
+        expect(report).toContain("1 série(s) en erreur pour les épisodes");
+        expect(report).toContain("[série 1] boom");
     });
 
     it("formats platforms and tokens results", () => {
