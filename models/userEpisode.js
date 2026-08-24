@@ -12,5 +12,6 @@ export default class UserEpisode {
         this.global = obj.global;
         this.date = obj.date;
         this.watchedAt = obj["watched_at"] ?? null;
+        this.platformId = obj["platform_id"] ?? null;
     }
 }

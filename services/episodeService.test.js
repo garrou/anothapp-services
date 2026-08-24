@@ -10,7 +10,8 @@ const userEpisodeRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
     createIfMissing: vi.fn(),
     existsForViewing: vi.fn(),
-    updateWatchedAt: vi.fn(),
+    update: vi.fn(),
+    updatePlatformByUserSeasonId: vi.fn(),
     deleteById: vi.fn(),
     getByUserSeasonId: vi.fn(),
     getViewedByMonthAgo: vi.fn(),
@@ -285,34 +286,62 @@ describe("EpisodeService.updateViewing", () => {
         episodeService = new EpisodeService();
     });
 
-    it("rejects with a 400 when id or watchedAt is missing", async () => {
-        await expect(episodeService.updateViewing("user-1", undefined, "2024-01-01")).rejects.toThrow(
+    it("rejects with a 400 when id, watchedAt or platformId is missing", async () => {
+        await expect(episodeService.updateViewing("user-1", undefined, "2024-01-01", 999)).rejects.toThrow(
             "Requête invalide"
         );
-        await expect(episodeService.updateViewing("user-1", 5, undefined)).rejects.toThrow("Requête invalide");
+        await expect(episodeService.updateViewing("user-1", 5, undefined, 999)).rejects.toThrow("Requête invalide");
+        await expect(episodeService.updateViewing("user-1", 5, "2024-01-01", undefined)).rejects.toThrow(
+            "Requête invalide"
+        );
     });
 
     it("rejects with a 400 when the date is in the future", async () => {
         const future = new Date(Date.now() + 86400000).toISOString();
 
-        await expect(episodeService.updateViewing("user-1", 5, future)).rejects.toThrow(
+        await expect(episodeService.updateViewing("user-1", 5, future, 999)).rejects.toThrow(
             "Date de visionnage invalide"
         );
     });
 
     it("updates the viewing when valid", async () => {
-        userEpisodeRepoMocks.updateWatchedAt.mockResolvedValue(true);
+        userEpisodeRepoMocks.update.mockResolvedValue(true);
 
-        await expect(episodeService.updateViewing("user-1", 5, "2024-01-01")).resolves.toBeUndefined();
-        expect(userEpisodeRepoMocks.updateWatchedAt).toHaveBeenCalledWith("user-1", 5, "2024-01-01");
+        await expect(episodeService.updateViewing("user-1", 5, "2024-01-01", 999)).resolves.toBeUndefined();
+        expect(userEpisodeRepoMocks.update).toHaveBeenCalledWith("user-1", 5, "2024-01-01", 999);
     });
 
     it("throws a 500 when nothing was updated", async () => {
-        userEpisodeRepoMocks.updateWatchedAt.mockResolvedValue(false);
+        userEpisodeRepoMocks.update.mockResolvedValue(false);
 
-        await expect(episodeService.updateViewing("user-1", 5, "2024-01-01")).rejects.toThrow(
+        await expect(episodeService.updateViewing("user-1", 5, "2024-01-01", 999)).rejects.toThrow(
             "Impossible de modifier le visionnage"
         );
+    });
+});
+
+describe("EpisodeService.updatePlatformForSeason", () => {
+    let episodeService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        episodeService = new EpisodeService();
+    });
+
+    it("does nothing when episode tracking isn't enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        await episodeService.updatePlatformForSeason("user-1", 7, 999);
+
+        expect(userEpisodeRepoMocks.updatePlatformByUserSeasonId).not.toHaveBeenCalled();
+    });
+
+    it("cascades the platform onto the season's episodes when tracking is enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+
+        await episodeService.updatePlatformForSeason("user-1", 7, 999);
+
+        expect(userEpisodeRepoMocks.updatePlatformByUserSeasonId).toHaveBeenCalledWith(7, 999);
     });
 });
 
