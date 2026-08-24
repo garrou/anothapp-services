@@ -1,9 +1,11 @@
 import ShowRepository from "../repositories/showRepository.js";
 import UserShowRepository from "../repositories/userShowRepository.js";
 import SearchService from "./searchService.js";
+import EpisodeService from "./episodeService.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import SeasonRepository from "../repositories/seasonRepository.js";
+import UserRepository from "../repositories/userRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import UserListRepository from "../repositories/userListRepository.js";
 import Validator from "../helpers/validator.js";
@@ -18,8 +20,10 @@ export default class ShowService {
         this._userListRepository = new UserListRepository();
         this._userSeasonRepository = new UserSeasonRepository();
         this._searchService = new SearchService();
+        this._episodeService = new EpisodeService();
         this._friendRepository = new FriendRepository();
         this._seasonRepository = new SeasonRepository();
+        this._userRepository = new UserRepository();
     }
 
     /**
@@ -209,6 +213,21 @@ export default class ShowService {
         }
         // const time = await userSeasonRepository.getViewingTimeByUserIdByShowIdByNumber(currentUserId, id, num);
         return await this._userSeasonRepository.getInfosByUserIdByShowId(currentUserId, id, num);
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @param {number?} num
+     * @returns {Promise<number|null>} null when the user doesn't track episodes - caller should fall back to the season-level estimate
+     */
+    getSeasonWatchedTime = async (currentUserId, id, num) => {
+        const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
+
+        if (!episodeTrackingEnabled) {
+            return null;
+        }
+        return this._episodeService.getWatchedTimeByShowIdBySeasonNumber(currentUserId, id, num);
     }
 
     /**

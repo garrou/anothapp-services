@@ -33,6 +33,19 @@ export default class EpisodeService {
     }
 
     /**
+     * @param {string} userId
+     * @param {number?} showId
+     * @param {number?} seasonNumber
+     * @returns {Promise<number>}
+     */
+    getWatchedTimeByShowIdBySeasonNumber = async (userId, showId, seasonNumber) => {
+        if (!showId || !seasonNumber) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        return this._userEpisodeRepository.getWatchedTimeByShowIdBySeasonNumber(userId, showId, seasonNumber);
+    }
+
+    /**
      * Ensures the show/season's episodes are synced locally, fetching them from
      * BetaSeries the first time they're needed.
      * @param {number} showId
@@ -57,6 +70,9 @@ export default class EpisodeService {
     }
 
     /**
+     * Backfills history: for every season viewing a user already has, marks every
+     * already-aired episode of that season watched, dated at the viewing's added_at.
+     * Idempotent - never duplicates a row already created for a given viewing/episode.
      * @param {string} userId
      * @returns {Promise<void>}
      */

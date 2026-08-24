@@ -24,6 +24,24 @@ export default class UserEpisodeRepository {
     }
 
     /**
+     * @param {string} userId
+     * @param {number} showId
+     * @param {number} seasonNumber
+     * @returns {Promise<number>}
+     */
+    getWatchedTimeByShowIdBySeasonNumber = async (userId, showId, seasonNumber) => {
+        const res = await db.query(`
+            SELECT SUM(COALESCE(e.length, s.duration)) AS time
+            FROM users_episodes ue
+            JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
+            JOIN users_seasons us ON us.id = ue.users_seasons_id
+            WHERE ue.user_id = $1 AND us.show_id = $2 AND us.number = $3
+        `, [userId, showId, seasonNumber]);
+        return parseInt(res.rows[0]["time"] ?? 0);
+    }
+
+    /**
      * Records a viewing of an episode for a specific season viewing, defaulting its
      * platform to the one the season itself was viewed on.
      * @param {string} userId

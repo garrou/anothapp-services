@@ -44,6 +44,18 @@ const seasonRepoMocks = vi.hoisted(() => ({
     getSeasonByShowIdByNumber: vi.fn(),
     createSeason: vi.fn(),
 }));
+const userRepoMocks = vi.hoisted(() => ({
+    hasEpisodeTrackingEnabled: vi.fn(),
+}));
+const episodeServiceMocks = vi.hoisted(() => ({
+    getWatchedTimeByShowIdBySeasonNumber: vi.fn(),
+}));
+vi.mock("../repositories/userRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
+}));
+vi.mock("./episodeService.js", () => ({
+    default: vi.fn().mockImplementation(function () { return episodeServiceMocks; }),
+}));
 vi.mock("../repositories/showRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return showRepoMocks; }),
 }));
@@ -342,5 +354,33 @@ describe("ShowService.updateByShowId", () => {
         const result = await showService.updateByShowId("user-1", 42, { addedAt: pastDate });
 
         expect(result).toBe(true);
+    });
+});
+
+describe("ShowService.getSeasonWatchedTime", () => {
+    let showService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        showService = new ShowService();
+    });
+
+    it("returns null without querying episode time when episode tracking is disabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        const result = await showService.getSeasonWatchedTime("user-1", 42, 1);
+
+        expect(result).toBeNull();
+        expect(episodeServiceMocks.getWatchedTimeByShowIdBySeasonNumber).not.toHaveBeenCalled();
+    });
+
+    it("returns the watched time from episodes when episode tracking is enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        episodeServiceMocks.getWatchedTimeByShowIdBySeasonNumber.mockResolvedValue(90);
+
+        const result = await showService.getSeasonWatchedTime("user-1", 42, 1);
+
+        expect(result).toBe(90);
+        expect(episodeServiceMocks.getWatchedTimeByShowIdBySeasonNumber).toHaveBeenCalledWith("user-1", 42, 1);
     });
 });
