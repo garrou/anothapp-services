@@ -119,7 +119,7 @@ export default class UserEpisodeRepository {
      */
     getBySeasonForUser = async (userId, showId, seasonNumber) => {
         const res = await db.query(`
-            SELECT e.id, e.title, e.code, e.number, e.date,
+            SELECT e.id, e.title, e.code, e.number, e.global, e.date,
                    COUNT(ue.id) FILTER (WHERE ue.watched_at IS NOT NULL) AS views
             FROM episodes e
             LEFT JOIN users_episodes ue ON ue.episode_id = e.id AND ue.user_id = $1

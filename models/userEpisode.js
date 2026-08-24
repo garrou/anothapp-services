@@ -8,6 +8,7 @@ export default class UserEpisode {
         this.title = obj.title;
         this.code = obj.code;
         this.number = obj.number;
+        this.global = obj.global;
         this.date = obj.date;
         this.views = parseInt(obj.views ?? 0);
     }
