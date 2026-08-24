@@ -1,13 +1,16 @@
 import SeasonRepository from "../repositories/seasonRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
+import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {MONTHS_SHORTCUTS} from "../constants/validation.js";
 
 export default class SeasonService {
 
     constructor() {
         this._seasonRepository = new SeasonRepository();
         this._userSeasonRepository = new UserSeasonRepository();
+        this._episodeService = new EpisodeService();
     }
 
     /**
@@ -27,15 +30,32 @@ export default class SeasonService {
     }
 
     /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @returns {Promise<UserEpisode[]>}
+     */
+    getEpisodesBySeasonId = async (currentUserId, id) => {
+        return this._episodeService.getByUserSeasonId(currentUserId, id);
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @param {number?} episodeId
+     * @returns {Promise<void>}
+     */
+    addEpisodeViewing = async (currentUserId, id, episodeId) => {
+        return this._episodeService.addViewing(currentUserId, id, episodeId);
+    }
+
+    /**
      * @param currentUserId
      * @param year
      * @param month
      * @returns {Promise<SeasonTimeline[] | Season[]>}
      */
     getSeasons = async (currentUserId, year, month) => {
-        const MONTHS = ["0", "1", "2", "3", "6", "12", "60"];
-
-        if (MONTHS.includes(month)) {
+        if (MONTHS_SHORTCUTS.includes(month)) {
             return await this._userSeasonRepository.getViewedByMonthAgo(currentUserId, month);
         } else if (year) {
             return await this._userSeasonRepository.getSeasonsByAddedYear(currentUserId, year);

@@ -1,5 +1,6 @@
 import UserShowRepository from "../repositories/userShowRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
+import UserEpisodeRepository from "../repositories/userEpisodeRepository.js";
 import {ExportData, ExportShow} from "../models/exportData.js";
 import StatService from "./statService.js";
 import UserService from "./userService.js";
@@ -12,6 +13,7 @@ export default class SettingService {
         this._userService = new UserService();
         this._userShowRepository = new UserShowRepository();
         this._userSeasonRepository = new UserSeasonRepository();
+        this._userEpisodeRepository = new UserEpisodeRepository();
         this._statService = new StatService();
     }
 
@@ -28,6 +30,7 @@ export default class SettingService {
         const user = await this._userService.getUser(userId);
         const shows = await this._userShowRepository.getShowsByUserId(userId, undefined, [], [], [], []);
         const seasons = await this._userSeasonRepository.getUserSeasonsByUserId(userId);
+        const episodes = await this._userEpisodeRepository.getAllByUserId(userId);
         const stats = await this._statService.getStats(userId);
         const exportedData = new ExportData(user, stats);
 
@@ -35,7 +38,11 @@ export default class SettingService {
             const exportedShow = new ExportShow(show);
             for (let i = 0; i < seasons.length; i++) {
                 if (seasons[i].showId === show.id) {
-                    exportedShow.seasons.push(seasons[i]);
+                    const season = seasons[i];
+                    season.episodes = episodes
+                        .filter((e) => e.userSeasonId === season.id)
+                        .map((e) => e.episode);
+                    exportedShow.seasons.push(season);
                 }
             }
             exportedData.shows.push(exportedShow);

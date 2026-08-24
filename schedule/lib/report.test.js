@@ -35,6 +35,20 @@ describe("formatReport", () => {
         expect(report).toContain("[2 - Show B]");
     });
 
+    it("formats episodes results", () => {
+        const report = formatReport({
+            episodes: {
+                synced: 12,
+                deleted: 2,
+                failed: [{showId: 1, seasonNumber: 2, error: "boom"}],
+            },
+        });
+        expect(report).toContain("12 épisode(s) synchronisé(s)");
+        expect(report).toContain("2 épisode(s) supprimé(s)");
+        expect(report).toContain("1 groupe(s) d'épisodes en erreur");
+        expect(report).toContain("[série 1 - saison 2] boom");
+    });
+
     it("formats platforms and tokens results", () => {
         const report = formatReport({
             platforms: {upserted: 5, failed: [{id: 1, name: "Netflix", error: "boom"}]},

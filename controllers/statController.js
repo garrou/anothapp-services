@@ -15,33 +15,4 @@ export default class StatController {
         }
     }
 
-    getCountByType = async (req, res, next) => {
-        try {
-            const {type, id} = req.query;
-            const total = await this._statService.getCountByUserIdByType(id ?? req.userId, type);
-            res.status(200).json(total);
-        } catch (e) {
-            next(e);
-        }
-    }
-
-    getTimeByType = async (req, res, next) => {
-        try {
-            const {type, id} = req.query;
-            const response = await this._statService.getTimeByUserIdByType(id ?? req.userId, type);
-            res.status(200).json(response);
-        } catch (e) {
-            next(e);
-        }
-    }
-
-    getCountGroupedByTypeByPeriod = async (req, res, next) => {
-        try {
-            const userId = req.query.id ?? req.userId;
-            const response = await this._statService.getGroupedCountByUserIdByTypeByPeriod(userId, req.query);
-            res.status(200).json(response);
-        } catch (e) {
-            next(e);
-        }
-    }
 }

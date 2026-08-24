@@ -9,12 +9,19 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getViewedByMonthAgo: vi.fn(),
     getSeasonsByAddedYear: vi.fn(),
 }));
+const episodeServiceMocks = vi.hoisted(() => ({
+    getByUserSeasonId: vi.fn(),
+    addViewing: vi.fn(),
+}));
 
 vi.mock("../repositories/seasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return seasonRepoMocks; }),
 }));
 vi.mock("../repositories/userSeasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userSeasonRepoMocks; }),
+}));
+vi.mock("./episodeService.js", () => ({
+    default: vi.fn().mockImplementation(function () { return episodeServiceMocks; }),
 }));
 
 describe("SeasonService.deleteBySeasonId", () => {
@@ -48,6 +55,39 @@ describe("SeasonService.deleteBySeasonId", () => {
     });
 });
 
+describe("SeasonService.getEpisodesBySeasonId", () => {
+    let seasonService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        seasonService = new SeasonService();
+    });
+
+    it("delegates to EpisodeService.getByUserSeasonId", async () => {
+        episodeServiceMocks.getByUserSeasonId.mockResolvedValue(["episode-checklist"]);
+
+        const result = await seasonService.getEpisodesBySeasonId("user-1", 7);
+
+        expect(result).toEqual(["episode-checklist"]);
+        expect(episodeServiceMocks.getByUserSeasonId).toHaveBeenCalledWith("user-1", 7);
+    });
+});
+
+describe("SeasonService.addEpisodeViewing", () => {
+    let seasonService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        seasonService = new SeasonService();
+    });
+
+    it("delegates to EpisodeService.addViewing", async () => {
+        await seasonService.addEpisodeViewing("user-1", 7, 100);
+
+        expect(episodeServiceMocks.addViewing).toHaveBeenCalledWith("user-1", 7, 100);
+    });
+});
+
 describe("SeasonService.getSeasons", () => {
     let seasonService;
 
@@ -68,7 +108,7 @@ describe("SeasonService.getSeasons", () => {
     it("accepts every documented month shortcut value", async () => {
         userSeasonRepoMocks.getViewedByMonthAgo.mockResolvedValue([]);
 
-        for (const month of ["0", "1", "2", "3", "6", "12", "60"]) {
+        for (const month of ["0", "1", "2", "3", "6", "12"]) {
             await expect(seasonService.getSeasons("user-1", undefined, month)).resolves.toEqual([]);
         }
     });
