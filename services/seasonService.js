@@ -3,6 +3,7 @@ import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {MONTHS_SHORTCUTS} from "../constants/validation.js";
 
 export default class SeasonService {
 
@@ -54,9 +55,7 @@ export default class SeasonService {
      * @returns {Promise<SeasonTimeline[] | Season[]>}
      */
     getSeasons = async (currentUserId, year, month) => {
-        const MONTHS = ["0", "1", "2", "3", "6", "12", "60"];
-
-        if (MONTHS.includes(month)) {
+        if (MONTHS_SHORTCUTS.includes(month)) {
             return await this._userSeasonRepository.getViewedByMonthAgo(currentUserId, month);
         } else if (year) {
             return await this._userSeasonRepository.getSeasonsByAddedYear(currentUserId, year);

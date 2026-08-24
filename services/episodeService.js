@@ -6,11 +6,10 @@ import SearchService from "./searchService.js";
 import ServiceError from "../helpers/serviceError.js";
 import Validator from "../helpers/validator.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {MONTHS_SHORTCUTS} from "../constants/validation.js";
 import mapWithConcurrency from "../schedule/lib/concurrency.js";
 
 const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
-
-const MONTHS = ["0", "1", "2", "3", "6", "12"];
 
 export default class EpisodeService {
 
@@ -40,7 +39,7 @@ export default class EpisodeService {
      * @returns {Promise<EpisodeTimeline[]>}
      */
     getViewedByMonthAgo = async (userId, month) => {
-        if (!MONTHS.includes(month)) {
+        if (!MONTHS_SHORTCUTS.includes(month)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         await this.#ensureTrackingEnabled(userId);
