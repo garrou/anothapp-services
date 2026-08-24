@@ -120,8 +120,21 @@ export default class UserEpisodeRepository {
     }
 
     /**
-     * Checklist of every episode of a season viewing: the catalog is the source of
-     * truth for which episodes exist, left-joined against this viewing's watched rows.
+     * @param {string} userId
+     * @returns {Promise<{userSeasonId: number, episode: UserEpisode}[]>}
+     */
+    getAllByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT ue.id, ue.users_seasons_id, e.id AS episode_id, e.title, e.code, e.number, e.global, e.date, ue.watched_at
+            FROM users_episodes ue
+            JOIN episodes e ON ue.episode_id = e.id
+            WHERE ue.user_id = $1
+            ORDER BY ue.users_seasons_id, e.number
+        `, [userId]);
+        return res.rows.map((row) => ({userSeasonId: row["users_seasons_id"], episode: new UserEpisode(row)}));
+    }
+
+    /**
      * @param {number} userSeasonId
      * @param {number} showId
      * @param {number} seasonNumber

@@ -1,6 +1,7 @@
 import EpisodeRepository from "../repositories/episodeRepository.js";
 import UserEpisodeRepository from "../repositories/userEpisodeRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
+import UserRepository from "../repositories/userRepository.js";
 import SearchService from "./searchService.js";
 import ServiceError from "../helpers/serviceError.js";
 import Validator from "../helpers/validator.js";
@@ -17,7 +18,20 @@ export default class EpisodeService {
         this._episodeRepository = new EpisodeRepository();
         this._userEpisodeRepository = new UserEpisodeRepository();
         this._userSeasonRepository = new UserSeasonRepository();
+        this._userRepository = new UserRepository();
         this._searchService = new SearchService();
+    }
+
+    /**
+     * @param {string} userId
+     * @returns {Promise<void>}
+     */
+    #ensureTrackingEnabled = async (userId) => {
+        const enabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
+
+        if (!enabled) {
+            throw new ServiceError(400, "Le suivi des épisodes n'est pas activé");
+        }
     }
 
     /**
@@ -29,6 +43,7 @@ export default class EpisodeService {
         if (!MONTHS.includes(month)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
+        await this.#ensureTrackingEnabled(userId);
         return this._userEpisodeRepository.getViewedByMonthAgo(userId, month);
     }
 
@@ -46,8 +61,6 @@ export default class EpisodeService {
     }
 
     /**
-     * Ensures the show/season's episodes are synced locally, fetching them from
-     * BetaSeries the first time they're needed.
      * @param {number} showId
      * @param {number} seasonNumber
      * @returns {Promise<Episode[]>}
@@ -98,6 +111,7 @@ export default class EpisodeService {
         if (!userSeasonId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
+        await this.#ensureTrackingEnabled(userId);
         const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
 
         if (!season) {
@@ -117,6 +131,7 @@ export default class EpisodeService {
         if (!userSeasonId || !episodeId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
+        await this.#ensureTrackingEnabled(userId);
         const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
 
         if (!season) {

@@ -20,6 +20,9 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getUserSeasonsByUserId: vi.fn(),
     getOwnedSeasonViewing: vi.fn(),
 }));
+const userRepoMocks = vi.hoisted(() => ({
+    hasEpisodeTrackingEnabled: vi.fn(),
+}));
 const searchServiceMocks = vi.hoisted(() => ({
     getEpisodesByShowIdBySeason: vi.fn(),
 }));
@@ -33,6 +36,9 @@ vi.mock("../repositories/userEpisodeRepository.js", () => ({
 vi.mock("../repositories/userSeasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userSeasonRepoMocks; }),
 }));
+vi.mock("../repositories/userRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
+}));
 vi.mock("./searchService.js", () => ({
     default: vi.fn().mockImplementation(function () { return searchServiceMocks; }),
 }));
@@ -43,11 +49,21 @@ describe("EpisodeService.getViewedByMonthAgo", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         episodeService = new EpisodeService();
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
     });
 
     it("rejects with a 400 when month isn't one of the accepted values", async () => {
         await expect(episodeService.getViewedByMonthAgo("user-1", "not-a-month")).rejects.toThrow(
             "Requête invalide"
+        );
+        expect(userEpisodeRepoMocks.getViewedByMonthAgo).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a 400 when episode tracking isn't enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        await expect(episodeService.getViewedByMonthAgo("user-1", "1")).rejects.toThrow(
+            "Le suivi des épisodes n'est pas activé"
         );
         expect(userEpisodeRepoMocks.getViewedByMonthAgo).not.toHaveBeenCalled();
     });
@@ -103,10 +119,20 @@ describe("EpisodeService.getByUserSeasonId", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         episodeService = new EpisodeService();
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
     });
 
     it("rejects with a 400 when no userSeasonId is given", async () => {
         await expect(episodeService.getByUserSeasonId("user-1", undefined)).rejects.toThrow("Requête invalide");
+    });
+
+    it("rejects with a 400 when episode tracking isn't enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        await expect(episodeService.getByUserSeasonId("user-1", 7)).rejects.toThrow(
+            "Le suivi des épisodes n'est pas activé"
+        );
+        expect(userSeasonRepoMocks.getOwnedSeasonViewing).not.toHaveBeenCalled();
     });
 
     it("rejects with a 400 when the viewing isn't owned by the user", async () => {
@@ -151,6 +177,7 @@ describe("EpisodeService.addViewing", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         episodeService = new EpisodeService();
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
         userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({ showId: 42, number: 1, platformId: 999 });
         userEpisodeRepoMocks.existsForViewing.mockResolvedValue(false);
         userEpisodeRepoMocks.create.mockResolvedValue(true);
@@ -159,6 +186,15 @@ describe("EpisodeService.addViewing", () => {
     it("rejects with a 400 when userSeasonId or episodeId is missing", async () => {
         await expect(episodeService.addViewing("user-1", undefined, 1)).rejects.toThrow("Requête invalide");
         await expect(episodeService.addViewing("user-1", 7, undefined)).rejects.toThrow("Requête invalide");
+    });
+
+    it("rejects with a 400 when episode tracking isn't enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        await expect(episodeService.addViewing("user-1", 7, 1)).rejects.toThrow(
+            "Le suivi des épisodes n'est pas activé"
+        );
+        expect(userSeasonRepoMocks.getOwnedSeasonViewing).not.toHaveBeenCalled();
     });
 
     it("rejects with a 400 when the viewing isn't owned by the user", async () => {
