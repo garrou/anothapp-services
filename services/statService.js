@@ -2,8 +2,6 @@ import UserShowRepository from "../repositories/userShowRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import UserEpisodeStatRepository from "../repositories/userEpisodeStatRepository.js";
 import UserRepository from "../repositories/userRepository.js";
-import ServiceError from "../helpers/serviceError.js";
-import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import Stat from "../models/stat.js";
 
 export default class StatService {
@@ -49,73 +47,6 @@ export default class StatService {
     }
 
     /**
-     * @param {string} currentUserId
-     * @param {string} type
-     * @returns {Promise<number>}
-     */
-    getCountByUserIdByType = (currentUserId, type) => {
-        switch (type) {
-            case "shows":
-                return this._userShowRepository.getTotalShowsByUserId(currentUserId);
-            case "episodes":
-                return this._userSeasonRepository.getTotalEpisodesByUserId(currentUserId);
-            case "seasons":
-                return this._userSeasonRepository.getTotalSeasonsByUserId(currentUserId);
-            default:
-                throw new ServiceError(400, ERROR_INVALID_REQUEST);
-        }
-    }
-
-    /**
-     * @param {string} currentUserId
-     * @param {string} type
-     * @returns {Promise<any>}
-     */
-    getTimeByUserIdByType = (currentUserId, type) => {
-        switch (type) {
-            case "total":
-                return this._userSeasonRepository.getTotalTimeByUserId(currentUserId);
-            case "years":
-                return this._userSeasonRepository.getTimeHourByUserIdGroupByYear(currentUserId);
-            case "month":
-                return this._userSeasonRepository.getTimeCurrentMonthByUserId(currentUserId);
-            case "best-month":
-                return this._userSeasonRepository.getRecordViewingTimeMonth(currentUserId, 1);
-            case "rank":
-                return this._userSeasonRepository.getRankingViewingTimeByShows(currentUserId);
-            default:
-                throw new ServiceError(400, ERROR_INVALID_REQUEST);
-        }
-    }
-
-    /**
-     * @param {string} userId
-     * @param {Object} query
-     * @return Promise
-     */
-    getGroupedCountByUserIdByTypeByPeriod = (userId, query) => {
-        const {type, period, limit} = query;
-        switch (type) {
-            case "seasons":
-                return this.#getNbSeasonsByUserIdByPeriod(userId, period);
-            case "episodes":
-                return this.#getNbEpisodesByUserIdByPeriod(userId, period);
-            case "kinds":
-                return this.#getNbKindsByUserId(userId);
-            case "best-months":
-                return this._userSeasonRepository.getRecordViewingTimeMonth(userId, limit);
-            case "countries":
-                return this._userShowRepository.getCountriesByUserId(userId, limit);
-            case "platforms":
-                return this._userSeasonRepository.getPlatformsByUserId(userId, limit);
-            case "notes":
-                return this._userShowRepository.getNotesByUserId(userId);
-            default:
-                throw new ServiceError(400, ERROR_INVALID_REQUEST);
-        }
-    }
-
-    /**
      * @param {string} userId
      * @return Promise<{label: string, value: number}[]>
      */
@@ -134,39 +65,5 @@ export default class StatService {
             .from(kindsMap, ([kind, occur]) => Stat.from(kind, occur))
             .sort((a, b) => b.value - a.value)
             .splice(0, 10);
-    }
-
-    /**
-     * @param {string} userId
-     * @param {string} period
-     * @return Promise
-     */
-    #getNbSeasonsByUserIdByPeriod = (userId, period) => {
-        switch (period) {
-            case "years":
-                return this._userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId);
-            case "year":
-                return this._userSeasonRepository.getNbSeasonsByUserIdGroupByMonthByCurrentYear(userId);
-            case "months":
-                return this._userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId);
-            default:
-                throw new ServiceError(400, ERROR_INVALID_REQUEST);
-        }
-    }
-
-    /**
-     * @param {string} userId
-     * @param {string} period
-     * @return Promise
-     */
-    #getNbEpisodesByUserIdByPeriod = (userId, period) => {
-        switch (period) {
-            case "years":
-                return this._userSeasonRepository.getNbEpisodesByUserIdGroupByYear(userId);
-            case "year":
-                return this._userSeasonRepository.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId);
-            default:
-                throw new ServiceError(400, ERROR_INVALID_REQUEST);
-        }
     }
 }

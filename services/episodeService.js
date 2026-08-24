@@ -95,9 +95,6 @@ export default class EpisodeService {
     }
 
     /**
-     * Backfills history: for every season viewing a user already has, marks every
-     * already-aired episode of that season watched, dated at the viewing's added_at.
-     * Idempotent - never duplicates a row already created for a given viewing/episode.
      * @param {string} userId
      * @returns {Promise<void>}
      */
