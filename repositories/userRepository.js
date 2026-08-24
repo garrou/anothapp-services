@@ -61,6 +61,19 @@ export default class UserRepository {
     }
 
     /**
+     * @param {string} id
+     * @returns {Promise<boolean>}
+     */
+    hasEpisodeTrackingEnabled = async (id) => {
+        const res = await db.query(`
+            SELECT episode_tracking_enabled
+            FROM users
+            WHERE id = $1
+        `, [id]);
+        return res.rows[0]?.["episode_tracking_enabled"] === true;
+    }
+
+    /**
      * @param {string} email
      * @param {string} password
      * @param {string} username

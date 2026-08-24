@@ -9,6 +9,8 @@ import mapWithConcurrency from "../schedule/lib/concurrency.js";
 
 const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
 
+const MONTHS = ["0", "1", "2", "3", "6", "12"];
+
 export default class EpisodeService {
 
     constructor() {
@@ -16,6 +18,18 @@ export default class EpisodeService {
         this._userEpisodeRepository = new UserEpisodeRepository();
         this._userSeasonRepository = new UserSeasonRepository();
         this._searchService = new SearchService();
+    }
+
+    /**
+     * @param {string} userId
+     * @param {string} month
+     * @returns {Promise<EpisodeTimeline[]>}
+     */
+    getViewedByMonthAgo = async (userId, month) => {
+        if (!MONTHS.includes(month)) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        return this._userEpisodeRepository.getViewedByMonthAgo(userId, month);
     }
 
     /**

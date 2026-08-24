@@ -1,9 +1,31 @@
 import db from "../config/db.js";
 import UserEpisode from "../models/userEpisode.js";
+import EpisodeTimeline from "../models/episodeTimeline.js";
 
 export default class UserEpisodeRepository {
 
     /**
+     * @param {string} userId
+     * @param {number} month
+     * @returns {Promise<EpisodeTimeline[]>}
+     */
+    getViewedByMonthAgo = async (userId, month) => {
+        const res = await db.query(`
+            SELECT s.id, s.title, s.poster, ue.watched_at, ue.platform_id,
+                   e.id AS episode_id, e.title AS episode_title, e.code AS episode_code,
+                   e.number AS episode_number, e.global AS episode_global
+            FROM users_episodes ue
+            JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
+            WHERE ue.user_id = $1 AND ue.watched_at >= DATE_TRUNC('month', CURRENT_DATE) - $2 * INTERVAL '1 month'
+            ORDER BY ue.watched_at DESC
+        `, [userId, month]);
+        return res.rows.map((row) => new EpisodeTimeline(row));
+    }
+
+    /**
+     * Records a viewing of an episode for a specific season viewing, defaulting its
+     * platform to the one the season itself was viewed on.
      * @param {string} userId
      * @param {number} userSeasonId
      * @param {number} episodeId
@@ -20,6 +42,8 @@ export default class UserEpisodeRepository {
     }
 
     /**
+     * Same as create, but a no-op when a row already exists for that (episode, viewing)
+     * pair - used for backfilling history without duplicating on repeated runs.
      * @param {string} userId
      * @param {number} userSeasonId
      * @param {number} episodeId
@@ -78,6 +102,8 @@ export default class UserEpisodeRepository {
     }
 
     /**
+     * Checklist of every episode of a season viewing: the catalog is the source of
+     * truth for which episodes exist, left-joined against this viewing's watched rows.
      * @param {number} userSeasonId
      * @param {number} showId
      * @param {number} seasonNumber

@@ -6,6 +6,16 @@ export default class EpisodeController {
         this._episodeService = new EpisodeService();
     }
 
+    getViewedByMonthAgo = async (req, res, next) => {
+        try {
+            const {month} = req.query;
+            const timeline = await this._episodeService.getViewedByMonthAgo(req.userId, month);
+            res.status(200).json(timeline);
+        } catch (e) {
+            next(e);
+        }
+    }
+
     updateViewing = async (req, res, next) => {
         try {
             const {id} = req.params;

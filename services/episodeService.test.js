@@ -13,6 +13,7 @@ const userEpisodeRepoMocks = vi.hoisted(() => ({
     updateWatchedAt: vi.fn(),
     deleteById: vi.fn(),
     getByUserSeasonId: vi.fn(),
+    getViewedByMonthAgo: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
     getUserSeasonsByUserId: vi.fn(),
@@ -34,6 +35,39 @@ vi.mock("../repositories/userSeasonRepository.js", () => ({
 vi.mock("./searchService.js", () => ({
     default: vi.fn().mockImplementation(function () { return searchServiceMocks; }),
 }));
+
+describe("EpisodeService.getViewedByMonthAgo", () => {
+    let episodeService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        episodeService = new EpisodeService();
+    });
+
+    it("rejects with a 400 when month isn't one of the accepted values", async () => {
+        await expect(episodeService.getViewedByMonthAgo("user-1", "not-a-month")).rejects.toThrow(
+            "Requête invalide"
+        );
+        expect(userEpisodeRepoMocks.getViewedByMonthAgo).not.toHaveBeenCalled();
+    });
+
+    it("accepts every documented month shortcut value", async () => {
+        userEpisodeRepoMocks.getViewedByMonthAgo.mockResolvedValue([]);
+
+        for (const month of ["0", "1", "2", "3", "6", "12"]) {
+            await expect(episodeService.getViewedByMonthAgo("user-1", month)).resolves.toEqual([]);
+        }
+    });
+
+    it("returns the timeline for a valid month", async () => {
+        userEpisodeRepoMocks.getViewedByMonthAgo.mockResolvedValue(["episode-timeline"]);
+
+        const result = await episodeService.getViewedByMonthAgo("user-1", "1");
+
+        expect(result).toEqual(["episode-timeline"]);
+        expect(userEpisodeRepoMocks.getViewedByMonthAgo).toHaveBeenCalledWith("user-1", "1");
+    });
+});
 
 describe("EpisodeService.getByUserSeasonId", () => {
     let episodeService;
