@@ -60,8 +60,6 @@ export default class UserEpisodeRepository {
     }
 
     /**
-     * Same as create, but a no-op when a row already exists for that (episode, viewing)
-     * pair - used for backfilling history without duplicating on repeated runs.
      * @param {string} userId
      * @param {number} userSeasonId
      * @param {number} episodeId
