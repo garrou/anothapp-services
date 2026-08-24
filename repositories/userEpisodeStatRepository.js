@@ -9,9 +9,10 @@ export default class UserEpisodeStatRepository {
      */
     getTotalTimeByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT SUM(e.length) AS time
+            SELECT SUM(COALESCE(e.length, s.duration)) AS time
             FROM users_episodes ue
             JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
             WHERE ue.user_id = $1
         `, [userId]);
         return parseInt(res.rows[0]["time"] ?? 0);
@@ -23,9 +24,10 @@ export default class UserEpisodeStatRepository {
      */
     getTimeCurrentMonthByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT SUM(e.length) AS time
+            SELECT SUM(COALESCE(e.length, s.duration)) AS time
             FROM users_episodes ue
             JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
             WHERE ue.user_id = $1 AND ue.watched_at >= DATE_TRUNC('month', CURRENT_DATE)
         `, [userId]);
         return parseInt(res.rows[0]["time"] ?? 0);
@@ -37,9 +39,10 @@ export default class UserEpisodeStatRepository {
      */
     getTimeHourByUserIdGroupByYear = async (userId) => {
         const res = await db.query(`
-            SELECT EXTRACT(YEAR FROM ue.watched_at) AS label, (SUM(e.length) / 60) AS value
+            SELECT EXTRACT(YEAR FROM ue.watched_at) AS label, (SUM(COALESCE(e.length, s.duration)) / 60) AS value
             FROM users_episodes ue
             JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
             WHERE ue.user_id = $1 AND DATE_PART('year', NOW()) - EXTRACT(YEAR FROM ue.watched_at) <= 10
             GROUP BY label
             ORDER BY label
@@ -54,9 +57,10 @@ export default class UserEpisodeStatRepository {
      */
     getRecordViewingTimeMonth = async (userId, limit = 10) => {
         const res = await db.query(`
-            SELECT TO_CHAR(ue.watched_at, 'MM/YYYY') AS label, SUM(e.length) AS value
+            SELECT TO_CHAR(ue.watched_at, 'MM/YYYY') AS label, SUM(COALESCE(e.length, s.duration)) AS value
             FROM users_episodes ue
             JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
             WHERE ue.user_id = $1
             GROUP BY label
             ORDER BY value DESC
@@ -72,7 +76,7 @@ export default class UserEpisodeStatRepository {
      */
     getRankingViewingTimeByShows = async (userId, limit = 10) => {
         const res = await db.query(`
-            SELECT shows.title AS label, (SUM(e.length) / 60) AS value
+            SELECT shows.title AS label, (SUM(COALESCE(e.length, shows.duration)) / 60) AS value
             FROM users_episodes ue
             JOIN episodes e ON ue.episode_id = e.id
             JOIN shows ON shows.id = e.show_id
