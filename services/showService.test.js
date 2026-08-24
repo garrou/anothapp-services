@@ -411,11 +411,11 @@ describe("ShowService.getShowById", () => {
 
     it("uses the actual watched episodes when episode tracking is enabled", async () => {
         userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
-        episodeServiceMocks.getWatchedTimeAndCountByShowId.mockResolvedValue([135, 3]);
+        episodeServiceMocks.getWatchedTimeAndCountByShowId.mockResolvedValue([135, 3, 2]);
 
         const result = await showService.getShowById("user-1", 42);
 
-        expect(result).toEqual({seasons: ["season"], time: 135, episodes: 3});
+        expect(result).toEqual({seasons: ["season"], time: 135, episodes: 3, distinctEpisodes: 2});
         expect(episodeServiceMocks.getWatchedTimeAndCountByShowId).toHaveBeenCalledWith("user-1", 42);
         expect(userSeasonRepoMocks.getTimeEpisodesByUserIdByShowId).not.toHaveBeenCalled();
     });

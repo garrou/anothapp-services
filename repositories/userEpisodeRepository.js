@@ -44,11 +44,12 @@ export default class UserEpisodeRepository {
     /**
      * @param {string} userId
      * @param {number} showId
-     * @returns {Promise<[number, number]>} watched time and count of watched episodes
+     * @returns {Promise<[number, number, number]>} watched time, count of watched episodes, count of distinct watched episodes
      */
     getWatchedTimeAndCountByShowId = async (userId, showId) => {
         const res = await db.query(`
-            SELECT SUM(COALESCE(e.length, s.duration)) AS time, COUNT(*) AS episodes
+            SELECT SUM(COALESCE(e.length, s.duration)) AS time, COUNT(*) AS episodes,
+                   COUNT(DISTINCT ue.episode_id) AS distinct_episodes
             FROM users_episodes ue
             JOIN episodes e ON ue.episode_id = e.id
             JOIN shows s ON s.id = e.show_id
@@ -56,7 +57,7 @@ export default class UserEpisodeRepository {
             WHERE ue.user_id = $1 AND us.show_id = $2
         `, [userId, showId]);
         const row = res.rows[0];
-        return [parseInt(row["time"] ?? 0), parseInt(row["episodes"] ?? 0)];
+        return [parseInt(row["time"] ?? 0), parseInt(row["episodes"] ?? 0), parseInt(row["distinct_episodes"] ?? 0)];
     }
 
     /**

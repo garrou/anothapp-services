@@ -62,7 +62,7 @@ export default class EpisodeService {
     /**
      * @param {string} userId
      * @param {number?} showId
-     * @returns {Promise<[number, number]>} watched time and count of watched episodes
+     * @returns {Promise<[number, number, number]>} watched time, count of watched episodes, count of distinct watched episodes
      */
     getWatchedTimeAndCountByShowId = async (userId, showId) => {
         if (!showId) {

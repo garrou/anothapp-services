@@ -128,12 +128,12 @@ describe("EpisodeService.getWatchedTimeAndCountByShowId", () => {
         );
     });
 
-    it("returns the total watched time and episode count", async () => {
-        userEpisodeRepoMocks.getWatchedTimeAndCountByShowId.mockResolvedValue([135, 3]);
+    it("returns the total watched time, episode count and distinct episode count", async () => {
+        userEpisodeRepoMocks.getWatchedTimeAndCountByShowId.mockResolvedValue([135, 3, 2]);
 
         const result = await episodeService.getWatchedTimeAndCountByShowId("user-1", 42);
 
-        expect(result).toEqual([135, 3]);
+        expect(result).toEqual([135, 3, 2]);
         expect(userEpisodeRepoMocks.getWatchedTimeAndCountByShowId).toHaveBeenCalledWith("user-1", 42);
     });
 });

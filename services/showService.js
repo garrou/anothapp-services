@@ -120,7 +120,7 @@ export default class ShowService {
     /**
      * @param {string} currentUserId
      * @param {number?} id
-     * @returns {Promise<{seasons: Season[], time: number, episodes: number}>}
+     * @returns {Promise<{seasons: Season[], time: number, episodes: number, distinctEpisodes: number?}>}
      */
     getShowById = async (currentUserId, id) => {
         if (!id) {
@@ -133,15 +133,23 @@ export default class ShowService {
         // }
         const seasons = await this._userSeasonRepository.getDistinctByUserIdByShowId(currentUserId, id);
         const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
-        const [time, nbEpisodes] = episodeTrackingEnabled
-            ? await this._episodeService.getWatchedTimeAndCountByShowId(currentUserId, id)
-            : await this._userSeasonRepository.getTimeEpisodesByUserIdByShowId(currentUserId, id);
-        return {
+        let time, nbEpisodes, distinctEpisodes;
+
+        if (episodeTrackingEnabled) {
+            [time, nbEpisodes, distinctEpisodes] = await this._episodeService.getWatchedTimeAndCountByShowId(currentUserId, id);
+        } else {
+            [time, nbEpisodes] = await this._userSeasonRepository.getTimeEpisodesByUserIdByShowId(currentUserId, id);
+        }
+        const result = {
             // "serie": new UserShow(show),
             "seasons": seasons,
             "time": isNaN(time) ? 0 : time,
             "episodes": isNaN(nbEpisodes) ? 0 : nbEpisodes
         };
+        if (episodeTrackingEnabled) {
+            result.distinctEpisodes = distinctEpisodes;
+        }
+        return result;
     }
 
     /**
