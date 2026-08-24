@@ -42,8 +42,6 @@ export default class UserEpisodeRepository {
     }
 
     /**
-     * Records a viewing of an episode for a specific season viewing, defaulting its
-     * platform to the one the season itself was viewed on.
      * @param {string} userId
      * @param {number} userSeasonId
      * @param {number} episodeId
