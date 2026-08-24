@@ -31,11 +31,10 @@ const fetchSeasons = async (id) => {
 
 /**
  * @param {number} showId
- * @param {number} seasonNumber
  * @returns {Promise<Object[]>}
  */
-const fetchEpisodes = async (showId, seasonNumber) => {
-    const data = await client.get(`/shows/episodes?id=${showId}&season=${seasonNumber}`);
+const fetchEpisodes = async (showId) => {
+    const data = await client.get(`/shows/episodes?id=${showId}`);
     return data.episodes ?? [];
 };
 

@@ -33,8 +33,8 @@ describe("updateEpisodes", () => {
     it("upserts every episode returned by BetaSeries for each show/season pair", async () => {
         episodeRepoMocks.getAllEpisodeSeasons.mockResolvedValue([{show_id: 1, season_number: 1}]);
         betaseriesMocks.fetchEpisodes.mockResolvedValue([
-            {id: 10, episode: 1, title: "Pilot", code: "S01E01", global: 1, length: 45, date: "2020-01-01"},
-            {id: 11, episode: 2, title: "Ep 2", code: "S01E02", global: 2, length: 45, date: null},
+            {id: 10, season: 1, episode: 1, title: "Pilot", code: "S01E01", global: 1, length: 45, date: "2020-01-01"},
+            {id: 11, season: 1, episode: 2, title: "Ep 2", code: "S01E02", global: 2, length: 45, date: null},
         ]);
 
         const result = await updateEpisodes();
@@ -48,10 +48,29 @@ describe("updateEpisodes", () => {
         expect(result.synced).toBe(2);
     });
 
+    it("fetches a show only once even when it has several synced seasons", async () => {
+        episodeRepoMocks.getAllEpisodeSeasons.mockResolvedValue([
+            {show_id: 1, season_number: 1},
+            {show_id: 1, season_number: 2},
+        ]);
+        betaseriesMocks.fetchEpisodes.mockResolvedValue([
+            {id: 10, season: 1, episode: 1, title: "Pilot", code: "S01E01", global: 1, length: 45, date: "2020-01-01"},
+            {id: 20, season: 2, episode: 1, title: "S2E1", code: "S02E01", global: 2, length: 45, date: "2021-01-01"},
+        ]);
+
+        const result = await updateEpisodes();
+
+        expect(betaseriesMocks.fetchEpisodes).toHaveBeenCalledOnce();
+        expect(betaseriesMocks.fetchEpisodes).toHaveBeenCalledWith(1);
+        expect(episodeRepoMocks.deleteEpisodesNotIn).toHaveBeenCalledWith(1, 1, [10]);
+        expect(episodeRepoMocks.deleteEpisodesNotIn).toHaveBeenCalledWith(1, 2, [20]);
+        expect(result.synced).toBe(2);
+    });
+
     it("deletes episodes no longer returned by BetaSeries for that season", async () => {
         episodeRepoMocks.getAllEpisodeSeasons.mockResolvedValue([{show_id: 1, season_number: 1}]);
         betaseriesMocks.fetchEpisodes.mockResolvedValue([
-            {id: 10, episode: 1, title: "Pilot", code: "S01E01", global: 1, length: 45, date: "2020-01-01"},
+            {id: 10, season: 1, episode: 1, title: "Pilot", code: "S01E01", global: 1, length: 45, date: "2020-01-01"},
         ]);
         episodeRepoMocks.deleteEpisodesNotIn.mockResolvedValue(2);
 
@@ -61,19 +80,19 @@ describe("updateEpisodes", () => {
         expect(result.deleted).toBe(2);
     });
 
-    it("reports a failure for one show/season group without aborting the others", async () => {
+    it("reports a failure for one show without aborting the others", async () => {
         episodeRepoMocks.getAllEpisodeSeasons.mockResolvedValue([
             {show_id: 1, season_number: 1},
             {show_id: 2, season_number: 1},
         ]);
         betaseriesMocks.fetchEpisodes.mockImplementation(async (showId) => {
             if (showId === 1) throw new Error("network down");
-            return [{id: 20, episode: 1, title: "Ep", code: "S01E01", global: 1, length: 30, date: "2021-01-01"}];
+            return [{id: 20, season: 1, episode: 1, title: "Ep", code: "S01E01", global: 1, length: 30, date: "2021-01-01"}];
         });
 
         const result = await updateEpisodes();
 
-        expect(result.failed).toEqual([{showId: 1, seasonNumber: 1, error: "network down"}]);
+        expect(result.failed).toEqual([{showId: 1, error: "network down"}]);
         expect(result.synced).toBe(1);
     });
 });

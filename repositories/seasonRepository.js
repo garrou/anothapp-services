@@ -66,9 +66,11 @@ export default class SeasonRepository {
      */
     getAllSeasons = async () => {
         const res = await db.query(`
-            SELECT number, episodes, image, show_id
+            SELECT seasons.number, seasons.episodes, seasons.image, seasons.show_id
             FROM seasons
-            ORDER BY show_id, number
+            JOIN shows ON shows.id = seasons.show_id
+            WHERE shows.finished = FALSE
+            ORDER BY seasons.show_id, seasons.number
         `);
         return res.rows;
     }

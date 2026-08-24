@@ -5,12 +5,20 @@ import mapWithConcurrency from "../lib/concurrency.js";
 const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
 
 /**
- * @param {{show_id: number, season_number: number}} group
- * @returns {Promise<{showId: number, seasonNumber: number, episodes: any[]}>}
+ * @param {number} showId
+ * @returns {Promise<{showId: number, bySeason: Map<number, any[]>}>}
  */
-const fetchGroup = async (group) => {
-    const episodes = await betaseries.fetchEpisodes(group.show_id, group.season_number);
-    return {showId: group.show_id, seasonNumber: group.season_number, episodes};
+const fetchShow = async (showId) => {
+    const episodes = await betaseries.fetchEpisodes(showId);
+    const bySeason = new Map();
+
+    for (const episode of episodes) {
+        if (!bySeason.has(episode.season)) {
+            bySeason.set(episode.season, []);
+        }
+        bySeason.get(episode.season).push(episode);
+    }
+    return {showId, bySeason};
 };
 
 /**
@@ -19,33 +27,41 @@ const fetchGroup = async (group) => {
 const updateEpisodes = async () => {
     const episodeRepository = new EpisodeRepository();
     const groups = await episodeRepository.getAllEpisodeSeasons();
-    const results = await mapWithConcurrency(groups, CONCURRENCY, fetchGroup);
+    const showIds = [...new Set(groups.map((g) => g.show_id))];
+    const results = await mapWithConcurrency(showIds, CONCURRENCY, fetchShow);
 
-    let synced = 0;
-    let deleted = 0;
+    const bySeasonByShow = new Map();
+    const failedShows = new Set();
     const failed = [];
 
-    for (let i = 0; i < groups.length; i += 1) {
+    for (let i = 0; i < showIds.length; i += 1) {
         const result = results[i];
 
         if (result.status === "rejected") {
-            failed.push({
-                showId: groups[i].show_id,
-                seasonNumber: groups[i].season_number,
-                error: result.reason?.message ?? String(result.reason),
-            });
+            failedShows.add(showIds[i]);
+            failed.push({showId: showIds[i], error: result.reason?.message ?? String(result.reason)});
             continue;
         }
-        const {showId, seasonNumber, episodes} = result.value;
+        bySeasonByShow.set(showIds[i], result.value.bySeason);
+    }
+
+    let synced = 0;
+    let deleted = 0;
+
+    for (const group of groups) {
+        if (failedShows.has(group.show_id)) {
+            continue;
+        }
+        const episodes = bySeasonByShow.get(group.show_id)?.get(group.season_number) ?? [];
 
         for (const episode of episodes) {
             await episodeRepository.upsertEpisode(
-                episode.id, showId, seasonNumber, episode.episode, episode.title,
+                episode.id, group.show_id, group.season_number, episode.episode, episode.title,
                 episode.code, episode.global, episode.length, episode.date
             );
             synced += 1;
         }
-        deleted += await episodeRepository.deleteEpisodesNotIn(showId, seasonNumber, episodes.map((e) => e.id));
+        deleted += await episodeRepository.deleteEpisodesNotIn(group.show_id, group.season_number, episodes.map((e) => e.id));
     }
     return {synced, deleted, failed};
 };

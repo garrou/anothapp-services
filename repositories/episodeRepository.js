@@ -57,7 +57,11 @@ export default class EpisodeRepository {
      */
     getAllEpisodeSeasons = async () => {
         const res = await db.query(`
-            SELECT DISTINCT show_id, season_number FROM episodes ORDER BY show_id, season_number
+            SELECT DISTINCT e.show_id, e.season_number
+            FROM episodes e
+            JOIN shows s ON s.id = e.show_id
+            WHERE s.finished = FALSE
+            ORDER BY e.show_id, e.season_number
         `);
         return res.rows;
     }
