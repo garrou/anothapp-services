@@ -273,6 +273,22 @@ describe("ShowService.getShows", () => {
         ).rejects.toThrow("Requête invalide");
     });
 
+    it("rejects with a 400 for status=all without a friendId", async () => {
+        await expect(
+            showService.getShows("user-1", { status: "all" })
+        ).rejects.toThrow("Requête invalide");
+    });
+
+    it("returns the friend's full unfiltered collection for status=all", async () => {
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        userShowRepoMocks.getShowsByUserId.mockResolvedValue(["friend-show"]);
+
+        const result = await showService.getShows("user-1", { status: "all", friendId: "user-2" });
+
+        expect(result).toEqual(["friend-show"]);
+        expect(userShowRepoMocks.getShowsByUserId).toHaveBeenCalledWith("user-2", undefined, [], [], [], []);
+    });
+
     it("falls back to the filtered listing when no status is given", async () => {
         userShowRepoMocks.getShowsByUserId.mockResolvedValue(["filtered-show"]);
 

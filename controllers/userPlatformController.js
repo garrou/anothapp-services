@@ -7,7 +7,8 @@ export default class PlatformController {
     
     getUserPlatforms = async (req, res, next) => {
         try {
-            const platforms = await this._userPlatformService.getUserPlatforms(req.userId);
+            const {friendId} = req.query;
+            const platforms = await this._userPlatformService.getUserPlatforms(req.userId, friendId);
             res.status(200).json(platforms);
         } catch (e) {
             next(e);

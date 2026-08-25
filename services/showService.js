@@ -57,6 +57,11 @@ export default class ShowService {
                     throw new ServiceError(400, ERROR_INVALID_REQUEST);
                 }
                 return this._userShowRepository.getSharedShowsWithFriend(userId, friendId);
+            case "all":
+                if (!friendId) {
+                    throw new ServiceError(400, ERROR_INVALID_REQUEST);
+                }
+                return this._userShowRepository.getShowsByUserId(friendId, undefined, [], [], [], []);
             default:
                 throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
