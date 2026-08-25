@@ -46,6 +46,16 @@ export default class SeasonController {
         }
     }
 
+    addAllEpisodesViewing = async (req, res, next) => {
+        try {
+            const {id} = req.params;
+            await this._seasonService.addAllEpisodesViewing(req.userId, id);
+            res.sendStatus(201);
+        } catch (e) {
+            next(e);
+        }
+    }
+
     updateBySeasonId = async (req, res, next) => {
         try {
             const {id} = req.params;

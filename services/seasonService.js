@@ -49,6 +49,15 @@ export default class SeasonService {
     }
 
     /**
+     * @param {string} currentUserId
+     * @param {number?} id
+     * @returns {Promise<void>}
+     */
+    addAllEpisodesViewing = async (currentUserId, id) => {
+        return this._episodeService.addAllViewings(currentUserId, id);
+    }
+
+    /**
      * @param currentUserId
      * @param year
      * @param month

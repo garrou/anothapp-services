@@ -278,6 +278,54 @@ describe("EpisodeService.addViewing", () => {
     });
 });
 
+describe("EpisodeService.addAllViewings", () => {
+    let episodeService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        episodeService = new EpisodeService();
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({ showId: 42, number: 1, platformId: 999 });
+        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([]);
+    });
+
+    it("rejects with a 400 when no userSeasonId is given", async () => {
+        await expect(episodeService.addAllViewings("user-1", undefined)).rejects.toThrow("Requête invalide");
+    });
+
+    it("rejects with a 400 when episode tracking isn't enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        await expect(episodeService.addAllViewings("user-1", 7)).rejects.toThrow(
+            "Le suivi des épisodes n'est pas activé"
+        );
+        expect(userSeasonRepoMocks.getOwnedSeasonViewing).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a 400 when the viewing isn't owned by the user", async () => {
+        userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue(null);
+
+        await expect(episodeService.addAllViewings("user-1", 7)).rejects.toThrow(
+            "Ce visionnage n'est pas dans votre collection"
+        );
+    });
+
+    it("creates a viewing for every already-aired episode of the season, skipping unaired ones", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        const future = new Date(Date.now() + 86400000).toISOString();
+        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
+            { id: 1, date: past },
+            { id: 2, date: future },
+            { id: 3, date: null },
+        ]);
+
+        await expect(episodeService.addAllViewings("user-1", 7)).resolves.toBeUndefined();
+
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledTimes(1);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 1, expect.any(String), 999);
+    });
+});
+
 describe("EpisodeService.updateViewing", () => {
     let episodeService;
 

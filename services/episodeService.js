@@ -169,6 +169,30 @@ export default class EpisodeService {
 
     /**
      * @param {string} userId
+     * @param {number?} userSeasonId
+     * @returns {Promise<void>}
+     */
+    addAllViewings = async (userId, userSeasonId) => {
+        if (!userSeasonId) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        await this.#ensureTrackingEnabled(userId);
+        const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
+
+        if (!season) {
+            throw new ServiceError(400, "Ce visionnage n'est pas dans votre collection");
+        }
+        const episodes = await this.#ensureEpisodesExist(season.showId, season.number);
+        const aired = episodes.filter((e) => e.date && !Validator.isInFuture(e.date));
+        const watchedAt = new Date().toISOString();
+
+        await Promise.all(aired.map((episode) =>
+            this._userEpisodeRepository.createIfMissing(userId, userSeasonId, episode.id, watchedAt, season.platformId)
+        ));
+    }
+
+    /**
+     * @param {string} userId
      * @param {number?} id
      * @param {string?} watchedAt
      * @returns {Promise<void>}
