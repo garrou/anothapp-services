@@ -6,10 +6,13 @@ export default class UserProfile {
      */
     constructor(user, current = false) {
         this.id = user.id;
-        this.email = user.email;
         this.picture = user.picture;
         this.username = user.username;
         this.current = current;
         this.episodeTrackingEnabled = user.episodeTrackingEnabled;
+
+        if (current) {
+            this.email = user.email;
+        }
     }
 }

@@ -10,7 +10,7 @@ import ServiceError from "../helpers/serviceError.js";
 import UserListRepository from "../repositories/userListRepository.js";
 import Validator from "../helpers/validator.js";
 import ParserHelper from "../helpers/parser.js";
-import {ERROR_FAILED_ADD_SEASON, ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {DUPLICATE_ERROR_CODE, ERROR_FAILED_ADD_SEASON, ERROR_INVALID_REQUEST} from "../constants/errors.js";
 
 export default class ShowService {
 
@@ -99,10 +99,17 @@ export default class ShowService {
                 throw new ServiceError(500, "Impossible de créer la série");
             }
         }
-        const added = addInList
-            ? await this._userListRepository.create(currentUserId, showId)
-            : await this._userShowRepository.create(currentUserId, showId);
-
+        let added;
+        try {
+            added = addInList
+                ? await this._userListRepository.create(currentUserId, showId)
+                : await this._userShowRepository.create(currentUserId, showId);
+        } catch (err) {
+            if (err.code === DUPLICATE_ERROR_CODE) {
+                throw new ServiceError(409, `Cette série est déjà dans votre ${addInList ? "liste" : "collection"}`);
+            }
+            throw err;
+        }
         if (!added) {
             throw new ServiceError(500, "Impossible d'ajouter la série");
         }

@@ -5,7 +5,7 @@ import {isDevMode} from "../helpers/utils.js";
 export const checkJwt = (req, res, next) => {
 
     if (isDevMode()) {
-        console.log(Date.now(), req.originalUrl, req.query, req.cookies);
+        console.log(Date.now(), req.originalUrl, req.query, Object.keys(req.cookies));
     }
     if (WHITELIST.some((url) => req.originalUrl.startsWith(url))) {
         return next();

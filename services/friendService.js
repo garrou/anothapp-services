@@ -1,6 +1,6 @@
 import FriendRepository from "../repositories/friendRepository.js";
 import ServiceError from "../helpers/serviceError.js";
-import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST} from "../constants/errors.js";
 
 export default class FriendService {
 
@@ -22,8 +22,15 @@ export default class FriendService {
         if (exists) {
             throw new ServiceError(409, "Vous êtes déjà en relation avec cet utilisateur");
         }
-        const send = await this._friendRepository.sendFriendRequest(currentUserId, userId);
-
+        let send;
+        try {
+            send = await this._friendRepository.sendFriendRequest(currentUserId, userId);
+        } catch (err) {
+            if (err.code === DUPLICATE_ERROR_CODE) {
+                throw new ServiceError(409, "Vous êtes déjà en relation avec cet utilisateur");
+            }
+            throw err;
+        }
         if (!send) {
             throw new ServiceError(500, "Impossible de demander cet utilisateur");
         }

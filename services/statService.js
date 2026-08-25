@@ -2,6 +2,8 @@ import UserShowRepository from "../repositories/userShowRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import UserEpisodeStatRepository from "../repositories/userEpisodeStatRepository.js";
 import UserRepository from "../repositories/userRepository.js";
+import FriendRepository from "../repositories/friendRepository.js";
+import ServiceError from "../helpers/serviceError.js";
 import Stat from "../models/stat.js";
 
 export default class StatService {
@@ -10,35 +12,55 @@ export default class StatService {
         this._userSeasonRepository = new UserSeasonRepository();
         this._userEpisodeStatRepository = new UserEpisodeStatRepository();
         this._userRepository = new UserRepository();
+        this._friendRepository = new FriendRepository();
     }
 
     /**
-     * @param {string} userId
+     * @param {string} currentUserId
+     * @param {string?} friendId
      * @returns {Promise<Object>}
      */
-    getStats = async (userId) => {
+    getStats = async (currentUserId, friendId) => {
+        if (friendId && friendId !== currentUserId
+            && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
+            throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
+        }
+        const userId = friendId ?? currentUserId;
         const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
         const repo = episodeTrackingEnabled ? this._userEpisodeStatRepository : this._userSeasonRepository;
 
+        const [
+            monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes, bestMonthRows,
+            seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
+            episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
+            seasonsPlatforms, seriesCountries, seriesNotes
+        ] = await Promise.all([
+            repo.getTimeCurrentMonthByUserId(userId),
+            repo.getTotalTimeByUserId(userId),
+            this._userShowRepository.getTotalShowsByUserId(userId),
+            this._userSeasonRepository.getTotalSeasonsByUserId(userId),
+            repo.getTotalEpisodesByUserId(userId),
+            repo.getRecordViewingTimeMonth(userId, 1),
+            this._userSeasonRepository.getNbSeasonsByUserIdGroupByMonthByCurrentYear(userId),
+            repo.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId),
+            repo.getTimeHourByUserIdGroupByYear(userId),
+            this._userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId),
+            repo.getNbEpisodesByUserIdGroupByYear(userId),
+            this._userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId),
+            repo.getRecordViewingTimeMonth(userId, 10),
+            repo.getRankingViewingTimeByShows(userId),
+            this.#getNbKindsByUserId(userId),
+            this._userSeasonRepository.getPlatformsByUserId(userId),
+            this._userShowRepository.getCountriesByUserId(userId, 200),
+            this._userShowRepository.getNotesByUserId(userId),
+        ]);
+
         const stats = {
-            "monthTime": await repo.getTimeCurrentMonthByUserId(userId),
-            "totalTime": await repo.getTotalTimeByUserId(userId),
-            "nbSeries": await this._userShowRepository.getTotalShowsByUserId(userId),
-            "nbSeasons": await this._userSeasonRepository.getTotalSeasonsByUserId(userId),
-            "nbEpisodes": await repo.getTotalEpisodesByUserId(userId),
-            "bestMonth": (await repo.getRecordViewingTimeMonth(userId, 1))[0],
-            "seasonsMonthCurrentYear": await this._userSeasonRepository.getNbSeasonsByUserIdGroupByMonthByCurrentYear(userId),
-            "episodesMonthCurrentYear": await repo.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId),
-            "timeYears": await repo.getTimeHourByUserIdGroupByYear(userId),
-            "seasonsYears": await this._userSeasonRepository.getNbSeasonsByUserIdGroupByYear(userId),
-            "episodesYears": await repo.getNbEpisodesByUserIdGroupByYear(userId),
-            "seasonsMonths": await this._userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId),
-            "bestMonths": await repo.getRecordViewingTimeMonth(userId, 10),
-            "seriesRankingTime": await repo.getRankingViewingTimeByShows(userId),
-            "seriesKinds": await this.#getNbKindsByUserId(userId),
-            "seasonsPlatforms": await this._userSeasonRepository.getPlatformsByUserId(userId),
-            "seriesCountries": await this._userShowRepository.getCountriesByUserId(userId, 200),
-            "seriesNotes": await this._userShowRepository.getNotesByUserId(userId)
+            monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes,
+            "bestMonth": bestMonthRows[0],
+            seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
+            episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
+            seasonsPlatforms, seriesCountries, seriesNotes
         };
         if (episodeTrackingEnabled) {
             stats.episodesHeatmap = await this._userEpisodeStatRepository.getWatchedByDay(userId);

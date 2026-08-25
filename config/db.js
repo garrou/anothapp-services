@@ -22,15 +22,16 @@ const query = async (query, params = []) => {
  * @returns {Promise<any>}
  */
 const transaction = async (callback) => {
-    const client = pool.connect();
+    const client = await pool.connect();
 
     try {
         await client.query("BEGIN");
         const res = await callback(client);
         await client.query("COMMIT");
         return res;
-    } catch {
+    } catch (err) {
         await client.query("ROLLBACK");
+        throw err;
     } finally {
         client.release();
     }

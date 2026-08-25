@@ -8,7 +8,7 @@ export default class StatController {
     getStats = async (req, res, next) => {
         try {
             const {id} = req.query;
-            const stats = await this._statService.getStats(id ?? req.userId);
+            const stats = await this._statService.getStats(req.userId, id);
             res.status(200).json(stats);
         } catch (e) {
             next(e);

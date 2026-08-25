@@ -36,6 +36,9 @@ const userEpisodeStatRepoMocks = vi.hoisted(() => ({
 const userRepoMocks = vi.hoisted(() => ({
     hasEpisodeTrackingEnabled: vi.fn(),
 }));
+const friendRepoMocks = vi.hoisted(() => ({
+    checkIfAlreadyFriend: vi.fn(),
+}));
 
 vi.mock("../repositories/userShowRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userShowRepoMocks; }),
@@ -48,6 +51,9 @@ vi.mock("../repositories/userEpisodeStatRepository.js", () => ({
 }));
 vi.mock("../repositories/userRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
+}));
+vi.mock("../repositories/friendRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return friendRepoMocks; }),
 }));
 
 describe("StatService.getStats", () => {
@@ -113,5 +119,32 @@ describe("StatService.getStats", () => {
         expect(stats.nbSeasons).toBe(20);
         expect(stats.nbSeries).toBe(10);
         expect(userSeasonRepoMocks.getTotalSeasonsByUserId).toHaveBeenCalledWith("user-1");
+    });
+
+    it("rejects with a 400 when requesting a friendId that isn't actually a friend", async () => {
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
+
+        await expect(
+            statService.getStats("user-1", "user-2")
+        ).rejects.toThrow("Vous n'êtes pas en relation avec cette personne");
+        expect(userRepoMocks.hasEpisodeTrackingEnabled).not.toHaveBeenCalled();
+    });
+
+    it("returns the friend's stats when friendId is an actual friend", async () => {
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        await statService.getStats("user-1", "user-2");
+
+        expect(friendRepoMocks.checkIfAlreadyFriend).toHaveBeenCalledWith("user-1", "user-2");
+        expect(userSeasonRepoMocks.getTotalSeasonsByUserId).toHaveBeenCalledWith("user-2");
+    });
+
+    it("skips the friendship check when friendId is the caller's own id", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        await statService.getStats("user-1", "user-1");
+
+        expect(friendRepoMocks.checkIfAlreadyFriend).not.toHaveBeenCalled();
     });
 });

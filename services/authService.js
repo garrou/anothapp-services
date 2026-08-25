@@ -3,7 +3,7 @@ import UserProfile from "../models/userProfile.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
-import { ERROR_LOGIN_PASSWORD, ERROR_REFRESH_TOKEN_INVALID } from "../constants/errors.js";
+import { DUPLICATE_ERROR_CODE, ERROR_LOGIN_PASSWORD, ERROR_REFRESH_TOKEN_INVALID } from "../constants/errors.js";
 import { DUMMY_HASH } from "../constants/security.js";
 import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
 
@@ -119,7 +119,7 @@ export default class AuthService {
             const created = await this._userRepository.createUser(email, hash, username);
             if (!created) throw new ServiceError(500, "Impossible de créer le compte");
         } catch (err) {
-            if (err.code === '23505') {
+            if (err.code === DUPLICATE_ERROR_CODE) {
                 throw new ServiceError(409, "Un compte est déjà associé à ces informations");
             }
             throw err;

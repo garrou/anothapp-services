@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import AuthService from "./authService.js";
 import SecurityHelper from "../helpers/security.js";
+import { DUPLICATE_ERROR_CODE } from "../constants/errors.js";
 
 const userRepoMocks = vi.hoisted(() => ({
     getUserByIdentifier: vi.fn(),
@@ -110,7 +111,7 @@ describe("AuthService.register", () => {
     });
 
     it("converts a unique constraint violation (23505) into an explicit 409 error", async () => {
-        userRepoMocks.createUser.mockRejectedValue({ code: "23505" });
+        userRepoMocks.createUser.mockRejectedValue({ code: DUPLICATE_ERROR_CODE });
 
         await expect(
             authService.register("adrien@test.fr", "adrien", "Azerty123", "Azerty123")
