@@ -8,6 +8,7 @@ import { limiter } from "../middlewares/rateLimit.js";
 class App {
     constructor() {
         this._app = express();
+        this._app.set("trust proxy", 1);
         this.#setupCors();
         this.#setupMiddleware();
         this.#setupRoutes();
