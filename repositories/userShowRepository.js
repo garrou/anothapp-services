@@ -189,6 +189,28 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
+     * @returns Promise<UserShow[]>
+     */
+    getShowsToResumeByUserIdEpisodes = async (userId) => {
+        const res = await db.query(`
+            SELECT s.*, us.*
+            FROM shows s
+            JOIN users_shows us ON us.show_id = s.id
+            WHERE us.user_id = $1 AND us.continue = FALSE AND (
+                SELECT COALESCE(SUM(seasons.episodes), 0) FROM seasons WHERE seasons.show_id = s.id
+            ) - (
+                SELECT COUNT(DISTINCT ue.episode_id)
+                FROM users_episodes ue
+                JOIN users_seasons uss ON uss.id = ue.users_seasons_id
+                WHERE uss.user_id = $1 AND uss.show_id = s.id
+            ) > 0
+            ORDER BY s.title
+        `, [userId]);
+        return res.rows.map((row) => new UserShow(row));
+    }
+
+    /**
+     * @param {string} userId
      * @returns Promise<any[]>
      */
     getKindsByUserId = async (userId) => {
@@ -262,6 +284,31 @@ export default class UserShowRepository {
                     FROM users_seasons
                     WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
                 ) AS missing
+                FROM shows s
+                JOIN users_shows us ON s.id = us.show_id
+                WHERE us.user_id = $1 AND us.continue = TRUE
+            ) sub
+            WHERE missing > 0
+            ORDER BY title
+        `, [userId]);
+        return res.rows.map((row) => new UserShow(row));
+    }
+
+    /**
+     * @param {string} userId
+     * @returns Promise<UserShow[]>
+     */
+    getShowsToContinueByUserIdEpisodes = async (userId) => {
+        const res = await db.query(`
+            SELECT *
+            FROM (
+                SELECT s.*, us.added_at, us.continue, us.favorite,
+                    (SELECT COALESCE(SUM(seasons.episodes), 0) FROM seasons WHERE seasons.show_id = s.id) - (
+                        SELECT COUNT(DISTINCT ue.episode_id)
+                        FROM users_episodes ue
+                        JOIN users_seasons uss ON uss.id = ue.users_seasons_id
+                        WHERE uss.user_id = $1 AND uss.show_id = s.id
+                    ) AS missing
                 FROM shows s
                 JOIN users_shows us ON s.id = us.show_id
                 WHERE us.user_id = $1 AND us.continue = TRUE

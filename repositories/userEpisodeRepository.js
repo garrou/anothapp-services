@@ -112,29 +112,14 @@ export default class UserEpisodeRepository {
      * @param {string} userId
      * @param {number} id
      * @param {string} watchedAt
-     * @param {number} platformId
      * @returns {Promise<boolean>}
      */
-    update = async (userId, id, watchedAt, platformId) => {
+    updateWatchedAt = async (userId, id, watchedAt) => {
         const res = await db.query(`
-            UPDATE users_episodes SET watched_at = $1, platform_id = $2
-            WHERE id = $3 AND user_id = $4
-        `, [watchedAt, platformId, id, userId]);
+            UPDATE users_episodes SET watched_at = $1
+            WHERE id = $2 AND user_id = $3
+        `, [watchedAt, id, userId]);
         return res.rowCount === 1;
-    }
-
-    /**
-     * Cascades a season's platform change onto every episode already recorded for that
-     * viewing - keeps per-episode platform consistent with the season it belongs to.
-     * @param {number} userSeasonId
-     * @param {number} platformId
-     * @returns {Promise<void>}
-     */
-    updatePlatformByUserSeasonId = async (userSeasonId, platformId) => {
-        await db.query(`
-            UPDATE users_episodes SET platform_id = $1
-            WHERE users_seasons_id = $2
-        `, [platformId, userSeasonId]);
     }
 
     /**
@@ -172,8 +157,7 @@ export default class UserEpisodeRepository {
      */
     getByUserSeasonId = async (userSeasonId, showId, seasonNumber) => {
         const res = await db.query(`
-            SELECT ue.id, e.id AS episode_id, e.title, e.code, e.number, e.global, e.date,
-                   ue.watched_at, ue.platform_id
+            SELECT ue.id, e.id AS episode_id, e.title, e.code, e.number, e.global, e.date, ue.watched_at
             FROM episodes e
             LEFT JOIN users_episodes ue ON ue.episode_id = e.id AND ue.users_seasons_id = $1
             WHERE e.show_id = $2 AND e.season_number = $3

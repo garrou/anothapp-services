@@ -12,7 +12,6 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
 const episodeServiceMocks = vi.hoisted(() => ({
     getByUserSeasonId: vi.fn(),
     addViewing: vi.fn(),
-    updatePlatformForSeason: vi.fn(),
 }));
 
 vi.mock("../repositories/seasonRepository.js", () => ({
@@ -165,14 +164,13 @@ describe("SeasonService.updateBySeasonId", () => {
         ).rejects.toThrow("Requête invalide");
     });
 
-    it("updates the season and cascades the platform onto its episodes", async () => {
+    it("updates the season when all fields are present", async () => {
         seasonRepoMocks.updateSeason.mockResolvedValue(true);
 
         await expect(
             seasonService.updateBySeasonId("user-1", 7, 2, "2024-01-01")
         ).resolves.toBeUndefined();
         expect(seasonRepoMocks.updateSeason).toHaveBeenCalledWith("user-1", 7, 2, "2024-01-01");
-        expect(episodeServiceMocks.updatePlatformForSeason).toHaveBeenCalledWith("user-1", 7, 2);
     });
 
     it("throws a 500 when the update fails in the database", async () => {
@@ -181,6 +179,5 @@ describe("SeasonService.updateBySeasonId", () => {
         await expect(
             seasonService.updateBySeasonId("user-1", 7, 2, "2024-01-01")
         ).rejects.toThrow("Impossible de modifier la saison");
-        expect(episodeServiceMocks.updatePlatformForSeason).not.toHaveBeenCalled();
     });
 });

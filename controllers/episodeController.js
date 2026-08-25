@@ -19,8 +19,8 @@ export default class EpisodeController {
     updateViewing = async (req, res, next) => {
         try {
             const {id} = req.params;
-            const {watchedAt, platformId} = req.body;
-            await this._episodeService.updateViewing(req.userId, id, watchedAt, platformId);
+            const {watchedAt} = req.body;
+            await this._episodeService.updateViewing(req.userId, id, watchedAt);
             res.sendStatus(200);
         } catch (e) {
             next(e);

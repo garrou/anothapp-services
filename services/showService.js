@@ -34,12 +34,20 @@ export default class ShowService {
      */
     #getShowsByStatus = async (userId, status, friendId) => {
         switch (status) {
-            case "stopped":
-                return this._userShowRepository.getShowsToResumeByUserId(userId);
+            case "stopped": {
+                const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
+                return episodeTrackingEnabled
+                    ? this._userShowRepository.getShowsToResumeByUserIdEpisodes(userId)
+                    : this._userShowRepository.getShowsToResumeByUserId(userId);
+            }
             case "watchlist":
                 return this._userListRepository.getListShowsByUserId(userId);
-            case "continue":
-                return this._userShowRepository.getShowsToContinueByUserId(userId);
+            case "continue": {
+                const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
+                return episodeTrackingEnabled
+                    ? this._userShowRepository.getShowsToContinueByUserIdEpisodes(userId)
+                    : this._userShowRepository.getShowsToContinueByUserId(userId);
+            }
             case "favorite":
                 return this._userShowRepository.getFavoritesByUserId(friendId ?? userId);
             case "next":

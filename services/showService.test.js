@@ -10,7 +10,9 @@ const userShowRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
     deleteByUserIdShowId: vi.fn(),
     getShowsToResumeByUserId: vi.fn(),
+    getShowsToResumeByUserIdEpisodes: vi.fn(),
     getShowsToContinueByUserId: vi.fn(),
+    getShowsToContinueByUserIdEpisodes: vi.fn(),
     getFavoritesByUserId: vi.fn(),
     getShowsWithNextEpisode: vi.fn(),
     getSharedShowsWithFriend: vi.fn(),
@@ -219,12 +221,44 @@ describe("ShowService.getShows", () => {
         ).rejects.toThrow("Vous n'êtes pas en relation avec cette personne");
     });
 
-    it("delegates to the status-based lookup when a status is given", async () => {
+    it("delegates to the season-based lookup for 'stopped' when episode tracking is disabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
         userShowRepoMocks.getShowsToResumeByUserId.mockResolvedValue(["stopped-show"]);
 
         const result = await showService.getShows("user-1", { status: "stopped" });
 
         expect(result).toEqual(["stopped-show"]);
+        expect(userShowRepoMocks.getShowsToResumeByUserIdEpisodes).not.toHaveBeenCalled();
+    });
+
+    it("delegates to the episode-based lookup for 'stopped' when episode tracking is enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userShowRepoMocks.getShowsToResumeByUserIdEpisodes.mockResolvedValue(["stopped-show-episodes"]);
+
+        const result = await showService.getShows("user-1", { status: "stopped" });
+
+        expect(result).toEqual(["stopped-show-episodes"]);
+        expect(userShowRepoMocks.getShowsToResumeByUserId).not.toHaveBeenCalled();
+    });
+
+    it("delegates to the season-based lookup for 'continue' when episode tracking is disabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+        userShowRepoMocks.getShowsToContinueByUserId.mockResolvedValue(["continue-show"]);
+
+        const result = await showService.getShows("user-1", { status: "continue" });
+
+        expect(result).toEqual(["continue-show"]);
+        expect(userShowRepoMocks.getShowsToContinueByUserIdEpisodes).not.toHaveBeenCalled();
+    });
+
+    it("delegates to the episode-based lookup for 'continue' when episode tracking is enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userShowRepoMocks.getShowsToContinueByUserIdEpisodes.mockResolvedValue(["continue-show-episodes"]);
+
+        const result = await showService.getShows("user-1", { status: "continue" });
+
+        expect(result).toEqual(["continue-show-episodes"]);
+        expect(userShowRepoMocks.getShowsToContinueByUserId).not.toHaveBeenCalled();
     });
 
     it("rejects with a 400 for an unknown status", async () => {

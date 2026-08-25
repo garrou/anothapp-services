@@ -171,38 +171,20 @@ export default class EpisodeService {
      * @param {string} userId
      * @param {number?} id
      * @param {string?} watchedAt
-     * @param {number?} platformId
      * @returns {Promise<void>}
      */
-    updateViewing = async (userId, id, watchedAt, platformId) => {
-        if (!id || !watchedAt || !platformId) {
+    updateViewing = async (userId, id, watchedAt) => {
+        if (!id || !watchedAt) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         if (Validator.isInFuture(watchedAt)) {
             throw new ServiceError(400, "Date de visionnage invalide");
         }
-        const updated = await this._userEpisodeRepository.update(userId, id, watchedAt, platformId);
+        const updated = await this._userEpisodeRepository.updateWatchedAt(userId, id, watchedAt);
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier le visionnage");
         }
-    }
-
-    /**
-     * Cascades a season's platform change onto its already-recorded episodes, when the
-     * user has episode tracking enabled - a no-op otherwise, since there's nothing to update.
-     * @param {string} userId
-     * @param {number} userSeasonId
-     * @param {number} platformId
-     * @returns {Promise<void>}
-     */
-    updatePlatformForSeason = async (userId, userSeasonId, platformId) => {
-        const enabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
-
-        if (!enabled) {
-            return;
-        }
-        await this._userEpisodeRepository.updatePlatformByUserSeasonId(userSeasonId, platformId);
     }
 
     /**
