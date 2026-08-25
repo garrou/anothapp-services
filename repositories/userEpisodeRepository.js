@@ -123,6 +123,18 @@ export default class UserEpisodeRepository {
     }
 
     /**
+     * @param {number} userSeasonId
+     * @param {number} platformId
+     * @returns {Promise<void>}
+     */
+    updatePlatformByUserSeasonId = async (userSeasonId, platformId) => {
+        await db.query(`
+            UPDATE users_episodes SET platform_id = $1
+            WHERE users_seasons_id = $2
+        `, [platformId, userSeasonId]);
+    }
+
+    /**
      * @param {string} userId
      * @param {number} id
      * @returns {Promise<boolean>}

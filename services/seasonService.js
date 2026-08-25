@@ -79,5 +79,6 @@ export default class SeasonService {
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier la saison");
         }
+        await this._episodeService.updatePlatformForSeason(currentUserId, seasonId, platformId);
     }
 }

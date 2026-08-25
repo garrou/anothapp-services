@@ -189,6 +189,21 @@ export default class EpisodeService {
 
     /**
      * @param {string} userId
+     * @param {number} userSeasonId
+     * @param {number} platformId
+     * @returns {Promise<void>}
+     */
+    updatePlatformForSeason = async (userId, userSeasonId, platformId) => {
+        const enabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
+
+        if (!enabled) {
+            return;
+        }
+        await this._userEpisodeRepository.updatePlatformByUserSeasonId(userSeasonId, platformId);
+    }
+
+    /**
+     * @param {string} userId
      * @param {number?} id
      * @returns {Promise<void>}
      */

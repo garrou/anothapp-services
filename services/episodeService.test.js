@@ -11,6 +11,7 @@ const userEpisodeRepoMocks = vi.hoisted(() => ({
     createIfMissing: vi.fn(),
     existsForViewing: vi.fn(),
     updateWatchedAt: vi.fn(),
+    updatePlatformByUserSeasonId: vi.fn(),
     deleteById: vi.fn(),
     getByUserSeasonId: vi.fn(),
     getViewedByMonthAgo: vi.fn(),
@@ -313,6 +314,31 @@ describe("EpisodeService.updateViewing", () => {
         await expect(episodeService.updateViewing("user-1", 5, "2024-01-01")).rejects.toThrow(
             "Impossible de modifier le visionnage"
         );
+    });
+});
+
+describe("EpisodeService.updatePlatformForSeason", () => {
+    let episodeService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        episodeService = new EpisodeService();
+    });
+
+    it("does nothing when episode tracking isn't enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        await episodeService.updatePlatformForSeason("user-1", 7, 999);
+
+        expect(userEpisodeRepoMocks.updatePlatformByUserSeasonId).not.toHaveBeenCalled();
+    });
+
+    it("cascades the platform onto the season's episodes when tracking is enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+
+        await episodeService.updatePlatformForSeason("user-1", 7, 999);
+
+        expect(userEpisodeRepoMocks.updatePlatformByUserSeasonId).toHaveBeenCalledWith(7, 999);
     });
 });
 
