@@ -63,4 +63,9 @@ describe("formatReport", () => {
         const report = formatReport({tokens: {deleted: 0}});
         expect(report).toBe("0 jeton(s) de renouvellement supprimé(s)");
     });
+
+    it("formats notifications results", () => {
+        const report = formatReport({notifications: {deleted: 12}});
+        expect(report).toBe("12 notification(s) supprimée(s)");
+    });
 });
