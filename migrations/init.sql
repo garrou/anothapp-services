@@ -164,6 +164,20 @@ CREATE TABLE users_platforms (
     PRIMARY KEY(user_id, platform_id)
 );
 
+CREATE TABLE notifications (
+    id SERIAL PRIMARY KEY,
+    recipient_user_id UUID NOT NULL,
+    actor_user_id UUID,
+    type VARCHAR(50) NOT NULL,
+    show_id INTEGER,
+    metadata JSONB,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    read_at TIMESTAMP,
+    FOREIGN KEY(recipient_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(actor_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
+);
+
 CREATE INDEX idx_users_shows_user_id ON users_shows(user_id);
 CREATE INDEX idx_users_seasons_user_id ON users_seasons(user_id);
 CREATE INDEX idx_episodes_show_season ON episodes(show_id, season_number);
@@ -171,3 +185,5 @@ CREATE INDEX idx_users_episodes_user_id ON users_episodes(user_id);
 CREATE INDEX idx_users_episodes_users_seasons_id ON users_episodes(users_seasons_id);
 CREATE INDEX idx_friends_sec_user_id ON friends(sec_user_id);
 CREATE INDEX idx_users_list_user_id ON users_list(user_id);
+CREATE INDEX idx_notifications_recipient_unread ON notifications(recipient_user_id, read_at);
+CREATE INDEX idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);

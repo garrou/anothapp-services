@@ -53,6 +53,12 @@ const episodeServiceMocks = vi.hoisted(() => ({
     getWatchedTimeByShowIdBySeasonNumber: vi.fn(),
     getWatchedTimeAndCountByShowId: vi.fn(),
 }));
+const eventBusMocks = vi.hoisted(() => ({
+    emit: vi.fn(),
+}));
+vi.mock("../helpers/eventBus.js", () => ({
+    default: eventBusMocks,
+}));
 vi.mock("../repositories/userRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
 }));
@@ -119,7 +125,7 @@ describe("ShowService.addShow", () => {
         );
     });
 
-    it("reuses the show already stored locally instead of calling the search API", async () => {
+    it("reuses the show already stored locally instead of calling the search API, and notifies friends", async () => {
         userShowRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(false);
         showRepoMocks.getShow.mockResolvedValue(validShow);
         userShowRepoMocks.create.mockResolvedValue(true);
@@ -129,6 +135,17 @@ describe("ShowService.addShow", () => {
         expect(result).toEqual(validShow);
         expect(searchServiceMocks.getByShowId).not.toHaveBeenCalled();
         expect(showRepoMocks.createShow).not.toHaveBeenCalled();
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("show.started", {actorUserId: "user-1", showId: 42});
+    });
+
+    it("does not notify when adding to the watchlist instead of the collection", async () => {
+        userListRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(false);
+        showRepoMocks.getShow.mockResolvedValue(validShow);
+        userListRepoMocks.create.mockResolvedValue(true);
+
+        await showService.addShow("user-1", 42, true);
+
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });
 
     it("fetches and persists the show from the search API when unknown locally", async () => {
@@ -328,13 +345,28 @@ describe("ShowService.addSeason", () => {
         );
     });
 
-    it("attaches the season directly when it already exists locally", async () => {
+    it("attaches the season directly when it already exists locally, and notifies friends when tracking is off", async () => {
         userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
         seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
         userSeasonRepoMocks.create.mockResolvedValue(true);
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
 
         await expect(showService.addSeason("user-1", 42, 1)).resolves.toBeUndefined();
         expect(searchServiceMocks.getSeasonByShowIdByNumber).not.toHaveBeenCalled();
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched", {
+            actorUserId: "user-1", showId: 42, metadata: {seasonNumber: 1},
+        });
+    });
+
+    it("stays silent when episode tracking is enabled - episode events cover it instead", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(true);
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+
+        await showService.addSeason("user-1", 42, 1);
+
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });
 
     it("fetches, creates and attaches the season when it doesn't exist locally yet", async () => {
@@ -405,6 +437,26 @@ describe("ShowService.updateByShowId", () => {
         const result = await showService.updateByShowId("user-1", 42, { addedAt: pastDate });
 
         expect(result).toBe(true);
+    });
+
+    it("sets the note and notifies friends", async () => {
+        userShowRepoMocks.updateNoteByUserIdByShowId.mockResolvedValue(true);
+
+        const result = await showService.updateByShowId("user-1", 42, { note: 3 });
+
+        expect(result).toBe(true);
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("show.rated", {
+            actorUserId: "user-1", showId: 42, metadata: {noteId: 3},
+        });
+    });
+
+    it("does not notify when setting the note fails", async () => {
+        userShowRepoMocks.updateNoteByUserIdByShowId.mockResolvedValue(false);
+
+        const result = await showService.updateByShowId("user-1", 42, { note: 3 });
+
+        expect(result).toBe(false);
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });
 });
 

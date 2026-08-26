@@ -85,13 +85,14 @@ export default class UserEpisodeRepository {
      * @returns {Promise<void>}
      */
     createIfMissing = async (userId, userSeasonId, episodeId, watchedAt, platformId) => {
-        await db.query(`
+        const res = await db.query(`
             INSERT INTO users_episodes (user_id, users_seasons_id, episode_id, watched_at, platform_id)
             SELECT $1, $2, $3, $4, $5
             WHERE NOT EXISTS (
                 SELECT 1 FROM users_episodes WHERE users_seasons_id = $2 AND episode_id = $3
             )
         `, [userId, userSeasonId, episodeId, watchedAt, platformId]);
+        return res.rowCount === 1;
     }
 
     /**
