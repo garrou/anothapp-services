@@ -28,7 +28,13 @@ const userRepoMocks = vi.hoisted(() => ({
 const searchServiceMocks = vi.hoisted(() => ({
     getEpisodesByShowIdBySeason: vi.fn(),
 }));
+const eventBusMocks = vi.hoisted(() => ({
+    emit: vi.fn(),
+}));
 
+vi.mock("../helpers/eventBus.js", () => ({
+    default: eventBusMocks,
+}));
 vi.mock("../repositories/episodeRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return episodeRepoMocks; }),
 }));
@@ -259,12 +265,18 @@ describe("EpisodeService.addViewing", () => {
         expect(userEpisodeRepoMocks.create).not.toHaveBeenCalled();
     });
 
-    it("creates the viewing when everything checks out", async () => {
+    it("creates the viewing when everything checks out and notifies friends", async () => {
         const past = new Date(Date.now() - 86400000).toISOString();
-        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1, showId: 42, seasonNumber: 1, date: past });
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({
+            id: 1, showId: 42, seasonNumber: 1, date: past, code: "S01E01", title: "Pilot",
+        });
 
         await expect(episodeService.addViewing("user-1", 7, 1)).resolves.toBeUndefined();
         expect(userEpisodeRepoMocks.create).toHaveBeenCalledWith("user-1", 7, 1, expect.any(String), 999);
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("episode.watched", {
+            actorUserId: "user-1", showId: 42,
+            metadata: {seasonNumber: 1, episodeCode: "S01E01", episodeTitle: "Pilot"},
+        });
     });
 
     it("throws a 500 when creation fails", async () => {
@@ -310,7 +322,7 @@ describe("EpisodeService.addAllViewings", () => {
         );
     });
 
-    it("creates a viewing for every already-aired episode of the season, skipping unaired ones", async () => {
+    it("creates a viewing for every already-aired episode of the season, skipping unaired ones, and notifies friends once", async () => {
         const past = new Date(Date.now() - 86400000).toISOString();
         const future = new Date(Date.now() + 86400000).toISOString();
         episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
@@ -318,11 +330,26 @@ describe("EpisodeService.addAllViewings", () => {
             { id: 2, date: future },
             { id: 3, date: null },
         ]);
+        userEpisodeRepoMocks.createIfMissing.mockResolvedValue(true);
 
         await expect(episodeService.addAllViewings("user-1", 7)).resolves.toBeUndefined();
 
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledTimes(1);
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 1, expect.any(String), 999);
+        expect(eventBusMocks.emit).toHaveBeenCalledTimes(1);
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("episode.bulk_watched", {
+            actorUserId: "user-1", showId: 42, metadata: {seasonNumber: 1, count: 1},
+        });
+    });
+
+    it("stays silent when every episode was already marked watched (createIfMissing no-ops)", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([{ id: 1, date: past }]);
+        userEpisodeRepoMocks.createIfMissing.mockResolvedValue(false);
+
+        await episodeService.addAllViewings("user-1", 7);
+
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });
 });
 

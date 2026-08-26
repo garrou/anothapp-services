@@ -1,6 +1,7 @@
 import FriendRepository from "../repositories/friendRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import {DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import eventBus from "../helpers/eventBus.js";
 
 export default class FriendService {
 
@@ -34,6 +35,7 @@ export default class FriendService {
         if (!send) {
             throw new ServiceError(500, "Impossible de demander cet utilisateur");
         }
+        eventBus.emit("friend.request", {recipientUserId: userId, actorUserId: currentUserId});
     }
 
     /**
@@ -51,6 +53,7 @@ export default class FriendService {
         if (!accepted) {
             throw new ServiceError(500, "Impossible d'accepter cette demande");
         }
+        eventBus.emit("friend.accepted", {recipientUserId: bodyUserId, actorUserId: currentUserId});
     }
 
     /**
@@ -66,6 +69,9 @@ export default class FriendService {
 
         if (!deleted) {
             throw new ServiceError(500, "Impossible de supprimer cet ami");
+        }
+        if (!deleted.wasAccepted && deleted.requesterId !== currentUserId) {
+            eventBus.emit("friend.declined", {recipientUserId: deleted.requesterId, actorUserId: currentUserId});
         }
     }
 

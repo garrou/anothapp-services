@@ -11,9 +11,15 @@ const friendRepoMocks = vi.hoisted(() => ({
     sendFriendRequest: vi.fn(),
     deleteFriend: vi.fn(),
 }));
+const eventBusMocks = vi.hoisted(() => ({
+    emit: vi.fn(),
+}));
 
 vi.mock("../repositories/friendRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return friendRepoMocks; }),
+}));
+vi.mock("../helpers/eventBus.js", () => ({
+    default: eventBusMocks,
 }));
 
 describe("FriendService.sendFriendRequest", () => {
@@ -40,12 +46,15 @@ describe("FriendService.sendFriendRequest", () => {
         expect(friendRepoMocks.sendFriendRequest).not.toHaveBeenCalled();
     });
 
-    it("sends the request when no relation exists yet", async () => {
+    it("sends the request when no relation exists yet and notifies the target", async () => {
         friendRepoMocks.checkIfRelationExists.mockResolvedValue(false);
         friendRepoMocks.sendFriendRequest.mockResolvedValue(true);
 
         await expect(friendService.sendFriendRequest("user-1", "user-2")).resolves.toBeUndefined();
         expect(friendRepoMocks.sendFriendRequest).toHaveBeenCalledWith("user-1", "user-2");
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("friend.request", {
+            recipientUserId: "user-2", actorUserId: "user-1",
+        });
     });
 
     it("throws a 500 when the insert fails in the database", async () => {
@@ -79,11 +88,14 @@ describe("FriendService.acceptFriend", () => {
         expect(friendRepoMocks.acceptFriend).not.toHaveBeenCalled();
     });
 
-    it("accepts the request when bodyUserId matches paramUserId", async () => {
+    it("accepts the request when bodyUserId matches paramUserId and notifies the original requester", async () => {
         friendRepoMocks.acceptFriend.mockResolvedValue(true);
 
         await expect(friendService.acceptFriend("user-1", "user-2", "user-2")).resolves.toBeUndefined();
         expect(friendRepoMocks.acceptFriend).toHaveBeenCalledWith("user-2", "user-1");
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("friend.accepted", {
+            recipientUserId: "user-2", actorUserId: "user-1",
+        });
     });
 
     it("throws a 500 when the update fails in the database", async () => {
@@ -109,18 +121,36 @@ describe("FriendService.deleteFriend", () => {
         );
     });
 
-    it("deletes the relation when it exists", async () => {
-        friendRepoMocks.deleteFriend.mockResolvedValue(true);
-
-        await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
-    });
-
     it("throws a 500 when nothing was deleted", async () => {
-        friendRepoMocks.deleteFriend.mockResolvedValue(false);
+        friendRepoMocks.deleteFriend.mockResolvedValue(null);
 
         await expect(friendService.deleteFriend("user-1", "user-2")).rejects.toThrow(
             "Impossible de supprimer cet ami"
         );
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
+    });
+
+    it("notifies the original requester when their pending request is declined", async () => {
+        friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: false});
+
+        await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("friend.declined", {
+            recipientUserId: "user-2", actorUserId: "user-1",
+        });
+    });
+
+    it("stays silent when cancelling your own pending sent request", async () => {
+        friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-1", wasAccepted: false});
+
+        await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
+    });
+
+    it("stays silent when removing an already-accepted friendship", async () => {
+        friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
+
+        await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });
 });
 

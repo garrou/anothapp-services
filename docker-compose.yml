@@ -6,7 +6,10 @@ services:
       - "8080:8080"
     restart: always
     env_file:
-      - docker.env
+      - template.env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: anothapp_db
     networks:
       - net
     depends_on:

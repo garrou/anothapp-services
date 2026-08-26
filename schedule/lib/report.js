@@ -49,6 +49,9 @@ const formatReport = (results) => {
     if (results.tokens) {
         lines.push(`${results.tokens.deleted} jeton(s) de renouvellement supprimé(s)`);
     }
+    if (results.notifications) {
+        lines.push(`${results.notifications.deleted} notification(s) supprimée(s)`);
+    }
     return lines.join("\n");
 };
 

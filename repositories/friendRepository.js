@@ -125,7 +125,8 @@ export default class FriendRepository {
         const res = await db.query(`
             DELETE FROM friends
             WHERE (fst_user_id = $1 AND sec_user_id = $2) OR (fst_user_id = $2 AND sec_user_id = $1)
+            RETURNING fst_user_id, accepted
         `, [userId, otherId]);
-        return res.rowCount === 1;
+        return res.rowCount === 1 ? {requesterId: res.rows[0]["fst_user_id"], wasAccepted: res.rows[0]["accepted"]} : null;
     }
 }

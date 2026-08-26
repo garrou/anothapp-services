@@ -11,6 +11,7 @@ import UserListRepository from "../repositories/userListRepository.js";
 import Validator from "../helpers/validator.js";
 import ParserHelper from "../helpers/parser.js";
 import {DUPLICATE_ERROR_CODE, ERROR_FAILED_ADD_SEASON, ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import eventBus from "../helpers/eventBus.js";
 
 export default class ShowService {
 
@@ -112,6 +113,9 @@ export default class ShowService {
         }
         if (!added) {
             throw new ServiceError(500, "Impossible d'ajouter la série");
+        }
+        if (!addInList) {
+            eventBus.emit("show.started", {actorUserId: currentUserId, showId});
         }
         return show;
     }
@@ -230,6 +234,11 @@ export default class ShowService {
         if (!added) {
             throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
         }
+        const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
+
+        if (!episodeTrackingEnabled) {
+            eventBus.emit("season.watched", {actorUserId: currentUserId, showId: id, metadata: {seasonNumber: num}});
+        }
     }
 
     /**
@@ -285,6 +294,10 @@ export default class ShowService {
             result = await this._userShowRepository.updateAddedAtByUserIdByShowId(currentUserId, id, addedAt);
         } else if (note) {
             result = await this._userShowRepository.updateNoteByUserIdByShowId(currentUserId, id, note);
+
+            if (result) {
+                eventBus.emit("show.rated", {actorUserId: currentUserId, showId: id, metadata: {noteId: note}});
+            }
         } else {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }

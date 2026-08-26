@@ -8,6 +8,7 @@ import Validator from "../helpers/validator.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import {MONTHS_SHORTCUTS} from "../constants/validation.js";
 import mapWithConcurrency from "../schedule/lib/concurrency.js";
+import eventBus from "../helpers/eventBus.js";
 
 const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
 
@@ -165,6 +166,11 @@ export default class EpisodeService {
         if (!created) {
             throw new ServiceError(500, "Impossible d'ajouter le visionnage");
         }
+        eventBus.emit("episode.watched", {
+            actorUserId: userId,
+            showId: season.showId,
+            metadata: {seasonNumber: season.number, episodeCode: episode.code, episodeTitle: episode.title},
+        });
     }
 
     /**
@@ -186,9 +192,18 @@ export default class EpisodeService {
         const aired = episodes.filter((e) => e.date && !Validator.isInFuture(e.date));
         const watchedAt = new Date().toISOString();
 
-        await Promise.all(aired.map((episode) =>
+        const created = await Promise.all(aired.map((episode) =>
             this._userEpisodeRepository.createIfMissing(userId, userSeasonId, episode.id, watchedAt, season.platformId)
         ));
+        const newlyWatchedCount = created.filter(Boolean).length;
+
+        if (newlyWatchedCount > 0) {
+            eventBus.emit("episode.bulk_watched", {
+                actorUserId: userId,
+                showId: season.showId,
+                metadata: {seasonNumber: season.number, count: newlyWatchedCount},
+            });
+        }
     }
 
     /**
