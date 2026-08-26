@@ -195,10 +195,6 @@ export default class EpisodeService {
         const created = await Promise.all(aired.map((episode) =>
             this._userEpisodeRepository.createIfMissing(userId, userSeasonId, episode.id, watchedAt, season.platformId)
         ));
-        // One aggregated event for the whole batch - a per-episode event
-        // would flood friends with dozens of rows for a single "mark all"
-        // click, and would misreport episodes that were already watched
-        // (createIfMissing no-ops on those, so they don't count here).
         const newlyWatchedCount = created.filter(Boolean).length;
 
         if (newlyWatchedCount > 0) {
