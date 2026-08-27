@@ -75,7 +75,7 @@ CREATE TABLE shows (
 
 CREATE TABLE users_shows (
     continue BOOLEAN NOT NULL DEFAULT TRUE,
-    added_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     user_id UUID,
     show_id INTEGER,
     favorite BOOLEAN NOT NULL DEFAULT FALSE,
@@ -97,7 +97,7 @@ CREATE TABLE seasons (
 
 CREATE TABLE users_seasons (
     id SERIAL,
-    added_at TIMESTAMP DEFAULT NOW(),
+    added_at TIMESTAMPTZ DEFAULT NOW(),
     user_id UUID,
     show_id INTEGER,
     platform_id INTEGER,
@@ -125,7 +125,7 @@ CREATE TABLE episodes (
 
 CREATE TABLE users_episodes (
     id SERIAL,
-    watched_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    watched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     user_id UUID NOT NULL,
     episode_id INTEGER NOT NULL,
     users_seasons_id INTEGER NOT NULL,
