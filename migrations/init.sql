@@ -44,7 +44,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     picture VARCHAR(255),
-    last_export TIMESTAMP,
+    last_export TIMESTAMPTZ,
     episode_tracking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     PRIMARY KEY(id)
 );
@@ -53,9 +53,9 @@ CREATE TABLE refresh_tokens (
     id UUID DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
     token_hash TEXT NOT NULL UNIQUE,
-    expires_at TIMESTAMP NOT NULL,
-    revoked_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY(id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -141,7 +141,7 @@ CREATE TABLE users_episodes (
 CREATE TABLE friends (
     fst_user_id UUID,
     sec_user_id UUID,
-    friend_at TIMESTAMP DEFAULT NOW(),
+    friend_at TIMESTAMPTZ DEFAULT NOW(),
     accepted BOOLEAN DEFAULT FALSE,
     PRIMARY KEY(fst_user_id, sec_user_id),
     FOREIGN KEY(fst_user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -171,8 +171,8 @@ CREATE TABLE notifications (
     type VARCHAR(50) NOT NULL,
     show_id INTEGER,
     metadata JSONB,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    read_at TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    read_at TIMESTAMPTZ,
     FOREIGN KEY(recipient_user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(actor_user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
