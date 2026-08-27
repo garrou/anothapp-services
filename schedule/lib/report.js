@@ -46,6 +46,9 @@ const formatReport = (results) => {
             failed.forEach((p) => lines.push(`    [${p.id} - ${p.name}] ${p.error}`));
         }
     }
+    if (results.reminders) {
+        lines.push(`${results.reminders.created} rappel(s) d'épisode créé(s)`);
+    }
     if (results.tokens) {
         lines.push(`${results.tokens.deleted} jeton(s) de renouvellement supprimé(s)`);
     }

@@ -73,6 +73,25 @@ export default class NotificationRepository {
     }
 
     /**
+     * @param {string} date YYYY-MM-DD
+     * @returns {Promise<number>}
+     */
+    createUpcomingEpisodeReminders = async (date) => {
+        const res = await db.query(`
+            INSERT INTO notifications (recipient_user_id, type, show_id, metadata)
+            SELECT us.user_id, 'episode_upcoming', s.id, jsonb_build_object('date', s.next_episode)
+            FROM shows s
+            JOIN users_shows us ON us.show_id = s.id
+            WHERE s.next_episode = $1 AND us.continue = TRUE AND NOT EXISTS (
+                SELECT 1 FROM notifications n
+                WHERE n.recipient_user_id = us.user_id AND n.show_id = s.id
+                AND n.type = 'episode_upcoming' AND n.metadata ->> 'date' = s.next_episode
+            )
+        `, [date]);
+        return res.rowCount;
+    }
+
+    /**
      * @param {number} days
      * @returns {Promise<number>}
      */

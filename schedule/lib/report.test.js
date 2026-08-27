@@ -68,4 +68,9 @@ describe("formatReport", () => {
         const report = formatReport({notifications: {deleted: 12}});
         expect(report).toBe("12 notification(s) supprimée(s)");
     });
+
+    it("formats reminders results", () => {
+        const report = formatReport({reminders: {created: 5}});
+        expect(report).toBe("5 rappel(s) d'épisode créé(s)");
+    });
 });

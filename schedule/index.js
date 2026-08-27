@@ -3,6 +3,7 @@ import updateShows from "./tasks/updateShows.js";
 import updateSeasons from "./tasks/updateSeasons.js";
 import updateEpisodes from "./tasks/updateEpisodes.js";
 import updatePlatforms from "./tasks/updatePlatforms.js";
+import remindUpcomingEpisodes from "./tasks/remindUpcomingEpisodes.js";
 import cleanupRefreshTokens from "./tasks/cleanupRefreshTokens.js";
 import cleanupNotifications from "./tasks/cleanupNotifications.js";
 import sendTelegramMessage from "./lib/notify.js";
@@ -13,6 +14,7 @@ const TASKS = {
     seasons: updateSeasons,
     episodes: updateEpisodes,
     platforms: updatePlatforms,
+    reminders: remindUpcomingEpisodes,
     tokens: cleanupRefreshTokens,
     notifications: cleanupNotifications,
 };
