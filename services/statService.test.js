@@ -22,6 +22,7 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getNbSeasonsByUserIdGroupByMonth: vi.fn(),
     getRankingViewingTimeByShows: vi.fn(),
     getPlatformsByUserId: vi.fn(),
+    getWatchedDatesByUserId: vi.fn(),
     getTotalTimeByUserIdByYear: vi.fn(),
     getTotalEpisodesByUserIdByYear: vi.fn(),
     getTopShowByUserIdByYear: vi.fn(),
@@ -45,6 +46,7 @@ const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getNbEpisodesByUserIdGroupByYear: vi.fn(),
     getRankingViewingTimeByShows: vi.fn(),
     getWatchedByDay: vi.fn(),
+    getWatchedDatesByUserId: vi.fn(),
 }));
 const userRepoMocks = vi.hoisted(() => ({
     hasEpisodeTrackingEnabled: vi.fn(),
@@ -96,6 +98,7 @@ describe("StatService.getStats", () => {
             repo.getTimeHourByUserIdGroupByYear.mockResolvedValue([]);
             repo.getNbEpisodesByUserIdGroupByYear.mockResolvedValue([]);
             repo.getRankingViewingTimeByShows.mockResolvedValue([]);
+            repo.getWatchedDatesByUserId.mockResolvedValue([]);
         }
     });
 
@@ -132,6 +135,24 @@ describe("StatService.getStats", () => {
         expect(stats.nbSeasons).toBe(20);
         expect(stats.nbSeries).toBe(10);
         expect(userSeasonRepoMocks.getTotalSeasonsByUserId).toHaveBeenCalledWith("user-1");
+    });
+
+    it("computes the current/longest streak from the watched dates of the active repo", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-08-27T12:00:00Z"));
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(
+            ["2026-08-25", "2026-08-26", "2026-08-27"]
+        );
+
+        const stats = await statService.getStats("user-1");
+
+        expect(stats.currentStreak).toBe(3);
+        expect(stats.longestStreak).toBe(3);
+        expect(userEpisodeStatRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-1");
+        expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalled();
+
+        vi.useRealTimers();
     });
 
     it("rejects with a 400 when requesting a friendId that isn't actually a friend", async () => {

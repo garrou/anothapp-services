@@ -6,6 +6,7 @@ import FriendRepository from "../repositories/friendRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import Stat from "../models/stat.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {computeStreak} from "../helpers/streak.js";
 
 export default class StatService {
     constructor() {
@@ -34,7 +35,7 @@ export default class StatService {
             monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes, bestMonthRows,
             seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
             episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
-            seasonsPlatforms, seriesCountries, seriesNotes
+            seasonsPlatforms, seriesCountries, seriesNotes, watchedDates
         ] = await Promise.all([
             repo.getTimeCurrentMonthByUserId(userId),
             repo.getTotalTimeByUserId(userId),
@@ -54,14 +55,16 @@ export default class StatService {
             this._userSeasonRepository.getPlatformsByUserId(userId),
             this._userShowRepository.getCountriesByUserId(userId, 200),
             this._userShowRepository.getNotesByUserId(userId),
+            repo.getWatchedDatesByUserId(userId),
         ]);
+        const {current: currentStreak, longest: longestStreak} = computeStreak(watchedDates);
 
         const stats = {
             monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes,
             "bestMonth": bestMonthRows[0],
             seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
             episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
-            seasonsPlatforms, seriesCountries, seriesNotes
+            seasonsPlatforms, seriesCountries, seriesNotes, currentStreak, longestStreak
         };
         if (episodeTrackingEnabled) {
             stats.episodesHeatmap = await this._userEpisodeStatRepository.getWatchedByDay(userId);
