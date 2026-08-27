@@ -24,6 +24,7 @@ const userShowRepoMocks = vi.hoisted(() => ({
     updateWatchingByUserIdByShowId: vi.fn(),
     updateAddedAtByUserIdByShowId: vi.fn(),
     updateNoteByUserIdByShowId: vi.fn(),
+    getRecommendationsByUserId: vi.fn(),
 }));
 const userListRepoMocks = vi.hoisted(() => ({
     checkShowExistsByUserIdByShowId: vi.fn(),
@@ -542,5 +543,24 @@ describe("ShowService.getShowById", () => {
         expect(result).toEqual({seasons: ["season"], time: 135, episodes: 3, distinctEpisodes: 2});
         expect(episodeServiceMocks.getWatchedTimeAndCountByShowId).toHaveBeenCalledWith("user-1", 42);
         expect(userSeasonRepoMocks.getTimeEpisodesByUserIdByShowId).not.toHaveBeenCalled();
+    });
+});
+
+describe("ShowService.getRecommendations", () => {
+    let showService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        showService = new ShowService();
+    });
+
+    it("delegates to the repository for the current user", async () => {
+        const recommendations = [{id: 1, title: "Dark", nbFriends: 2, avgNote: 4.5}];
+        userShowRepoMocks.getRecommendationsByUserId.mockResolvedValue(recommendations);
+
+        const result = await showService.getRecommendations("user-1");
+
+        expect(result).toBe(recommendations);
+        expect(userShowRepoMocks.getRecommendationsByUserId).toHaveBeenCalledWith("user-1");
     });
 });

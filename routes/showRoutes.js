@@ -8,6 +8,8 @@ router.post("/", showController.addShow);
 
 router.get("/", showController.getShows);
 
+router.get("/recommendations", showController.getRecommendations);
+
 router.get("/:id", showController.getShow);
 
 router.delete("/:id", showController.deleteByShowId);

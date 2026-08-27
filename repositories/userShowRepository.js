@@ -1,6 +1,7 @@
 import db from "../config/db.js";
 import Stat from "../models/stat.js";
 import UserShow from "../models/userShow.js";
+import Recommendation from "../models/recommendation.js";
 
 export default class UserShowRepository {
 
@@ -407,6 +408,29 @@ export default class UserShowRepository {
             ORDER BY s.title
         `, [userId, friendId]);
         return res.rows.map((row) => new UserShow(row));
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} limit
+     * @returns {Promise<Recommendation[]>}
+     */
+    getRecommendationsByUserId = async (userId, limit = 10) => {
+        const res = await db.query(`
+            SELECT s.*, COUNT(DISTINCT us.user_id) AS nb_friends, AVG(us.note_id) AS avg_note
+            FROM users_shows us
+            JOIN shows s ON s.id = us.show_id
+            JOIN friends f ON (f.fst_user_id = $1 AND f.sec_user_id = us.user_id)
+                OR (f.sec_user_id = $1 AND f.fst_user_id = us.user_id)
+            WHERE f.accepted = TRUE
+                AND us.note_id > 3
+                AND us.show_id NOT IN (SELECT show_id FROM users_shows WHERE user_id = $1)
+                AND us.show_id NOT IN (SELECT show_id FROM users_list WHERE user_id = $1)
+            GROUP BY s.id
+            ORDER BY nb_friends DESC, avg_note DESC
+            LIMIT $2
+        `, [userId, limit]);
+        return res.rows.map((row) => new Recommendation(row));
     }
 
     /**
