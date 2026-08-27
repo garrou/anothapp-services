@@ -250,6 +250,20 @@ export default class UserEpisodeStatRepository {
 
     /**
      * @param {string} userId
+     * @param {number} year
+     * @returns {Promise<string[]>} distinct days ('YYYY-MM-DD') the user watched at least one episode that year
+     */
+    getWatchedDatesByUserIdByYear = async (userId, year) => {
+        const res = await db.query(`
+            SELECT DISTINCT TO_CHAR(watched_at, 'YYYY-MM-DD') AS date
+            FROM users_episodes
+            WHERE user_id = $1 AND EXTRACT(YEAR FROM watched_at) = $2
+        `, [userId, year]);
+        return res.rows.map((row) => row["date"]);
+    }
+
+    /**
+     * @param {string} userId
      * @returns {Promise<{date: string, value: number}[]>}
      */
     getWatchedByDay = async (userId) => {

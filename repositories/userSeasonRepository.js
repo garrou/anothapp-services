@@ -483,4 +483,18 @@ export default class UserSeasonRepository {
         `, [userId]);
         return res.rows.map((row) => row["date"]);
     }
+
+    /**
+     * @param {string} userId
+     * @param {number} year
+     * @returns {Promise<string[]>} distinct days ('YYYY-MM-DD') the user logged a watched season that year
+     */
+    getWatchedDatesByUserIdByYear = async (userId, year) => {
+        const res = await db.query(`
+            SELECT DISTINCT TO_CHAR(added_at, 'YYYY-MM-DD') AS date
+            FROM users_seasons
+            WHERE user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
+        `, [userId, year]);
+        return res.rows.map((row) => row["date"]);
+    }
 }

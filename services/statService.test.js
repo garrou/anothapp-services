@@ -29,6 +29,7 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getKindsTimeByUserIdByYear: vi.fn(),
     getTopPlatformByUserIdByYear: vi.fn(),
     getBestMonthByUserIdByYear: vi.fn(),
+    getWatchedDatesByUserIdByYear: vi.fn(),
 }));
 const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getTimeCurrentMonthByUserId: vi.fn(),
@@ -47,6 +48,7 @@ const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getRankingViewingTimeByShows: vi.fn(),
     getWatchedByDay: vi.fn(),
     getWatchedDatesByUserId: vi.fn(),
+    getWatchedDatesByUserIdByYear: vi.fn(),
 }));
 const userRepoMocks = vi.hoisted(() => ({
     hasEpisodeTrackingEnabled: vi.fn(),
@@ -198,6 +200,7 @@ describe("StatService.getWrapped", () => {
             repo.getKindsTimeByUserIdByYear.mockResolvedValue([]);
             repo.getTopPlatformByUserIdByYear.mockResolvedValue(null);
             repo.getBestMonthByUserIdByYear.mockResolvedValue(null);
+            repo.getWatchedDatesByUserIdByYear.mockResolvedValue([]);
         }
     });
 
@@ -223,6 +226,19 @@ describe("StatService.getWrapped", () => {
         expect(wrapped.totalTime).toBe(1234);
         expect(userEpisodeStatRepoMocks.getTotalTimeByUserIdByYear).toHaveBeenCalledWith("user-1", 2024);
         expect(userSeasonRepoMocks.getTotalTimeByUserIdByYear).not.toHaveBeenCalled();
+    });
+
+    it("computes the longest streak of the year from the watched dates of the active repo", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserIdByYear.mockResolvedValue(
+            ["2024-07-01", "2024-07-02", "2024-07-03", "2024-11-20"]
+        );
+
+        const wrapped = await statService.getWrapped("user-1", 2024);
+
+        expect(wrapped.bestStreak).toBe(3);
+        expect(userEpisodeStatRepoMocks.getWatchedDatesByUserIdByYear).toHaveBeenCalledWith("user-1", 2024);
+        expect(userSeasonRepoMocks.getWatchedDatesByUserIdByYear).not.toHaveBeenCalled();
     });
 
     it("sources data from users_seasons when episode tracking is disabled", async () => {
