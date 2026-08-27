@@ -1,5 +1,6 @@
 import db from "../config/db.js";
 import Stat from "../models/stat.js";
+import {frenchMonth} from "../helpers/utils.js";
 
 export default class UserEpisodeStatRepository {
 
@@ -120,13 +121,13 @@ export default class UserEpisodeStatRepository {
      */
     getNbEpisodesByUserIdGroupByMonthByCurrentYear = async (userId) => {
         const res = await db.query(`
-            SELECT EXTRACT(MONTH FROM watched_at) AS num, TO_CHAR(watched_at, 'Mon') AS label, COUNT(*) AS value
+            SELECT EXTRACT(MONTH FROM watched_at) AS num, COUNT(*) AS value
             FROM users_episodes
             WHERE user_id = $1 AND EXTRACT(YEAR FROM watched_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-            GROUP BY num, label
+            GROUP BY num
             ORDER BY num
         `, [userId]);
-        return res.rows.map((row) => new Stat(row));
+        return res.rows.map((row) => Stat.from(frenchMonth(row["num"]), row["value"]));
     }
 
     /**
@@ -222,16 +223,16 @@ export default class UserEpisodeStatRepository {
      */
     getBestMonthByUserIdByYear = async (userId, year) => {
         const res = await db.query(`
-            SELECT TO_CHAR(ue.watched_at, 'Month') AS label, SUM(COALESCE(e.length, s.duration)) AS value
+            SELECT EXTRACT(MONTH FROM ue.watched_at) AS num, SUM(COALESCE(e.length, s.duration)) AS value
             FROM users_episodes ue
             JOIN episodes e ON ue.episode_id = e.id
             JOIN shows s ON s.id = e.show_id
             WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
-            GROUP BY label
+            GROUP BY num
             ORDER BY value DESC
             LIMIT 1
         `, [userId, year]);
-        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
+        return res.rowCount === 1 ? Stat.from(frenchMonth(res.rows[0]["num"]), res.rows[0]["value"]) : null;
     }
 
     /**

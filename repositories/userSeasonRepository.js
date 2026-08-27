@@ -1,5 +1,5 @@
 import db from "../config/db.js";
-import {cumulate} from "../helpers/utils.js";
+import {cumulate, frenchMonth} from "../helpers/utils.js";
 import Season from "../models/season.js";
 import {PartialUserSeason, UserSeason} from "../models/userSeason.js";
 import SeasonTimeline from "../models/seasonTimeline.js";
@@ -194,13 +194,13 @@ export default class UserSeasonRepository {
      */
     getNbSeasonsByUserIdGroupByMonth = async (userId) => {
         const res = await db.query(`
-            SELECT EXTRACT(MONTH FROM added_at) AS num, TO_CHAR(added_at, 'Mon') AS label, COUNT(*) AS value
+            SELECT EXTRACT(MONTH FROM added_at) AS num, COUNT(*) AS value
             FROM users_seasons
             WHERE users_seasons.user_id = $1
-            GROUP BY num, label
+            GROUP BY num
             ORDER BY num
         `, [userId]);
-        return res.rows.map((row) => new Stat(row));
+        return res.rows.map((row) => Stat.from(frenchMonth(row["num"]), row["value"]));
     }
 
     /**
@@ -324,13 +324,13 @@ export default class UserSeasonRepository {
      */
     getNbSeasonsByUserIdGroupByMonthByCurrentYear = async (userId)  => {
         const res = await db.query(`
-            SELECT EXTRACT(MONTH FROM added_at) AS num, TO_CHAR(added_at, 'Mon') AS label, COUNT(*) AS value
+            SELECT EXTRACT(MONTH FROM added_at) AS num, COUNT(*) AS value
             FROM users_seasons
             WHERE users_seasons.user_id = $1 AND EXTRACT (YEAR FROM added_at) = EXTRACT (YEAR FROM CURRENT_DATE)
-            GROUP BY num, label
+            GROUP BY num
             ORDER BY num
         `, [userId]);
-        return res.rows.map((row) => new Stat(row));
+        return res.rows.map((row) => Stat.from(frenchMonth(row["num"]), row["value"]));
     }
 
     /**
@@ -339,14 +339,14 @@ export default class UserSeasonRepository {
      */
     getNbEpisodesByUserIdGroupByMonthByCurrentYear = async (userId)  => {
         const res = await db.query(`
-            SELECT EXTRACT(MONTH FROM added_at) AS num, TO_CHAR(added_at, 'Mon') AS label, SUM(episodes) AS value
+            SELECT EXTRACT(MONTH FROM added_at) AS num, SUM(episodes) AS value
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id
             WHERE users_seasons.number = seasons.number AND EXTRACT (YEAR FROM added_at) = EXTRACT (YEAR FROM current_date) AND users_seasons.user_id = $1
-            GROUP BY num, label
+            GROUP BY num
             ORDER BY num
         `, [userId]);
-        return res.rows.map((row) => new Stat(row));
+        return res.rows.map((row) => Stat.from(frenchMonth(row["num"]), row["value"]));
     }
 
     /**
@@ -441,16 +441,16 @@ export default class UserSeasonRepository {
      */
     getBestMonthByUserIdByYear = async (userId, year) => {
         const res = await db.query(`
-            SELECT TO_CHAR(added_at, 'Month') AS label, SUM(shows.duration * episodes) AS value
+            SELECT EXTRACT(MONTH FROM added_at) AS num, SUM(shows.duration * episodes) AS value
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
             WHERE users_seasons.user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
-            GROUP BY label
+            GROUP BY num
             ORDER BY value DESC
             LIMIT 1
         `, [userId, year]);
-        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
+        return res.rowCount === 1 ? Stat.from(frenchMonth(res.rows[0]["num"]), res.rows[0]["value"]) : null;
     }
 
     /**

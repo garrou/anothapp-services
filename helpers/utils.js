@@ -13,8 +13,20 @@ const isDevMode = () => process.env.MODE === 'dev';
 
 const isProdMode = () => !isDevMode();
 
+const MONTHS_FR = [
+    "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+];
+
+/**
+ * @param {number|string} month 1-12
+ * @returns {string}
+ */
+const frenchMonth = (month) => MONTHS_FR[parseInt(month) - 1] ?? "";
+
 export {
     cumulate,
+    frenchMonth,
     isDevMode,
     isProdMode
 }
