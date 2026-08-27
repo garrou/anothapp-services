@@ -15,4 +15,14 @@ export default class StatController {
         }
     }
 
+    getWrapped = async (req, res, next) => {
+        try {
+            const {year} = req.query;
+            const wrapped = await this._statService.getWrapped(req.userId, year);
+            res.status(200).json(wrapped);
+        } catch (e) {
+            next(e);
+        }
+    }
+
 }

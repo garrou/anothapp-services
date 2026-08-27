@@ -131,6 +131,111 @@ export default class UserEpisodeStatRepository {
 
     /**
      * @param {string} userId
+     * @param {number} year
+     * @returns {Promise<number>}
+     */
+    getTotalTimeByUserIdByYear = async (userId, year) => {
+        const res = await db.query(`
+            SELECT SUM(COALESCE(e.length, s.duration)) AS time
+            FROM users_episodes ue
+            JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
+            WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
+        `, [userId, year]);
+        return parseInt(res.rows[0]["time"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} year
+     * @returns {Promise<number>}
+     */
+    getTotalEpisodesByUserIdByYear = async (userId, year) => {
+        const res = await db.query(`
+            SELECT COUNT(*) AS total FROM users_episodes
+            WHERE user_id = $1 AND EXTRACT(YEAR FROM watched_at) = $2
+        `, [userId, year]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} year
+     * @returns {Promise<Stat|null>} the show watched the most (by minutes) that year
+     */
+    getTopShowByUserIdByYear = async (userId, year) => {
+        const res = await db.query(`
+            SELECT shows.title AS label, SUM(COALESCE(e.length, shows.duration)) AS value
+            FROM users_episodes ue
+            JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows ON shows.id = e.show_id
+            WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
+            GROUP BY label
+            ORDER BY value DESC
+            LIMIT 1
+        `, [userId, year]);
+        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
+    }
+
+    /**
+     * Per-show kinds (semicolon-separated) with minutes watched that year, for
+     * the caller to split and accumulate per kind - kinds live on the show,
+     * not per-episode, so they can't be summed directly in SQL.
+     * @param {string} userId
+     * @param {number} year
+     * @returns {Promise<{kinds: string, value: number}[]>}
+     */
+    getKindsTimeByUserIdByYear = async (userId, year) => {
+        const res = await db.query(`
+            SELECT shows.kinds AS kinds, SUM(COALESCE(e.length, shows.duration)) AS value
+            FROM users_episodes ue
+            JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows ON shows.id = e.show_id
+            WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
+            GROUP BY shows.id, kinds
+        `, [userId, year]);
+        return res.rows.map((row) => ({kinds: row["kinds"], value: parseInt(row["value"])}));
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} year
+     * @returns {Promise<Stat|null>} the platform used the most that year
+     */
+    getTopPlatformByUserIdByYear = async (userId, year) => {
+        const res = await db.query(`
+            SELECT p.name AS label, COUNT(*) AS value
+            FROM users_episodes ue
+            JOIN platforms p ON p.id = ue.platform_id
+            WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
+            GROUP BY label
+            ORDER BY value DESC
+            LIMIT 1
+        `, [userId, year]);
+        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} year
+     * @returns {Promise<Stat|null>} the month watched the most (by minutes) within that year
+     */
+    getBestMonthByUserIdByYear = async (userId, year) => {
+        const res = await db.query(`
+            SELECT TO_CHAR(ue.watched_at, 'Month') AS label, SUM(COALESCE(e.length, s.duration)) AS value
+            FROM users_episodes ue
+            JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
+            WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
+            GROUP BY label
+            ORDER BY value DESC
+            LIMIT 1
+        `, [userId, year]);
+        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
+    }
+
+    /**
+     * @param {string} userId
      * @returns {Promise<{date: string, value: number}[]>}
      */
     getWatchedByDay = async (userId) => {

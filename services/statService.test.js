@@ -6,6 +6,7 @@ const userShowRepoMocks = vi.hoisted(() => ({
     getCountriesByUserId: vi.fn(),
     getNotesByUserId: vi.fn(),
     getKindsByUserId: vi.fn(),
+    getNbShowsAddedByUserIdByYear: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
     getTimeCurrentMonthByUserId: vi.fn(),
@@ -21,6 +22,12 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getNbSeasonsByUserIdGroupByMonth: vi.fn(),
     getRankingViewingTimeByShows: vi.fn(),
     getPlatformsByUserId: vi.fn(),
+    getTotalTimeByUserIdByYear: vi.fn(),
+    getTotalEpisodesByUserIdByYear: vi.fn(),
+    getTopShowByUserIdByYear: vi.fn(),
+    getKindsTimeByUserIdByYear: vi.fn(),
+    getTopPlatformByUserIdByYear: vi.fn(),
+    getBestMonthByUserIdByYear: vi.fn(),
 }));
 const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getTimeCurrentMonthByUserId: vi.fn(),
@@ -28,6 +35,12 @@ const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getTotalEpisodesByUserId: vi.fn(),
     getRecordViewingTimeMonth: vi.fn(),
     getNbEpisodesByUserIdGroupByMonthByCurrentYear: vi.fn(),
+    getTotalTimeByUserIdByYear: vi.fn(),
+    getTotalEpisodesByUserIdByYear: vi.fn(),
+    getTopShowByUserIdByYear: vi.fn(),
+    getKindsTimeByUserIdByYear: vi.fn(),
+    getTopPlatformByUserIdByYear: vi.fn(),
+    getBestMonthByUserIdByYear: vi.fn(),
     getTimeHourByUserIdGroupByYear: vi.fn(),
     getNbEpisodesByUserIdGroupByYear: vi.fn(),
     getRankingViewingTimeByShows: vi.fn(),
@@ -146,5 +159,81 @@ describe("StatService.getStats", () => {
         await statService.getStats("user-1", "user-1");
 
         expect(friendRepoMocks.checkIfAlreadyFriend).not.toHaveBeenCalled();
+    });
+});
+
+describe("StatService.getWrapped", () => {
+    let statService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        statService = new StatService();
+        userShowRepoMocks.getNbShowsAddedByUserIdByYear.mockResolvedValue(0);
+
+        for (const repo of [userSeasonRepoMocks, userEpisodeStatRepoMocks]) {
+            repo.getTotalTimeByUserIdByYear.mockResolvedValue(0);
+            repo.getTotalEpisodesByUserIdByYear.mockResolvedValue(0);
+            repo.getTopShowByUserIdByYear.mockResolvedValue(null);
+            repo.getKindsTimeByUserIdByYear.mockResolvedValue([]);
+            repo.getTopPlatformByUserIdByYear.mockResolvedValue(null);
+            repo.getBestMonthByUserIdByYear.mockResolvedValue(null);
+        }
+    });
+
+    it("rejects a non-numeric year", async () => {
+        await expect(statService.getWrapped("user-1", "abc")).rejects.toThrow("Requête invalide");
+    });
+
+    it("rejects a year before 2000", async () => {
+        await expect(statService.getWrapped("user-1", 1999)).rejects.toThrow("Requête invalide");
+    });
+
+    it("rejects a year in the future", async () => {
+        await expect(statService.getWrapped("user-1", new Date().getFullYear() + 1)).rejects.toThrow("Requête invalide");
+    });
+
+    it("sources data from users_episodes when episode tracking is enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userEpisodeStatRepoMocks.getTotalTimeByUserIdByYear.mockResolvedValue(1234);
+
+        const wrapped = await statService.getWrapped("user-1", 2024);
+
+        expect(wrapped.year).toBe(2024);
+        expect(wrapped.totalTime).toBe(1234);
+        expect(userEpisodeStatRepoMocks.getTotalTimeByUserIdByYear).toHaveBeenCalledWith("user-1", 2024);
+        expect(userSeasonRepoMocks.getTotalTimeByUserIdByYear).not.toHaveBeenCalled();
+    });
+
+    it("sources data from users_seasons when episode tracking is disabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+        userSeasonRepoMocks.getTotalTimeByUserIdByYear.mockResolvedValue(5678);
+
+        const wrapped = await statService.getWrapped("user-1", 2024);
+
+        expect(wrapped.totalTime).toBe(5678);
+        expect(userSeasonRepoMocks.getTotalTimeByUserIdByYear).toHaveBeenCalledWith("user-1", 2024);
+        expect(userEpisodeStatRepoMocks.getTotalTimeByUserIdByYear).not.toHaveBeenCalled();
+    });
+
+    it("picks the kind with the most accumulated minutes across shows", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userEpisodeStatRepoMocks.getKindsTimeByUserIdByYear.mockResolvedValue([
+            {kinds: "Drame;Thriller", value: 100},
+            {kinds: "Comédie", value: 50},
+            {kinds: "Thriller", value: 80},
+        ]);
+
+        const wrapped = await statService.getWrapped("user-1", 2024);
+
+        // Thriller: 100 + 80 = 180, Drame: 100, Comédie: 50
+        expect(wrapped.topKind).toEqual({id: 0, label: "Thriller", value: 180});
+    });
+
+    it("returns a null topKind when nothing was watched that year", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+
+        const wrapped = await statService.getWrapped("user-1", 2024);
+
+        expect(wrapped.topKind).toBeNull();
     });
 });
