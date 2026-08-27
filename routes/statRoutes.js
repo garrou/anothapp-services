@@ -6,4 +6,6 @@ const statController = new StatController();
 
 router.get("/", statController.getStats);
 
+router.get("/wrapped", statController.getWrapped);
+
 export default router;

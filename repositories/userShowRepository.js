@@ -110,6 +110,20 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
+     * @param {number} year
+     * @returns Promise<number>
+     */
+    getNbShowsAddedByUserIdByYear = async (userId, year) => {
+        const res = await db.query(`
+            SELECT COUNT(*) AS total
+            FROM users_shows
+            WHERE user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
+        `, [userId, year]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
      * @param {number} showId
      * @returns {Promise<boolean>}
      */
