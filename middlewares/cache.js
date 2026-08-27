@@ -21,7 +21,10 @@ export default (duration, eachUser = false) => (req, res, next) => {
         res.originalJson = res.json;
         res.json = (body) => {
             res.originalJson(body);
-            cache.set(key, body, duration);
+
+            if (res.statusCode < 400) {
+                cache.set(key, body, duration);
+            }
         }
         next();
     }

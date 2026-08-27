@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import cacheMiddleware from "./cache.js";
 
-const buildRes = () => ({
+const buildRes = (statusCode = 200) => ({
+    statusCode,
     json: vi.fn((body) => body),
 });
 
@@ -50,6 +51,28 @@ describe("cache middleware", () => {
 
         expect(next2).not.toHaveBeenCalled();
         expect(res2.json).toHaveBeenCalledWith({ id: 1, title: "Breaking Bad" });
+    });
+
+    it("does not cache an error response, so the next request retries instead of replaying the failure", () => {
+        const middleware = cacheMiddleware(1000);
+        const url = "/shows/error-test-1";
+
+        // first request: the upstream call failed, controller sends a 4xx/5xx body
+        const req1 = { method: "GET", originalUrl: url };
+        const res1 = buildRes(500);
+        middleware(req1, res1, vi.fn());
+        res1.json({ message: "Request failed with status code 403" });
+
+        // second request: should be a miss again, not served the cached error
+        const req2 = { method: "GET", originalUrl: url };
+        const res2 = buildRes();
+        const next2 = vi.fn();
+        const originalJson2 = res2.json;
+
+        middleware(req2, res2, next2);
+
+        expect(next2).toHaveBeenCalledWith();
+        expect(res2.json).not.toBe(originalJson2);
     });
 
     it("keys the cache per user when eachUser is true, so two users don't share an entry", () => {
