@@ -309,4 +309,12 @@ export default class ShowService {
         }
         return result;
     }
+
+    /**
+     * @param {string} currentUserId
+     * @returns {Promise<Recommendation[]>}
+     */
+    getRecommendations = async (currentUserId) => {
+        return this._userShowRepository.getRecommendationsByUserId(currentUserId);
+    }
 }

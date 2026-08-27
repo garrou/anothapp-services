@@ -45,6 +45,15 @@ export default class ShowController {
         }
     }
 
+    getRecommendations = async (req, res, next) => {
+        try {
+            const recommendations = await this._showService.getRecommendations(req.userId);
+            res.status(200).json(recommendations);
+        } catch (e) {
+            next(e);
+        }
+    }
+
     addSeasonByShowId = async (req, res, next) => {
         try {
             const {id, num} = req.body;
