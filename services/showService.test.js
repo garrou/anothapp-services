@@ -13,6 +13,8 @@ const userShowRepoMocks = vi.hoisted(() => ({
     getShowsToResumeByUserIdEpisodes: vi.fn(),
     getShowsToContinueByUserId: vi.fn(),
     getShowsToContinueByUserIdEpisodes: vi.fn(),
+    getShowsFinishedByUserId: vi.fn(),
+    getShowsFinishedByUserIdEpisodes: vi.fn(),
     getFavoritesByUserId: vi.fn(),
     getShowsWithNextEpisode: vi.fn(),
     getSharedShowsWithFriend: vi.fn(),
@@ -256,6 +258,26 @@ describe("ShowService.getShows", () => {
 
         expect(result).toEqual(["stopped-show-episodes"]);
         expect(userShowRepoMocks.getShowsToResumeByUserId).not.toHaveBeenCalled();
+    });
+
+    it("delegates to the season-based lookup for 'finished' when episode tracking is disabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+        userShowRepoMocks.getShowsFinishedByUserId.mockResolvedValue(["finished-show"]);
+
+        const result = await showService.getShows("user-1", { status: "finished" });
+
+        expect(result).toEqual(["finished-show"]);
+        expect(userShowRepoMocks.getShowsFinishedByUserIdEpisodes).not.toHaveBeenCalled();
+    });
+
+    it("delegates to the episode-based lookup for 'finished' when episode tracking is enabled", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userShowRepoMocks.getShowsFinishedByUserIdEpisodes.mockResolvedValue(["finished-show-episodes"]);
+
+        const result = await showService.getShows("user-1", { status: "finished" });
+
+        expect(result).toEqual(["finished-show-episodes"]);
+        expect(userShowRepoMocks.getShowsFinishedByUserId).not.toHaveBeenCalled();
     });
 
     it("delegates to the season-based lookup for 'continue' when episode tracking is disabled", async () => {

@@ -43,6 +43,12 @@ export default class ShowService {
             }
             case "watchlist":
                 return this._userListRepository.getListShowsByUserId(userId);
+            case "finished": {
+                const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
+                return episodeTrackingEnabled
+                    ? this._userShowRepository.getShowsFinishedByUserIdEpisodes(userId)
+                    : this._userShowRepository.getShowsFinishedByUserId(userId);
+            }
             case "continue": {
                 const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
                 return episodeTrackingEnabled

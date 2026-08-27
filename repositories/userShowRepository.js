@@ -211,6 +211,47 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
+     * @returns Promise<UserShow[]>
+     */
+    getShowsFinishedByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT s.*, us.*
+            FROM shows s
+            JOIN users_shows us ON us.show_id = s.id
+            WHERE us.user_id = $1 AND s.finished = TRUE AND s.seasons - (
+                SELECT COUNT(DISTINCT users_seasons.number)
+                FROM users_seasons
+                WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
+            ) = 0
+            ORDER BY s.title
+        `, [userId]);
+        return res.rows.map((row) => new UserShow(row));
+    }
+
+    /**
+     * @param {string} userId
+     * @returns Promise<UserShow[]>
+     */
+    getShowsFinishedByUserIdEpisodes = async (userId) => {
+        const res = await db.query(`
+            SELECT s.*, us.*
+            FROM shows s
+            JOIN users_shows us ON us.show_id = s.id
+            WHERE us.user_id = $1 AND s.finished = TRUE AND (
+                SELECT COALESCE(SUM(seasons.episodes), 0) FROM seasons WHERE seasons.show_id = s.id
+            ) - (
+                SELECT COUNT(DISTINCT ue.episode_id)
+                FROM users_episodes ue
+                JOIN users_seasons uss ON uss.id = ue.users_seasons_id
+                WHERE uss.user_id = $1 AND uss.show_id = s.id
+            ) = 0
+            ORDER BY s.title
+        `, [userId]);
+        return res.rows.map((row) => new UserShow(row));
+    }
+
+    /**
+     * @param {string} userId
      * @returns Promise<any[]>
      */
     getKindsByUserId = async (userId) => {
