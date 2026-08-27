@@ -417,9 +417,11 @@ export default class UserShowRepository {
      */
     getRecommendationsByUserId = async (userId, limit = 10) => {
         const res = await db.query(`
-            SELECT s.*, COUNT(DISTINCT us.user_id) AS nb_friends, AVG(us.note_id) AS avg_note
+            SELECT s.*, COUNT(DISTINCT us.user_id) AS nb_friends, AVG(us.note_id) AS avg_note,
+                json_agg(json_build_object('id', u.id, 'username', u.username, 'picture', u.picture)) AS friends
             FROM users_shows us
             JOIN shows s ON s.id = us.show_id
+            JOIN users u ON u.id = us.user_id
             JOIN friends f ON (f.fst_user_id = $1 AND f.sec_user_id = us.user_id)
                 OR (f.sec_user_id = $1 AND f.fst_user_id = us.user_id)
             WHERE f.accepted = TRUE

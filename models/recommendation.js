@@ -13,5 +13,6 @@ export default class Recommendation {
         this.country = obj.country;
         this.nbFriends = parseInt(obj["nb_friends"]);
         this.avgNote = parseFloat(obj["avg_note"]);
+        this.friends = obj.friends;
     }
 }
