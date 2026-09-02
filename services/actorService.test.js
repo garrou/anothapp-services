@@ -87,11 +87,9 @@ describe("ActorService.addFavorite", () => {
         });
     });
 
-    it("fetches and persists the actor from the search API when unknown locally", async () => {
+    it("fetches and persists the actor from the search API when unknown locally, without re-querying it", async () => {
         userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
-        actorRepoMocks.getActorById
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce(storedActor);
+        actorRepoMocks.getActorById.mockResolvedValue(null);
         searchServiceMocks.getPersonById.mockResolvedValue(validPerson);
         actorRepoMocks.createActor.mockResolvedValue(true);
         userFavoriteActorRepoMocks.create.mockResolvedValue(true);
@@ -103,6 +101,7 @@ describe("ActorService.addFavorite", () => {
             34100, "Rami Malek", "https://pictures.betaseries.com/persons/rami.jpg",
             "1981-05-12", null, "États-Unis", "Acteur américain."
         );
+        expect(actorRepoMocks.getActorById).toHaveBeenCalledOnce();
         expect(result).toEqual(storedActor);
     });
 
@@ -122,6 +121,41 @@ describe("ActorService.addFavorite", () => {
 
         await expect(actorService.addFavorite("user-1", 34100)).rejects.toThrow(
             "Impossible d'ajouter l'acteur aux favoris"
+        );
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
+    });
+
+    it("recovers when two concurrent requests both try to create the same new actor", async () => {
+        userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
+        actorRepoMocks.getActorById
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(storedActor);
+        searchServiceMocks.getPersonById.mockResolvedValue(validPerson);
+        actorRepoMocks.createActor.mockRejectedValue({code: "23505"});
+        userFavoriteActorRepoMocks.create.mockResolvedValue(true);
+
+        const result = await actorService.addFavorite("user-1", 34100);
+
+        expect(actorRepoMocks.getActorById).toHaveBeenCalledTimes(2);
+        expect(result).toEqual(storedActor);
+    });
+
+    it("propagates a non-duplicate error from actor creation", async () => {
+        userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
+        actorRepoMocks.getActorById.mockResolvedValue(null);
+        searchServiceMocks.getPersonById.mockResolvedValue(validPerson);
+        actorRepoMocks.createActor.mockRejectedValue(new Error("db down"));
+
+        await expect(actorService.addFavorite("user-1", 34100)).rejects.toThrow("db down");
+    });
+
+    it("rejects with a 409 when two concurrent requests both favorite the same actor for the same user", async () => {
+        userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
+        actorRepoMocks.getActorById.mockResolvedValue(storedActor);
+        userFavoriteActorRepoMocks.create.mockRejectedValue({code: "23505"});
+
+        await expect(actorService.addFavorite("user-1", 34100)).rejects.toThrow(
+            "Cet acteur est déjà dans vos favoris"
         );
         expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });

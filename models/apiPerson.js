@@ -11,7 +11,7 @@ export default class ApiPerson {
         this.nationality = person.nationality;
         this.description = person.description;
         this.poster = person.poster;
-        this.series = person.shows.map(show => new ApiPersonShow(show)).sort((a, b) => b.creation - a.creation);
+        this.series = (person.shows ?? []).map(show => new ApiPersonShow(show)).sort((a, b) => b.creation - a.creation);
         //this.movies = person.movies.map(movie => new ApiPersonMovie(movie)).sort((a, b) => b.productionYear - a.productionYear);
     }
 }

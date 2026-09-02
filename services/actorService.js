@@ -2,7 +2,8 @@ import ActorRepository from "../repositories/actorRepository.js";
 import UserFavoriteActorRepository from "../repositories/userFavoriteActorRepository.js";
 import SearchService from "./searchService.js";
 import ServiceError from "../helpers/serviceError.js";
-import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import Actor from "../models/actor.js";
+import {DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import eventBus from "../helpers/eventBus.js";
 
 export default class ActorService {
@@ -35,18 +36,35 @@ export default class ActorService {
             if (!person.id || !person.name) {
                 throw new ServiceError(400, "Acteur invalide");
             }
-            const created = await this._actorRepository.createActor(
-                person.id, person.name, person.poster, person.birthday, person.deathday,
-                person.nationality, person.description
-            );
+            try {
+                const created = await this._actorRepository.createActor(
+                    person.id, person.name, person.poster, person.birthday, person.deathday,
+                    person.nationality, person.description
+                );
 
-            if (!created) {
-                throw new ServiceError(500, "Impossible de créer l'acteur");
+                if (!created) {
+                    throw new ServiceError(500, "Impossible de créer l'acteur");
+                }
+                actor = new Actor({
+                    id: person.id, name: person.name, picture: person.poster, birthday: person.birthday,
+                    deathday: person.deathday, nationality: person.nationality, description: person.description
+                });
+            } catch (err) {
+                if (err.code !== DUPLICATE_ERROR_CODE) {
+                    throw err;
+                }
+                actor = await this._actorRepository.getActorById(actorId);
             }
-            actor = await this._actorRepository.getActorById(actorId);
         }
-        const added = await this._userFavoriteActorRepository.create(currentUserId, actorId);
-
+        let added;
+        try {
+            added = await this._userFavoriteActorRepository.create(currentUserId, actorId);
+        } catch (err) {
+            if (err.code === DUPLICATE_ERROR_CODE) {
+                throw new ServiceError(409, "Cet acteur est déjà dans vos favoris");
+            }
+            throw err;
+        }
         if (!added) {
             throw new ServiceError(500, "Impossible d'ajouter l'acteur aux favoris");
         }
