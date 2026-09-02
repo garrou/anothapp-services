@@ -70,6 +70,11 @@ CREATE TABLE shows (
     country VARCHAR(50) NOT NULL,
     finished BOOLEAN NOT NULL DEFAULT FALSE,
     next_episode VARCHAR(10),
+    description TEXT,
+    creation SMALLINT,
+    network VARCHAR(100),
+    language VARCHAR(10),
+    episodes INTEGER,
     PRIMARY KEY(id)
 );
 
@@ -119,6 +124,7 @@ CREATE TABLE episodes (
     global INTEGER,
     length INTEGER,
     date DATE,
+    description TEXT,
     PRIMARY KEY(id),
     FOREIGN KEY(show_id, season_number) REFERENCES seasons(show_id, number) ON DELETE CASCADE ON UPDATE CASCADE
 );

@@ -18,5 +18,10 @@ export default class UserShow {
         this.note = obj["note_id"];
         this.finished = obj.finished;
         this.nextEpisode = obj["next_episode"];
+        this.description = obj.description;
+        this.creation = obj.creation;
+        this.network = obj.network;
+        this.language = obj.language;
+        this.episodes = obj.episodes;
     }
 }

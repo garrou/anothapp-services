@@ -29,83 +29,105 @@ const dbShow = {
     next_episode: "2024-01-01",
 };
 
-const unchangedApiShow = {
+const apiShow = {
     genres: {28: "Drame", 80: "Policier"},
     images: {poster: "https://img/old.jpg"},
     status: "Running",
     length: "45",
     country: "US",
+    description: "Un prof de chimie se lance dans la méth.",
+    creation: "2008",
+    network: "AMC",
+    language: "en",
+    episodes: "62",
 };
 
 describe("updateShows", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        showRepoMocks.updateShow.mockResolvedValue(true);
         betaseriesMocks.fetchNextEpisodeDate.mockResolvedValue("2024-01-01");
         betaseriesMocks.fetchSeasons.mockResolvedValue([1, 2, 3, 4, 5]);
     });
 
-    it("does nothing when the show is unchanged", async () => {
+    it("updates every show on every run, unconditionally", async () => {
         showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
-        betaseriesMocks.fetchShow.mockResolvedValue(unchangedApiShow);
+        betaseriesMocks.fetchShow.mockResolvedValue(apiShow);
 
         const result = await updateShows();
 
-        expect(result).toEqual({updated: [], toDelete: [], failed: []});
-        expect(showRepoMocks.updateShow).not.toHaveBeenCalled();
-        expect(showRepoMocks.deleteShow).not.toHaveBeenCalled();
-    });
-
-    it("treats the same genres in a different order as unchanged", async () => {
-        showRepoMocks.getAllShows.mockResolvedValue([{...dbShow, kinds: "Policier;Drame"}]);
-        betaseriesMocks.fetchShow.mockResolvedValue(unchangedApiShow); // computes "Drame;Policier"
-
-        const result = await updateShows();
-
-        expect(result).toEqual({updated: [], toDelete: [], failed: []});
-        expect(showRepoMocks.updateShow).not.toHaveBeenCalled();
-    });
-
-    it("updates a show whose kinds changed", async () => {
-        showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
-        betaseriesMocks.fetchShow.mockResolvedValue({
-            ...unchangedApiShow,
-            genres: {28: "Drame", 10765: "Science-Fiction"},
-        });
-
-        const result = await updateShows();
-
-        expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, expect.objectContaining({
-            kinds: "Drame;Science-Fiction",
-        }));
-        expect(result.updated).toEqual([dbShow]);
-    });
-
-    it("updates a show whose poster changed", async () => {
-        showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
-        betaseriesMocks.fetchShow.mockResolvedValue({
-            ...unchangedApiShow,
-            images: {poster: "https://img/new.jpg"},
-        });
-
-        const result = await updateShows();
-
-        expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, expect.objectContaining({
-            poster: "https://img/new.jpg",
+        expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, {
             deleted: false,
+            poster: "https://img/old.jpg",
+            kinds: "Drame;Policier",
+            duration: 45,
+            seasons: 5,
+            country: "US",
+            finished: false,
+            nextEpisode: "2024-01-01",
+            description: "Un prof de chimie se lance dans la méth.",
+            creation: 2008,
+            network: "AMC",
+            language: "en",
+            episodes: 62,
+        });
+        expect(result).toEqual({updated: 1, toDelete: [], failed: []});
+    });
+
+    it("passes through the new metadata fields (description, creation, network, language, episodes)", async () => {
+        showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
+        betaseriesMocks.fetchShow.mockResolvedValue({
+            ...apiShow,
+            description: "Nouveau synopsis",
+            creation: "2010",
+            network: "Netflix",
+            language: "fr",
+            episodes: "10",
+        });
+
+        await updateShows();
+
+        expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, expect.objectContaining({
+            description: "Nouveau synopsis",
+            creation: 2010,
+            network: "Netflix",
+            language: "fr",
+            episodes: 10,
         }));
-        expect(result.updated).toEqual([dbShow]);
+    });
+
+    it("nulls out the new metadata fields when BetaSeries doesn't return them", async () => {
+        showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
+        betaseriesMocks.fetchShow.mockResolvedValue({
+            ...apiShow,
+            description: undefined,
+            creation: undefined,
+            network: undefined,
+            language: undefined,
+            episodes: undefined,
+        });
+
+        await updateShows();
+
+        expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, expect.objectContaining({
+            description: null,
+            creation: null,
+            network: null,
+            language: null,
+            episodes: null,
+        }));
     });
 
     it("syncs the season count against fetchSeasons(), not the display endpoint's own count", async () => {
         showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
-        betaseriesMocks.fetchShow.mockResolvedValue(unchangedApiShow);
+        betaseriesMocks.fetchShow.mockResolvedValue(apiShow);
         betaseriesMocks.fetchSeasons.mockResolvedValue([1, 2, 3, 4, 5, 6]);
 
         const result = await updateShows();
 
         expect(betaseriesMocks.fetchSeasons).toHaveBeenCalledWith(42);
         expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, expect.objectContaining({seasons: 6}));
-        expect(result.updated).toEqual([dbShow]);
+        expect(result.updated).toEqual(1);
     });
 
     it("flags a show that no longer exists on BetaSeries instead of deleting it", async () => {
@@ -122,7 +144,7 @@ describe("updateShows", () => {
     it("does not fetch the next episode when the show is finished, and clears it", async () => {
         showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
         betaseriesMocks.fetchShow.mockResolvedValue({
-            ...unchangedApiShow,
+            ...apiShow,
             status: "Ended",
         });
 
@@ -133,14 +155,13 @@ describe("updateShows", () => {
             finished: true,
             nextEpisode: "",
         }));
-        expect(result.updated).toEqual([dbShow]);
+        expect(result.updated).toEqual(1);
     });
 
     it("keeps the existing duration and country when BetaSeries returns empty values", async () => {
         showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
         betaseriesMocks.fetchShow.mockResolvedValue({
-            ...unchangedApiShow,
-            images: {poster: "https://img/new.jpg"},
+            ...apiShow,
             length: "0",
             country: "",
         });
@@ -158,13 +179,14 @@ describe("updateShows", () => {
         showRepoMocks.getAllShows.mockResolvedValue([dbShow, otherShow]);
         betaseriesMocks.fetchShow.mockImplementation(async (id) => {
             if (id === 42) throw new Error("network down");
-            return unchangedApiShow;
+            return apiShow;
         });
 
         const result = await updateShows();
 
         expect(result.failed).toEqual([{id: 42, title: "Breaking Bad", error: "network down"}]);
-        expect(showRepoMocks.updateShow).not.toHaveBeenCalled();
+        expect(result.updated).toEqual(1);
+        expect(showRepoMocks.updateShow).toHaveBeenCalledWith(99, expect.objectContaining({deleted: false}));
         expect(showRepoMocks.deleteShow).not.toHaveBeenCalled();
     });
 });

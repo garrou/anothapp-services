@@ -7,5 +7,10 @@ export default class Show {
         this.duration = obj.duration;
         this.seasons = obj.seasons;
         this.country = obj.country;
+        this.description = obj.description;
+        this.creation = obj.creation;
+        this.network = obj.network;
+        this.language = obj.language;
+        this.episodes = obj.episodes;
     }
 }

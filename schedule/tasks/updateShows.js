@@ -6,23 +6,10 @@ import {getImageUrl} from "../../models/apiShow.js";
 const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
 
 /**
- * @param {string} a
- * @param {string} b
- * @returns {boolean}
- */
-const sameKinds = (a, b) => {
-    if (a === b) return true;
-    const sortedA = a.split(";").filter(Boolean).sort();
-    const sortedB = b.split(";").filter(Boolean).sort();
-    return sortedA.length === sortedB.length && sortedA.every((kind, i) => kind === sortedB[i]);
-};
-
-/**
  * @param {Object} show a row from the `shows` table
- * @returns {Promise<{deleted: true}|{deleted: false, poster: string, kinds: string, duration: number, seasons: number, country: string, finished: boolean, nextEpisode: string}|null>}
- *          null when nothing changed
+ * @returns {Promise<{deleted: true}|{deleted: false, poster: string, kinds: string, duration: number, seasons: number, country: string, finished: boolean, nextEpisode: string, description: string?, creation: number?, network: string?, language: string?, episodes: number?}>}
  */
-const compareShow = async (show) => {
+const fetchShowUpdate = async (show) => {
     const current = await betaseries.fetchShow(show.id);
 
     if (!current) {
@@ -39,38 +26,39 @@ const compareShow = async (show) => {
         finished ? Promise.resolve("") : betaseries.fetchNextEpisodeDate(show.id),
     ]);
     const seasons = currentSeasons.length;
+    const parsedCreation = parseInt(current.creation);
+    const parsedEpisodes = parseInt(current.episodes);
 
-    const unchanged = show.poster === poster
-        && sameKinds(show.kinds, kinds)
-        && show.seasons === seasons
-        && show.country === country
-        && show.duration === duration
-        && show.finished === finished
-        && (show.next_episode ?? "") === nextEpisode;
-
-    return unchanged ? null : {deleted: false, poster, kinds, duration, seasons, country, finished, nextEpisode};
+    return {
+        deleted: false, poster, kinds, duration, seasons, country, finished, nextEpisode,
+        description: current.description ?? null,
+        creation: Number.isNaN(parsedCreation) ? null : parsedCreation,
+        network: current.network ?? null,
+        language: current.language ?? null,
+        episodes: Number.isNaN(parsedEpisodes) ? null : parsedEpisodes,
+    };
 };
 
 /**
- * @returns {Promise<{updated: any[], toDelete: any[], failed: any[]}>}
+ * @returns {Promise<{updated: number, toDelete: any[], failed: any[]}>}
  */
 const updateShows = async () => {
     const showRepository = new ShowRepository();
     const shows = await showRepository.getAllShows();
-    const comparisons = await mapWithConcurrency(shows, CONCURRENCY, compareShow);
+    const results = await mapWithConcurrency(shows, CONCURRENCY, fetchShowUpdate);
 
     const failed = [];
     const toDelete = [];
     const toUpdate = [];
 
     for (let i = 0; i < shows.length; i += 1) {
-        const result = comparisons[i];
+        const result = results[i];
 
         if (result.status === "rejected") {
             failed.push({id: shows[i].id, title: shows[i].title, error: result.reason?.message ?? String(result.reason)});
-        } else if (result.value?.deleted) {
+        } else if (result.value.deleted) {
             toDelete.push(shows[i]);
-        } else if (result.value) {
+        } else {
             toUpdate.push({show: shows[i], changes: result.value});
         }
     }
@@ -79,7 +67,7 @@ const updateShows = async () => {
         showRepository.updateShow(show.id, changes)
     );
 
-    const updated = [];
+    let updated = 0;
 
     for (let i = 0; i < toUpdate.length; i += 1) {
         const {show} = toUpdate[i];
@@ -88,7 +76,7 @@ const updateShows = async () => {
         if (result.status === "rejected") {
             failed.push({id: show.id, title: show.title, error: result.reason?.message ?? String(result.reason)});
         } else {
-            updated.push(show);
+            updated += 1;
         }
     }
     return {updated, toDelete, failed};
