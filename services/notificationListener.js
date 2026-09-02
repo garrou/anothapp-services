@@ -16,6 +16,7 @@ export default class NotificationListener {
         eventBus.on("season.watched", this.#notifyFriends("season_watched"));
         eventBus.on("episode.watched", this.#notifyFriends("episode_watched"));
         eventBus.on("episode.bulk_watched", this.#notifyFriends("episode_bulk_watched"));
+        eventBus.on("actor.favorited", this.#notifyFriends("actor_favorited"));
         eventBus.on("friend.request", this.#notifyOne("friend_request"));
         eventBus.on("friend.accepted", this.#notifyOne("friend_accepted"));
         eventBus.on("friend.declined", this.#notifyOne("friend_declined"));

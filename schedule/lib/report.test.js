@@ -58,6 +58,29 @@ describe("formatReport", () => {
         expect(report).toContain("3 jeton(s) de renouvellement supprimé(s)");
     });
 
+    it("formats actors results", () => {
+        const report = formatReport({
+            actors: {
+                skipped: false,
+                updated: 3,
+                toDelete: [{id: 99, name: "Deleted Actor"}],
+                failed: [{id: 1, name: "Actor A", error: "boom"}],
+            },
+        });
+        expect(report).toContain("3 acteur(s) synchronisé(s)");
+        expect(report).toContain("1 acteur(s) à supprimer (non supprimés automatiquement, à vérifier)");
+        expect(report).toContain("[99 - Deleted Actor]");
+        expect(report).toContain("1 acteur(s) en erreur");
+        expect(report).toContain("[1 - Actor A] boom");
+    });
+
+    it("reports when the actors sync was skipped for the day", () => {
+        const report = formatReport({
+            actors: {skipped: true, updated: 0, toDelete: [], failed: []},
+        });
+        expect(report).toBe("Acteurs : pas de synchronisation aujourd'hui");
+    });
+
     it("only reports the tasks that ran", () => {
         const report = formatReport({tokens: {deleted: 0}});
         expect(report).toBe("0 jeton(s) de renouvellement supprimé(s)");

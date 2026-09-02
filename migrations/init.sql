@@ -170,6 +170,26 @@ CREATE TABLE users_platforms (
     PRIMARY KEY(user_id, platform_id)
 );
 
+CREATE TABLE actors (
+    id INTEGER,
+    name VARCHAR(255) NOT NULL,
+    picture VARCHAR(255),
+    birthday DATE,
+    deathday DATE,
+    nationality VARCHAR(100),
+    description TEXT,
+    PRIMARY KEY(id)
+);
+
+CREATE TABLE users_favorite_actors (
+    user_id UUID,
+    actor_id INTEGER,
+    added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(actor_id) REFERENCES actors(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    PRIMARY KEY(user_id, actor_id)
+);
+
 CREATE TABLE notifications (
     id SERIAL PRIMARY KEY,
     recipient_user_id UUID NOT NULL,

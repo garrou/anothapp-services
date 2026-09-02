@@ -55,10 +55,20 @@ const fetchPlatforms = async () => {
     return (data.services ?? []).filter((p) => p && p.id !== undefined);
 };
 
+/**
+ * @param {number} id
+ * @returns {Promise<Object|null>} null when the person no longer exists on BetaSeries
+ */
+const fetchPerson = async (id) => {
+    const data = await client.get(`/persons/person?id=${id}`);
+    return Array.isArray(data.person) ? null : data.person;
+};
+
 export default {
     fetchShow,
     fetchSeasons,
     fetchEpisodes,
     fetchNextEpisodeDate,
     fetchPlatforms,
+    fetchPerson,
 };
