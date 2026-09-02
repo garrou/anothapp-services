@@ -33,17 +33,17 @@ describe("updateEpisodes", () => {
     it("upserts every episode returned by BetaSeries for each show/season pair", async () => {
         episodeRepoMocks.getAllEpisodeSeasons.mockResolvedValue([{show_id: 1, season_number: 1}]);
         betaseriesMocks.fetchEpisodes.mockResolvedValue([
-            {id: 10, season: 1, episode: 1, title: "Pilot", code: "S01E01", global: 1, length: 45, date: "2020-01-01"},
-            {id: 11, season: 1, episode: 2, title: "Ep 2", code: "S01E02", global: 2, length: 45, date: null},
+            {id: 10, season: 1, episode: 1, title: "Pilot", code: "S01E01", global: 1, length: 45, date: "2020-01-01", description: "Le pilote."},
+            {id: 11, season: 1, episode: 2, title: "Ep 2", code: "S01E02", global: 2, length: 45, date: null, description: null},
         ]);
 
         const result = await updateEpisodes();
 
         expect(episodeRepoMocks.upsertEpisode).toHaveBeenCalledWith(
-            10, 1, 1, 1, "Pilot", "S01E01", 1, 45, "2020-01-01"
+            10, 1, 1, 1, "Pilot", "S01E01", 1, 45, "2020-01-01", "Le pilote."
         );
         expect(episodeRepoMocks.upsertEpisode).toHaveBeenCalledWith(
-            11, 1, 1, 2, "Ep 2", "S01E02", 2, 45, null
+            11, 1, 1, 2, "Ep 2", "S01E02", 2, 45, null, null
         );
         expect(result.synced).toBe(2);
     });

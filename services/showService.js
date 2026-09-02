@@ -99,8 +99,11 @@ export default class ShowService {
             if (!Validator.isValidShow(show)) {      
                 throw new ServiceError(400, "Série invalide");
             }
-            const {id, title, poster, kinds, duration, seasons, country} = show;
-            const created = await this._showRepository.createShow(id, title, poster, kinds.join(";"), duration, seasons, country);
+            const {id, title, poster, kinds, duration, seasons, country, description, creation, network, language, episodes} = show;
+            const created = await this._showRepository.createShow(
+                id, title, poster, kinds.join(";"), duration, seasons, country,
+                description, creation || null, network, language, episodes || null
+            );
 
             if (!created) {
                 throw new ServiceError(500, "Impossible de créer la série");

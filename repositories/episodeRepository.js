@@ -39,16 +39,17 @@ export default class EpisodeRepository {
      * @param {number} global
      * @param {number} length
      * @param {string?} date
+     * @param {string?} description
      * @returns {Promise<boolean>}
      */
-    upsertEpisode = async (id, showId, seasonNumber, number, title, code, global, length, date) => {
+    upsertEpisode = async (id, showId, seasonNumber, number, title, code, global, length, date, description) => {
         const res = await db.query(`
-            INSERT INTO episodes (id, show_id, season_number, number, title, code, global, length, date)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            INSERT INTO episodes (id, show_id, season_number, number, title, code, global, length, date, description)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             ON CONFLICT (id) DO UPDATE
             SET title = EXCLUDED.title, code = EXCLUDED.code, global = EXCLUDED.global,
-                length = EXCLUDED.length, date = EXCLUDED.date
-        `, [id, showId, seasonNumber, number, title, code, global, length, date ?? null]);
+                length = EXCLUDED.length, date = EXCLUDED.date, description = EXCLUDED.description
+        `, [id, showId, seasonNumber, number, title, code, global, length, date ?? null, description ?? null]);
         return res.rowCount === 1;
     }
 

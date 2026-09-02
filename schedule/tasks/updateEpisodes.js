@@ -57,7 +57,7 @@ const updateEpisodes = async () => {
         for (const episode of episodes) {
             await episodeRepository.upsertEpisode(
                 episode.id, group.show_id, group.season_number, episode.episode, episode.title,
-                episode.code, episode.global, episode.length, episode.date
+                episode.code, episode.global, episode.length, episode.date, episode.description
             );
             synced += 1;
         }

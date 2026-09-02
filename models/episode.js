@@ -13,5 +13,6 @@ export default class Episode {
         this.global = obj.global;
         this.length = obj.length;
         this.date = obj.date;
+        this.description = obj.description;
     }
 }

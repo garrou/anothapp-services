@@ -7,8 +7,7 @@ const formatReport = (results) => {
 
     if (results.shows) {
         const {updated, toDelete, failed} = results.shows;
-        lines.push(`${updated.length} série(s) mise(s) à jour`);
-        updated.forEach((s) => lines.push(`    [${s.id} - ${s.title}]`));
+        lines.push(`${updated} série(s) synchronisée(s)`);
         if (toDelete.length > 0) {
             lines.push(`${toDelete.length} série(s) à supprimer (non supprimées automatiquement, à vérifier)`);
             toDelete.forEach((s) => lines.push(`    [${s.id} - ${s.title}]`));

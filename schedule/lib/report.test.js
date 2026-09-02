@@ -5,7 +5,7 @@ describe("formatReport", () => {
     it("formats shows and seasons results", () => {
         const report = formatReport({
             shows: {
-                updated: [{id: 1, title: "Show A"}],
+                updated: 1,
                 toDelete: [],
                 failed: [],
             },
@@ -15,8 +15,7 @@ describe("formatReport", () => {
                 failed: [],
             },
         });
-        expect(report).toContain("1 série(s) mise(s) à jour");
-        expect(report).toContain("[1 - Show A]");
+        expect(report).toContain("1 série(s) synchronisée(s)");
         expect(report).toContain("1 saison(s) mise(s) à jour");
         expect(report).toContain("[série 1 - saison 2]");
         expect(report).toContain("1 saison(s) supprimée(s)");
@@ -26,7 +25,7 @@ describe("formatReport", () => {
     it("flags shows to delete without saying they were deleted", () => {
         const report = formatReport({
             shows: {
-                updated: [],
+                updated: 0,
                 toDelete: [{id: 2, title: "Show B"}],
                 failed: [],
             },
