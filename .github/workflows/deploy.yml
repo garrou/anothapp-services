@@ -29,6 +29,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            set -e
             cd ${{ secrets.ALWAYSDATA_APP_PATH }}
             BEFORE=$(git rev-parse HEAD)
             git pull origin main
