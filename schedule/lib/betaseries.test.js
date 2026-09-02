@@ -37,3 +37,26 @@ describe("fetchSeasons caching", () => {
         expect(clientMocks.get).toHaveBeenCalledWith("/shows/seasons?id=103");
     });
 });
+
+describe("fetchPerson", () => {
+    beforeEach(() => {
+        clientMocks.get.mockReset();
+    });
+
+    it("returns the person object", async () => {
+        clientMocks.get.mockResolvedValue({person: {id: 34100, name: "Rami Malek"}});
+
+        const person = await betaseries.fetchPerson(34100);
+
+        expect(person).toEqual({id: 34100, name: "Rami Malek"});
+        expect(clientMocks.get).toHaveBeenCalledWith("/persons/person?id=34100");
+    });
+
+    it("returns null when BetaSeries returns an empty array instead of a person", async () => {
+        clientMocks.get.mockResolvedValue({person: []});
+
+        const person = await betaseries.fetchPerson(34100);
+
+        expect(person).toBeNull();
+    });
+});

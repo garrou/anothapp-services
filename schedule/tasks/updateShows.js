@@ -31,11 +31,11 @@ const fetchShowUpdate = async (show) => {
 
     return {
         deleted: false, poster, kinds, duration, seasons, country, finished, nextEpisode,
-        description: current.description ?? null,
-        creation: Number.isNaN(parsedCreation) ? null : parsedCreation,
-        network: current.network ?? null,
-        language: current.language ?? null,
-        episodes: Number.isNaN(parsedEpisodes) ? null : parsedEpisodes,
+        description: current.description ?? show.description ?? null,
+        creation: Number.isNaN(parsedCreation) ? (show.creation ?? null) : parsedCreation,
+        network: current.network ?? show.network ?? null,
+        language: current.language ?? show.language ?? null,
+        episodes: Number.isNaN(parsedEpisodes) ? (show.episodes ?? null) : parsedEpisodes,
     };
 };
 

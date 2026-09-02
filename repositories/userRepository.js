@@ -61,6 +61,14 @@ export default class UserRepository {
     }
 
     /**
+     * @returns {Promise<number>}
+     */
+    getUserCount = async () => {
+        const res = await db.query(`SELECT COUNT(*) AS total FROM users`);
+        return parseInt(res.rows[0]["total"]);
+    }
+
+    /**
      * @param {string} id
      * @returns {Promise<boolean>}
      */
