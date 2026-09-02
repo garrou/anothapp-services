@@ -27,7 +27,7 @@ const fetchShowUpdate = async (show) => {
     ]);
     const seasons = currentSeasons.length;
     const parsedCreation = parseInt(current.creation);
-    const parsedEpisodes = parseInt(current.episodes);
+    const parsedEpisodes = parseInt(currentSeasons.reduce((acc, season) => acc + season.episodes, 0));
 
     return {
         deleted: false, poster, kinds, duration, seasons, country, finished, nextEpisode,
