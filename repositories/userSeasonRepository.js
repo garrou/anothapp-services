@@ -162,7 +162,7 @@ export default class UserSeasonRepository {
      */
     getTimeHourByUserIdGroupByYear = async (userId) => {
         const res = await db.query(`
-            SELECT EXTRACT(YEAR FROM added_at) AS label, (SUM(shows.duration * episodes) / 60) AS value
+            SELECT EXTRACT(YEAR FROM added_at) AS label, (SUM(shows.duration * seasons.episodes) / 60) AS value
             FROM users_seasons
             JOIN shows ON users_seasons.show_id = shows.id
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number AND DATE_PART('year', NOW()) - EXTRACT (YEAR FROM added_at) <= 10
@@ -179,7 +179,7 @@ export default class UserSeasonRepository {
      */
     getTimeCurrentMonthByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT SUM(shows.duration * episodes) AS time
+            SELECT SUM(shows.duration * seasons.episodes) AS time
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
@@ -290,7 +290,7 @@ export default class UserSeasonRepository {
      */
     getRecordViewingTimeMonth = async (userId, limit = 10) => {
         const res = await db.query(`
-            SELECT TO_CHAR(added_at, 'MM/YYYY') as label, SUM(shows.duration * episodes) AS value
+            SELECT TO_CHAR(added_at, 'MM/YYYY') as label, SUM(shows.duration * seasons.episodes) AS value
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
@@ -441,7 +441,7 @@ export default class UserSeasonRepository {
      */
     getBestMonthByUserIdByYear = async (userId, year) => {
         const res = await db.query(`
-            SELECT EXTRACT(MONTH FROM added_at) AS num, SUM(shows.duration * episodes) AS value
+            SELECT EXTRACT(MONTH FROM added_at) AS num, SUM(shows.duration * seasons.episodes) AS value
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
