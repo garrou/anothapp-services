@@ -71,6 +71,9 @@ const formatReport = (results) => {
     if (results.notifications) {
         lines.push(`${results.notifications.deleted} notification(s) supprimée(s)`);
     }
+    if (results.users) {
+        lines.push(`${results.users.total} utilisateur(s) au total`);
+    }
     return lines.join("\n");
 };
 

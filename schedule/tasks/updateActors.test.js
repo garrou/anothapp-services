@@ -65,6 +65,41 @@ describe("updateActors", () => {
         expect(result).toEqual({skipped: false, updated: 1, toDelete: [], failed: []});
     });
 
+    it("keeps the existing metadata when BetaSeries doesn't return it", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2024-01-07"));
+        const dbActorWithMetadata = {
+            id: 34100,
+            name: "Rami Malek",
+            picture: "https://pictures.betaseries.com/persons/old.jpg",
+            birthday: "1981-05-12",
+            deathday: null,
+            nationality: "États-Unis",
+            description: "Ancienne description.",
+        };
+        actorRepoMocks.getAllActors.mockResolvedValue([dbActorWithMetadata]);
+        betaseriesMocks.fetchPerson.mockResolvedValue({
+            name: undefined,
+            poster: undefined,
+            birthday: undefined,
+            deathday: undefined,
+            nationality: undefined,
+            description: undefined,
+        });
+
+        await updateActors();
+
+        expect(actorRepoMocks.updateActor).toHaveBeenCalledWith(34100, {
+            deleted: false,
+            name: "Rami Malek",
+            picture: "https://pictures.betaseries.com/persons/old.jpg",
+            birthday: "1981-05-12",
+            deathday: null,
+            nationality: "États-Unis",
+            description: "Ancienne description.",
+        });
+    });
+
     it("flags an actor that no longer exists on BetaSeries instead of deleting it", async () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2024-01-07"));

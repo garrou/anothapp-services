@@ -96,7 +96,37 @@ describe("updateShows", () => {
         }));
     });
 
-    it("nulls out the new metadata fields when BetaSeries doesn't return them", async () => {
+    it("keeps the existing metadata fields when BetaSeries doesn't return them", async () => {
+        const dbShowWithMetadata = {
+            ...dbShow,
+            description: "Ancien synopsis",
+            creation: 2008,
+            network: "AMC",
+            language: "en",
+            episodes: 62,
+        };
+        showRepoMocks.getAllShows.mockResolvedValue([dbShowWithMetadata]);
+        betaseriesMocks.fetchShow.mockResolvedValue({
+            ...apiShow,
+            description: undefined,
+            creation: undefined,
+            network: undefined,
+            language: undefined,
+            episodes: undefined,
+        });
+
+        await updateShows();
+
+        expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, expect.objectContaining({
+            description: "Ancien synopsis",
+            creation: 2008,
+            network: "AMC",
+            language: "en",
+            episodes: 62,
+        }));
+    });
+
+    it("nulls out the new metadata fields when neither BetaSeries nor the existing row has them", async () => {
         showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
         betaseriesMocks.fetchShow.mockResolvedValue({
             ...apiShow,

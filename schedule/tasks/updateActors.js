@@ -4,8 +4,6 @@ import mapWithConcurrency from "../lib/concurrency.js";
 
 const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
 
-// Actor bios/pictures change rarely, so this only actually runs once a week (Sunday)
-// instead of every night like shows/episodes/platforms.
 const ACTORS_SYNC_DAY = 0;
 
 /**
@@ -20,12 +18,12 @@ const fetchActorUpdate = async (actor) => {
     }
     return {
         deleted: false,
-        name: current.name,
-        picture: current.poster ?? null,
-        birthday: current.birthday ?? null,
-        deathday: current.deathday ?? null,
-        nationality: current.nationality ?? null,
-        description: current.description ?? null,
+        name: current.name || actor.name,
+        picture: current.poster ?? actor.picture ?? null,
+        birthday: current.birthday ?? actor.birthday ?? null,
+        deathday: current.deathday ?? actor.deathday ?? null,
+        nationality: current.nationality ?? actor.nationality ?? null,
+        description: current.description ?? actor.description ?? null,
     };
 };
 

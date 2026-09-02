@@ -57,7 +57,8 @@ export default class ShowRepository {
      */
     getAllShows = async () => {
         const res = await db.query(`
-            SELECT id, title, poster, kinds, duration, seasons, country, finished, next_episode
+            SELECT id, title, poster, kinds, duration, seasons, country, finished, next_episode,
+                   description, creation, network, language, episodes
             FROM shows
         `);
         return res.rows;

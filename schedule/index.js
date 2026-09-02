@@ -7,6 +7,7 @@ import updateActors from "./tasks/updateActors.js";
 import remindUpcomingEpisodes from "./tasks/remindUpcomingEpisodes.js";
 import cleanupRefreshTokens from "./tasks/cleanupRefreshTokens.js";
 import cleanupNotifications from "./tasks/cleanupNotifications.js";
+import reportUserCount from "./tasks/reportUserCount.js";
 import sendTelegramMessage from "./lib/notify.js";
 import {formatReport} from "./lib/report.js";
 
@@ -19,6 +20,7 @@ const TASKS = {
     reminders: remindUpcomingEpisodes,
     tokens: cleanupRefreshTokens,
     notifications: cleanupNotifications,
+    users: reportUserCount,
 };
 
 /**

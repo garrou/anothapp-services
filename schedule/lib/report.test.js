@@ -95,4 +95,9 @@ describe("formatReport", () => {
         const report = formatReport({reminders: {created: 5}});
         expect(report).toBe("5 rappel(s) d'épisode créé(s)");
     });
+
+    it("formats user count results", () => {
+        const report = formatReport({users: {total: 128}});
+        expect(report).toBe("128 utilisateur(s) au total");
+    });
 });
