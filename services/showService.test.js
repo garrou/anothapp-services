@@ -520,14 +520,24 @@ describe("ShowService.getSeasonWatchedTime", () => {
 describe("ShowService.getShowById", () => {
     let showService;
 
+    const storedShow = {id: 42, title: "Breaking Bad"};
+
     beforeEach(() => {
         vi.clearAllMocks();
         showService = new ShowService();
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue(storedShow);
         userSeasonRepoMocks.getDistinctByUserIdByShowId.mockResolvedValue(["season"]);
     });
 
     it("rejects with a 400 when no id is given", async () => {
         await expect(showService.getShowById("user-1", undefined)).rejects.toThrow("Requête invalide");
+    });
+
+    it("rejects with a 404 when the show isn't in the user's collection", async () => {
+        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue(null);
+
+        await expect(showService.getShowById("user-1", 42)).rejects.toThrow("Série introuvable");
+        expect(userSeasonRepoMocks.getDistinctByUserIdByShowId).not.toHaveBeenCalled();
     });
 
     it("uses the season-level estimate when episode tracking is disabled", async () => {
@@ -536,7 +546,7 @@ describe("ShowService.getShowById", () => {
 
         const result = await showService.getShowById("user-1", 42);
 
-        expect(result).toEqual({seasons: ["season"], time: 600, episodes: 10});
+        expect(result).toEqual({serie: storedShow, seasons: ["season"], time: 600, episodes: 10});
         expect(episodeServiceMocks.getWatchedTimeAndCountByShowId).not.toHaveBeenCalled();
     });
 
@@ -546,7 +556,7 @@ describe("ShowService.getShowById", () => {
 
         const result = await showService.getShowById("user-1", 42);
 
-        expect(result).toEqual({seasons: ["season"], time: 135, episodes: 3, distinctEpisodes: 2});
+        expect(result).toEqual({serie: storedShow, seasons: ["season"], time: 135, episodes: 3, distinctEpisodes: 2});
         expect(episodeServiceMocks.getWatchedTimeAndCountByShowId).toHaveBeenCalledWith("user-1", 42);
         expect(userSeasonRepoMocks.getTimeEpisodesByUserIdByShowId).not.toHaveBeenCalled();
     });

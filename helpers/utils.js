@@ -13,6 +13,13 @@ const isDevMode = () => process.env.MODE === 'dev';
 
 const isProdMode = () => !isDevMode();
 
+/**
+ * @param {string} currentUserId
+ * @param {string?} requestedId
+ * @returns {boolean}
+ */
+const isOwnRequest = (currentUserId, requestedId) => !requestedId || requestedId === currentUserId;
+
 const MONTHS_FR = [
     "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
     "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
@@ -28,5 +35,6 @@ export {
     cumulate,
     frenchMonth,
     isDevMode,
+    isOwnRequest,
     isProdMode
 }

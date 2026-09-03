@@ -153,17 +153,17 @@ export default class ShowService {
     /**
      * @param {string} currentUserId
      * @param {number?} id
-     * @returns {Promise<{seasons: Season[], time: number, episodes: number, distinctEpisodes: number?}>}
+     * @returns {Promise<{serie: UserShow, seasons: Season[], time: number, episodes: number, distinctEpisodes: number?}>}
      */
     getShowById = async (currentUserId, id) => {
         if (!id) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        // const show = await this._userShowRepository.getShowByUserIdByShowId(currentUserId, id);
+        const show = await this._userShowRepository.getShowByUserIdByShowId(currentUserId, id);
 
-        // if (!show) {
-        //     throw new Error("Série introuvable");
-        // }
+        if (!show) {
+            throw new ServiceError(404, "Série introuvable");
+        }
         const seasons = await this._userSeasonRepository.getDistinctByUserIdByShowId(currentUserId, id);
         const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
         let time, nbEpisodes, distinctEpisodes;
@@ -174,7 +174,7 @@ export default class ShowService {
             [time, nbEpisodes] = await this._userSeasonRepository.getTimeEpisodesByUserIdByShowId(currentUserId, id);
         }
         const result = {
-            // "serie": new UserShow(show),
+            "serie": show,
             "seasons": seasons,
             "time": isNaN(time) ? 0 : time,
             "episodes": isNaN(nbEpisodes) ? 0 : nbEpisodes

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { frenchMonth } from "./utils.js";
+import { frenchMonth, isOwnRequest } from "./utils.js";
 
 describe("frenchMonth", () => {
     it("translates a month number to its French name", () => {
@@ -15,5 +15,19 @@ describe("frenchMonth", () => {
     it("returns an empty string for an out-of-range month", () => {
         expect(frenchMonth(0)).toBe("");
         expect(frenchMonth(13)).toBe("");
+    });
+});
+
+describe("isOwnRequest", () => {
+    it("is true when no id is requested", () => {
+        expect(isOwnRequest("user-1", undefined)).toBe(true);
+    });
+
+    it("is true when the requested id is the caller's own", () => {
+        expect(isOwnRequest("user-1", "user-1")).toBe(true);
+    });
+
+    it("is false when the requested id belongs to someone else", () => {
+        expect(isOwnRequest("user-1", "user-2")).toBe(false);
     });
 });

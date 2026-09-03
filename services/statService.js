@@ -7,6 +7,7 @@ import ServiceError from "../helpers/serviceError.js";
 import Stat from "../models/stat.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import {computeStreak} from "../helpers/streak.js";
+import {isOwnRequest} from "../helpers/utils.js";
 
 export default class StatService {
     constructor() {
@@ -23,7 +24,7 @@ export default class StatService {
      * @returns {Promise<Object>}
      */
     getStats = async (currentUserId, friendId) => {
-        if (friendId && friendId !== currentUserId
+        if (!isOwnRequest(currentUserId, friendId)
             && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
             throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
         }
