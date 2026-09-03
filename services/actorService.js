@@ -1,5 +1,6 @@
 import ActorRepository from "../repositories/actorRepository.js";
 import UserFavoriteActorRepository from "../repositories/userFavoriteActorRepository.js";
+import FriendRepository from "../repositories/friendRepository.js";
 import SearchService from "./searchService.js";
 import ServiceError from "../helpers/serviceError.js";
 import Actor from "../models/actor.js";
@@ -11,6 +12,7 @@ export default class ActorService {
     constructor() {
         this._actorRepository = new ActorRepository();
         this._userFavoriteActorRepository = new UserFavoriteActorRepository();
+        this._friendRepository = new FriendRepository();
         this._searchService = new SearchService();
     }
 
@@ -93,9 +95,13 @@ export default class ActorService {
 
     /**
      * @param {string} currentUserId
+     * @param {string?} friendId
      * @returns {Promise<Actor[]>}
      */
-    getFavorites = async (currentUserId) => {
-        return this._userFavoriteActorRepository.getFavoritesByUserId(currentUserId);
+    getFavorites = async (currentUserId, friendId) => {
+        if (friendId && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
+            throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
+        }
+        return this._userFavoriteActorRepository.getFavoritesByUserId(friendId ?? currentUserId);
     }
 }

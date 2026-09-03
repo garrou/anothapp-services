@@ -26,7 +26,8 @@ export default class ActorController {
 
     getFavorites = async (req, res, next) => {
         try {
-            const actors = await this._actorService.getFavorites(req.userId);
+            const {friendId} = req.query;
+            const actors = await this._actorService.getFavorites(req.userId, friendId);
             res.status(200).json(actors);
         } catch (e) {
             next(e);

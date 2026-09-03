@@ -14,6 +14,9 @@ const userFavoriteActorRepoMocks = vi.hoisted(() => ({
 const searchServiceMocks = vi.hoisted(() => ({
     getPersonById: vi.fn(),
 }));
+const friendRepoMocks = vi.hoisted(() => ({
+    checkIfAlreadyFriend: vi.fn(),
+}));
 const eventBusMocks = vi.hoisted(() => ({
     emit: vi.fn(),
 }));
@@ -25,6 +28,9 @@ vi.mock("../repositories/actorRepository.js", () => ({
 }));
 vi.mock("../repositories/userFavoriteActorRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userFavoriteActorRepoMocks; }),
+}));
+vi.mock("../repositories/friendRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return friendRepoMocks; }),
 }));
 vi.mock("./searchService.js", () => ({
     default: vi.fn().mockImplementation(function () { return searchServiceMocks; }),
@@ -189,6 +195,10 @@ describe("ActorService.removeFavorite", () => {
 });
 
 describe("ActorService.getFavorites", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     it("returns the favorites for the user", async () => {
         userFavoriteActorRepoMocks.getFavoritesByUserId.mockResolvedValue([storedActor]);
         const actorService = new ActorService();
@@ -197,5 +207,27 @@ describe("ActorService.getFavorites", () => {
 
         expect(userFavoriteActorRepoMocks.getFavoritesByUserId).toHaveBeenCalledWith("user-1");
         expect(result).toEqual([storedActor]);
+    });
+
+    it("returns a friend's favorites when the users are friends", async () => {
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        userFavoriteActorRepoMocks.getFavoritesByUserId.mockResolvedValue([storedActor]);
+        const actorService = new ActorService();
+
+        const result = await actorService.getFavorites("user-1", "friend-1");
+
+        expect(friendRepoMocks.checkIfAlreadyFriend).toHaveBeenCalledWith("user-1", "friend-1");
+        expect(userFavoriteActorRepoMocks.getFavoritesByUserId).toHaveBeenCalledWith("friend-1");
+        expect(result).toEqual([storedActor]);
+    });
+
+    it("rejects when the requested friendId isn't actually a friend", async () => {
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
+        const actorService = new ActorService();
+
+        await expect(actorService.getFavorites("user-1", "stranger-1")).rejects.toThrow(
+            "Vous n'êtes pas en relation avec cette personne"
+        );
+        expect(userFavoriteActorRepoMocks.getFavoritesByUserId).not.toHaveBeenCalled();
     });
 });
