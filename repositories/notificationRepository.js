@@ -24,7 +24,7 @@ export default class NotificationRepository {
      * @param {number} limit
      * @returns {Promise<Notification[]>}
      */
-    getByUserId = async (userId, limit = 20) => {
+    getByUserId = async (userId, limit = 30) => {
         const res = await db.query(`
             SELECT n.*, u.username AS actor_username, u.picture AS actor_picture,
                    s.title AS show_title, s.poster AS show_poster
