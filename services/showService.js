@@ -162,7 +162,7 @@ export default class ShowService {
         const show = await this._userShowRepository.getShowByUserIdByShowId(currentUserId, id);
 
         if (!show) {
-            throw new Error("Série introuvable");
+            throw new ServiceError(404, "Série introuvable");
         }
         const seasons = await this._userSeasonRepository.getDistinctByUserIdByShowId(currentUserId, id);
         const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
