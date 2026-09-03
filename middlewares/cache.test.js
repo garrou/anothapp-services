@@ -98,4 +98,46 @@ describe("cache middleware", () => {
         expect(next2).toHaveBeenCalledWith();
         expect(res2.json).not.toBe(originalJson2);
     });
+
+    it("bypasses the cache entirely when shouldCache returns false, on every request", () => {
+        const middleware = cacheMiddleware(1000, false, (req) => Boolean(req.query.id));
+        const url = "/stats/no-predicate-test";
+
+        // first request: no ?id, opted out - never cached even though the response is sent
+        const req1 = { method: "GET", originalUrl: url, query: {} };
+        const res1 = buildRes();
+        const next1 = vi.fn();
+        middleware(req1, res1, next1);
+        res1.json({ nbSeries: 10 });
+
+        expect(next1).toHaveBeenCalledWith();
+
+        // second request, same URL: still a miss, because nothing was ever cached for it
+        const req2 = { method: "GET", originalUrl: url, query: {} };
+        const res2 = buildRes();
+        const next2 = vi.fn();
+        const originalJson2 = res2.json;
+        middleware(req2, res2, next2);
+
+        expect(next2).toHaveBeenCalledWith();
+        expect(res2.json).toBe(originalJson2);
+    });
+
+    it("caches when shouldCache returns true", () => {
+        const middleware = cacheMiddleware(1000, false, (req) => Boolean(req.query.id));
+        const url = "/stats/with-predicate-test";
+
+        const req1 = { method: "GET", originalUrl: url, query: { id: "friend-1" } };
+        const res1 = buildRes();
+        middleware(req1, res1, vi.fn());
+        res1.json({ nbSeries: 5 });
+
+        const req2 = { method: "GET", originalUrl: url, query: { id: "friend-1" } };
+        const res2 = buildRes();
+        const next2 = vi.fn();
+        middleware(req2, res2, next2);
+
+        expect(next2).not.toHaveBeenCalled();
+        expect(res2.json).toHaveBeenCalledWith({ nbSeries: 5 });
+    });
 });

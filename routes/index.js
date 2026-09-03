@@ -25,7 +25,7 @@ router.use("/search", checkJwt, cache(3600), searchRoutes);
 router.use("/shows", checkJwt, showRoutes);
 router.use("/seasons", checkJwt, seasonRoutes);
 router.use("/episodes", checkJwt, episodeRoutes);
-router.use("/stats", checkJwt, cache(600, true), statRoutes);
+router.use("/stats", checkJwt, cache(600, true, (req) => Boolean(req.query.id)), statRoutes);
 router.use("/friends", checkJwt, friendRoutes);
 router.use("/settings", checkJwt, settingsRoutes);
 router.use("/platforms", checkJwt, platformRoutes);
