@@ -27,7 +27,7 @@ const fetchShowUpdate = async (show) => {
     ]);
     const seasons = currentSeasons.length;
     const parsedCreation = parseInt(current.creation);
-    const parsedEpisodes = parseInt(currentSeasons.reduce((acc, season) => acc + season.episodes, 0));
+    const parsedEpisodes = currentSeasons.reduce((acc, season) => acc + (parseInt(season.episodes) || 0), 0);
 
     return {
         deleted: false, poster, kinds, duration, seasons, country, finished, nextEpisode,
@@ -35,7 +35,7 @@ const fetchShowUpdate = async (show) => {
         creation: Number.isNaN(parsedCreation) ? (show.creation ?? null) : parsedCreation,
         network: current.network ?? show.network ?? null,
         language: current.language ?? show.language ?? null,
-        episodes: Number.isNaN(parsedEpisodes) ? (show.episodes ?? null) : parsedEpisodes,
+        episodes: currentSeasons.length === 0 ? (show.episodes ?? null) : parsedEpisodes,
     };
 };
 

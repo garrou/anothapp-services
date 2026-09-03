@@ -39,15 +39,19 @@ const apiShow = {
     creation: "2008",
     network: "AMC",
     language: "en",
-    episodes: "62",
 };
+
+const defaultSeasons = [
+    {number: 1, episodes: 13}, {number: 2, episodes: 13}, {number: 3, episodes: 12},
+    {number: 4, episodes: 12}, {number: 5, episodes: 12},
+];
 
 describe("updateShows", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         showRepoMocks.updateShow.mockResolvedValue(true);
         betaseriesMocks.fetchNextEpisodeDate.mockResolvedValue("2024-01-01");
-        betaseriesMocks.fetchSeasons.mockResolvedValue([1, 2, 3, 4, 5]);
+        betaseriesMocks.fetchSeasons.mockResolvedValue(defaultSeasons);
     });
 
     it("updates every show on every run, unconditionally", async () => {
@@ -74,7 +78,7 @@ describe("updateShows", () => {
         expect(result).toEqual({updated: 1, toDelete: [], failed: []});
     });
 
-    it("passes through the new metadata fields (description, creation, network, language, episodes)", async () => {
+    it("passes through the new metadata fields (description, creation, network, language)", async () => {
         showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
         betaseriesMocks.fetchShow.mockResolvedValue({
             ...apiShow,
@@ -82,7 +86,6 @@ describe("updateShows", () => {
             creation: "2010",
             network: "Netflix",
             language: "fr",
-            episodes: "10",
         });
 
         await updateShows();
@@ -92,8 +95,20 @@ describe("updateShows", () => {
             creation: 2010,
             network: "Netflix",
             language: "fr",
-            episodes: 10,
         }));
+    });
+
+    it("computes episodes as the sum of each season's episode count, not BetaSeries' show-level total", async () => {
+        showRepoMocks.getAllShows.mockResolvedValue([dbShow]);
+        betaseriesMocks.fetchShow.mockResolvedValue(apiShow);
+        betaseriesMocks.fetchSeasons.mockResolvedValue([
+            {number: 1, episodes: 10}, {number: 2, episodes: 12},
+            {number: 3, episodes: 10}, {number: 4, episodes: 13},
+        ]);
+
+        await updateShows();
+
+        expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, expect.objectContaining({episodes: 45}));
     });
 
     it("keeps the existing metadata fields when BetaSeries doesn't return them", async () => {
@@ -112,8 +127,8 @@ describe("updateShows", () => {
             creation: undefined,
             network: undefined,
             language: undefined,
-            episodes: undefined,
         });
+        betaseriesMocks.fetchSeasons.mockResolvedValue([]);
 
         await updateShows();
 
@@ -134,8 +149,8 @@ describe("updateShows", () => {
             creation: undefined,
             network: undefined,
             language: undefined,
-            episodes: undefined,
         });
+        betaseriesMocks.fetchSeasons.mockResolvedValue([]);
 
         await updateShows();
 
