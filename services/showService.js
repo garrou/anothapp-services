@@ -153,7 +153,7 @@ export default class ShowService {
     /**
      * @param {string} currentUserId
      * @param {number?} id
-     * @returns {Promise<{seasons: Season[], time: number, episodes: number, distinctEpisodes: number?}>}
+     * @returns {Promise<{serie: UserShow, seasons: Season[], time: number, episodes: number, distinctEpisodes: number?}>}
      */
     getShowById = async (currentUserId, id) => {
         if (!id) {
