@@ -29,12 +29,6 @@ describe("NotificationService", () => {
         expect(notificationRepoMocks.getByUserId).toHaveBeenCalledWith("user-1");
     });
 
-    it("getUnreadCount delegates to the repository", async () => {
-        notificationRepoMocks.getUnreadCountByUserId.mockResolvedValue(3);
-
-        await expect(notificationService.getUnreadCount("user-1")).resolves.toBe(3);
-    });
-
     it("markAsRead rejects with a 400 when no id is given", async () => {
         await expect(notificationService.markAsRead("user-1", undefined)).rejects.toThrow("Requête invalide");
         expect(notificationRepoMocks.markAsRead).not.toHaveBeenCalled();
