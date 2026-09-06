@@ -40,17 +40,6 @@ export default class NotificationRepository {
 
     /**
      * @param {string} userId
-     * @returns {Promise<number>}
-     */
-    getUnreadCountByUserId = async (userId) => {
-        const res = await db.query(`
-            SELECT COUNT(*) AS total FROM notifications WHERE recipient_user_id = $1 AND read_at IS NULL
-        `, [userId]);
-        return parseInt(res.rows[0]["total"]);
-    }
-
-    /**
-     * @param {string} userId
      * @param {number} id
      * @returns {Promise<boolean>}
      */

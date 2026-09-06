@@ -16,12 +16,6 @@ export default class NotificationService {
 
     /**
      * @param {string} userId
-     * @returns {Promise<number>}
-     */
-    getUnreadCount = async (userId) => this._notificationRepository.getUnreadCountByUserId(userId);
-
-    /**
-     * @param {string} userId
      * @param {number?} id
      * @returns {Promise<void>}
      */

@@ -8,11 +8,8 @@ export default class NotificationController {
 
     getNotifications = async (req, res, next) => {
         try {
-            const [notifications, unreadCount] = await Promise.all([
-                this._notificationService.getNotifications(req.userId),
-                this._notificationService.getUnreadCount(req.userId),
-            ]);
-            res.status(200).json({ notifications, unreadCount });
+            const notifications = await this._notificationService.getNotifications(req.userId);
+            res.status(200).json({ notifications });
         } catch (e) {
             next(e);
         }
