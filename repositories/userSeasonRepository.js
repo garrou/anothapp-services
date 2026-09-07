@@ -4,8 +4,13 @@ import Season from "../models/season.js";
 import {PartialUserSeason, UserSeason} from "../models/userSeason.js";
 import SeasonTimeline from "../models/seasonTimeline.js";
 import Stat from "../models/stat.js";
+import UserSeasonFriendRepository from "./userSeasonFriendRepository.js";
 
 export default class UserSeasonRepository {
+
+    constructor() {
+        this._userSeasonFriendRepository = new UserSeasonFriendRepository();
+    }
 
     /**
      * @param {string} userId
@@ -85,7 +90,10 @@ export default class UserSeasonRepository {
             WHERE user_id = $1 AND show_id = $2 AND number = $3
             ORDER BY added_at
         `, [userId, showId, number]);
-        return res.rows.map((row) => new PartialUserSeason(row));
+        const watchedWithByUserSeasonId = await this._userSeasonFriendRepository.getByUserSeasonIds(
+            res.rows.map((row) => row.id)
+        );
+        return res.rows.map((row) => new PartialUserSeason(row, watchedWithByUserSeasonId.get(row.id) ?? []));
     }
 
     /**

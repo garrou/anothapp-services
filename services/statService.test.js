@@ -56,12 +56,18 @@ const userRepoMocks = vi.hoisted(() => ({
 const friendRepoMocks = vi.hoisted(() => ({
     checkIfAlreadyFriend: vi.fn(),
 }));
+const userSeasonFriendRepoMocks = vi.hoisted(() => ({
+    getTopFriendsByUserId: vi.fn(),
+}));
 
 vi.mock("../repositories/userShowRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userShowRepoMocks; }),
 }));
 vi.mock("../repositories/userSeasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userSeasonRepoMocks; }),
+}));
+vi.mock("../repositories/userSeasonFriendRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return userSeasonFriendRepoMocks; }),
 }));
 vi.mock("../repositories/userEpisodeStatRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userEpisodeStatRepoMocks; }),
@@ -90,6 +96,7 @@ describe("StatService.getStats", () => {
         userSeasonRepoMocks.getNbSeasonsByUserIdGroupByMonth.mockResolvedValue([]);
         userSeasonRepoMocks.getPlatformsByUserId.mockResolvedValue([]);
         userSeasonRepoMocks.getRecordViewingTimeMonth.mockResolvedValue([]);
+        userSeasonFriendRepoMocks.getTopFriendsByUserId.mockResolvedValue([]);
 
         for (const repo of [userSeasonRepoMocks, userEpisodeStatRepoMocks]) {
             repo.getTimeCurrentMonthByUserId.mockResolvedValue(0);
@@ -155,6 +162,18 @@ describe("StatService.getStats", () => {
         expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalled();
 
         vi.useRealTimers();
+    });
+
+    it("exposes the top watched-with friends ranking", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+        userSeasonFriendRepoMocks.getTopFriendsByUserId.mockResolvedValue([
+            {id: "friend-1", label: "Marie", value: 5}
+        ]);
+
+        const stats = await statService.getStats("user-1");
+
+        expect(stats.topWatchedWithFriends).toEqual([{id: "friend-1", label: "Marie", value: 5}]);
+        expect(userSeasonFriendRepoMocks.getTopFriendsByUserId).toHaveBeenCalledWith("user-1", 5);
     });
 
     it("rejects with a 400 when requesting a friendId that isn't actually a friend", async () => {

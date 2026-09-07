@@ -1,5 +1,6 @@
 import UserShowRepository from "../repositories/userShowRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
+import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
 import UserEpisodeStatRepository from "../repositories/userEpisodeStatRepository.js";
 import UserRepository from "../repositories/userRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
@@ -13,6 +14,7 @@ export default class StatService {
     constructor() {
         this._userShowRepository = new UserShowRepository();
         this._userSeasonRepository = new UserSeasonRepository();
+        this._userSeasonFriendRepository = new UserSeasonFriendRepository();
         this._userEpisodeStatRepository = new UserEpisodeStatRepository();
         this._userRepository = new UserRepository();
         this._friendRepository = new FriendRepository();
@@ -36,7 +38,7 @@ export default class StatService {
             monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes, bestMonthRows,
             seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
             episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
-            seasonsPlatforms, seriesCountries, seriesNotes, watchedDates
+            seasonsPlatforms, seriesCountries, seriesNotes, watchedDates, topWatchedWithFriends
         ] = await Promise.all([
             repo.getTimeCurrentMonthByUserId(userId),
             repo.getTotalTimeByUserId(userId),
@@ -57,6 +59,7 @@ export default class StatService {
             this._userShowRepository.getCountriesByUserId(userId, 200),
             this._userShowRepository.getNotesByUserId(userId),
             repo.getWatchedDatesByUserId(userId),
+            this._userSeasonFriendRepository.getTopFriendsByUserId(userId, 5),
         ]);
         const {current: currentStreak, longest: longestStreak} = computeStreak(watchedDates);
 
@@ -65,7 +68,8 @@ export default class StatService {
             "bestMonth": bestMonthRows[0],
             seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
             episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
-            seasonsPlatforms, seriesCountries, seriesNotes, currentStreak, longestStreak
+            seasonsPlatforms, seriesCountries, seriesNotes, currentStreak, longestStreak,
+            topWatchedWithFriends
         };
         if (episodeTrackingEnabled) {
             stats.episodesHeatmap = await this._userEpisodeStatRepository.getWatchedByDay(userId);
