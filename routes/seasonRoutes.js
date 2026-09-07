@@ -16,4 +16,6 @@ router.delete("/:id", seasonController.deleteBySeasonId);
 
 router.patch("/:id", seasonController.updateBySeasonId);
 
+router.patch("/:id/watched-with", seasonController.updateWatchedWith);
+
 export default router;

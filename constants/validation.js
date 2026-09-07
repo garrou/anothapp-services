@@ -11,3 +11,5 @@ export const MAX_USERNAME = 25;
 export const MIN_USERNAME = 3;
 
 export const MONTHS_SHORTCUTS = ["0", "1", "2", "3", "6", "12"];
+
+export const MAX_WATCHED_WITH = 10;

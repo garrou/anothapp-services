@@ -114,6 +114,14 @@ CREATE TABLE users_seasons (
     FOREIGN KEY(user_id, show_id) REFERENCES users_shows(user_id, show_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE users_seasons_friends (
+    users_season_id INTEGER NOT NULL,
+    friend_user_id UUID NOT NULL,
+    FOREIGN KEY(users_season_id) REFERENCES users_seasons(id) ON DELETE CASCADE,
+    FOREIGN KEY(friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY(users_season_id, friend_user_id)
+);
+
 CREATE TABLE episodes (
     id INTEGER,
     show_id INTEGER NOT NULL,
@@ -210,6 +218,7 @@ CREATE INDEX idx_episodes_show_season ON episodes(show_id, season_number);
 CREATE INDEX idx_users_episodes_user_id ON users_episodes(user_id);
 CREATE INDEX idx_users_episodes_users_seasons_id ON users_episodes(users_seasons_id);
 CREATE INDEX idx_friends_sec_user_id ON friends(sec_user_id);
+CREATE INDEX idx_users_seasons_friends_friend ON users_seasons_friends(friend_user_id);
 CREATE INDEX idx_users_list_user_id ON users_list(user_id);
 CREATE INDEX idx_notifications_recipient_unread ON notifications(recipient_user_id, read_at);
 CREATE INDEX idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);

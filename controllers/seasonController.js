@@ -66,4 +66,15 @@ export default class SeasonController {
             next(e);
         }
     }
+
+    updateWatchedWith = async (req, res, next) => {
+        try {
+            const {id} = req.params;
+            const {friendIds} = req.body;
+            await this._seasonService.updateWatchedWith(req.userId, id, friendIds);
+            res.sendStatus(200);
+        } catch (e) {
+            next(e);
+        }
+    }
 }

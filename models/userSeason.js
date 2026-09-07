@@ -4,11 +4,13 @@ class PartialUserSeason {
 
     /**
      * @param {Object} obj
+     * @param {import("./userProfile.js").default[]} [watchedWith]
      */
-    constructor(obj) {
+    constructor(obj, watchedWith = []) {
         this.id = obj.id;
         this.addedAt = obj["added_at"];
         this.platform = new Platform(obj);
+        this.watchedWith = watchedWith;
     }
 }
 

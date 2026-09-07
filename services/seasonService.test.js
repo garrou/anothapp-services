@@ -8,6 +8,16 @@ const seasonRepoMocks = vi.hoisted(() => ({
 const userSeasonRepoMocks = vi.hoisted(() => ({
     getViewedByMonthAgo: vi.fn(),
     getSeasonsByAddedYear: vi.fn(),
+    getOwnedSeasonViewing: vi.fn(),
+}));
+const userSeasonFriendRepoMocks = vi.hoisted(() => ({
+    setForUserSeasonId: vi.fn(),
+}));
+const friendRepoMocks = vi.hoisted(() => ({
+    getFriends: vi.fn(),
+}));
+const eventBusMocks = vi.hoisted(() => ({
+    emit: vi.fn(),
 }));
 const episodeServiceMocks = vi.hoisted(() => ({
     getByUserSeasonId: vi.fn(),
@@ -20,6 +30,15 @@ vi.mock("../repositories/seasonRepository.js", () => ({
 }));
 vi.mock("../repositories/userSeasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userSeasonRepoMocks; }),
+}));
+vi.mock("../repositories/userSeasonFriendRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return userSeasonFriendRepoMocks; }),
+}));
+vi.mock("../repositories/friendRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return friendRepoMocks; }),
+}));
+vi.mock("../helpers/eventBus.js", () => ({
+    default: eventBusMocks,
 }));
 vi.mock("./episodeService.js", () => ({
     default: vi.fn().mockImplementation(function () { return episodeServiceMocks; }),
@@ -182,5 +201,74 @@ describe("SeasonService.updateBySeasonId", () => {
             seasonService.updateBySeasonId("user-1", 7, 2, "2024-01-01")
         ).rejects.toThrow("Impossible de modifier la saison");
         expect(episodeServiceMocks.updatePlatformForSeason).not.toHaveBeenCalled();
+    });
+});
+
+describe("SeasonService.updateWatchedWith", () => {
+    let seasonService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        seasonService = new SeasonService();
+        userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({showId: 42, number: 1, platformId: 999});
+        friendRepoMocks.getFriends.mockResolvedValue([{id: "friend-1"}, {id: "friend-2"}]);
+    });
+
+    it("rejects with a 400 when seasonId is missing", async () => {
+        await expect(seasonService.updateWatchedWith("user-1", undefined, [])).rejects.toThrow(
+            "Requête invalide"
+        );
+        expect(userSeasonFriendRepoMocks.setForUserSeasonId).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a 400 when friendIds isn't an array", async () => {
+        await expect(seasonService.updateWatchedWith("user-1", 7, "friend-1")).rejects.toThrow(
+            "Requête invalide"
+        );
+    });
+
+    it("rejects with a 400 when more than 10 friends are tagged", async () => {
+        const tooMany = Array.from({length: 11}, (_, i) => `friend-${i}`);
+
+        await expect(seasonService.updateWatchedWith("user-1", 7, tooMany)).rejects.toThrow(
+            "Vous ne pouvez pas taguer plus de 10 amis"
+        );
+        expect(userSeasonRepoMocks.getOwnedSeasonViewing).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a 404 when the viewing isn't owned by the current user", async () => {
+        userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue(null);
+
+        await expect(seasonService.updateWatchedWith("user-1", 7, ["friend-1"])).rejects.toThrow(
+            "Visionnage introuvable"
+        );
+        expect(userSeasonFriendRepoMocks.setForUserSeasonId).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a 400 when a tagged user isn't an accepted friend", async () => {
+        await expect(seasonService.updateWatchedWith("user-1", 7, ["friend-1", "stranger"])).rejects.toThrow(
+            "Vous ne pouvez taguer que des amis"
+        );
+        expect(userSeasonFriendRepoMocks.setForUserSeasonId).not.toHaveBeenCalled();
+    });
+
+    it("dedupes friend ids, persists them and notifies each tagged friend", async () => {
+        await seasonService.updateWatchedWith("user-1", 7, ["friend-1", "friend-1", "friend-2"]);
+
+        expect(userSeasonFriendRepoMocks.setForUserSeasonId).toHaveBeenCalledWith(7, ["friend-1", "friend-2"]);
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with", {
+            actorUserId: "user-1",
+            recipientIds: ["friend-1", "friend-2"],
+            showId: 42,
+            metadata: {seasonNumber: 1}
+        });
+    });
+
+    it("clears the tags without checking friendship or notifying when friendIds is empty", async () => {
+        await seasonService.updateWatchedWith("user-1", 7, []);
+
+        expect(friendRepoMocks.getFriends).not.toHaveBeenCalled();
+        expect(userSeasonFriendRepoMocks.setForUserSeasonId).toHaveBeenCalledWith(7, []);
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });
 });
