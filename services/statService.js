@@ -91,7 +91,10 @@ export default class StatService {
         const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
         const repo = episodeTrackingEnabled ? this._userEpisodeStatRepository : this._userSeasonRepository;
 
-        const [totalTime, totalEpisodes, nbNewShows, topShow, kindsRows, topPlatform, bestMonth, watchedDates] = await Promise.all([
+        const [
+            totalTime, totalEpisodes, nbNewShows, topShow, kindsRows, topPlatform, bestMonth,
+            watchedDates, topWatchedWithFriend
+        ] = await Promise.all([
             repo.getTotalTimeByUserIdByYear(currentUserId, numYear),
             repo.getTotalEpisodesByUserIdByYear(currentUserId, numYear),
             this._userShowRepository.getNbShowsAddedByUserIdByYear(currentUserId, numYear),
@@ -100,12 +103,13 @@ export default class StatService {
             repo.getTopPlatformByUserIdByYear(currentUserId, numYear),
             repo.getBestMonthByUserIdByYear(currentUserId, numYear),
             repo.getWatchedDatesByUserIdByYear(currentUserId, numYear),
+            this._userSeasonFriendRepository.getTopFriendByUserIdByYear(currentUserId, numYear),
         ]);
 
         return {
             year: numYear, totalTime, totalEpisodes, nbNewShows, topShow,
             topKind: this.#topKindFromRows(kindsRows), topPlatform, bestMonth,
-            bestStreak: computeStreak(watchedDates).longest
+            bestStreak: computeStreak(watchedDates).longest, topWatchedWithFriend
         };
     }
 

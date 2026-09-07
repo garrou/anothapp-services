@@ -76,4 +76,33 @@ export default class UserSeasonFriendRepository {
         `, [userId, limit]);
         return res.rows.map((row) => new Stat(row));
     }
+
+    /**
+     * @param {string} userId
+     * @param {number} year
+     * @returns {Promise<Stat|null>}
+     */
+    getTopFriendByUserIdByYear = async (userId, year) => {
+        const res = await db.query(`
+            SELECT other_user.id, other_user.username AS label, COUNT(*) AS value
+            FROM (
+                SELECT usf.friend_user_id AS other_id
+                FROM users_seasons_friends usf
+                JOIN users_seasons us ON us.id = usf.users_season_id
+                WHERE us.user_id = $1 AND EXTRACT(YEAR FROM us.added_at) = $2
+
+                UNION ALL
+
+                SELECT us.user_id AS other_id
+                FROM users_seasons_friends usf
+                JOIN users_seasons us ON us.id = usf.users_season_id
+                WHERE usf.friend_user_id = $1 AND EXTRACT(YEAR FROM us.added_at) = $2
+            ) pairs
+            JOIN users other_user ON other_user.id = pairs.other_id
+            GROUP BY other_user.id, other_user.username
+            ORDER BY value DESC
+            LIMIT 1
+        `, [userId, year]);
+        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
+    }
 }

@@ -58,6 +58,7 @@ const friendRepoMocks = vi.hoisted(() => ({
 }));
 const userSeasonFriendRepoMocks = vi.hoisted(() => ({
     getTopFriendsByUserId: vi.fn(),
+    getTopFriendByUserIdByYear: vi.fn(),
 }));
 
 vi.mock("../repositories/userShowRepository.js", () => ({
@@ -211,6 +212,7 @@ describe("StatService.getWrapped", () => {
         vi.clearAllMocks();
         statService = new StatService();
         userShowRepoMocks.getNbShowsAddedByUserIdByYear.mockResolvedValue(0);
+        userSeasonFriendRepoMocks.getTopFriendByUserIdByYear.mockResolvedValue(null);
 
         for (const repo of [userSeasonRepoMocks, userEpisodeStatRepoMocks]) {
             repo.getTotalTimeByUserIdByYear.mockResolvedValue(0);
@@ -291,5 +293,25 @@ describe("StatService.getWrapped", () => {
         const wrapped = await statService.getWrapped("user-1", 2024);
 
         expect(wrapped.topKind).toBeNull();
+    });
+
+    it("exposes the top watched-with friend for that year", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+        userSeasonFriendRepoMocks.getTopFriendByUserIdByYear.mockResolvedValue(
+            {id: "friend-1", label: "Marie", value: 4}
+        );
+
+        const wrapped = await statService.getWrapped("user-1", 2024);
+
+        expect(wrapped.topWatchedWithFriend).toEqual({id: "friend-1", label: "Marie", value: 4});
+        expect(userSeasonFriendRepoMocks.getTopFriendByUserIdByYear).toHaveBeenCalledWith("user-1", 2024);
+    });
+
+    it("returns a null topWatchedWithFriend when nobody was tagged that year", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+
+        const wrapped = await statService.getWrapped("user-1", 2024);
+
+        expect(wrapped.topWatchedWithFriend).toBeNull();
     });
 });
