@@ -55,12 +55,22 @@ export default class UserSeasonFriendRepository {
      */
     getTopFriendsByUserId = async (userId, limit = 5) => {
         const res = await db.query(`
-            SELECT u.id, u.username AS label, COUNT(*) AS value
-            FROM users_seasons_friends usf
-            JOIN users_seasons us ON us.id = usf.users_season_id
-            JOIN users u ON u.id = usf.friend_user_id
-            WHERE us.user_id = $1
-            GROUP BY u.id, u.username
+            SELECT other_user.id, other_user.username AS label, COUNT(*) AS value
+            FROM (
+                SELECT usf.friend_user_id AS other_id
+                FROM users_seasons_friends usf
+                JOIN users_seasons us ON us.id = usf.users_season_id
+                WHERE us.user_id = $1
+
+                UNION ALL
+
+                SELECT us.user_id AS other_id
+                FROM users_seasons_friends usf
+                JOIN users_seasons us ON us.id = usf.users_season_id
+                WHERE usf.friend_user_id = $1
+            ) pairs
+            JOIN users other_user ON other_user.id = pairs.other_id
+            GROUP BY other_user.id, other_user.username
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
