@@ -53,14 +53,16 @@ export default class UserShowRepository {
      * @param {string[]} countries
      * @param {string[]} kinds
      * @param {number[]} notes
+     * @param {string[]} friendIds
      * @returns {Promise<UserShow[]>}
      */
-    getShowsByUserId = async (userId, title, platforms, countries, kinds, notes) => {
+    getShowsByUserId = async (userId, title, platforms, countries, kinds, notes, friendIds = []) => {
         const res = await db.query(`
             SELECT DISTINCT s.*, us.*
             FROM shows s
             JOIN users_shows us ON s.id = us.show_id
             LEFT JOIN users_seasons use ON us.user_id = use.user_id AND us.show_id = use.show_id
+            LEFT JOIN users_seasons_friends usf ON usf.users_season_id = use.id
             LEFT JOIN notes n ON n.id = us.note_id
             WHERE us.user_id = $1
             AND (COALESCE($2, '') = '' OR s.title ILIKE $2)
@@ -68,6 +70,7 @@ export default class UserShowRepository {
             AND (CARDINALITY($4::VARCHAR[]) = 0 OR s.country ILIKE ANY ($4))
             AND (CARDINALITY($5::INT[]) = 0 OR us.note_id = ANY ($5))
             AND (${db.generateCondition("s.kinds", "ILIKE", "AND", 6, kinds.length)})
+            AND (CARDINALITY($${6 + kinds.length}::uuid[]) = 0 OR usf.friend_user_id = ANY ($${6 + kinds.length}))
             ORDER BY us.added_at DESC
         `, [
             userId,
@@ -76,6 +79,7 @@ export default class UserShowRepository {
             countries,
             notes,
             ...kinds.map((kind) => `%${kind}%`),
+            friendIds,
         ]);
         return res.rows.map((row) => new UserShow(row));
     }
