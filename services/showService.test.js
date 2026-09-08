@@ -344,11 +344,12 @@ describe("ShowService.getShows", () => {
             countries: "US,FR",
             kinds: "Drame",
             notes: "4,5",
+            watchedWith: "friend-1,friend-2",
         });
 
         expect(result).toEqual(["filtered-show"]);
         expect(userShowRepoMocks.getShowsByUserId).toHaveBeenCalledWith(
-            "user-1", "Breaking", [1, 2], ["US", "FR"], ["Drame"], [4, 5]
+            "user-1", "Breaking", [1, 2], ["US", "FR"], ["Drame"], [4, 5], ["friend-1", "friend-2"]
         );
     });
 });

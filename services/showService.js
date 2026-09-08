@@ -191,7 +191,7 @@ export default class ShowService {
      * @returns {Promise<UserShow[]|Show[]>}
      */
     getShows = async (currentUserId, query) => {
-        const { title, status, friendId, platforms, countries, kinds, notes } = query;
+        const { title, status, friendId, platforms, countries, kinds, notes, watchedWith } = query;
         if (friendId && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
             throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
         }
@@ -205,6 +205,7 @@ export default class ShowService {
             ParserHelper.splitAndToNotNull(countries),
             ParserHelper.splitAndToNotNull(kinds),
             ParserHelper.splitAndToNumber(notes),
+            ParserHelper.splitAndToNotNull(watchedWith),
         );
     }
 
