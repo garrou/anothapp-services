@@ -35,6 +35,25 @@ export default class UserEpisodeStatRepository {
     }
 
     /**
+     * @param {string[]} userIds
+     * @returns {Promise<Map<string, number>>}
+     */
+    getTimeCurrentMonthByUserIds = async (userIds) => {
+        if (!userIds.length) {
+            return new Map();
+        }
+        const res = await db.query(`
+            SELECT ue.user_id, SUM(COALESCE(e.length, s.duration)) AS time
+            FROM users_episodes ue
+            JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
+            WHERE ue.user_id = ANY($1::uuid[]) AND ue.watched_at >= DATE_TRUNC('month', CURRENT_DATE)
+            GROUP BY ue.user_id
+        `, [userIds]);
+        return new Map(res.rows.map((row) => [row["user_id"], parseInt(row["time"] ?? 0)]));
+    }
+
+    /**
      * @param {string} userId
      * @returns {Promise<Stat[]>}
      */

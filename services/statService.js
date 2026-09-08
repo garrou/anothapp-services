@@ -114,6 +114,39 @@ export default class StatService {
     }
 
     /**
+     * @param {string} currentUserId
+     * @returns {Promise<{id: string, username: string, picture: string?, value: number, isMe: boolean}[]>}
+     */
+    getLeaderboard = async (currentUserId) => {
+        const [friends, me] = await Promise.all([
+            this._friendRepository.getFriends(currentUserId),
+            this._userRepository.getUserById(currentUserId),
+        ]);
+        const participants = [me, ...friends];
+        const ids = participants.map((p) => p.id);
+        const trackingByUserId = await this._userRepository.getEpisodeTrackingByIds(ids);
+
+        const seasonIds = ids.filter((id) => !trackingByUserId.get(id));
+        const episodeIds = ids.filter((id) => trackingByUserId.get(id));
+
+        const [seasonTimes, episodeTimes] = await Promise.all([
+            this._userSeasonRepository.getTimeCurrentMonthByUserIds(seasonIds),
+            this._userEpisodeStatRepository.getTimeCurrentMonthByUserIds(episodeIds),
+        ]);
+        const timeByUserId = new Map([...seasonTimes, ...episodeTimes]);
+
+        return participants
+            .map((p) => ({
+                id: p.id,
+                username: p.username,
+                picture: p.picture,
+                value: timeByUserId.get(p.id) ?? 0,
+                isMe: p.id === currentUserId
+            }))
+            .sort((a, b) => b.value - a.value);
+    }
+
+    /**
      * @param {{kinds: string, value: number}[]} rows
      * @returns {Stat|null}
      */

@@ -25,4 +25,13 @@ export default class StatController {
         }
     }
 
+    getLeaderboard = async (req, res, next) => {
+        try {
+            const leaderboard = await this._statService.getLeaderboard(req.userId);
+            res.status(200).json(leaderboard);
+        } catch (e) {
+            next(e);
+        }
+    }
+
 }

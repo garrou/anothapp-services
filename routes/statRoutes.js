@@ -8,4 +8,6 @@ router.get("/", statController.getStats);
 
 router.get("/wrapped", statController.getWrapped);
 
+router.get("/leaderboard", statController.getLeaderboard);
+
 export default router;
