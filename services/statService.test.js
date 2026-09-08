@@ -30,9 +30,11 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getTopPlatformByUserIdByYear: vi.fn(),
     getBestMonthByUserIdByYear: vi.fn(),
     getWatchedDatesByUserIdByYear: vi.fn(),
+    getTimeCurrentMonthByUserIds: vi.fn(),
 }));
 const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getTimeCurrentMonthByUserId: vi.fn(),
+    getTimeCurrentMonthByUserIds: vi.fn(),
     getTotalTimeByUserId: vi.fn(),
     getTotalEpisodesByUserId: vi.fn(),
     getRecordViewingTimeMonth: vi.fn(),
@@ -52,9 +54,12 @@ const userEpisodeStatRepoMocks = vi.hoisted(() => ({
 }));
 const userRepoMocks = vi.hoisted(() => ({
     hasEpisodeTrackingEnabled: vi.fn(),
+    getUserById: vi.fn(),
+    getEpisodeTrackingByIds: vi.fn(),
 }));
 const friendRepoMocks = vi.hoisted(() => ({
     checkIfAlreadyFriend: vi.fn(),
+    getFriends: vi.fn(),
 }));
 const userSeasonFriendRepoMocks = vi.hoisted(() => ({
     getTopFriendsByUserId: vi.fn(),
@@ -313,5 +318,55 @@ describe("StatService.getWrapped", () => {
         const wrapped = await statService.getWrapped("user-1", 2024);
 
         expect(wrapped.topWatchedWithFriend).toBeNull();
+    });
+});
+
+describe("StatService.getLeaderboard", () => {
+    let statService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        statService = new StatService();
+        userRepoMocks.getUserById.mockResolvedValue({id: "user-1", username: "Moi", picture: undefined});
+        friendRepoMocks.getFriends.mockResolvedValue([
+            {id: "friend-1", username: "Marie", picture: undefined},
+            {id: "friend-2", username: "Paul", picture: undefined},
+        ]);
+        userRepoMocks.getEpisodeTrackingByIds.mockResolvedValue(new Map([
+            ["user-1", false],
+            ["friend-1", false],
+            ["friend-2", true],
+        ]));
+        userSeasonRepoMocks.getTimeCurrentMonthByUserIds.mockResolvedValue(new Map());
+        userEpisodeStatRepoMocks.getTimeCurrentMonthByUserIds.mockResolvedValue(new Map());
+    });
+
+    it("splits participants between the season and episode repos by their tracking mode", async () => {
+        await statService.getLeaderboard("user-1");
+
+        expect(userSeasonRepoMocks.getTimeCurrentMonthByUserIds).toHaveBeenCalledWith(["user-1", "friend-1"]);
+        expect(userEpisodeStatRepoMocks.getTimeCurrentMonthByUserIds).toHaveBeenCalledWith(["friend-2"]);
+    });
+
+    it("ranks participants by minutes watched this month, descending", async () => {
+        userSeasonRepoMocks.getTimeCurrentMonthByUserIds.mockResolvedValue(new Map([
+            ["user-1", 120],
+            ["friend-1", 300],
+        ]));
+        userEpisodeStatRepoMocks.getTimeCurrentMonthByUserIds.mockResolvedValue(new Map([
+            ["friend-2", 200],
+        ]));
+
+        const leaderboard = await statService.getLeaderboard("user-1");
+
+        expect(leaderboard.map((entry) => entry.id)).toEqual(["friend-1", "friend-2", "user-1"]);
+        expect(leaderboard.find((entry) => entry.id === "user-1")).toMatchObject({isMe: true, value: 120});
+    });
+
+    it("defaults to 0 minutes for a participant with no viewing this month", async () => {
+        const leaderboard = await statService.getLeaderboard("user-1");
+
+        expect(leaderboard).toHaveLength(3);
+        leaderboard.forEach((entry) => expect(entry.value).toBe(0));
     });
 });
