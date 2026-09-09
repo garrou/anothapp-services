@@ -74,6 +74,9 @@ const formatReport = (results) => {
     if (results.users) {
         lines.push(`${results.users.total} utilisateur(s) au total`);
     }
+    if (results.database) {
+        lines.push(`Taille de la base : ${results.database.size}`);
+    }
     return lines.join("\n");
 };
 

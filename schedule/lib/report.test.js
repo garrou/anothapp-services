@@ -100,4 +100,9 @@ describe("formatReport", () => {
         const report = formatReport({users: {total: 128}});
         expect(report).toBe("128 utilisateur(s) au total");
     });
+
+    it("formats database size results", () => {
+        const report = formatReport({database: {size: "128 MB"}});
+        expect(report).toBe("Taille de la base : 128 MB");
+    });
 });
