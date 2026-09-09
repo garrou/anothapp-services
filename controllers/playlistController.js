@@ -17,7 +17,7 @@ export default class PlaylistController {
 
     getPlaylistById = async (req, res, next) => {
         try {
-            const playlist = await this._playlistService.getPlaylistById(req.userId, Number(req.params.id));
+            const playlist = await this._playlistService.getPlaylistById(req.userId, req.params.id);
             res.status(200).json(playlist);
         } catch (e) {
             next(e);
@@ -37,7 +37,7 @@ export default class PlaylistController {
     updatePlaylist = async (req, res, next) => {
         try {
             const {name, visible} = req.body;
-            await this._playlistService.updatePlaylist(req.userId, Number(req.params.id), {name, visible});
+            await this._playlistService.updatePlaylist(req.userId, req.params.id, {name, visible});
             res.sendStatus(204);
         } catch (e) {
             next(e);
@@ -46,7 +46,7 @@ export default class PlaylistController {
 
     deletePlaylist = async (req, res, next) => {
         try {
-            await this._playlistService.deletePlaylist(req.userId, Number(req.params.id));
+            await this._playlistService.deletePlaylist(req.userId, req.params.id);
             res.sendStatus(204);
         } catch (e) {
             next(e);
@@ -56,7 +56,7 @@ export default class PlaylistController {
     addShowToPlaylist = async (req, res, next) => {
         try {
             const {showId} = req.body;
-            await this._playlistService.addShowToPlaylist(req.userId, Number(req.params.id), showId);
+            await this._playlistService.addShowToPlaylist(req.userId, req.params.id, showId);
             res.sendStatus(201);
         } catch (e) {
             next(e);
@@ -65,7 +65,7 @@ export default class PlaylistController {
 
     removeShowFromPlaylist = async (req, res, next) => {
         try {
-            await this._playlistService.removeShowFromPlaylist(req.userId, Number(req.params.id), Number(req.params.showId));
+            await this._playlistService.removeShowFromPlaylist(req.userId, req.params.id, Number(req.params.showId));
             res.sendStatus(204);
         } catch (e) {
             next(e);

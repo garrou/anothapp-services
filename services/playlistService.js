@@ -41,7 +41,7 @@ export default class PlaylistService {
 
     /**
      * @param {string} currentUserId
-     * @param {number} id
+     * @param {string} id
      * @returns {Promise<{playlist: import("../models/playlist.js").default, shows: import("../models/show.js").default[]}>}
      */
     getPlaylistById = async (currentUserId, id) => {
@@ -76,7 +76,7 @@ export default class PlaylistService {
 
     /**
      * @param {string} currentUserId
-     * @param {number} id
+     * @param {string} id
      * @param {{name: string?, visible: boolean?}} fields
      * @returns {Promise<void>}
      */
@@ -98,7 +98,7 @@ export default class PlaylistService {
 
     /**
      * @param {string} currentUserId
-     * @param {number} id
+     * @param {string} id
      * @returns {Promise<void>}
      */
     deletePlaylist = async (currentUserId, id) => {
@@ -114,7 +114,7 @@ export default class PlaylistService {
 
     /**
      * @param {string} currentUserId
-     * @param {number} playlistId
+     * @param {string} playlistId
      * @param {number?} showId
      * @returns {Promise<void>}
      */
@@ -131,7 +131,7 @@ export default class PlaylistService {
 
     /**
      * @param {string} currentUserId
-     * @param {number} playlistId
+     * @param {string} playlistId
      * @param {number} showId
      * @returns {Promise<void>}
      */

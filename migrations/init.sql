@@ -221,7 +221,7 @@ CREATE TABLE users_list (
 );
 
 CREATE TABLE playlists (
-    id SERIAL,
+    id UUID DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
     name VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -231,7 +231,7 @@ CREATE TABLE playlists (
 );
 
 CREATE TABLE playlists_shows (
-    playlist_id INTEGER,
+    playlist_id UUID,
     show_id INTEGER,
     added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY(playlist_id) REFERENCES playlists(id) ON DELETE CASCADE ON UPDATE CASCADE,

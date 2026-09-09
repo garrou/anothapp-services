@@ -34,7 +34,7 @@ export default class PlaylistRepository {
     }
 
     /**
-     * @param {number} id
+     * @param {string} id
      * @returns {Promise<Playlist|null>}
      */
     getById = async (id) => {
@@ -79,7 +79,7 @@ export default class PlaylistRepository {
     }
 
     /**
-     * @param {number} id
+     * @param {string} id
      * @param {{name: string?, visible: boolean?}} fields
      * @returns {Promise<boolean>}
      */
@@ -93,7 +93,7 @@ export default class PlaylistRepository {
     }
 
     /**
-     * @param {number} id
+     * @param {string} id
      * @returns {Promise<boolean>}
      */
     delete = async (id) => {
@@ -104,7 +104,7 @@ export default class PlaylistRepository {
     }
 
     /**
-     * @param {number} playlistId
+     * @param {string} playlistId
      * @param {number} showId
      * @returns {Promise<void>}
      */
@@ -117,7 +117,7 @@ export default class PlaylistRepository {
     }
 
     /**
-     * @param {number} playlistId
+     * @param {string} playlistId
      * @param {number} showId
      * @returns {Promise<boolean>}
      */
@@ -130,7 +130,7 @@ export default class PlaylistRepository {
     }
 
     /**
-     * @param {number} playlistId
+     * @param {string} playlistId
      * @returns {Promise<Show[]>}
      */
     getShowsByPlaylistId = async (playlistId) => {
