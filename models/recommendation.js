@@ -7,7 +7,7 @@ export default class Recommendation {
         this.id = obj.id;
         this.title = obj.title;
         this.poster = obj.poster;
-        this.kinds = obj.kind_names ?? (obj.kinds ? obj.kinds.split(";") : []);
+        this.kinds = obj.kind_names ?? [];
         this.duration = obj.duration;
         this.seasons = obj.seasons;
         this.country = obj.country;

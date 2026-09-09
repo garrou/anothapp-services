@@ -7,7 +7,7 @@ export default class UserShow {
         this.id = obj.id;
         this.title = obj.title;
         this.poster = obj.poster;
-        this.kinds = obj.kind_names ?? (obj.kinds ? obj.kinds.split(";") : []);
+        this.kinds = obj.kind_names ?? [];
         this.favorite = obj.favorite;
         this.missing = obj.missing;
         this.duration = obj.duration;

@@ -21,7 +21,6 @@ const dbShow = {
     id: 42,
     title: "Breaking Bad",
     poster: "https://img/old.jpg",
-    kinds: "Drame;Policier",
     duration: 45,
     seasons: 5,
     country: "US",
@@ -63,7 +62,6 @@ describe("updateShows", () => {
         expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, {
             deleted: false,
             poster: "https://img/old.jpg",
-            kinds: "Drame;Policier",
             kindIds: ["Drama", "Crime"],
             duration: 45,
             seasons: 5,

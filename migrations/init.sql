@@ -107,7 +107,6 @@ CREATE TABLE shows (
     id INTEGER,
     title VARCHAR(255) UNIQUE NOT NULL,
     poster VARCHAR(255),
-    kinds VARCHAR(255) NOT NULL,
     duration INTEGER NOT NULL,
     seasons INTEGER NOT NULL,
     country VARCHAR(50) NOT NULL,
