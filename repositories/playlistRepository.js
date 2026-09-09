@@ -5,15 +5,15 @@ import Show from "../models/show.js";
 const MAX_COVER_POSTERS = 4;
 
 const POSTERS_SUBQUERY = `(
-    SELECT COALESCE(array_agg(s.poster ORDER BY recent.added_at DESC), '{}')
+    SELECT COALESCE(array_agg(poster ORDER BY added_at DESC), '{}')
     FROM (
-        SELECT show_id, added_at
-        FROM playlists_shows
-        WHERE playlist_id = p.id
-        ORDER BY added_at DESC
+        SELECT s.poster, ps.added_at
+        FROM playlists_shows ps
+        JOIN shows s ON s.id = ps.show_id
+        WHERE ps.playlist_id = p.id AND s.poster IS NOT NULL
+        ORDER BY ps.added_at DESC
         LIMIT ${MAX_COVER_POSTERS}
     ) recent
-    JOIN shows s ON s.id = recent.show_id
 )`;
 
 export default class PlaylistRepository {

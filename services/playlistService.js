@@ -52,7 +52,7 @@ export default class PlaylistService {
         }
         if (playlist.userId !== currentUserId) {
             if (!playlist.visible || !await this._friendRepository.checkIfAlreadyFriend(currentUserId, playlist.userId)) {
-                throw new ServiceError(400, "Vous n'avez pas accès à cette playlist");
+                throw new ServiceError(400, "Playlist introuvable");
             }
         }
         const shows = await this._playlistRepository.getShowsByPlaylistId(id);

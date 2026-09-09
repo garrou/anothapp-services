@@ -96,7 +96,7 @@ describe("PlaylistService.getPlaylistById", () => {
     it("rejects with a 400 when a non-owner requests a private playlist", async () => {
         playlistRepoMocks.getById.mockResolvedValue(ownedPlaylist);
 
-        await expect(playlistService.getPlaylistById("user-2", 1)).rejects.toThrow("Vous n'avez pas accès à cette playlist");
+        await expect(playlistService.getPlaylistById("user-2", 1)).rejects.toThrow("Playlist introuvable");
         expect(friendRepoMocks.checkIfAlreadyFriend).not.toHaveBeenCalled();
     });
 
@@ -104,7 +104,7 @@ describe("PlaylistService.getPlaylistById", () => {
         playlistRepoMocks.getById.mockResolvedValue(friendPlaylist);
         friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
 
-        await expect(playlistService.getPlaylistById("user-1", 2)).rejects.toThrow("Vous n'avez pas accès à cette playlist");
+        await expect(playlistService.getPlaylistById("user-1", 2)).rejects.toThrow("Playlist introuvable");
     });
 
     it("returns a friend's visible playlist", async () => {
