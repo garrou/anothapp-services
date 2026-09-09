@@ -10,5 +10,6 @@ export default class Playlist {
         this.createdAt = obj["created_at"];
         this.visible = obj.visible;
         this.showsCount = obj["shows_count"] !== undefined ? parseInt(obj["shows_count"]) : undefined;
+        this.posters = obj.posters ?? undefined;
     }
 }

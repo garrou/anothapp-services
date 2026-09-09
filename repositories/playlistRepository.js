@@ -2,6 +2,8 @@ import db from "../config/db.js";
 import Playlist from "../models/playlist.js";
 import Show from "../models/show.js";
 
+const MAX_COVER_POSTERS = 4;
+
 export default class PlaylistRepository {
 
     /**
@@ -38,7 +40,7 @@ export default class PlaylistRepository {
      */
     getByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT p.*, COUNT(ps.show_id) AS shows_count
+            SELECT p.*, COUNT(ps.show_id) AS shows_count, ${POSTERS_SUBQUERY} AS posters
             FROM playlists p
             LEFT JOIN playlists_shows ps ON ps.playlist_id = p.id
             WHERE p.user_id = $1
@@ -54,7 +56,19 @@ export default class PlaylistRepository {
      */
     getVisibleByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT p.*, COUNT(ps.show_id) AS shows_count
+            SELECT p.*, COUNT(ps.show_id) AS shows_count, 
+            (
+                SELECT COALESCE(array_agg(s.poster ORDER BY recent.added_at DESC), '{}')
+                FROM (
+                    SELECT show_id, added_at
+                    FROM playlists_shows
+                    WHERE playlist_id = p.id
+                    ORDER BY added_at DESC
+                    LIMIT ${MAX_COVER_POSTERS}
+                ) recent
+                JOIN shows s ON s.id = recent.show_id
+            )
+            AS posters
             FROM playlists p
             LEFT JOIN playlists_shows ps ON ps.playlist_id = p.id
             WHERE p.user_id = $1 AND p.visible = TRUE
