@@ -296,16 +296,21 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
-     * @returns Promise<any[]>
+     * @param {number} limit
+     * @returns Promise<Stat[]>
      */
-    getKindsByUserId = async (userId) => {
+    getKindsByUserId = async (userId, limit = 10) => {
         const res = await db.query(`
-            SELECT s.kinds
-            FROM shows s
-            JOIN users_shows us ON us.show_id = s.id
+            SELECT k.name AS label, COUNT(*) AS value
+            FROM users_shows us
+            JOIN shows_kinds sk ON sk.show_id = us.show_id
+            JOIN kinds k ON k.id = sk.kind_id
             WHERE us.user_id = $1
-        `, [userId]);
-        return res.rows;
+            GROUP BY k.name
+            ORDER BY value DESC
+            LIMIT $2
+        `, [userId, limit]);
+        return res.rows.map((row) => new Stat(row));
     }
 
     /**
