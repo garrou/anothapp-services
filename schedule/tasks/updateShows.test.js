@@ -30,7 +30,7 @@ const dbShow = {
 };
 
 const apiShow = {
-    genres: {28: "Drame", 80: "Policier"},
+    genres: {Drama: "Drame", Crime: "Policier"},
     images: {poster: "https://img/old.jpg"},
     status: "Running",
     length: "45",
@@ -64,7 +64,7 @@ describe("updateShows", () => {
             deleted: false,
             poster: "https://img/old.jpg",
             kinds: "Drame;Policier",
-            kindIds: ["28", "80"],
+            kindIds: ["Drama", "Crime"],
             duration: 45,
             seasons: 5,
             country: "US",
