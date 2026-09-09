@@ -51,12 +51,12 @@ export default class UserShowRepository {
      * @param {string?} title
      * @param {number[]} platforms
      * @param {string[]} countries
-     * @param {string[]} kinds
+     * @param {string[]} kindIds
      * @param {number[]} notes
      * @param {string[]} friendIds
      * @returns {Promise<UserShow[]>}
      */
-    getShowsByUserId = async (userId, title, platforms, countries, kinds, notes, friendIds = []) => {
+    getShowsByUserId = async (userId, title, platforms, countries, kindIds, notes, friendIds = []) => {
         const res = await db.query(`
             SELECT DISTINCT s.*, us.*
             FROM shows s
@@ -69,8 +69,11 @@ export default class UserShowRepository {
             AND (CARDINALITY($3::INT[]) = 0 OR use.platform_id = ANY ($3))
             AND (CARDINALITY($4::VARCHAR[]) = 0 OR s.country ILIKE ANY ($4))
             AND (CARDINALITY($5::INT[]) = 0 OR us.note_id = ANY ($5))
-            AND (${db.generateCondition("s.kinds", "ILIKE", "AND", 6, kinds.length)})
-            AND (CARDINALITY($${6 + kinds.length}::uuid[]) = 0 OR usf.friend_user_id = ANY ($${6 + kinds.length}))
+            AND (CARDINALITY($6::VARCHAR[]) = 0 OR EXISTS (
+                SELECT 1 FROM shows_kinds sk
+                WHERE sk.show_id = s.id AND sk.kind_id = ANY ($6)
+            ))
+            AND (CARDINALITY($7::uuid[]) = 0 OR usf.friend_user_id = ANY ($7))
             ORDER BY us.added_at DESC
         `, [
             userId,
@@ -78,7 +81,7 @@ export default class UserShowRepository {
             platforms,
             countries,
             notes,
-            ...kinds.map((kind) => `%${kind}%`),
+            kindIds,
             friendIds,
         ]);
         return res.rows.map((row) => new UserShow(row));
