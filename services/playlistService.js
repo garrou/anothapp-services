@@ -2,7 +2,7 @@ import PlaylistRepository from "../repositories/playlistRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import ShowService from "./showService.js";
 import ServiceError from "../helpers/serviceError.js";
-import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {ERROR_INVALID_REQUEST, PLAYLIST_NOT_FOUND} from "../constants/errors.js";
 
 const MAX_NAME_LENGTH = 255;
 
@@ -20,7 +20,7 @@ export default class PlaylistService {
      */
     #assertOwner = (playlist, currentUserId) => {
         if (!playlist || playlist.userId !== currentUserId) {
-            throw new ServiceError(400, "Cette playlist ne vous appartient pas");
+            throw new ServiceError(400, PLAYLIST_NOT_FOUND);
         }
     }
 
@@ -48,11 +48,11 @@ export default class PlaylistService {
         const playlist = await this._playlistRepository.getById(id);
 
         if (!playlist) {
-            throw new ServiceError(400, "Playlist introuvable");
+            throw new ServiceError(400, PLAYLIST_NOT_FOUND);
         }
         if (playlist.userId !== currentUserId) {
             if (!playlist.visible || !await this._friendRepository.checkIfAlreadyFriend(currentUserId, playlist.userId)) {
-                throw new ServiceError(400, "Playlist introuvable");
+                throw new ServiceError(400, PLAYLIST_NOT_FOUND);
             }
         }
         const shows = await this._playlistRepository.getShowsByPlaylistId(id);

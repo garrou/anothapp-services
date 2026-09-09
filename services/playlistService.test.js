@@ -1,5 +1,6 @@
 import {describe, it, expect, vi, beforeEach} from "vitest";
 import PlaylistService from "./playlistService.js";
+import { PLAYLIST_NOT_FOUND } from "../constants/errors.js";
 
 const playlistRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -80,7 +81,7 @@ describe("PlaylistService.getPlaylistById", () => {
     it("rejects with a 400 when the playlist doesn't exist", async () => {
         playlistRepoMocks.getById.mockResolvedValue(null);
 
-        await expect(playlistService.getPlaylistById("user-1", 99)).rejects.toThrow("Playlist introuvable");
+        await expect(playlistService.getPlaylistById("user-1", 99)).rejects.toThrow(PLAYLIST_NOT_FOUND);
     });
 
     it("returns the playlist and its shows for its owner", async () => {
@@ -96,7 +97,7 @@ describe("PlaylistService.getPlaylistById", () => {
     it("rejects with a 400 when a non-owner requests a private playlist", async () => {
         playlistRepoMocks.getById.mockResolvedValue(ownedPlaylist);
 
-        await expect(playlistService.getPlaylistById("user-2", 1)).rejects.toThrow("Playlist introuvable");
+        await expect(playlistService.getPlaylistById("user-2", 1)).rejects.toThrow(PLAYLIST_NOT_FOUND);
         expect(friendRepoMocks.checkIfAlreadyFriend).not.toHaveBeenCalled();
     });
 
@@ -104,7 +105,7 @@ describe("PlaylistService.getPlaylistById", () => {
         playlistRepoMocks.getById.mockResolvedValue(friendPlaylist);
         friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
 
-        await expect(playlistService.getPlaylistById("user-1", 2)).rejects.toThrow("Playlist introuvable");
+        await expect(playlistService.getPlaylistById("user-1", 2)).rejects.toThrow(PLAYLIST_NOT_FOUND);
     });
 
     it("returns a friend's visible playlist", async () => {
@@ -165,7 +166,7 @@ describe("PlaylistService.updatePlaylist", () => {
 
         await expect(
             playlistService.updatePlaylist("user-1", 2, {name: "Nouveau nom"})
-        ).rejects.toThrow("Cette playlist ne vous appartient pas");
+        ).rejects.toThrow(PLAYLIST_NOT_FOUND);
         expect(playlistRepoMocks.update).not.toHaveBeenCalled();
     });
 
@@ -174,7 +175,7 @@ describe("PlaylistService.updatePlaylist", () => {
 
         await expect(
             playlistService.updatePlaylist("user-1", 99, {name: "Nouveau nom"})
-        ).rejects.toThrow("Cette playlist ne vous appartient pas");
+        ).rejects.toThrow(PLAYLIST_NOT_FOUND);
     });
 
     it("rejects with a 400 when clearing the name to blank", async () => {
@@ -215,7 +216,7 @@ describe("PlaylistService.deletePlaylist", () => {
     it("rejects with a 400 when the playlist isn't owned by the current user", async () => {
         playlistRepoMocks.getById.mockResolvedValue(friendPlaylist);
 
-        await expect(playlistService.deletePlaylist("user-1", 2)).rejects.toThrow("Cette playlist ne vous appartient pas");
+        await expect(playlistService.deletePlaylist("user-1", 2)).rejects.toThrow(PLAYLIST_NOT_FOUND);
         expect(playlistRepoMocks.delete).not.toHaveBeenCalled();
     });
 
@@ -244,7 +245,7 @@ describe("PlaylistService.addShowToPlaylist", () => {
     it("rejects with a 400 when the playlist isn't owned by the current user", async () => {
         playlistRepoMocks.getById.mockResolvedValue(friendPlaylist);
 
-        await expect(playlistService.addShowToPlaylist("user-1", 2, 42)).rejects.toThrow("Cette playlist ne vous appartient pas");
+        await expect(playlistService.addShowToPlaylist("user-1", 2, 42)).rejects.toThrow(PLAYLIST_NOT_FOUND);
         expect(showServiceMocks.ensureShowExists).not.toHaveBeenCalled();
     });
 
@@ -270,7 +271,7 @@ describe("PlaylistService.removeShowFromPlaylist", () => {
     it("rejects with a 400 when the playlist isn't owned by the current user", async () => {
         playlistRepoMocks.getById.mockResolvedValue(friendPlaylist);
 
-        await expect(playlistService.removeShowFromPlaylist("user-1", 2, 42)).rejects.toThrow("Cette playlist ne vous appartient pas");
+        await expect(playlistService.removeShowFromPlaylist("user-1", 2, 42)).rejects.toThrow(PLAYLIST_NOT_FOUND);
         expect(playlistRepoMocks.removeShow).not.toHaveBeenCalled();
     });
 
