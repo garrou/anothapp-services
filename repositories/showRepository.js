@@ -66,6 +66,15 @@ export default class ShowRepository {
     }
 
     /**
+     * @param {number} showId
+     * @param {string[]} kindIds
+     * @returns {Promise<void>}
+     */
+    setKinds = async (showId, kindIds) => {
+        return db.transaction((client) => this.#syncKinds(client, showId, kindIds));
+    }
+
+    /**
      * @param {number} id
      * @returns {Promise<Show|null>}
      */
