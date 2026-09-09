@@ -58,7 +58,8 @@ export default class UserShowRepository {
      */
     getShowsByUserId = async (userId, title, platforms, countries, kindIds, notes, friendIds = []) => {
         const res = await db.query(`
-            SELECT DISTINCT s.*, us.*
+            SELECT DISTINCT s.*, us.*,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
             FROM shows s
             JOIN users_shows us ON s.id = us.show_id
             LEFT JOIN users_seasons use ON us.user_id = use.user_id AND us.show_id = use.show_id
@@ -94,10 +95,11 @@ export default class UserShowRepository {
      */
     getShowByUserIdByShowId = async (userId, id) => {
         const res = await db.query(`
-            SELECT s.*, us.*
+            SELECT s.*, us.*,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
             FROM shows s
             JOIN users_shows us ON s.id = us.show_id
-            WHERE us.user_id = $1 AND us.show_id = $2 
+            WHERE us.user_id = $1 AND us.show_id = $2
             LIMIT 1
         `, [userId, id]);
         return res.rowCount === 1 ? new UserShow(res.rows[0]) : null;
@@ -196,7 +198,8 @@ export default class UserShowRepository {
      */
     getShowsToResumeByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT s.*, us.*
+            SELECT s.*, us.*,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
             FROM shows s
             JOIN users_shows us ON us.show_id = s.id
             WHERE us.user_id = $1 AND us.continue = FALSE AND s.seasons - (
@@ -216,7 +219,9 @@ export default class UserShowRepository {
     getShowsToResumeByUserIdEpisodes = async (userId) => {
         const res = await db.query(`
             SELECT * FROM (
-                SELECT s.*, us.*, s.seasons - (
+                SELECT s.*, us.*,
+                    (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names,
+                    s.seasons - (
                     SELECT COUNT(DISTINCT users_seasons.number)
                     FROM users_seasons
                     WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
@@ -244,7 +249,8 @@ export default class UserShowRepository {
      */
     getShowsFinishedByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT s.*, us.*
+            SELECT s.*, us.*,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
             FROM shows s
             JOIN users_shows us ON us.show_id = s.id
             WHERE us.user_id = $1 AND s.finished = TRUE AND s.seasons - (
@@ -264,7 +270,9 @@ export default class UserShowRepository {
     getShowsFinishedByUserIdEpisodes = async (userId) => {
         const res = await db.query(`
             SELECT * FROM (
-                SELECT s.*, us.*, s.seasons - (
+                SELECT s.*, us.*,
+                    (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names,
+                    s.seasons - (
                     SELECT COUNT(DISTINCT users_seasons.number)
                     FROM users_seasons
                     WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
@@ -324,7 +332,8 @@ export default class UserShowRepository {
      */
     getFavoritesByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT s.*, us.*
+            SELECT s.*, us.*,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
             FROM users_shows us
             JOIN shows s ON s.id = us.show_id
             WHERE us.user_id = $1 AND favorite = TRUE
@@ -339,7 +348,8 @@ export default class UserShowRepository {
      */
     getShowsWithNextEpisode = async (userId) => {
         const res = await db.query(`
-            SELECT s.*, us.*
+            SELECT s.*, us.*,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
             FROM users_shows us
             JOIN shows s ON s.id = us.show_id
             WHERE us.user_id = $1 AND NULLIF(s.next_episode, '') IS NOT NULL AND us.continue = TRUE
@@ -356,7 +366,9 @@ export default class UserShowRepository {
         const res = await db.query(`
             SELECT *
             FROM (
-                SELECT s.*, us.added_at, us.continue, us.favorite, s.seasons - (
+                SELECT s.*, us.added_at, us.continue, us.favorite,
+                    (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names,
+                    s.seasons - (
                     SELECT COUNT(DISTINCT users_seasons.number)
                     FROM users_seasons
                     WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
@@ -379,7 +391,9 @@ export default class UserShowRepository {
         const res = await db.query(`
             SELECT *
             FROM (
-                SELECT s.*, us.added_at, us.continue, us.favorite, s.seasons - (
+                SELECT s.*, us.added_at, us.continue, us.favorite,
+                    (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names,
+                    s.seasons - (
                         SELECT COUNT(DISTINCT users_seasons.number)
                         FROM users_seasons
                         WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
@@ -408,7 +422,8 @@ export default class UserShowRepository {
      */
     getSharedShowsWithFriend = async (userId, friendId) => {
         const res = await db.query(`
-            SELECT s.*
+            SELECT s.*,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
             FROM shows s
             JOIN users_shows us1 ON s.id = us1.show_id AND us1.user_id = $1
             JOIN users_shows us2 ON s.id = us2.show_id AND us2.user_id = $2
@@ -425,7 +440,8 @@ export default class UserShowRepository {
     getRecommendationsByUserId = async (userId, limit = 10) => {
         const res = await db.query(`
             SELECT s.*, COUNT(DISTINCT us.user_id) AS nb_friends, AVG(us.note_id) AS avg_note,
-                json_agg(json_build_object('id', u.id, 'username', u.username, 'picture', u.picture)) AS friends
+                json_agg(json_build_object('id', u.id, 'username', u.username, 'picture', u.picture)) AS friends,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
             FROM users_shows us
             JOIN shows s ON s.id = us.show_id
             JOIN users u ON u.id = us.user_id

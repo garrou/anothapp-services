@@ -49,7 +49,8 @@ export default class UserListRepository {
      */
     getListShowsByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT s.*
+            SELECT s.*,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
             FROM shows s
             JOIN users_list ul ON ul.show_id = s.id
             WHERE ul.user_id = $1

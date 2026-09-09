@@ -80,7 +80,8 @@ export default class ShowRepository {
      */
     getShow = async (id) => {
         const res = await db.query(`
-            SELECT id, title, poster, kinds, duration, seasons, country, description, creation, network, language, episodes
+            SELECT id, title, poster, kinds, duration, seasons, country, description, creation, network, language, episodes,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = shows.id) AS kind_names
             FROM shows
             WHERE id = $1
         `, [id])
