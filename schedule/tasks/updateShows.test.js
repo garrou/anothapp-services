@@ -64,6 +64,7 @@ describe("updateShows", () => {
             deleted: false,
             poster: "https://img/old.jpg",
             kinds: "Drame;Policier",
+            kindIds: ["28", "80"],
             duration: 45,
             seasons: 5,
             country: "US",

@@ -32,6 +32,7 @@ class ApiShow extends ApiEntity {
         this.finished = show.status === "Ended";
         this.creation = parseInt(show.creation);
         this.kinds = Object.values(show.genres);
+        this.kindIds = Object.keys(show.genres);
         this.platforms = getPlatforms(show.platforms?.svods);
     }
 }
