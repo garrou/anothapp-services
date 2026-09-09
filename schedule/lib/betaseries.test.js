@@ -60,3 +60,29 @@ describe("fetchPerson", () => {
         expect(person).toBeNull();
     });
 });
+
+describe("fetchGenres", () => {
+    beforeEach(() => {
+        clientMocks.get.mockReset();
+    });
+
+    it("maps the genres object into a list of {id, name}", async () => {
+        clientMocks.get.mockResolvedValue({genres: {action: "Action", drama: "Drame"}});
+
+        const genres = await betaseries.fetchGenres();
+
+        expect(genres).toEqual([
+            {id: "action", name: "Action"},
+            {id: "drama", name: "Drame"},
+        ]);
+        expect(clientMocks.get).toHaveBeenCalledWith("/shows/genres");
+    });
+
+    it("returns an empty list when BetaSeries returns no genres", async () => {
+        clientMocks.get.mockResolvedValue({});
+
+        const genres = await betaseries.fetchGenres();
+
+        expect(genres).toEqual([]);
+    });
+});

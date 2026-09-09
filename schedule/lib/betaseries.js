@@ -64,6 +64,14 @@ const fetchPerson = async (id) => {
     return Array.isArray(data.person) ? null : data.person;
 };
 
+/**
+ * @returns {Promise<{id: string, name: string}[]>}
+ */
+const fetchGenres = async () => {
+    const data = await client.get(`/shows/genres`);
+    return Object.entries(data.genres ?? {}).map(([id, name]) => ({id, name}));
+};
+
 export default {
     fetchShow,
     fetchSeasons,
@@ -71,4 +79,5 @@ export default {
     fetchNextEpisodeDate,
     fetchPlatforms,
     fetchPerson,
+    fetchGenres,
 };

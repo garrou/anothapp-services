@@ -7,10 +7,10 @@ import ApiPerson from '../models/apiPerson.js';
 import {cumulate} from '../helpers/utils.js';
 import {Param, FetchHelper} from '../helpers/fetch.js';
 import PlatformRepository from "../repositories/platformRepository.js";
-import ApiShowKind from "../models/apiShowKind.js";
 import ServiceError from "../helpers/serviceError.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import NoteRepository from "../repositories/noteRepository.js";
+import KindRepository from "../repositories/kindRepository.js";
 import BetaseriesClient from "../helpers/betaseriesClient.js";
 
 export default class SearchService {
@@ -18,6 +18,7 @@ export default class SearchService {
     constructor() {
         this._platformRepository = new PlatformRepository();
         this._noteRepository = new NoteRepository();
+        this._kindRepository = new KindRepository();
         this._client = new BetaseriesClient();
     }
 
@@ -124,10 +125,7 @@ export default class SearchService {
      * @returns {Promise<ApiShow[]>}
      */
     getKinds = async () => {
-        const {genres} = await this._client.get(`/shows/genres`);
-        return Object.entries(genres)
-            .map(entry => new ApiShowKind(entry))
-            .sort((a, b) => a.name.localeCompare(b.name));
+        return this._kindRepository.getKinds();
     }
 
     /**
