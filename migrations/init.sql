@@ -38,6 +38,49 @@ INSERT INTO notes (id, name) VALUES
 (4, 'Très bien'),
 (5, 'Excellent');
 
+CREATE TABLE kinds (
+    id VARCHAR(50),
+    name VARCHAR(50) UNIQUE NOT NULL,
+    PRIMARY KEY(id)
+);
+
+INSERT INTO kinds (id, name) VALUES
+    ('Comedy', 'Comédie'),
+    ('Drama', 'Drame'),
+    ('Crime', 'Crime'),
+    ('Horror', 'Horreur'),
+    ('Anime', 'Anime'),
+    ('Action', 'Action'),
+    ('Adventure', 'Aventure'),
+    ('Fantasy', 'Fantastique'),
+    ('Animation', 'Animation'),
+    ('Science_Fiction', 'Science-fiction'),
+    ('Mini-Series', 'Mini-série'),
+    ('Documentary', 'Documentaire'),
+    ('Reality', 'Télé-réalité'),
+    ('Romance', 'Romance'),
+    ('Western', 'Western'),
+    ('Talk_Show', 'Talk Show'),
+    ('Game_Show', 'Game Show'),
+    ('Thriller', 'Thriller'),
+    ('Food', 'Cuisine'),
+    ('Soap', 'Soap'),
+    ('Children', 'Enfant'),
+    ('Family', 'Famille'),
+    ('Home_and_Garden', 'Maison et jardinage'),
+    ('Mystery', 'Mystère'),
+    ('News', 'Actualité'),
+    ('Special_Interest', 'Intérêt particulier'),
+    ('Sport', 'Sport'),
+    ('Suspense', 'Suspense'),
+    ('Travel', 'Voyage'),
+    ('History', 'Histoire'),
+    ('Indie', 'Indie'),
+    ('Musical', 'Comédie musicale'),
+    ('Podcast', 'Podcast'),
+    ('War', 'Guerre'),
+    ('Martial_Arts', 'Arts martiaux');
+
 CREATE TABLE users (
     id UUID DEFAULT gen_random_uuid(),
     username VARCHAR(25) UNIQUE NOT NULL,
@@ -64,7 +107,6 @@ CREATE TABLE shows (
     id INTEGER,
     title VARCHAR(255) UNIQUE NOT NULL,
     poster VARCHAR(255),
-    kinds VARCHAR(255) NOT NULL,
     duration INTEGER NOT NULL,
     seasons INTEGER NOT NULL,
     country VARCHAR(50) NOT NULL,
@@ -89,6 +131,14 @@ CREATE TABLE users_shows (
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE SET NULL,
     PRIMARY KEY(user_id, show_id)
+);
+
+CREATE TABLE shows_kinds (
+    show_id INTEGER,
+    kind_id VARCHAR(50),
+    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(kind_id) REFERENCES kinds(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    PRIMARY KEY(show_id, kind_id)
 );
 
 CREATE TABLE seasons (

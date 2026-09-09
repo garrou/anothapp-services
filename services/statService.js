@@ -5,7 +5,6 @@ import UserEpisodeStatRepository from "../repositories/userEpisodeStatRepository
 import UserRepository from "../repositories/userRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import ServiceError from "../helpers/serviceError.js";
-import Stat from "../models/stat.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import {computeStreak} from "../helpers/streak.js";
 import {isOwnRequest} from "../helpers/utils.js";
@@ -54,7 +53,7 @@ export default class StatService {
             this._userSeasonRepository.getNbSeasonsByUserIdGroupByMonth(userId),
             repo.getRecordViewingTimeMonth(userId, 10),
             repo.getRankingViewingTimeByShows(userId),
-            this.#getNbKindsByUserId(userId),
+            this._userShowRepository.getKindsByUserId(userId),
             this._userSeasonRepository.getPlatformsByUserId(userId),
             this._userShowRepository.getCountriesByUserId(userId, 200),
             this._userShowRepository.getNotesByUserId(userId),
@@ -92,7 +91,7 @@ export default class StatService {
         const repo = episodeTrackingEnabled ? this._userEpisodeStatRepository : this._userSeasonRepository;
 
         const [
-            totalTime, totalEpisodes, nbNewShows, topShow, kindsRows, topPlatform, bestMonth,
+            totalTime, totalEpisodes, nbNewShows, topShow, topKind, topPlatform, bestMonth,
             watchedDates, topWatchedWithFriend
         ] = await Promise.all([
             repo.getTotalTimeByUserIdByYear(currentUserId, numYear),
@@ -108,7 +107,7 @@ export default class StatService {
 
         return {
             year: numYear, totalTime, totalEpisodes, nbNewShows, topShow,
-            topKind: this.#topKindFromRows(kindsRows), topPlatform, bestMonth,
+            topKind, topPlatform, bestMonth,
             bestStreak: computeStreak(watchedDates).longest, topWatchedWithFriend
         };
     }
@@ -146,44 +145,4 @@ export default class StatService {
             .sort((a, b) => b.value - a.value);
     }
 
-    /**
-     * @param {{kinds: string, value: number}[]} rows
-     * @returns {Stat|null}
-     */
-    #topKindFromRows = (rows) => {
-        const kindsMap = new Map();
-
-        rows.forEach(({kinds, value}) => kinds.split(";").forEach((kind) => {
-            kindsMap.set(kind, (kindsMap.get(kind) ?? 0) + value);
-        }));
-        let top = null;
-
-        kindsMap.forEach((value, kind) => {
-            if (!top || value > top.value) {
-                top = Stat.from(kind, value);
-            }
-        });
-        return top;
-    }
-
-    /**
-     * @param {string} userId
-     * @return Promise<{label: string, value: number}[]>
-     */
-    #getNbKindsByUserId = async (userId) => {
-        const kindsMap = new Map();
-        const rows = await this._userShowRepository.getKindsByUserId(userId);
-
-        rows.forEach((row) => row["kinds"]
-            .split(";")
-            .forEach((kind) => {
-                const val = kindsMap.get(kind);
-                !val ? kindsMap.set(kind, 1) : kindsMap.set(kind, val + 1);
-            })
-        );
-        return Array
-            .from(kindsMap, ([kind, occur]) => Stat.from(kind, occur))
-            .sort((a, b) => b.value - a.value)
-            .splice(0, 10);
-    }
 }

@@ -223,7 +223,7 @@ describe("StatService.getWrapped", () => {
             repo.getTotalTimeByUserIdByYear.mockResolvedValue(0);
             repo.getTotalEpisodesByUserIdByYear.mockResolvedValue(0);
             repo.getTopShowByUserIdByYear.mockResolvedValue(null);
-            repo.getKindsTimeByUserIdByYear.mockResolvedValue([]);
+            repo.getKindsTimeByUserIdByYear.mockResolvedValue(null);
             repo.getTopPlatformByUserIdByYear.mockResolvedValue(null);
             repo.getBestMonthByUserIdByYear.mockResolvedValue(null);
             repo.getWatchedDatesByUserIdByYear.mockResolvedValue([]);
@@ -278,22 +278,18 @@ describe("StatService.getWrapped", () => {
         expect(userEpisodeStatRepoMocks.getTotalTimeByUserIdByYear).not.toHaveBeenCalled();
     });
 
-    it("picks the kind with the most accumulated minutes across shows", async () => {
+    it("exposes the kind with the most accumulated minutes that year", async () => {
         userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
-        userEpisodeStatRepoMocks.getKindsTimeByUserIdByYear.mockResolvedValue([
-            {kinds: "Drame;Thriller", value: 100},
-            {kinds: "Comédie", value: 50},
-            {kinds: "Thriller", value: 80},
-        ]);
+        userEpisodeStatRepoMocks.getKindsTimeByUserIdByYear.mockResolvedValue({id: 0, label: "Thriller", value: 180});
 
         const wrapped = await statService.getWrapped("user-1", 2024);
 
-        // Thriller: 100 + 80 = 180, Drame: 100, Comédie: 50
         expect(wrapped.topKind).toEqual({id: 0, label: "Thriller", value: 180});
     });
 
     it("returns a null topKind when nothing was watched that year", async () => {
         userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userEpisodeStatRepoMocks.getKindsTimeByUserIdByYear.mockResolvedValue(null);
 
         const wrapped = await statService.getWrapped("user-1", 2024);
 

@@ -198,23 +198,29 @@ export default class UserEpisodeStatRepository {
     }
 
     /**
-     * Per-show kinds (semicolon-separated) with minutes watched that year, for
-     * the caller to split and accumulate per kind - kinds live on the show,
-     * not per-episode, so they can't be summed directly in SQL.
      * @param {string} userId
      * @param {number} year
-     * @returns {Promise<{kinds: string, value: number}[]>}
+     * @returns {Promise<Stat|null>} the kind with the most watch time that year
      */
     getKindsTimeByUserIdByYear = async (userId, year) => {
         const res = await db.query(`
-            SELECT shows.kinds AS kinds, SUM(COALESCE(e.length, shows.duration)) AS value
-            FROM users_episodes ue
-            JOIN episodes e ON ue.episode_id = e.id
-            JOIN shows ON shows.id = e.show_id
-            WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
-            GROUP BY shows.id, kinds
+            WITH show_time AS (
+                SELECT e.show_id AS show_id, SUM(COALESCE(e.length, shows.duration)) AS value
+                FROM users_episodes ue
+                JOIN episodes e ON ue.episode_id = e.id
+                JOIN shows ON shows.id = e.show_id
+                WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
+                GROUP BY e.show_id
+            )
+            SELECT k.name AS label, SUM(show_time.value) AS value
+            FROM show_time
+            JOIN shows_kinds sk ON sk.show_id = show_time.show_id
+            JOIN kinds k ON k.id = sk.kind_id
+            GROUP BY k.name
+            ORDER BY value DESC
+            LIMIT 1
         `, [userId, year]);
-        return res.rows.map((row) => ({kinds: row["kinds"], value: parseInt(row["value"])}));
+        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
     }
 
     /**

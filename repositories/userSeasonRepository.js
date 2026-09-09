@@ -429,18 +429,27 @@ export default class UserSeasonRepository {
     /**
      * @param {string} userId
      * @param {number} year
-     * @returns {Promise<{kinds: string, value: number}[]>}
+     * @returns {Promise<Stat|null>} the kind with the most watch time that year
      */
     getKindsTimeByUserIdByYear = async (userId, year) => {
         const res = await db.query(`
-            SELECT shows.kinds AS kinds, SUM(seasons.episodes * shows.duration) AS value
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON shows.id = seasons.show_id
-            WHERE user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
-            GROUP BY shows.id, kinds
+            WITH show_time AS (
+                SELECT seasons.show_id AS show_id, SUM(seasons.episodes * shows.duration) AS value
+                FROM users_seasons
+                JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
+                JOIN shows ON shows.id = seasons.show_id
+                WHERE user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
+                GROUP BY seasons.show_id
+            )
+            SELECT k.name AS label, SUM(show_time.value) AS value
+            FROM show_time
+            JOIN shows_kinds sk ON sk.show_id = show_time.show_id
+            JOIN kinds k ON k.id = sk.kind_id
+            GROUP BY k.name
+            ORDER BY value DESC
+            LIMIT 1
         `, [userId, year]);
-        return res.rows.map((row) => ({kinds: row["kinds"], value: parseInt(row["value"])}));
+        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
     }
 
     /**

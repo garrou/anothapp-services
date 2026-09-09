@@ -7,7 +7,7 @@ const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
 
 /**
  * @param {Object} show a row from the `shows` table
- * @returns {Promise<{deleted: true}|{deleted: false, poster: string, kinds: string, duration: number, seasons: number, country: string, finished: boolean, nextEpisode: string, description: string?, creation: number?, network: string?, language: string?, episodes: number?}>}
+ * @returns {Promise<{deleted: true}|{deleted: false, poster: string, kindIds: string[], duration: number, seasons: number, country: string, finished: boolean, nextEpisode: string, description: string?, creation: number?, network: string?, language: string?, episodes: number?}>}
  */
 const fetchShowUpdate = async (show) => {
     const current = await betaseries.fetchShow(show.id);
@@ -15,7 +15,7 @@ const fetchShowUpdate = async (show) => {
     if (!current) {
         return {deleted: true};
     }
-    const kinds = Object.values(current.genres ?? {}).join(";");
+    const kindIds = Object.keys(current.genres ?? {});
     const poster = getImageUrl(current.images);
     const finished = current.status === "Ended";
     const parsedDuration = parseInt(current.length ?? "0");
@@ -30,7 +30,7 @@ const fetchShowUpdate = async (show) => {
     const parsedEpisodes = currentSeasons.reduce((acc, season) => acc + (parseInt(season.episodes) || 0), 0);
 
     return {
-        deleted: false, poster, kinds, duration, seasons, country, finished, nextEpisode,
+        deleted: false, poster, kindIds, duration, seasons, country, finished, nextEpisode,
         description: current.description ?? show.description ?? null,
         creation: Number.isNaN(parsedCreation) ? (show.creation ?? null) : parsedCreation,
         network: current.network ?? show.network ?? null,
