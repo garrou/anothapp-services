@@ -13,6 +13,7 @@ import settingsRoutes from "./settingsRoutes.js";
 import platformRoutes from "./platformRoutes.js";
 import notificationRoutes from "./notificationRoutes.js";
 import actorRoutes from "./actorRoutes.js";
+import playlistRoutes from "./playlistRoutes.js";
 import NotificationListener from "../services/notificationListener.js";
 import {isOwnRequest} from "../helpers/utils.js";
 
@@ -32,6 +33,7 @@ router.use("/settings", checkJwt, settingsRoutes);
 router.use("/platforms", checkJwt, platformRoutes);
 router.use("/notifications", checkJwt, notificationRoutes);
 router.use("/actors", checkJwt, actorRoutes);
+router.use("/playlists", checkJwt, playlistRoutes);
 
 router.use("*", (req, res) => {
     res.status(404).json({ message: "Not found" });

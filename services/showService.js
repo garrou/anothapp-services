@@ -75,6 +75,32 @@ export default class ShowService {
     }
 
     /**
+     * @param {number} showId
+     * @returns {Promise<Show|ApiShow>}
+     */
+    ensureShowExists = async (showId) => {
+        let show = await this._showRepository.getShow(showId);
+
+        if (!show) {
+            show = await this._searchService.getByShowId(showId);
+
+            if (!Validator.isValidShow(show)) {
+                throw new ServiceError(400, "Série invalide");
+            }
+            const {id, title, poster, kindIds, duration, seasons, country, description, creation, network, language, episodes} = show;
+            const created = await this._showRepository.createShow(
+                id, title, poster, kindIds ?? [], duration, seasons, country,
+                description, creation || null, network, language, episodes || null
+            );
+
+            if (!created) {
+                throw new ServiceError(500, "Impossible de créer la série");
+            }
+        }
+        return show;
+    }
+
+    /**
      * @param {string} currentUserId
      * @param {number?} showId
      * @param {boolean} addInList
@@ -91,24 +117,7 @@ export default class ShowService {
         if (exists) {
             throw new ServiceError(409, `Cette série est déjà dans votre ${addInList ? "liste" : "collection"}`);
         }
-        let show = await this._showRepository.getShow(showId);
-
-        if (!show) {
-            show = await this._searchService.getByShowId(showId);
-
-            if (!Validator.isValidShow(show)) {      
-                throw new ServiceError(400, "Série invalide");
-            }
-            const {id, title, poster, kindIds, duration, seasons, country, description, creation, network, language, episodes} = show;
-            const created = await this._showRepository.createShow(
-                id, title, poster, kindIds ?? [], duration, seasons, country,
-                description, creation || null, network, language, episodes || null
-            );
-
-            if (!created) {
-                throw new ServiceError(500, "Impossible de créer la série");
-            }
-        }
+        const show = await this.ensureShowExists(showId);
         let added;
         try {
             added = addInList
