@@ -1,82 +1,89 @@
 import {describe, it, expect, vi, beforeEach} from "vitest";
-import backfillShowsKinds from "./backfillShowsKinds.js";
 
-const showRepoMocks = vi.hoisted(() => ({
-    getAllShows: vi.fn(),
-    setKinds: vi.fn(),
-}));
-const kindRepoMocks = vi.hoisted(() => ({
-    getKinds: vi.fn(),
+const dbMocks = vi.hoisted(() => ({
+    query: vi.fn(),
+    transaction: vi.fn(),
 }));
 
-vi.mock("../../repositories/showRepository.js", () => ({
-    default: vi.fn().mockImplementation(function () { return showRepoMocks; }),
-}));
-vi.mock("../../repositories/kindRepository.js", () => ({
-    default: vi.fn().mockImplementation(function () { return kindRepoMocks; }),
-}));
+vi.mock("../../config/db.js", () => ({default: dbMocks}));
+
+const {default: backfillShowsKinds} = await import("./backfillShowsKinds.js");
+
+const kindsRows = [
+    {id: "Drama", name: "Drame"},
+    {id: "Crime", name: "Policier"},
+];
 
 describe("backfillShowsKinds", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        kindRepoMocks.getKinds.mockResolvedValue([
-            {value: "Drama", name: "Drame"},
-            {value: "Crime", name: "Policier"},
-        ]);
-        showRepoMocks.setKinds.mockResolvedValue(undefined);
+        dbMocks.transaction.mockImplementation(async (callback) => {
+            const client = {query: vi.fn().mockResolvedValue({})};
+            return callback(client);
+        });
     });
 
     it("resolves each legacy display name to its kind id and syncs shows_kinds", async () => {
-        showRepoMocks.getAllShows.mockResolvedValue([
-            {id: 42, title: "Breaking Bad", kinds: "Drame;Policier"},
-        ]);
+        dbMocks.query
+            .mockResolvedValueOnce({rows: kindsRows})
+            .mockResolvedValueOnce({rows: [{id: 42, title: "Breaking Bad", kinds: "Drame;Policier"}]});
 
         const result = await backfillShowsKinds();
 
-        expect(showRepoMocks.setKinds).toHaveBeenCalledWith(42, ["Drama", "Crime"]);
+        expect(dbMocks.transaction).toHaveBeenCalledTimes(1);
         expect(result).toEqual({updated: 1, total: 1, orphanNames: [], failed: []});
     });
 
     it("reports names that don't match any known kind instead of dropping them silently", async () => {
-        showRepoMocks.getAllShows.mockResolvedValue([
-            {id: 42, title: "Breaking Bad", kinds: "Drame;Inconnu"},
-        ]);
+        dbMocks.query
+            .mockResolvedValueOnce({rows: kindsRows})
+            .mockResolvedValueOnce({rows: [{id: 42, title: "Breaking Bad", kinds: "Drame;Inconnu"}]});
 
         const result = await backfillShowsKinds();
 
-        expect(showRepoMocks.setKinds).toHaveBeenCalledWith(42, ["Drama"]);
+        expect(dbMocks.transaction).toHaveBeenCalledTimes(1);
         expect(result.orphanNames).toEqual(["Inconnu"]);
     });
 
     it("skips a show entirely when none of its names resolve", async () => {
-        showRepoMocks.getAllShows.mockResolvedValue([
-            {id: 42, title: "Breaking Bad", kinds: "Inconnu"},
-        ]);
+        dbMocks.query
+            .mockResolvedValueOnce({rows: kindsRows})
+            .mockResolvedValueOnce({rows: [{id: 42, title: "Breaking Bad", kinds: "Inconnu"}]});
 
         const result = await backfillShowsKinds();
 
-        expect(showRepoMocks.setKinds).not.toHaveBeenCalled();
+        expect(dbMocks.transaction).not.toHaveBeenCalled();
         expect(result).toEqual({updated: 0, total: 1, orphanNames: ["Inconnu"], failed: []});
     });
 
     it("handles a show with an empty kinds string", async () => {
-        showRepoMocks.getAllShows.mockResolvedValue([
-            {id: 42, title: "Breaking Bad", kinds: ""},
-        ]);
+        dbMocks.query
+            .mockResolvedValueOnce({rows: kindsRows})
+            .mockResolvedValueOnce({rows: [{id: 42, title: "Breaking Bad", kinds: ""}]});
 
         const result = await backfillShowsKinds();
 
-        expect(showRepoMocks.setKinds).not.toHaveBeenCalled();
+        expect(dbMocks.transaction).not.toHaveBeenCalled();
         expect(result).toEqual({updated: 0, total: 1, orphanNames: [], failed: []});
     });
 
     it("reports a failure without aborting the other shows", async () => {
-        showRepoMocks.getAllShows.mockResolvedValue([
-            {id: 42, title: "Breaking Bad", kinds: "Drame"},
-            {id: 99, title: "Other Show", kinds: "Policier"},
-        ]);
-        showRepoMocks.setKinds.mockImplementation(async (id) => {
-            if (id === 42) throw new Error("db down");
+        dbMocks.query
+            .mockResolvedValueOnce({rows: kindsRows})
+            .mockResolvedValueOnce({rows: [
+                {id: 42, title: "Breaking Bad", kinds: "Drame"},
+                {id: 99, title: "Other Show", kinds: "Policier"},
+            ]});
+        dbMocks.transaction.mockImplementation(async (callback) => {
+            const client = {
+                query: vi.fn().mockImplementation(async (sql, params) => {
+                    if (sql.includes("INSERT") && params[0] === 42) {
+                        throw new Error("db down");
+                    }
+                    return {};
+                }),
+            };
+            return callback(client);
         });
 
         const result = await backfillShowsKinds();
