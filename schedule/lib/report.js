@@ -45,6 +45,14 @@ const formatReport = (results) => {
             failed.forEach((p) => lines.push(`    [${p.id} - ${p.name}] ${p.error}`));
         }
     }
+    if (results.kinds) {
+        const {upserted, failed} = results.kinds;
+        lines.push(`${upserted} genre(s) synchronisé(s)`);
+        if (failed.length > 0) {
+            lines.push(`${failed.length} genre(s) en erreur`);
+            failed.forEach((k) => lines.push(`    [${k.id} - ${k.name}] ${k.error}`));
+        }
+    }
     if (results.actors) {
         const {skipped, updated, toDelete, failed} = results.actors;
 
@@ -76,6 +84,19 @@ const formatReport = (results) => {
     }
     if (results.database) {
         lines.push(`Taille de la base : ${results.database.size}`);
+    }
+    if (results.accountAgeAchievements) {
+        const {skipped, evaluated, total, failed} = results.accountAgeAchievements;
+
+        if (skipped) {
+            lines.push("Ancienneté du compte : pas d'évaluation aujourd'hui");
+        } else {
+            lines.push(`${evaluated}/${total} utilisateur(s) évalué(s) pour l'ancienneté du compte`);
+            if (failed.length > 0) {
+                lines.push(`${failed.length} utilisateur(s) en erreur`);
+                failed.forEach((f) => lines.push(`    [${f.userId}] ${f.error}`));
+            }
+        }
     }
     return lines.join("\n");
 };
