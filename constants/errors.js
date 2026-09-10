@@ -13,3 +13,5 @@ export const ERROR_TOKEN_INVALID = "Session invalide";
 export const TOO_MUCH_EXPORT_REQUEST = "L'export de données est disponible une fois par jour";
 
 export const DUPLICATE_ERROR_CODE = "23505";
+
+export const PLAYLIST_NOT_FOUND = "Playlist introuvable";

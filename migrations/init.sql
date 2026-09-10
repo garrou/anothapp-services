@@ -220,6 +220,25 @@ CREATE TABLE users_list (
     PRIMARY KEY(user_id, show_id)
 );
 
+CREATE TABLE playlists (
+    id UUID DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    visible BOOLEAN NOT NULL DEFAULT FALSE,
+    PRIMARY KEY(id),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE playlists_shows (
+    playlist_id UUID,
+    show_id INTEGER,
+    added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY(playlist_id) REFERENCES playlists(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    PRIMARY KEY(playlist_id, show_id)
+);
+
 CREATE TABLE users_platforms (
     user_id UUID,
     platform_id INTEGER,
@@ -270,5 +289,6 @@ CREATE INDEX idx_users_episodes_users_seasons_id ON users_episodes(users_seasons
 CREATE INDEX idx_friends_sec_user_id ON friends(sec_user_id);
 CREATE INDEX idx_users_seasons_friends_friend ON users_seasons_friends(friend_user_id);
 CREATE INDEX idx_users_list_user_id ON users_list(user_id);
+CREATE INDEX idx_playlists_user_id ON playlists(user_id);
 CREATE INDEX idx_notifications_recipient_unread ON notifications(recipient_user_id, read_at);
 CREATE INDEX idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);
