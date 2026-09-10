@@ -499,8 +499,7 @@ INSERT INTO achievement_tiers (code, league, sub_tier, threshold) VALUES
     ('platforms', 2, 1, 12),
     ('platforms', 3, 3, 14),
     ('platforms', 3, 2, 16),
-    ('platforms', 3, 1, 20),
-    ('leaderboard_top3', 1, 1, 1);
+    ('platforms', 3, 1, 20);
 
 CREATE TABLE users_achievements (
     user_id UUID NOT NULL,

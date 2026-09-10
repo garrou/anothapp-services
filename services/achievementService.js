@@ -129,24 +129,6 @@ export default class AchievementService {
     }
 
     /**
-     * Unlocks the single-tier "leaderboard_top3" achievement, called by the monthly
-     * leaderboard task for each participant who ranked top 3 that month.
-     * @param {string} userId
-     * @returns {Promise<void>}
-     */
-    unlockLeaderboardTop3 = async (userId) => {
-        const existing = await this._achievementRepository.getUserAchievement(userId, "leaderboard_top3");
-        if (existing) return;
-
-        const raised = await this._achievementRepository.upsertUserAchievement(userId, "leaderboard_top3", 1, 1);
-        if (raised) {
-            await this._notificationRepository.create(userId, undefined, "achievement_unlocked", undefined, {
-                code: "leaderboard_top3", name: NAME_BY_CODE.get("leaderboard_top3"), league: 1, subTier: 1,
-            });
-        }
-    }
-
-    /**
      * @param {string} currentUserId
      * @param {string?} friendId
      * @returns {Promise<Object[]>} every achievement with its current value, tier reached and next tier -

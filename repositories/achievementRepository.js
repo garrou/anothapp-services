@@ -42,20 +42,6 @@ export default class AchievementRepository {
     /**
      * @param {string} userId
      * @param {string} code
-     * @returns {Promise<{league: number, subTier: number}|null>}
-     */
-    getUserAchievement = async (userId, code) => {
-        const res = await db.query(`
-            SELECT league, sub_tier AS "subTier"
-            FROM users_achievements
-            WHERE user_id = $1 AND code = $2
-        `, [userId, code]);
-        return res.rowCount === 1 ? res.rows[0] : null;
-    }
-
-    /**
-     * @param {string} userId
-     * @param {string} code
      * @param {number} league
      * @param {number} subTier
      * @returns {Promise<boolean>} true if this call actually raised the tier

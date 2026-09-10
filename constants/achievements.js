@@ -10,5 +10,4 @@ export const ACHIEVEMENTS = [
     { code: "friends_count", name: "Cercle d'amis" },
     { code: "notes_count", name: "Noteur assidu" },
     { code: "account_age", name: "Ancien de la maison" },
-    { code: "leaderboard_top3", name: "Top 3 classement" },
 ];

@@ -4,7 +4,6 @@ import AchievementService from "./achievementService.js";
 const achievementRepoMocks = vi.hoisted(() => ({
     getTiers: vi.fn(),
     getUserAchievements: vi.fn(),
-    getUserAchievement: vi.fn(),
     upsertUserAchievement: vi.fn(),
 }));
 const userRepoMocks = vi.hoisted(() => ({
@@ -203,43 +202,6 @@ describe("AchievementService.evaluate", () => {
         expect(userRepoMocks.getUserById).not.toHaveBeenCalled();
         expect(friendRepoMocks.getFriends).not.toHaveBeenCalled();
         expect(userShowRepoMocks.getNotedShowsCountByUserId).not.toHaveBeenCalled();
-    });
-});
-
-describe("AchievementService.unlockLeaderboardTop3", () => {
-    let achievementService;
-
-    beforeEach(() => {
-        achievementService = new AchievementService();
-    });
-
-    it("unlocks and notifies the first time", async () => {
-        achievementRepoMocks.getUserAchievement.mockResolvedValue(null);
-
-        await achievementService.unlockLeaderboardTop3("user-1");
-
-        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "leaderboard_top3", 1, 1);
-        expect(notificationRepoMocks.create).toHaveBeenCalledWith(
-            "user-1", undefined, "achievement_unlocked", undefined,
-            { code: "leaderboard_top3", name: "Top 3 classement", league: 1, subTier: 1 }
-        );
-    });
-
-    it("is a no-op once already unlocked", async () => {
-        achievementRepoMocks.getUserAchievement.mockResolvedValue({ league: 1, subTier: 1 });
-
-        await achievementService.unlockLeaderboardTop3("user-1");
-
-        expect(achievementRepoMocks.upsertUserAchievement).not.toHaveBeenCalled();
-    });
-
-    it("does not notify when the DB write is rejected by the concurrent-write guard", async () => {
-        achievementRepoMocks.getUserAchievement.mockResolvedValue(null);
-        achievementRepoMocks.upsertUserAchievement.mockResolvedValue(false);
-
-        await achievementService.unlockLeaderboardTop3("user-1");
-
-        expect(notificationRepoMocks.create).not.toHaveBeenCalled();
     });
 });
 
