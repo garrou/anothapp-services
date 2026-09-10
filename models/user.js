@@ -10,6 +10,7 @@ export default class User {
         this.password = user.password;
         this.lastExport = user["last_export"];
         this.episodeTrackingEnabled = user["episode_tracking_enabled"];
+        this.createdAt = user["created_at"];
     }
 
     /**
