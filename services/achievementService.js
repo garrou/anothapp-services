@@ -14,6 +14,13 @@ import {isOwnRequest} from "../helpers/utils.js";
 
 const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30;
 
+const STAT_CODES = [
+    "streak", "watch_time", "shows_started", "shows_completed", "countries",
+    "kinds", "platforms", "friends_watched_with", "friends_count", "notes_count", "account_age",
+];
+
+const NAME_BY_CODE = new Map(ACHIEVEMENTS.map(({code, name}) => [code, name]));
+
 export default class AchievementService {
     constructor() {
         this._achievementRepository = new AchievementRepository();
@@ -27,46 +34,53 @@ export default class AchievementService {
     }
 
     /**
-     * Raw progress value per achievement code, for every code driven by a live stat
-     * (excludes "leaderboard_top3", which is only ever set by unlockLeaderboardTop3).
+     * Raw progress value per achievement code. Only queries what `codes` actually asks
+     * for - evaluate() is called per watch event (including once per single episode), so
+     * recomputing all 11 stats regardless of which one the event could even affect was
+     * needless DB load on a hot path.
      * @param {string} userId
+     * @param {string[]} codes
      * @returns {Promise<Object<string, number>>}
      */
-    #computeValues = async (userId) => {
-        const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
+    #computeValues = async (userId, codes) => {
+        const need = (code) => codes.includes(code);
+        const needsRepo = need("streak") || need("watch_time");
+
+        const episodeTrackingEnabled = needsRepo ? await this._userRepository.hasEpisodeTrackingEnabled(userId) : false;
         const repo = episodeTrackingEnabled ? this._userEpisodeStatRepository : this._userSeasonRepository;
 
         const [
             user, dates, minutes, showsStarted, showsCompleted, countries,
             kinds, platforms, friendsWatchedWith, friends, notedShows
         ] = await Promise.all([
-            this._userRepository.getUserById(userId),
-            repo.getWatchedDatesByUserId(userId),
-            repo.getTotalTimeByUserId(userId),
-            this._userShowRepository.getTotalShowsByUserId(userId),
-            this._userShowRepository.getTotalCompletedShowsByUserId(userId),
-            this._userShowRepository.getCountriesCountByUserId(userId),
-            this._userShowRepository.getKindsCountByUserId(userId),
-            this._userSeasonRepository.getPlatformsCountByUserId(userId),
-            this._userSeasonFriendRepository.getDistinctFriendsCountByUserId(userId),
-            this._friendRepository.getFriends(userId),
-            this._userShowRepository.getNotedShowsCountByUserId(userId),
+            need("account_age") ? this._userRepository.getUserById(userId) : null,
+            need("streak") ? repo.getWatchedDatesByUserId(userId) : null,
+            need("watch_time") ? repo.getTotalTimeByUserId(userId) : null,
+            need("shows_started") ? this._userShowRepository.getTotalShowsByUserId(userId) : null,
+            need("shows_completed") ? this._userShowRepository.getTotalCompletedShowsByUserId(userId) : null,
+            need("countries") ? this._userShowRepository.getCountriesCountByUserId(userId) : null,
+            need("kinds") ? this._userShowRepository.getKindsCountByUserId(userId) : null,
+            need("platforms") ? this._userSeasonRepository.getPlatformsCountByUserId(userId) : null,
+            need("friends_watched_with") ? this._userSeasonFriendRepository.getDistinctFriendsCountByUserId(userId) : null,
+            need("friends_count") ? this._friendRepository.getFriends(userId) : null,
+            need("notes_count") ? this._userShowRepository.getNotedShowsCountByUserId(userId) : null,
         ]);
-        const accountAgeMonths = user ? (Date.now() - new Date(user.createdAt).getTime()) / MS_PER_MONTH : 0;
 
-        return {
-            streak: computeStreak(dates).longest,
-            watch_time: minutes / 60,
-            shows_started: showsStarted,
-            shows_completed: showsCompleted,
-            countries,
-            kinds,
-            platforms,
-            friends_watched_with: friendsWatchedWith,
-            friends_count: friends.length,
-            notes_count: notedShows,
-            account_age: Math.floor(accountAgeMonths),
-        };
+        const values = {};
+        if (need("streak")) values.streak = computeStreak(dates).longest;
+        if (need("watch_time")) values.watch_time = minutes / 60;
+        if (need("shows_started")) values.shows_started = showsStarted;
+        if (need("shows_completed")) values.shows_completed = showsCompleted;
+        if (need("countries")) values.countries = countries;
+        if (need("kinds")) values.kinds = kinds;
+        if (need("platforms")) values.platforms = platforms;
+        if (need("friends_watched_with")) values.friends_watched_with = friendsWatchedWith;
+        if (need("friends_count")) values.friends_count = friends.length;
+        if (need("notes_count")) values.notes_count = notedShows;
+        if (need("account_age")) {
+            values.account_age = user ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / MS_PER_MONTH) : 0;
+        }
+        return values;
     }
 
     /**
@@ -85,11 +99,15 @@ export default class AchievementService {
 
     /**
      * @param {string} userId
+     * @param {string[]} codes which achievement codes to re-check - defaults to all of
+     * them (used by the one-off backfill); event listeners pass only the codes their
+     * event could actually affect, so e.g. a single episode watched doesn't also
+     * re-query friends/notes/countries.
      * @returns {Promise<void>}
      */
-    evaluate = async (userId) => {
+    evaluate = async (userId, codes = STAT_CODES) => {
         const [values, tiers, current] = await Promise.all([
-            this.#computeValues(userId),
+            this.#computeValues(userId, codes),
             this._achievementRepository.getTiers(),
             this._achievementRepository.getUserAchievements(userId),
         ]);
@@ -115,7 +133,7 @@ export default class AchievementService {
             const raised = await this._achievementRepository.upsertUserAchievement(userId, code, best.league, best.subTier);
             if (raised) {
                 await this._notificationRepository.create(userId, undefined, "achievement_unlocked", undefined, {
-                    code, league: best.league, subTier: best.subTier,
+                    code, name: NAME_BY_CODE.get(code), league: best.league, subTier: best.subTier,
                 });
             }
         }
@@ -134,7 +152,7 @@ export default class AchievementService {
         const raised = await this._achievementRepository.upsertUserAchievement(userId, "leaderboard_top3", 1, 1);
         if (raised) {
             await this._notificationRepository.create(userId, undefined, "achievement_unlocked", undefined, {
-                code: "leaderboard_top3", league: 1, subTier: 1,
+                code: "leaderboard_top3", name: NAME_BY_CODE.get("leaderboard_top3"), league: 1, subTier: 1,
             });
         }
     }
@@ -153,7 +171,7 @@ export default class AchievementService {
         const userId = friendId ?? currentUserId;
 
         const [values, tiers, current] = await Promise.all([
-            this.#computeValues(userId),
+            this.#computeValues(userId, STAT_CODES),
             this._achievementRepository.getTiers(),
             this._achievementRepository.getUserAchievements(userId),
         ]);

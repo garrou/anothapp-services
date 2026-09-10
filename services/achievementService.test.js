@@ -107,7 +107,8 @@ describe("AchievementService.evaluate", () => {
 
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "streak", 1, 2);
         expect(notificationRepoMocks.create).toHaveBeenCalledWith(
-            "user-1", undefined, "achievement_unlocked", undefined, { code: "streak", league: 1, subTier: 2 }
+            "user-1", undefined, "achievement_unlocked", undefined,
+            { code: "streak", name: "Série de visionnage", league: 1, subTier: 2 }
         );
     });
 
@@ -168,6 +169,41 @@ describe("AchievementService.evaluate", () => {
         expect(userEpisodeStatRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-1");
         expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalled();
     });
+
+    it("only queries what a narrowed code list actually needs", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "account_age", league: 1, subTier: 3, threshold: 1 },
+        ]);
+        userRepoMocks.getUserById.mockResolvedValue({
+            createdAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+
+        await achievementService.evaluate("user-1", ["account_age"]);
+
+        expect(userRepoMocks.getUserById).toHaveBeenCalledWith("user-1");
+        expect(userRepoMocks.hasEpisodeTrackingEnabled).not.toHaveBeenCalled();
+        expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalled();
+        expect(userSeasonRepoMocks.getTotalTimeByUserId).not.toHaveBeenCalled();
+        expect(userShowRepoMocks.getTotalShowsByUserId).not.toHaveBeenCalled();
+        expect(userShowRepoMocks.getCountriesCountByUserId).not.toHaveBeenCalled();
+        expect(userShowRepoMocks.getKindsCountByUserId).not.toHaveBeenCalled();
+        expect(userSeasonRepoMocks.getPlatformsCountByUserId).not.toHaveBeenCalled();
+        expect(userSeasonFriendRepoMocks.getDistinctFriendsCountByUserId).not.toHaveBeenCalled();
+        expect(friendRepoMocks.getFriends).not.toHaveBeenCalled();
+        expect(userShowRepoMocks.getNotedShowsCountByUserId).not.toHaveBeenCalled();
+    });
+
+    it("only queries watch-dates/time (not the unrelated codes) for a streak-only evaluation", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
+        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
+
+        await achievementService.evaluate("user-1", ["streak"]);
+
+        expect(userSeasonRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-1");
+        expect(userRepoMocks.getUserById).not.toHaveBeenCalled();
+        expect(friendRepoMocks.getFriends).not.toHaveBeenCalled();
+        expect(userShowRepoMocks.getNotedShowsCountByUserId).not.toHaveBeenCalled();
+    });
 });
 
 describe("AchievementService.unlockLeaderboardTop3", () => {
@@ -184,7 +220,8 @@ describe("AchievementService.unlockLeaderboardTop3", () => {
 
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "leaderboard_top3", 1, 1);
         expect(notificationRepoMocks.create).toHaveBeenCalledWith(
-            "user-1", undefined, "achievement_unlocked", undefined, { code: "leaderboard_top3", league: 1, subTier: 1 }
+            "user-1", undefined, "achievement_unlocked", undefined,
+            { code: "leaderboard_top3", name: "Top 3 classement", league: 1, subTier: 1 }
         );
     });
 

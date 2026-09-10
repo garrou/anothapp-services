@@ -11,6 +11,7 @@ import cleanupNotifications from "./tasks/cleanupNotifications.js";
 import reportUserCount from "./tasks/reportUserCount.js";
 import reportDatabaseSize from "./tasks/reportDatabaseSize.js";
 import evaluateLeaderboardAchievements from "./tasks/evaluateLeaderboardAchievements.js";
+import evaluateAccountAgeAchievements from "./tasks/evaluateAccountAgeAchievements.js";
 import sendTelegramMessage from "./lib/notify.js";
 import {formatReport} from "./lib/report.js";
 
@@ -27,6 +28,7 @@ const TASKS = {
     users: reportUserCount,
     database: reportDatabaseSize,
     leaderboardAchievements: evaluateLeaderboardAchievements,
+    accountAgeAchievements: evaluateAccountAgeAchievements,
 };
 
 /**
