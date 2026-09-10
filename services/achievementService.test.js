@@ -292,3 +292,31 @@ describe("AchievementService.getAchievements", () => {
         expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalledWith("user-1");
     });
 });
+
+describe("AchievementService.getTierCatalog", () => {
+    let achievementService;
+
+    beforeEach(() => {
+        achievementService = new AchievementService();
+    });
+
+    it("groups every tier by code, sorted ascending by threshold, without the redundant code field", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "streak", league: 1, subTier: 1, threshold: 7 },
+            { code: "streak", league: 1, subTier: 3, threshold: 1 },
+            { code: "watch_time", league: 1, subTier: 3, threshold: 5 },
+        ]);
+
+        const tiers = await achievementService.getTierCatalog();
+
+        expect(tiers).toEqual({
+            streak: [
+                { league: 1, subTier: 3, threshold: 1 },
+                { league: 1, subTier: 1, threshold: 7 },
+            ],
+            watch_time: [
+                { league: 1, subTier: 3, threshold: 5 },
+            ],
+        });
+    });
+});
