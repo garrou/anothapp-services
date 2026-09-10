@@ -51,10 +51,6 @@ export default class UserService {
 
         if (user) {
             const profile = new UserProfile(user, isCurrentUser);
-            // This path also serves GET /users/:id, which has no friendship check (used to
-            // preview a stranger before sending a friend request) - createdAt must not leak
-            // there. The friend-scoped list (friendRepository.getFriends) builds its own
-            // UserProfile straight from its already-friend-filtered rows and is unaffected.
             if (!isCurrentUser) {
                 delete profile.createdAt;
             }

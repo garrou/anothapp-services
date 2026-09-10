@@ -1,11 +1,6 @@
 import eventBus from "../helpers/eventBus.js";
 import AchievementService from "./achievementService.js";
 
-// Which achievement codes each event can actually move, so a single episode watched
-// (which fires per episode, not per batch) doesn't also re-query friends/notes/countries
-// on every call. "account_age" is deliberately never listed here - it doesn't depend on
-// any user action, so it has its own monthly scheduled task instead
-// (schedule/tasks/evaluateAccountAgeAchievements.js).
 const EPISODE_CODES = ["streak", "watch_time", "shows_completed"];
 const SEASON_WATCHED_CODES = ["streak", "watch_time", "shows_started", "shows_completed", "countries", "kinds", "platforms"];
 const SHOW_STARTED_CODES = ["shows_started", "countries", "kinds"];

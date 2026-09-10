@@ -34,10 +34,6 @@ export default class AchievementService {
     }
 
     /**
-     * Raw progress value per achievement code. Only queries what `codes` actually asks
-     * for - evaluate() is called per watch event (including once per single episode), so
-     * recomputing all 11 stats regardless of which one the event could even affect was
-     * needless DB load on a hot path.
      * @param {string} userId
      * @param {string[]} codes
      * @returns {Promise<Object<string, number>>}
@@ -99,10 +95,7 @@ export default class AchievementService {
 
     /**
      * @param {string} userId
-     * @param {string[]} codes which achievement codes to re-check - defaults to all of
-     * them (used by the one-off backfill); event listeners pass only the codes their
-     * event could actually affect, so e.g. a single episode watched doesn't also
-     * re-query friends/notes/countries.
+     * @param {string[]} codes which achievement codes to re-check
      * @returns {Promise<void>}
      */
     evaluate = async (userId, codes = STAT_CODES) => {
