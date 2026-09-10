@@ -79,7 +79,18 @@ describe("UserService.getProfile", () => {
         expect(profile.email).toBe("user2@test.fr");
     });
 
-    it("includes createdAt for both the owner and another user's profile", async () => {
+    it("includes createdAt for the profile owner", async () => {
+        userRepoMocks.getUserById.mockResolvedValue({
+            id: "user-2", email: "user2@test.fr", username: "user2", picture: null,
+            episodeTrackingEnabled: false, createdAt: "2020-05-01T00:00:00.000Z",
+        });
+
+        const profile = await userService.getProfile("user-2", true);
+
+        expect(profile.createdAt).toBe("2020-05-01T00:00:00.000Z");
+    });
+
+    it("never includes createdAt when viewing another user's profile (GET /users/:id has no friendship check)", async () => {
         userRepoMocks.getUserById.mockResolvedValue({
             id: "user-2", email: "user2@test.fr", username: "user2", picture: null,
             episodeTrackingEnabled: false, createdAt: "2020-05-01T00:00:00.000Z",
@@ -87,7 +98,7 @@ describe("UserService.getProfile", () => {
 
         const profile = await userService.getProfile("user-2", false);
 
-        expect(profile.createdAt).toBe("2020-05-01T00:00:00.000Z");
+        expect(profile.createdAt).toBeUndefined();
     });
 });
 

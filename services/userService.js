@@ -50,7 +50,15 @@ export default class UserService {
         const user = await this._userRepository.getUserById(userId);
 
         if (user) {
-            return new UserProfile(user, isCurrentUser);
+            const profile = new UserProfile(user, isCurrentUser);
+            // This path also serves GET /users/:id, which has no friendship check (used to
+            // preview a stranger before sending a friend request) - createdAt must not leak
+            // there. The friend-scoped list (friendRepository.getFriends) builds its own
+            // UserProfile straight from its already-friend-filtered rows and is unaffected.
+            if (!isCurrentUser) {
+                delete profile.createdAt;
+            }
+            return profile;
         }
         throw new ServiceError(404, "Profil introuvable");
     }

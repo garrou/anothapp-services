@@ -106,8 +106,14 @@ export default class AchievementService {
                 ? rows.find((t) => t.league === existing.league && t.subTier === existing.subTier)?.threshold ?? -Infinity
                 : -Infinity;
 
-            if (best.threshold > existingThreshold) {
-                await this._achievementRepository.upsertUserAchievement(userId, code, best.league, best.subTier);
+            if (best.threshold <= existingThreshold) continue;
+
+            // The JS-level check above is just a cheap short-circuit against a snapshot;
+            // upsertUserAchievement re-checks against the row as it stands at write time,
+            // so a concurrent evaluate() for the same user can't race a higher tier back
+            // down - and only notify when this call actually raised it.
+            const raised = await this._achievementRepository.upsertUserAchievement(userId, code, best.league, best.subTier);
+            if (raised) {
                 await this._notificationRepository.create(userId, undefined, "achievement_unlocked", undefined, {
                     code, league: best.league, subTier: best.subTier,
                 });
@@ -125,10 +131,12 @@ export default class AchievementService {
         const existing = await this._achievementRepository.getUserAchievement(userId, "leaderboard_top3");
         if (existing) return;
 
-        await this._achievementRepository.upsertUserAchievement(userId, "leaderboard_top3", 1, 1);
-        await this._notificationRepository.create(userId, undefined, "achievement_unlocked", undefined, {
-            code: "leaderboard_top3", league: 1, subTier: 1,
-        });
+        const raised = await this._achievementRepository.upsertUserAchievement(userId, "leaderboard_top3", 1, 1);
+        if (raised) {
+            await this._notificationRepository.create(userId, undefined, "achievement_unlocked", undefined, {
+                code: "leaderboard_top3", league: 1, subTier: 1,
+            });
+        }
     }
 
     /**

@@ -84,6 +84,7 @@ const mockDefaults = () => {
     userSeasonFriendRepoMocks.getDistinctFriendsCountByUserId.mockResolvedValue(0);
     friendRepoMocks.getFriends.mockResolvedValue([]);
     achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map());
+    achievementRepoMocks.upsertUserAchievement.mockResolvedValue(true);
 };
 
 beforeEach(() => {
@@ -108,6 +109,17 @@ describe("AchievementService.evaluate", () => {
         expect(notificationRepoMocks.create).toHaveBeenCalledWith(
             "user-1", undefined, "achievement_unlocked", undefined, { code: "streak", league: 1, subTier: 2 }
         );
+    });
+
+    it("does not notify when the DB write is rejected by the concurrent-write guard", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
+        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
+        achievementRepoMocks.upsertUserAchievement.mockResolvedValue(false);
+
+        await achievementService.evaluate("user-1");
+
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "streak", 1, 2);
+        expect(notificationRepoMocks.create).not.toHaveBeenCalled();
     });
 
     it("does nothing when no tier is reached yet", async () => {
@@ -182,6 +194,15 @@ describe("AchievementService.unlockLeaderboardTop3", () => {
         await achievementService.unlockLeaderboardTop3("user-1");
 
         expect(achievementRepoMocks.upsertUserAchievement).not.toHaveBeenCalled();
+    });
+
+    it("does not notify when the DB write is rejected by the concurrent-write guard", async () => {
+        achievementRepoMocks.getUserAchievement.mockResolvedValue(null);
+        achievementRepoMocks.upsertUserAchievement.mockResolvedValue(false);
+
+        await achievementService.unlockLeaderboardTop3("user-1");
+
+        expect(notificationRepoMocks.create).not.toHaveBeenCalled();
     });
 });
 
