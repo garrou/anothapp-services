@@ -54,10 +54,6 @@ export default class AchievementRepository {
     }
 
     /**
-     * Only writes when this is a genuine improvement over whatever tier is already
-     * stored - checked against the row as it stands at write time (not a snapshot
-     * read earlier), so two concurrent evaluations for the same user can't race
-     * a higher tier back down to a lower one.
      * @param {string} userId
      * @param {string} code
      * @param {number} league
