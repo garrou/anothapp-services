@@ -1,9 +1,9 @@
 import Cache from "node-cache";
 import db from "../config/db.js";
 import AchievementTier from "../models/achievementTier.js";
+import { TIERS_CACHE_TTL_SECONDS } from "../constants/achievements.js";
 
 const TIERS_CACHE_KEY = "tiers";
-const TIERS_CACHE_TTL_SECONDS = 600;
 
 const tiersCache = new Cache({stdTTL: TIERS_CACHE_TTL_SECONDS, checkperiod: 60});
 

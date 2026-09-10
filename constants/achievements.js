@@ -11,3 +11,5 @@ export const ACHIEVEMENTS = [
     { code: "notes_count", name: "Noteur assidu" },
     { code: "account_age", name: "Ancien de la maison" },
 ];
+
+export const TIERS_CACHE_TTL_SECONDS = 600;
