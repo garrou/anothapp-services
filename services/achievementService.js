@@ -126,8 +126,7 @@ export default class AchievementService {
                     code, name: NAME_BY_CODE.get(code), league: best.league, subTier: best.subTier,
                 });
 
-                // Friends only hear about a league change (Bronze -> Argent...), not every
-                // sub-tier step within the same league - NotificationListener fans this out.
+                // Friends only hear about a league change
                 if (best.league !== (existing?.league ?? null)) {
                     eventBus.emit("achievement.league_unlocked", {
                         actorUserId: userId,
