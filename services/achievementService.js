@@ -119,10 +119,6 @@ export default class AchievementService {
 
             if (best.threshold <= existingThreshold) continue;
 
-            // The JS-level check above is just a cheap short-circuit against a snapshot;
-            // upsertUserAchievement re-checks against the row as it stands at write time,
-            // so a concurrent evaluate() for the same user can't race a higher tier back
-            // down - and only notify when this call actually raised it.
             const raised = await this._achievementRepository.upsertUserAchievement(userId, code, best.league, best.subTier);
             if (raised) {
                 await this._notificationRepository.create(userId, undefined, "achievement_unlocked", undefined, {
