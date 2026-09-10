@@ -50,7 +50,11 @@ export default class UserService {
         const user = await this._userRepository.getUserById(userId);
 
         if (user) {
-            return new UserProfile(user, isCurrentUser);
+            const profile = new UserProfile(user, isCurrentUser);
+            if (!isCurrentUser) {
+                delete profile.createdAt;
+            }
+            return profile;
         }
         throw new ServiceError(404, "Profil introuvable");
     }

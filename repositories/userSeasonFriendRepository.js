@@ -79,6 +79,30 @@ export default class UserSeasonFriendRepository {
 
     /**
      * @param {string} userId
+     * @returns {Promise<number>} distinct friends the user has watched at least one season with
+     */
+    getDistinctFriendsCountByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT COUNT(DISTINCT other_id) AS total
+            FROM (
+                SELECT usf.friend_user_id AS other_id
+                FROM users_seasons_friends usf
+                JOIN users_seasons us ON us.id = usf.users_season_id
+                WHERE us.user_id = $1
+
+                UNION ALL
+
+                SELECT us.user_id AS other_id
+                FROM users_seasons_friends usf
+                JOIN users_seasons us ON us.id = usf.users_season_id
+                WHERE usf.friend_user_id = $1
+            ) pairs
+        `, [userId]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
      * @param {number} year
      * @returns {Promise<Stat|null>}
      */

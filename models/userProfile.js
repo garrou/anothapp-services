@@ -10,6 +10,7 @@ export default class UserProfile {
         this.username = user.username;
         this.current = current;
         this.episodeTrackingEnabled = user.episodeTrackingEnabled;
+        this.createdAt = user.createdAt;
 
         if (current) {
             this.email = user.email;

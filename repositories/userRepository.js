@@ -69,6 +69,14 @@ export default class UserRepository {
     }
 
     /**
+     * @returns {Promise<string[]>}
+     */
+    getAllUserIds = async () => {
+        const res = await db.query(`SELECT id FROM users`);
+        return res.rows.map((row) => row.id);
+    }
+
+    /**
      * @param {string} id
      * @returns {Promise<boolean>}
      */

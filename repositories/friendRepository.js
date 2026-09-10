@@ -51,7 +51,7 @@ export default class FriendRepository {
      */
     getFriends = async (userId) => {
         const res = await db.query(`
-            SELECT u.id, u.email, u.picture, u.username
+            SELECT u.id, u.email, u.picture, u.username, u.created_at AS "createdAt"
             FROM friends
             JOIN users u ON id = fst_user_id OR id = sec_user_id
             WHERE (fst_user_id = $1 OR sec_user_id = $1) AND accepted = TRUE AND id <> $1
