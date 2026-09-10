@@ -509,6 +509,19 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
+     * @returns Promise<number>
+     */
+    getPlatformsCountByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT COUNT(DISTINCT platform_id) AS total
+            FROM users_seasons
+            WHERE user_id = $1 AND platform_id IS NOT NULL
+        `, [userId]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
      * @returns {Promise<string[]>} distinct days ('YYYY-MM-DD') the user logged a watched season
      */
     getWatchedDatesByUserId = async (userId) => {

@@ -120,6 +120,38 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
+     * @returns Promise<number> shows where every season has been watched
+     */
+    getTotalCompletedShowsByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT COUNT(*) AS total
+            FROM (
+                SELECT us.show_id
+                FROM users_seasons us
+                JOIN shows s ON s.id = us.show_id
+                WHERE us.user_id = $1
+                GROUP BY us.show_id, s.seasons
+                HAVING COUNT(DISTINCT us.number) >= s.seasons
+            ) completed
+        `, [userId]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
+     * @returns Promise<number>
+     */
+    getNotedShowsCountByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT COUNT(*) AS total
+            FROM users_shows
+            WHERE user_id = $1 AND note_id IS NOT NULL
+        `, [userId]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
      * @param {number} year
      * @returns Promise<number>
      */
@@ -315,6 +347,20 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
+     * @returns Promise<number>
+     */
+    getKindsCountByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT COUNT(DISTINCT sk.kind_id) AS total
+            FROM users_shows us
+            JOIN shows_kinds sk ON sk.show_id = us.show_id
+            WHERE us.user_id = $1
+        `, [userId]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
      * @param {number} limit
      * @returns Promise<Stat[]>
      */
@@ -329,6 +375,20 @@ export default class UserShowRepository {
             LIMIT $2
         `, [userId, limit]);
         return res.rows.map((row) => new Stat(row));
+    }
+
+    /**
+     * @param {string} userId
+     * @returns Promise<number>
+     */
+    getCountriesCountByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT COUNT(DISTINCT s.country) AS total
+            FROM shows s
+            JOIN users_shows us ON us.show_id = s.id
+            WHERE us.user_id = $1
+        `, [userId]);
+        return parseInt(res.rows[0]["total"] ?? 0);
     }
 
     /**

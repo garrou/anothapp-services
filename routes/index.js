@@ -14,10 +14,13 @@ import platformRoutes from "./platformRoutes.js";
 import notificationRoutes from "./notificationRoutes.js";
 import actorRoutes from "./actorRoutes.js";
 import playlistRoutes from "./playlistRoutes.js";
+import achievementRoutes from "./achievementRoutes.js";
 import NotificationListener from "../services/notificationListener.js";
+import AchievementListener from "../services/achievementListener.js";
 import {isOwnRequest} from "../helpers/utils.js";
 
 new NotificationListener();
+new AchievementListener();
 
 const router = new Router();
 
@@ -34,6 +37,7 @@ router.use("/platforms", checkJwt, platformRoutes);
 router.use("/notifications", checkJwt, notificationRoutes);
 router.use("/actors", checkJwt, actorRoutes);
 router.use("/playlists", checkJwt, playlistRoutes);
+router.use("/achievements", checkJwt, achievementRoutes);
 
 router.use("*", (req, res) => {
     res.status(404).json({ message: "Not found" });
