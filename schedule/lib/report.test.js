@@ -58,6 +58,15 @@ describe("formatReport", () => {
         expect(report).toContain("3 jeton(s) de renouvellement supprimé(s)");
     });
 
+    it("formats kinds results", () => {
+        const report = formatReport({
+            kinds: {upserted: 4, failed: [{id: 9, name: "Drame", error: "boom"}]},
+        });
+        expect(report).toContain("4 genre(s) synchronisé(s)");
+        expect(report).toContain("1 genre(s) en erreur");
+        expect(report).toContain("[9 - Drame] boom");
+    });
+
     it("formats actors results", () => {
         const report = formatReport({
             actors: {
@@ -104,5 +113,24 @@ describe("formatReport", () => {
     it("formats database size results", () => {
         const report = formatReport({database: {size: "128 MB"}});
         expect(report).toBe("Taille de la base : 128 MB");
+    });
+
+    it("formats accountAgeAchievements results", () => {
+        const report = formatReport({
+            accountAgeAchievements: {
+                skipped: false, evaluated: 6, total: 7,
+                failed: [{userId: "user-1", error: "boom"}],
+            },
+        });
+        expect(report).toContain("6/7 utilisateur(s) évalué(s) pour l'ancienneté du compte");
+        expect(report).toContain("1 utilisateur(s) en erreur");
+        expect(report).toContain("[user-1] boom");
+    });
+
+    it("reports when the account age evaluation was skipped for the day", () => {
+        const report = formatReport({
+            accountAgeAchievements: {skipped: true, evaluated: 0, total: 0, failed: []},
+        });
+        expect(report).toBe("Ancienneté du compte : pas d'évaluation aujourd'hui");
     });
 });
