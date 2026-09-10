@@ -69,6 +69,22 @@ describe("NotificationListener", () => {
         expect(notificationRepoMocks.create).toHaveBeenCalledWith("user-2", "user-1", "friend_request", undefined, undefined);
     });
 
+    it("fans out a league unlock to every accepted friend", async () => {
+        friendRepoMocks.getFriends.mockResolvedValue([{ id: "friend-1" }]);
+
+        eventBus.emit("achievement.league_unlocked", {
+            actorUserId: "user-1",
+            metadata: { code: "streak", name: "Série de visionnage", league: 2, subTier: 3 },
+        });
+        await flush();
+
+        expect(friendRepoMocks.getFriends).toHaveBeenCalledWith("user-1");
+        expect(notificationRepoMocks.create).toHaveBeenCalledWith(
+            "friend-1", "user-1", "achievement_league_unlocked", undefined,
+            { code: "streak", name: "Série de visionnage", league: 2, subTier: 3 }
+        );
+    });
+
     it("a listener failure is isolated and does not throw back into the emitter", async () => {
         friendRepoMocks.getFriends.mockRejectedValue(new Error("db down"));
 

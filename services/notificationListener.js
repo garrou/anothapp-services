@@ -21,6 +21,7 @@ export default class NotificationListener {
         eventBus.on("friend.request", this.#notifyOne("friend_request"));
         eventBus.on("friend.accepted", this.#notifyOne("friend_accepted"));
         eventBus.on("friend.declined", this.#notifyOne("friend_declined"));
+        eventBus.on("achievement.league_unlocked", this.#notifyFriends("achievement_league_unlocked"));
     }
 
     /**
