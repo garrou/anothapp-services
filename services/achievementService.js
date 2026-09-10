@@ -8,6 +8,9 @@ import FriendRepository from "../repositories/friendRepository.js";
 import NotificationRepository from "../repositories/notificationRepository.js";
 import {computeStreak} from "../helpers/streak.js";
 import {ACHIEVEMENTS} from "../constants/achievements.js";
+import ServiceError from "../helpers/serviceError.js";
+import {ERROR_NOT_FRIEND} from "../constants/errors.js";
+import {isOwnRequest} from "../helpers/utils.js";
 
 const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30;
 
@@ -129,10 +132,18 @@ export default class AchievementService {
     }
 
     /**
-     * @param {string} userId
-     * @returns {Promise<Object[]>} every achievement with its current value, tier reached and next tier
+     * @param {string} currentUserId
+     * @param {string?} friendId
+     * @returns {Promise<Object[]>} every achievement with its current value, tier reached and next tier -
+     * for a friend, only the ones actually unlocked (no value/progress leaked on the rest)
      */
-    getAchievements = async (userId) => {
+    getAchievements = async (currentUserId, friendId) => {
+        if (!isOwnRequest(currentUserId, friendId)
+            && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
+            throw new ServiceError(400, ERROR_NOT_FRIEND);
+        }
+        const userId = friendId ?? currentUserId;
+
         const [values, tiers, current] = await Promise.all([
             this.#computeValues(userId),
             this._achievementRepository.getTiers(),
@@ -140,7 +151,7 @@ export default class AchievementService {
         ]);
         const byCode = this.#groupTiersByCode(tiers);
 
-        return ACHIEVEMENTS.map(({code, name}) => {
+        const achievements = ACHIEVEMENTS.map(({code, name}) => {
             const rows = byCode.get(code) ?? [];
             const value = values[code] ?? 0;
             const reached = current.get(code) ?? null;
@@ -163,5 +174,9 @@ export default class AchievementService {
                 progress,
             };
         });
+
+        return isOwnRequest(currentUserId, friendId)
+            ? achievements
+            : achievements.filter((achievement) => achievement.league !== null);
     }
 }

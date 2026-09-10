@@ -32,6 +32,7 @@ const userSeasonFriendRepoMocks = vi.hoisted(() => ({
 }));
 const friendRepoMocks = vi.hoisted(() => ({
     getFriends: vi.fn(),
+    checkIfAlreadyFriend: vi.fn(),
 }));
 const notificationRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -237,5 +238,37 @@ describe("AchievementService.getAchievements", () => {
 
         expect(streak.nextThreshold).toBeNull();
         expect(streak.progress).toBe(1);
+    });
+
+    it("rejects a friendId that isn't an accepted friend", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
+
+        await expect(achievementService.getAchievements("user-1", "user-2")).rejects.toThrow();
+    });
+
+    it("only returns unlocked achievements when viewing a friend", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map([
+            ["streak", { league: 1, subTier: 3, unlockedAt: "2024-01-01T00:00:00.000Z" }],
+        ]));
+        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
+
+        const achievements = await achievementService.getAchievements("user-1", "user-2");
+
+        expect(achievements.every((a) => a.league !== null)).toBe(true);
+        expect(achievements.find((a) => a.code === "streak")).toBeDefined();
+    });
+
+    it("computes the friend's own values, not the requester's", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue([]);
+
+        await achievementService.getAchievements("user-1", "user-2");
+
+        expect(userSeasonRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-2");
+        expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalledWith("user-1");
     });
 });

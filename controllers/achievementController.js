@@ -8,7 +8,8 @@ export default class AchievementController {
 
     getAchievements = async (req, res, next) => {
         try {
-            const achievements = await this._achievementService.getAchievements(req.userId);
+            const {id} = req.query;
+            const achievements = await this._achievementService.getAchievements(req.userId, id);
             res.status(200).json({achievements});
         } catch (e) {
             next(e);
