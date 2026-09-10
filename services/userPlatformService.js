@@ -1,6 +1,7 @@
 import ServiceError from "../helpers/serviceError.js";
 import UserPlatformRepository from "../repositories/userPlatformRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
+import {ERROR_NOT_FRIEND} from "../constants/errors.js";
 
 export default class UserPlatformService {
 
@@ -16,7 +17,7 @@ export default class UserPlatformService {
      */
     getUserPlatforms = async (userId, friendId) => {
         if (friendId && !await this._friendRepository.checkIfAlreadyFriend(userId, friendId)) {
-            throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
+            throw new ServiceError(400, ERROR_NOT_FRIEND);
         }
         return this._userPlatformRepository.getUserPlatforms(friendId ?? userId);
     }

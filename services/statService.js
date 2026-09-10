@@ -5,7 +5,7 @@ import UserEpisodeStatRepository from "../repositories/userEpisodeStatRepository
 import UserRepository from "../repositories/userRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import ServiceError from "../helpers/serviceError.js";
-import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND} from "../constants/errors.js";
 import {computeStreak} from "../helpers/streak.js";
 import {isOwnRequest} from "../helpers/utils.js";
 
@@ -27,7 +27,7 @@ export default class StatService {
     getStats = async (currentUserId, friendId) => {
         if (!isOwnRequest(currentUserId, friendId)
             && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
-            throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
+            throw new ServiceError(400, ERROR_NOT_FRIEND);
         }
         const userId = friendId ?? currentUserId;
         const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);

@@ -10,7 +10,7 @@ import ServiceError from "../helpers/serviceError.js";
 import UserListRepository from "../repositories/userListRepository.js";
 import Validator from "../helpers/validator.js";
 import ParserHelper from "../helpers/parser.js";
-import {DUPLICATE_ERROR_CODE, ERROR_FAILED_ADD_SEASON, ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {DUPLICATE_ERROR_CODE, ERROR_FAILED_ADD_SEASON, ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND} from "../constants/errors.js";
 import eventBus from "../helpers/eventBus.js";
 
 export default class ShowService {
@@ -202,7 +202,7 @@ export default class ShowService {
     getShows = async (currentUserId, query) => {
         const { title, status, friendId, platforms, countries, kinds, notes, watchedWith } = query;
         if (friendId && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
-            throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
+            throw new ServiceError(400, ERROR_NOT_FRIEND);
         }
         if (status) {
             return this.#getShowsByStatus(currentUserId, status, friendId);
