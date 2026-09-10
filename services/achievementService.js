@@ -6,6 +6,7 @@ import UserEpisodeStatRepository from "../repositories/userEpisodeStatRepository
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import NotificationRepository from "../repositories/notificationRepository.js";
+import eventBus from "../helpers/eventBus.js";
 import {computeStreak} from "../helpers/streak.js";
 import {ACHIEVEMENTS} from "../constants/achievements.js";
 import ServiceError from "../helpers/serviceError.js";
@@ -124,6 +125,14 @@ export default class AchievementService {
                 await this._notificationRepository.create(userId, undefined, "achievement_unlocked", undefined, {
                     code, name: NAME_BY_CODE.get(code), league: best.league, subTier: best.subTier,
                 });
+
+                // Friends only hear about a league change
+                if (best.league !== (existing?.league ?? null)) {
+                    eventBus.emit("achievement.league_unlocked", {
+                        actorUserId: userId,
+                        metadata: {code, name: NAME_BY_CODE.get(code), league: best.league, subTier: best.subTier},
+                    });
+                }
             }
         }
     }
@@ -175,5 +184,21 @@ export default class AchievementService {
         return isOwnRequest(currentUserId, friendId)
             ? achievements
             : achievements.filter((achievement) => achievement.league !== null);
+    }
+
+    /**
+     * The full threshold ladder for every achievement, grouped by code and sorted ascending -
+     * static catalog data, identical for every user, used by the frontend to show the tiers
+     * a badge still has to climb.
+     * @returns {Promise<Object<string, {league: number, subTier: number, threshold: number}[]>>}
+     */
+    getTierCatalog = async () => {
+        const tiers = await this._achievementRepository.getTiers();
+        const byCode = this.#groupTiersByCode(tiers);
+
+        return Object.fromEntries(
+            [...byCode.entries()].map(([code, rows]) =>
+                [code, rows.map(({league, subTier, threshold}) => ({league, subTier, threshold}))])
+        );
     }
 }

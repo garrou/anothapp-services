@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import eventBus from "../helpers/eventBus.js";
 import AchievementService from "./achievementService.js";
 
 const achievementRepoMocks = vi.hoisted(() => ({
@@ -158,6 +159,62 @@ describe("AchievementService.evaluate", () => {
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "streak", 2, 3);
     });
 
+    it("emits achievement.league_unlocked when a league is reached for the first time", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
+        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
+        const emitSpy = vi.spyOn(eventBus, "emit");
+
+        await achievementService.evaluate("user-1");
+
+        expect(emitSpy).toHaveBeenCalledWith("achievement.league_unlocked", {
+            actorUserId: "user-1",
+            metadata: { code: "streak", name: "Série de visionnage", league: 1, subTier: 2 },
+        });
+    });
+
+    it("emits achievement.league_unlocked when moving up to a strictly higher league", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
+        achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map([
+            ["streak", { league: 1, subTier: 2 }],
+        ]));
+        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(
+            Array.from({ length: 10 }, (_, i) => `2024-01-${String(i + 1).padStart(2, "0")}`)
+        );
+        const emitSpy = vi.spyOn(eventBus, "emit");
+
+        await achievementService.evaluate("user-1");
+
+        expect(emitSpy).toHaveBeenCalledWith("achievement.league_unlocked", {
+            actorUserId: "user-1",
+            metadata: { code: "streak", name: "Série de visionnage", league: 2, subTier: 3 },
+        });
+    });
+
+    it("does not emit achievement.league_unlocked when only the sub-tier improves within the same league", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
+        achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map([
+            ["streak", { league: 1, subTier: 3 }],
+        ]));
+        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
+        const emitSpy = vi.spyOn(eventBus, "emit");
+
+        await achievementService.evaluate("user-1");
+
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "streak", 1, 2);
+        expect(emitSpy).not.toHaveBeenCalledWith("achievement.league_unlocked", expect.anything());
+    });
+
+    it("does not emit achievement.league_unlocked when the DB write is rejected by the concurrent-write guard", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
+        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
+        achievementRepoMocks.upsertUserAchievement.mockResolvedValue(false);
+        const emitSpy = vi.spyOn(eventBus, "emit");
+
+        await achievementService.evaluate("user-1");
+
+        expect(emitSpy).not.toHaveBeenCalledWith("achievement.league_unlocked", expect.anything());
+    });
+
     it("reads episode watch dates for episode-tracking users instead of season dates", async () => {
         achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
         userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
@@ -290,5 +347,33 @@ describe("AchievementService.getAchievements", () => {
 
         expect(userSeasonRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-2");
         expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalledWith("user-1");
+    });
+});
+
+describe("AchievementService.getTierCatalog", () => {
+    let achievementService;
+
+    beforeEach(() => {
+        achievementService = new AchievementService();
+    });
+
+    it("groups every tier by code, sorted ascending by threshold, without the redundant code field", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "streak", league: 1, subTier: 1, threshold: 7 },
+            { code: "streak", league: 1, subTier: 3, threshold: 1 },
+            { code: "watch_time", league: 1, subTier: 3, threshold: 5 },
+        ]);
+
+        const tiers = await achievementService.getTierCatalog();
+
+        expect(tiers).toEqual({
+            streak: [
+                { league: 1, subTier: 3, threshold: 1 },
+                { league: 1, subTier: 1, threshold: 7 },
+            ],
+            watch_time: [
+                { league: 1, subTier: 3, threshold: 5 },
+            ],
+        });
     });
 });

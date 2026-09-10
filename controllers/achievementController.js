@@ -15,4 +15,13 @@ export default class AchievementController {
             next(e);
         }
     }
+
+    getTiers = async (req, res, next) => {
+        try {
+            const tiers = await this._achievementService.getTierCatalog();
+            res.status(200).json({tiers});
+        } catch (e) {
+            next(e);
+        }
+    }
 }
