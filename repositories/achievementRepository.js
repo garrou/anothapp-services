@@ -5,9 +5,6 @@ import AchievementTier from "../models/achievementTier.js";
 const TIERS_CACHE_KEY = "tiers";
 const TIERS_CACHE_TTL_SECONDS = 600;
 
-// Module-level: achievement_tiers is edited directly in the DB (never through the app), so a
-// short TTL is enough to pick up a change without re-fetching this ~200-row table on every
-// single evaluate() call - which fires per watch event, including one per episode.
 const tiersCache = new Cache({stdTTL: TIERS_CACHE_TTL_SECONDS, checkperiod: 60});
 
 export default class AchievementRepository {
