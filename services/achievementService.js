@@ -81,8 +81,6 @@ export default class AchievementService {
     }
 
     /**
-     * Re-evaluates every stat-driven achievement for a user, persisting and notifying
-     * any newly reached tier. Safe to call repeatedly; a no-op when nothing improved.
      * @param {string} userId
      * @returns {Promise<void>}
      */
