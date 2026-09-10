@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import evaluateAccountAgeAchievements from "./evaluateAccountAgeAchievements.js";
 
 const userRepoMocks = vi.hoisted(() => ({
@@ -19,8 +19,24 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
+afterEach(() => {
+    vi.useRealTimers();
+});
+
 describe("evaluateAccountAgeAchievements", () => {
-    it("evaluates only account_age for every existing user", async () => {
+    it("skips the evaluation entirely outside the monthly sync day", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2024-01-15"));
+
+        const result = await evaluateAccountAgeAchievements();
+
+        expect(result).toEqual({ skipped: true, evaluated: 0, total: 0, failed: [] });
+        expect(userRepoMocks.getAllUserIds).not.toHaveBeenCalled();
+    });
+
+    it("evaluates only account_age for every existing user on the monthly sync day", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2024-01-01"));
         userRepoMocks.getAllUserIds.mockResolvedValue(["user-1", "user-2", "user-3"]);
         achievementServiceMocks.evaluate.mockResolvedValue(undefined);
 
@@ -30,10 +46,12 @@ describe("evaluateAccountAgeAchievements", () => {
         expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1", ["account_age"]);
         expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-2", ["account_age"]);
         expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-3", ["account_age"]);
-        expect(result).toEqual({ evaluated: 3, total: 3, failed: [] });
+        expect(result).toEqual({ skipped: false, evaluated: 3, total: 3, failed: [] });
     });
 
     it("reports a failure for one user without stopping the others", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2024-01-01"));
         userRepoMocks.getAllUserIds.mockResolvedValue(["user-1", "user-2"]);
         achievementServiceMocks.evaluate
             .mockRejectedValueOnce(new Error("boom"))
@@ -42,6 +60,7 @@ describe("evaluateAccountAgeAchievements", () => {
         const result = await evaluateAccountAgeAchievements();
 
         expect(result).toEqual({
+            skipped: false,
             evaluated: 1,
             total: 2,
             failed: [{ userId: "user-1", error: "boom" }],
@@ -49,11 +68,13 @@ describe("evaluateAccountAgeAchievements", () => {
     });
 
     it("is a no-op when there are no users", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2024-01-01"));
         userRepoMocks.getAllUserIds.mockResolvedValue([]);
 
         const result = await evaluateAccountAgeAchievements();
 
         expect(achievementServiceMocks.evaluate).not.toHaveBeenCalled();
-        expect(result).toEqual({ evaluated: 0, total: 0, failed: [] });
+        expect(result).toEqual({ skipped: false, evaluated: 0, total: 0, failed: [] });
     });
 });
