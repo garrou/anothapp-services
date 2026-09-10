@@ -5,7 +5,7 @@ import UserRepository from "../repositories/userRepository.js";
 import SearchService from "./searchService.js";
 import ServiceError from "../helpers/serviceError.js";
 import Validator from "../helpers/validator.js";
-import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {ERROR_INVALID_REQUEST, ERROR_VIEWING_NOT_IN_COLLECTION} from "../constants/errors.js";
 import {MONTHS_SHORTCUTS} from "../constants/validation.js";
 import mapWithConcurrency from "../schedule/lib/concurrency.js";
 import eventBus from "../helpers/eventBus.js";
@@ -124,7 +124,7 @@ export default class EpisodeService {
         const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
 
         if (!season) {
-            throw new ServiceError(400, "Ce visionnage n'est pas dans votre collection");
+            throw new ServiceError(400, ERROR_VIEWING_NOT_IN_COLLECTION);
         }
         await this.#ensureEpisodesExist(season.showId, season.number);
         return this._userEpisodeRepository.getByUserSeasonId(userSeasonId, season.showId, season.number);
@@ -144,7 +144,7 @@ export default class EpisodeService {
         const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
 
         if (!season) {
-            throw new ServiceError(400, "Ce visionnage n'est pas dans votre collection");
+            throw new ServiceError(400, ERROR_VIEWING_NOT_IN_COLLECTION);
         }
         const episode = await this._episodeRepository.getEpisodeById(episodeId);
 
@@ -186,7 +186,7 @@ export default class EpisodeService {
         const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
 
         if (!season) {
-            throw new ServiceError(400, "Ce visionnage n'est pas dans votre collection");
+            throw new ServiceError(400, ERROR_VIEWING_NOT_IN_COLLECTION);
         }
         const episodes = await this.#ensureEpisodesExist(season.showId, season.number);
         const aired = episodes.filter((e) => e.date && !Validator.isInFuture(e.date));

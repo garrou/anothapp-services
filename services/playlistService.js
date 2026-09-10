@@ -2,7 +2,7 @@ import PlaylistRepository from "../repositories/playlistRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import ShowService from "./showService.js";
 import ServiceError from "../helpers/serviceError.js";
-import {ERROR_INVALID_REQUEST, PLAYLIST_NOT_FOUND} from "../constants/errors.js";
+import {ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND, PLAYLIST_NOT_FOUND} from "../constants/errors.js";
 
 const MAX_NAME_LENGTH = 255;
 
@@ -32,7 +32,7 @@ export default class PlaylistService {
     getPlaylists = async (currentUserId, friendId) => {
         if (friendId) {
             if (!await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
-                throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
+                throw new ServiceError(400, ERROR_NOT_FRIEND);
             }
             return this._playlistRepository.getVisibleByUserId(friendId);
         }

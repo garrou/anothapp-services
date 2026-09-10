@@ -4,7 +4,7 @@ import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
-import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER} from "../constants/errors.js";
 
 export default class UserService {
     constructor() {
@@ -141,7 +141,7 @@ export default class UserService {
         const user = await this._userRepository.getUserById(userId);
 
         if (!user) {
-            throw new ServiceError(404, "Utilisateur inconnu");
+            throw new ServiceError(404, ERROR_UNKNOWN_USER);
         }
         const same = await SecurityHelper.comparePassword(currentPass, user.password);
 
@@ -171,7 +171,7 @@ export default class UserService {
         let user = await this._userRepository.getUserById(currentUserId);
 
         if (!user) {
-            throw new ServiceError(404, "Utilisateur inconnu");
+            throw new ServiceError(404, ERROR_UNKNOWN_USER);
         }
         if (user.email !== email) {
             throw new ServiceError(400, "Email incorrect");

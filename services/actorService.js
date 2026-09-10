@@ -4,7 +4,7 @@ import FriendRepository from "../repositories/friendRepository.js";
 import SearchService from "./searchService.js";
 import ServiceError from "../helpers/serviceError.js";
 import Actor from "../models/actor.js";
-import {DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {DUPLICATE_ERROR_CODE, ERROR_ACTOR_ALREADY_FAVORITE, ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND} from "../constants/errors.js";
 import eventBus from "../helpers/eventBus.js";
 
 export default class ActorService {
@@ -28,7 +28,7 @@ export default class ActorService {
         const exists = await this._userFavoriteActorRepository.checkFavoriteExists(currentUserId, actorId);
 
         if (exists) {
-            throw new ServiceError(409, "Cet acteur est déjà dans vos favoris");
+            throw new ServiceError(409, ERROR_ACTOR_ALREADY_FAVORITE);
         }
         let actor = await this._actorRepository.getActorById(actorId);
 
@@ -63,7 +63,7 @@ export default class ActorService {
             added = await this._userFavoriteActorRepository.create(currentUserId, actorId);
         } catch (err) {
             if (err.code === DUPLICATE_ERROR_CODE) {
-                throw new ServiceError(409, "Cet acteur est déjà dans vos favoris");
+                throw new ServiceError(409, ERROR_ACTOR_ALREADY_FAVORITE);
             }
             throw err;
         }
@@ -100,7 +100,7 @@ export default class ActorService {
      */
     getFavorites = async (currentUserId, friendId) => {
         if (friendId && !await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
-            throw new ServiceError(400, "Vous n'êtes pas en relation avec cette personne");
+            throw new ServiceError(400, ERROR_NOT_FRIEND);
         }
         return this._userFavoriteActorRepository.getFavoritesByUserId(friendId ?? currentUserId);
     }

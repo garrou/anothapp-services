@@ -15,3 +15,13 @@ export const TOO_MUCH_EXPORT_REQUEST = "L'export de données est disponible une 
 export const DUPLICATE_ERROR_CODE = "23505";
 
 export const PLAYLIST_NOT_FOUND = "Playlist introuvable";
+
+export const ERROR_NOT_FRIEND = "Vous n'êtes pas en relation avec cette personne";
+
+export const ERROR_ALREADY_FRIEND = "Vous êtes déjà en relation avec cet utilisateur";
+
+export const ERROR_VIEWING_NOT_IN_COLLECTION = "Ce visionnage n'est pas dans votre collection";
+
+export const ERROR_ACTOR_ALREADY_FAVORITE = "Cet acteur est déjà dans vos favoris";
+
+export const ERROR_UNKNOWN_USER = "Utilisateur inconnu";
