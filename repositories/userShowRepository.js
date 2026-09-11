@@ -152,6 +152,19 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
+     * @returns Promise<number>
+     */
+    getFavoritesCountByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT COUNT(*) AS total
+            FROM users_shows
+            WHERE user_id = $1 AND favorite = TRUE
+        `, [userId]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
      * @param {number} year
      * @returns Promise<number>
      */

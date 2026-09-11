@@ -5,6 +5,7 @@ import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import UserEpisodeStatRepository from "../repositories/userEpisodeStatRepository.js";
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
+import PlaylistRepository from "../repositories/playlistRepository.js";
 import NotificationRepository from "../repositories/notificationRepository.js";
 import eventBus from "../helpers/eventBus.js";
 import {computeStreak} from "../helpers/streak.js";
@@ -18,6 +19,7 @@ const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30;
 const STAT_CODES = [
     "streak", "watch_time", "shows_started", "shows_completed", "countries",
     "kinds", "platforms", "friends_watched_with", "friends_count", "notes_count", "account_age",
+    "favorites_count", "playlists_count", "duo",
 ];
 
 const NAME_BY_CODE = new Map(ACHIEVEMENTS.map(({code, name}) => [code, name]));
@@ -31,6 +33,7 @@ export default class AchievementService {
         this._userEpisodeStatRepository = new UserEpisodeStatRepository();
         this._userSeasonFriendRepository = new UserSeasonFriendRepository();
         this._friendRepository = new FriendRepository();
+        this._playlistRepository = new PlaylistRepository();
         this._notificationRepository = new NotificationRepository();
     }
 
@@ -48,7 +51,8 @@ export default class AchievementService {
 
         const [
             user, dates, minutes, showsStarted, showsCompleted, countries,
-            kinds, platforms, friendsWatchedWith, friends, notedShows
+            kinds, platforms, friendsWatchedWith, friends, notedShows,
+            favorites, playlistsCount, topDuo
         ] = await Promise.all([
             need("account_age") ? this._userRepository.getUserById(userId) : null,
             need("streak") ? repo.getWatchedDatesByUserId(userId) : null,
@@ -61,6 +65,9 @@ export default class AchievementService {
             need("friends_watched_with") ? this._userSeasonFriendRepository.getDistinctFriendsCountByUserId(userId) : null,
             need("friends_count") ? this._friendRepository.getFriends(userId) : null,
             need("notes_count") ? this._userShowRepository.getNotedShowsCountByUserId(userId) : null,
+            need("favorites_count") ? this._userShowRepository.getFavoritesCountByUserId(userId) : null,
+            need("playlists_count") ? this._playlistRepository.getCountByUserId(userId) : null,
+            need("duo") ? this._userSeasonFriendRepository.getTopFriendsByUserId(userId, 1) : null,
         ]);
 
         const values = {};
@@ -74,6 +81,9 @@ export default class AchievementService {
         if (need("friends_watched_with")) values.friends_watched_with = friendsWatchedWith;
         if (need("friends_count")) values.friends_count = friends.length;
         if (need("notes_count")) values.notes_count = notedShows;
+        if (need("favorites_count")) values.favorites_count = favorites;
+        if (need("playlists_count")) values.playlists_count = playlistsCount;
+        if (need("duo")) values.duo = topDuo[0]?.value ?? 0;
         if (need("account_age")) {
             values.account_age = user ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / MS_PER_MONTH) : 0;
         }

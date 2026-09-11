@@ -17,6 +17,7 @@ const userShowRepoMocks = vi.hoisted(() => ({
     getCountriesCountByUserId: vi.fn(),
     getKindsCountByUserId: vi.fn(),
     getNotedShowsCountByUserId: vi.fn(),
+    getFavoritesCountByUserId: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
     getWatchedDatesByUserId: vi.fn(),
@@ -29,10 +30,14 @@ const userEpisodeStatRepoMocks = vi.hoisted(() => ({
 }));
 const userSeasonFriendRepoMocks = vi.hoisted(() => ({
     getDistinctFriendsCountByUserId: vi.fn(),
+    getTopFriendsByUserId: vi.fn(),
 }));
 const friendRepoMocks = vi.hoisted(() => ({
     getFriends: vi.fn(),
     checkIfAlreadyFriend: vi.fn(),
+}));
+const playlistRepoMocks = vi.hoisted(() => ({
+    getCountByUserId: vi.fn(),
 }));
 const notificationRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -59,6 +64,9 @@ vi.mock("../repositories/userSeasonFriendRepository.js", () => ({
 vi.mock("../repositories/friendRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return friendRepoMocks; }),
 }));
+vi.mock("../repositories/playlistRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return playlistRepoMocks; }),
+}));
 vi.mock("../repositories/notificationRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return notificationRepoMocks; }),
 }));
@@ -81,8 +89,11 @@ const mockDefaults = () => {
     userShowRepoMocks.getCountriesCountByUserId.mockResolvedValue(0);
     userShowRepoMocks.getKindsCountByUserId.mockResolvedValue(0);
     userShowRepoMocks.getNotedShowsCountByUserId.mockResolvedValue(0);
+    userShowRepoMocks.getFavoritesCountByUserId.mockResolvedValue(0);
     userSeasonFriendRepoMocks.getDistinctFriendsCountByUserId.mockResolvedValue(0);
+    userSeasonFriendRepoMocks.getTopFriendsByUserId.mockResolvedValue([]);
     friendRepoMocks.getFriends.mockResolvedValue([]);
+    playlistRepoMocks.getCountByUserId.mockResolvedValue(0);
     achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map());
     achievementRepoMocks.upsertUserAchievement.mockResolvedValue(true);
 };
@@ -108,7 +119,7 @@ describe("AchievementService.evaluate", () => {
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "streak", 1, 2);
         expect(notificationRepoMocks.create).toHaveBeenCalledWith(
             "user-1", undefined, "achievement_unlocked", undefined,
-            { code: "streak", name: "Série de visionnage", league: 1, subTier: 2 }
+            { code: "streak", name: "Assidu", league: 1, subTier: 2 }
         );
     });
 
@@ -168,7 +179,7 @@ describe("AchievementService.evaluate", () => {
 
         expect(emitSpy).toHaveBeenCalledWith("achievement.league_unlocked", {
             actorUserId: "user-1",
-            metadata: { code: "streak", name: "Série de visionnage", league: 1, subTier: 2 },
+            metadata: { code: "streak", name: "Assidu", league: 1, subTier: 2 },
         });
     });
 
@@ -186,7 +197,7 @@ describe("AchievementService.evaluate", () => {
 
         expect(emitSpy).toHaveBeenCalledWith("achievement.league_unlocked", {
             actorUserId: "user-1",
-            metadata: { code: "streak", name: "Série de visionnage", league: 2, subTier: 3 },
+            metadata: { code: "streak", name: "Assidu", league: 2, subTier: 3 },
         });
     });
 
@@ -247,6 +258,40 @@ describe("AchievementService.evaluate", () => {
         expect(userSeasonFriendRepoMocks.getDistinctFriendsCountByUserId).not.toHaveBeenCalled();
         expect(friendRepoMocks.getFriends).not.toHaveBeenCalled();
         expect(userShowRepoMocks.getNotedShowsCountByUserId).not.toHaveBeenCalled();
+        expect(userShowRepoMocks.getFavoritesCountByUserId).not.toHaveBeenCalled();
+        expect(playlistRepoMocks.getCountByUserId).not.toHaveBeenCalled();
+        expect(userSeasonFriendRepoMocks.getTopFriendsByUserId).not.toHaveBeenCalled();
+    });
+
+    it("unlocks favorites_count, playlists_count and duo from their own repositories", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "favorites_count", league: 1, subTier: 3, threshold: 1 },
+            { code: "playlists_count", league: 1, subTier: 3, threshold: 1 },
+            { code: "duo", league: 1, subTier: 3, threshold: 1 },
+        ]);
+        userShowRepoMocks.getFavoritesCountByUserId.mockResolvedValue(5);
+        playlistRepoMocks.getCountByUserId.mockResolvedValue(2);
+        userSeasonFriendRepoMocks.getTopFriendsByUserId.mockResolvedValue([{ id: "friend-1", label: "Dexter", value: 12 }]);
+
+        await achievementService.evaluate("user-1", ["favorites_count", "playlists_count", "duo"]);
+
+        expect(userShowRepoMocks.getFavoritesCountByUserId).toHaveBeenCalledWith("user-1");
+        expect(playlistRepoMocks.getCountByUserId).toHaveBeenCalledWith("user-1");
+        expect(userSeasonFriendRepoMocks.getTopFriendsByUserId).toHaveBeenCalledWith("user-1", 1);
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "favorites_count", 1, 3);
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "playlists_count", 1, 3);
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "duo", 1, 3);
+    });
+
+    it("defaults duo to 0 when the user has no watched-with friends at all", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "duo", league: 1, subTier: 3, threshold: 1 },
+        ]);
+        userSeasonFriendRepoMocks.getTopFriendsByUserId.mockResolvedValue([]);
+
+        await achievementService.evaluate("user-1", ["duo"]);
+
+        expect(achievementRepoMocks.upsertUserAchievement).not.toHaveBeenCalled();
     });
 
     it("only queries watch-dates/time (not the unrelated codes) for a streak-only evaluation", async () => {

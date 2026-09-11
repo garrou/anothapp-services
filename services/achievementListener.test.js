@@ -71,16 +71,30 @@ describe("AchievementListener", () => {
         expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-2", ["friends_count"]);
     });
 
-    it("evaluates only friends_watched_with for the actor and every tagged recipient", async () => {
+    it("evaluates friends_watched_with and duo for the actor and every tagged recipient", async () => {
         eventBus.emit("season.watched_with", {
             actorUserId: "user-1", recipientIds: ["user-2", "user-3"], showId: 42,
         });
         await flush();
 
         expect(achievementServiceMocks.evaluate).toHaveBeenCalledTimes(3);
-        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1", ["friends_watched_with"]);
-        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-2", ["friends_watched_with"]);
-        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-3", ["friends_watched_with"]);
+        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1", ["friends_watched_with", "duo"]);
+        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-2", ["friends_watched_with", "duo"]);
+        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-3", ["friends_watched_with", "duo"]);
+    });
+
+    it("evaluates only favorites_count for a show favorited", async () => {
+        eventBus.emit("show.favorited", { actorUserId: "user-1", showId: 42 });
+        await flush();
+
+        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1", ["favorites_count"]);
+    });
+
+    it("evaluates only playlists_count for a playlist created", async () => {
+        eventBus.emit("playlist.created", { actorUserId: "user-1" });
+        await flush();
+
+        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1", ["playlists_count"]);
     });
 
     it("never includes account_age in any event's code list - it has its own scheduled task", async () => {

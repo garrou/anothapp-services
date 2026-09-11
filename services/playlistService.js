@@ -2,6 +2,7 @@ import PlaylistRepository from "../repositories/playlistRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import ShowService from "./showService.js";
 import ServiceError from "../helpers/serviceError.js";
+import eventBus from "../helpers/eventBus.js";
 import {ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND, PLAYLIST_NOT_FOUND} from "../constants/errors.js";
 
 const MAX_NAME_LENGTH = 255;
@@ -71,7 +72,9 @@ export default class PlaylistService {
         if (!trimmed || trimmed.length > MAX_NAME_LENGTH) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        return this._playlistRepository.create(currentUserId, trimmed, !!visible);
+        const playlist = await this._playlistRepository.create(currentUserId, trimmed, !!visible);
+        eventBus.emit("playlist.created", {actorUserId: currentUserId});
+        return playlist;
     }
 
     /**
