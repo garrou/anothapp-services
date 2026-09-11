@@ -6,7 +6,7 @@ export const ACHIEVEMENTS = [
     { code: "countries", name: "Voyageur" },
     { code: "kinds", name: "Éclectique" },
     { code: "platforms", name: "Polyvalent" },
-    { code: "friends_watched_with", name: "Fidèle" },
+    { code: "friends_watched_with", name: "Généreux" },
     { code: "friends_count", name: "Extraverti" },
     { code: "notes_count", name: "Critique" },
     { code: "account_age", name: "Doyen" },
