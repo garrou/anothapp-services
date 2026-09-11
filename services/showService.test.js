@@ -444,13 +444,23 @@ describe("ShowService.updateByShowId", () => {
         await expect(showService.updateByShowId("user-1", 42, {})).rejects.toThrow("Requête invalide");
     });
 
-    it("toggles favorite when favorite is set", async () => {
+    it("toggles favorite when favorite is set, and emits show.favorited when it just became favorited", async () => {
         userShowRepoMocks.updateFavoriteByUserIdByShowId.mockResolvedValue(true);
 
         const result = await showService.updateByShowId("user-1", 42, { favorite: true });
 
         expect(result).toBe(true);
         expect(userShowRepoMocks.updateFavoriteByUserIdByShowId).toHaveBeenCalledWith("user-1", 42);
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("show.favorited", {actorUserId: "user-1", showId: 42});
+    });
+
+    it("does not emit show.favorited when the show was un-favorited instead", async () => {
+        userShowRepoMocks.updateFavoriteByUserIdByShowId.mockResolvedValue(false);
+
+        const result = await showService.updateByShowId("user-1", 42, { favorite: true });
+
+        expect(result).toBe(false);
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });
 
     it("rejects a future addedAt date", async () => {

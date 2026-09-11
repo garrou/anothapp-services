@@ -19,6 +19,9 @@ const friendRepoMocks = vi.hoisted(() => ({
 const showServiceMocks = vi.hoisted(() => ({
     ensureShowExists: vi.fn(),
 }));
+const eventBusMocks = vi.hoisted(() => ({
+    emit: vi.fn(),
+}));
 
 vi.mock("../repositories/playlistRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return playlistRepoMocks; }),
@@ -28,6 +31,9 @@ vi.mock("../repositories/friendRepository.js", () => ({
 }));
 vi.mock("./showService.js", () => ({
     default: vi.fn().mockImplementation(function () { return showServiceMocks; }),
+}));
+vi.mock("../helpers/eventBus.js", () => ({
+    default: eventBusMocks,
 }));
 
 const ownedPlaylist = {id: 1, userId: "user-1", name: "Mes séries", visible: false};
@@ -150,6 +156,14 @@ describe("PlaylistService.createPlaylist", () => {
         await playlistService.createPlaylist("user-1", "Mes séries", true);
 
         expect(playlistRepoMocks.create).toHaveBeenCalledWith("user-1", "Mes séries", true);
+    });
+
+    it("emits playlist.created once the playlist is created", async () => {
+        playlistRepoMocks.create.mockResolvedValue(ownedPlaylist);
+
+        await playlistService.createPlaylist("user-1", "Mes séries");
+
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("playlist.created", {actorUserId: "user-1"});
     });
 });
 

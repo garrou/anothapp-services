@@ -6,7 +6,9 @@ const SEASON_WATCHED_CODES = ["streak", "watch_time", "shows_started", "shows_co
 const SHOW_STARTED_CODES = ["shows_started", "countries", "kinds"];
 const SHOW_RATED_CODES = ["notes_count"];
 const FRIEND_ACCEPTED_CODES = ["friends_count"];
-const WATCHED_WITH_CODES = ["friends_watched_with"];
+const WATCHED_WITH_CODES = ["friends_watched_with", "duo"];
+const SHOW_FAVORITED_CODES = ["favorites_count"];
+const PLAYLIST_CREATED_CODES = ["playlists_count"];
 
 export default class AchievementListener {
 
@@ -23,6 +25,8 @@ export default class AchievementListener {
         eventBus.on("show.started", this.#evaluate(SHOW_STARTED_CODES, (p) => [p.actorUserId]));
         eventBus.on("show.rated", this.#evaluate(SHOW_RATED_CODES, (p) => [p.actorUserId]));
         eventBus.on("friend.accepted", this.#evaluate(FRIEND_ACCEPTED_CODES, (p) => [p.actorUserId, p.recipientUserId]));
+        eventBus.on("show.favorited", this.#evaluate(SHOW_FAVORITED_CODES, (p) => [p.actorUserId]));
+        eventBus.on("playlist.created", this.#evaluate(PLAYLIST_CREATED_CODES, (p) => [p.actorUserId]));
     }
 
     /**

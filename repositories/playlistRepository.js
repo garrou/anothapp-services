@@ -48,6 +48,19 @@ export default class PlaylistRepository {
 
     /**
      * @param {string} userId
+     * @returns {Promise<number>}
+     */
+    getCountByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT COUNT(*) AS total
+            FROM playlists
+            WHERE user_id = $1
+        `, [userId]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
      * @returns {Promise<Playlist[]>}
      */
     getByUserId = async (userId) => {

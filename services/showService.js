@@ -304,6 +304,10 @@ export default class ShowService {
         }
         if (favorite) {
             result = await this._userShowRepository.updateFavoriteByUserIdByShowId(currentUserId, id);
+
+            if (result) {
+                eventBus.emit("show.favorited", {actorUserId: currentUserId, showId: id});
+            }
         } else if (watch) {
             result = await this._userShowRepository.updateWatchingByUserIdByShowId(currentUserId, id);
         } else if (addedAt) {
