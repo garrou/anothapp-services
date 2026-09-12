@@ -40,7 +40,7 @@ INSERT INTO notes (id, name) VALUES
 
 CREATE TABLE kinds (
     id VARCHAR(50),
-    name VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(50) NOT NULL,
     PRIMARY KEY(id)
 );
 

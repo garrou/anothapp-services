@@ -45,14 +45,17 @@ describe("ShowRepository.createShow", () => {
     });
 
     it("inserts the show and syncs its kinds when created", async () => {
-        client.query.mockResolvedValueOnce({rowCount: 1});
+        client.query.mockResolvedValueOnce({rowCount: 1}); // INSERT INTO shows
+        client.query.mockResolvedValueOnce({rowCount: 0}); // DELETE FROM shows_kinds
+        client.query.mockResolvedValueOnce({rows: []}); // SELECT existing kinds by name -> none
 
         const result = await repo.createShow(10, "Show", "poster.png", [{id: "Drama", name: "Drame"}], 42, 1, "FR", "desc", 2020, "TF1", "fr", 8);
 
         expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining("INSERT INTO shows"), [10, "Show", "poster.png", 42, 1, "FR", "desc", 2020, "TF1", "fr", 8]);
         expect(client.query).toHaveBeenNthCalledWith(2, expect.stringContaining("DELETE FROM shows_kinds"), [10]);
-        expect(client.query).toHaveBeenNthCalledWith(3, expect.stringContaining("INSERT INTO kinds"), ["Drama", "Drame"]);
-        expect(client.query).toHaveBeenNthCalledWith(4, expect.stringContaining("INSERT INTO shows_kinds"), [10, "Drama"]);
+        expect(client.query).toHaveBeenNthCalledWith(3, expect.stringContaining("kinds WHERE name = ANY"), [["Drame"]]);
+        expect(client.query).toHaveBeenNthCalledWith(4, expect.stringContaining("INSERT INTO kinds"), ["Drama", "Drame"]);
+        expect(client.query).toHaveBeenNthCalledWith(5, expect.stringContaining("INSERT INTO shows_kinds"), [10, "Drama"]);
         expect(result).toBe(true);
     });
 
@@ -66,11 +69,13 @@ describe("ShowRepository.createShow", () => {
     });
 
     it("sorts kinds by id before upserting to keep a consistent lock order", async () => {
-        client.query.mockResolvedValueOnce({rowCount: 1});
+        client.query.mockResolvedValueOnce({rowCount: 1}); // INSERT INTO shows
+        client.query.mockResolvedValueOnce({rowCount: 0}); // DELETE FROM shows_kinds
+        client.query.mockResolvedValueOnce({rows: []}); // SELECT existing kinds by name -> none
 
         await repo.createShow(10, "Show", "poster.png", [{id: "Zeta", name: "Z"}, {id: "Alpha", name: "A"}], 42, 1, "FR", "desc", 2020, "TF1", "fr", 8);
 
-        expect(client.query).toHaveBeenNthCalledWith(3, expect.any(String), ["Alpha", "A", "Zeta", "Z"]);
+        expect(client.query).toHaveBeenNthCalledWith(4, expect.any(String), ["Alpha", "A", "Zeta", "Z"]);
     });
 
     it("skips the kinds upsert entirely when there are no kinds", async () => {
@@ -79,6 +84,29 @@ describe("ShowRepository.createShow", () => {
         await repo.createShow(10, "Show", "poster.png", [], 42, 1, "FR", "desc", 2020, "TF1", "fr", 8);
 
         expect(client.query).toHaveBeenCalledTimes(2);
+    });
+
+    it("reuses an existing kind sharing the same name instead of inserting a new id", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 1}); // INSERT INTO shows
+        client.query.mockResolvedValueOnce({rowCount: 0}); // DELETE FROM shows_kinds
+        client.query.mockResolvedValueOnce({rows: [{id: "Science_Fiction", name: "Science-fiction"}]}); // SELECT existing kinds by name -> found
+
+        await repo.createShow(10, "Show", "poster.png", [{id: "Science Fiction", name: "Science-fiction"}], 42, 1, "FR", "desc", 2020, "TF1", "fr", 8);
+
+        // no INSERT INTO kinds - the existing "Science_Fiction" id is reused instead of "Science Fiction"
+        expect(client.query).toHaveBeenCalledTimes(4);
+        expect(client.query).toHaveBeenNthCalledWith(4, expect.stringContaining("INSERT INTO shows_kinds"), [10, "Science_Fiction"]);
+    });
+
+    it("only inserts kinds that don't already exist under another id", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 1}); // INSERT INTO shows
+        client.query.mockResolvedValueOnce({rowCount: 0}); // DELETE FROM shows_kinds
+        client.query.mockResolvedValueOnce({rows: [{id: "Science_Fiction", name: "Science-fiction"}]}); // SELECT existing kinds by name
+
+        await repo.createShow(10, "Show", "poster.png", [{id: "Science Fiction", name: "Science-fiction"}, {id: "Drama", name: "Drame"}], 42, 1, "FR", "desc", 2020, "TF1", "fr", 8);
+
+        expect(client.query).toHaveBeenNthCalledWith(4, expect.stringContaining("INSERT INTO kinds"), ["Drama", "Drame"]);
+        expect(client.query).toHaveBeenNthCalledWith(5, expect.stringContaining("INSERT INTO shows_kinds"), [10, "Science_Fiction", "Drama"]);
     });
 });
 
@@ -94,11 +122,15 @@ describe("ShowRepository.setKinds", () => {
     });
 
     it("syncs the kinds for the show", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 0}); // DELETE FROM shows_kinds
+        client.query.mockResolvedValueOnce({rows: []}); // SELECT existing kinds by name -> none
+
         await repo.setKinds(10, [{id: "Drama", name: "Drame"}]);
 
         expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining("DELETE FROM shows_kinds"), [10]);
-        expect(client.query).toHaveBeenNthCalledWith(2, expect.stringContaining("INSERT INTO kinds"), ["Drama", "Drame"]);
-        expect(client.query).toHaveBeenNthCalledWith(3, expect.stringContaining("INSERT INTO shows_kinds"), [10, "Drama"]);
+        expect(client.query).toHaveBeenNthCalledWith(2, expect.stringContaining("kinds WHERE name = ANY"), [["Drame"]]);
+        expect(client.query).toHaveBeenNthCalledWith(3, expect.stringContaining("INSERT INTO kinds"), ["Drama", "Drame"]);
+        expect(client.query).toHaveBeenNthCalledWith(4, expect.stringContaining("INSERT INTO shows_kinds"), [10, "Drama"]);
     });
 });
 
@@ -159,12 +191,14 @@ describe("ShowRepository.updateShow", () => {
     });
 
     it("updates the show and syncs its kinds when updated", async () => {
-        client.query.mockResolvedValueOnce({rowCount: 1});
+        client.query.mockResolvedValueOnce({rowCount: 1}); // UPDATE shows
+        client.query.mockResolvedValueOnce({rowCount: 0}); // DELETE FROM shows_kinds
+        client.query.mockResolvedValueOnce({rows: []}); // SELECT existing kinds by name -> none
 
         const result = await repo.updateShow(10, {poster: "poster.png", kinds: [{id: "Drama", name: "Drame"}], duration: 42, seasons: 1, country: "FR", finished: false, nextEpisode: "2024-01-01", description: "desc", creation: 2020, network: "TF1", language: "fr", episodes: 8});
 
         expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining("UPDATE shows"), [10, "poster.png", 42, 1, "FR", false, "2024-01-01", "desc", 2020, "TF1", "fr", 8]);
-        expect(client.query).toHaveBeenCalledTimes(4);
+        expect(client.query).toHaveBeenCalledTimes(5);
         expect(result).toBe(true);
     });
 
