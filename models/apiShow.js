@@ -31,8 +31,8 @@ class ApiShow extends ApiEntity {
         this.note = getNote(show.notes);
         this.finished = show.status === "Ended";
         this.creation = parseInt(show.creation);
-        this.kinds = Object.values(show.genres);
-        this.kindIds = Object.keys(show.genres);
+        this.kinds = Object.values(show.genres ?? {});
+        this.kindIds = Object.keys(show.genres ?? {});
         this.kindsById = Object.entries(show.genres ?? {}).map(([id, name]) => ({id, name}));
         this.platforms = getPlatforms(show.platforms?.svods);
     }

@@ -31,10 +31,15 @@ export default class ShowRepository {
         // Upsert first: a show can carry a kind BetaSeries hasn't (yet) returned from
         // /shows/genres, and we already have its id+name right here - no need to wait
         // for the separate kinds sync task to catch up before the FK below is satisfied.
-        const kindValues = kinds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(", ");
+        // Sorted by id so concurrent shows sharing kinds always lock those rows in the
+        // same order - otherwise two shows whose genres come back in a different order
+        // (each show's own object key order, not guaranteed consistent) can deadlock
+        // against each other under CONCURRENCY > 1.
+        const sortedKinds = [...kinds].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+        const kindValues = sortedKinds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(", ");
         await client.query(
             `INSERT INTO kinds (id, name) VALUES ${kindValues} ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
-            kinds.flatMap(({id, name}) => [id, name])
+            sortedKinds.flatMap(({id, name}) => [id, name])
         );
 
         const showKindValues = kinds.map((_, i) => `($1, $${i + 2})`).join(", ");
