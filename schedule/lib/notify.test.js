@@ -54,7 +54,7 @@ describe("sendTelegramMessage", () => {
 
         expect(axiosMocks.post).toHaveBeenCalledWith(
             "https://api.telegram.org/bottoken/sendMessage",
-            {chat_id: "chat-id", text: "hello"}
+            {chat_id: "chat-id", text: "hello", parse_mode: "HTML"}
         );
     });
 
