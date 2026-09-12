@@ -62,7 +62,7 @@ describe("updateShows", () => {
         expect(showRepoMocks.updateShow).toHaveBeenCalledWith(42, {
             deleted: false,
             poster: "https://img/old.jpg",
-            kindIds: ["Drama", "Crime"],
+            kinds: [{id: "Drama", name: "Drame"}, {id: "Crime", name: "Policier"}],
             duration: 45,
             seasons: 5,
             country: "US",
