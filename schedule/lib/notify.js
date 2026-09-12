@@ -30,6 +30,7 @@ const sendTelegramMessage = async (message) => {
         await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
             chat_id: chatId,
             text: shorten(message),
+            parse_mode: "HTML",
         });
     } catch (error) {
         console.error("Échec de l'envoi de la notification Telegram", error.response?.data ?? error.message);
