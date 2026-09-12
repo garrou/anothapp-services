@@ -19,19 +19,28 @@ export default class ShowRepository {
     /**
      * @param {string} client
      * @param {number} showId
-     * @param {string[]} kindIds
+     * @param {{id: string, name: string}[]} kinds
      * @returns {Promise<void>}
      */
-    #syncKinds = async (client, showId, kindIds) => {
+    #syncKinds = async (client, showId, kinds) => {
         await client.query(`DELETE FROM shows_kinds WHERE show_id = $1`, [showId]);
 
-        if (!kindIds.length) {
+        if (!kinds.length) {
             return;
         }
-        const values = kindIds.map((_, i) => `($1, $${i + 2})`).join(", ");
+        // Upsert first: a show can carry a kind BetaSeries hasn't (yet) returned from
+        // /shows/genres, and we already have its id+name right here - no need to wait
+        // for the separate kinds sync task to catch up before the FK below is satisfied.
+        const kindValues = kinds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(", ");
         await client.query(
-            `INSERT INTO shows_kinds (show_id, kind_id) VALUES ${values}`,
-            [showId, ...kindIds]
+            `INSERT INTO kinds (id, name) VALUES ${kindValues} ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
+            kinds.flatMap(({id, name}) => [id, name])
+        );
+
+        const showKindValues = kinds.map((_, i) => `($1, $${i + 2})`).join(", ");
+        await client.query(
+            `INSERT INTO shows_kinds (show_id, kind_id) VALUES ${showKindValues}`,
+            [showId, ...kinds.map(({id}) => id)]
         );
     }
 
@@ -39,7 +48,7 @@ export default class ShowRepository {
      * @param {number} id
      * @param {string} title
      * @param {string} poster
-     * @param {string[]} kindIds
+     * @param {{id: string, name: string}[]} kinds
      * @param {number} duration
      * @param {number} seasons
      * @param {string} country
@@ -50,7 +59,7 @@ export default class ShowRepository {
      * @param {number?} episodes
      * @returns {Promise<boolean>}
      */
-    createShow = async (id, title, poster, kindIds, duration, seasons, country, description, creation, network, language, episodes) => {
+    createShow = async (id, title, poster, kinds, duration, seasons, country, description, creation, network, language, episodes) => {
         return db.transaction(async (client) => {
             const res = await client.query(`
                 INSERT INTO shows (id, title, poster, duration, seasons, country, description, creation, network, language, episodes)
@@ -58,7 +67,7 @@ export default class ShowRepository {
             `, [id, title, poster, duration, seasons, country, description, creation, network, language, episodes]);
 
             if (res.rowCount === 1) {
-                await this.#syncKinds(client, id, kindIds);
+                await this.#syncKinds(client, id, kinds);
             }
             return res.rowCount === 1;
         });
@@ -66,11 +75,11 @@ export default class ShowRepository {
 
     /**
      * @param {number} showId
-     * @param {string[]} kindIds
+     * @param {{id: string, name: string}[]} kinds
      * @returns {Promise<void>}
      */
-    setKinds = async (showId, kindIds) => {
-        return db.transaction((client) => this.#syncKinds(client, showId, kindIds));
+    setKinds = async (showId, kinds) => {
+        return db.transaction((client) => this.#syncKinds(client, showId, kinds));
     }
 
     /**
@@ -101,10 +110,10 @@ export default class ShowRepository {
 
     /**
      * @param {number} id
-     * @param {{poster: string, kindIds: string[], duration: number, seasons: number, country: string, finished: boolean, nextEpisode: string, description: string?, creation: number?, network: string?, language: string?, episodes: number?}} fields
+     * @param {{poster: string, kinds: {id: string, name: string}[], duration: number, seasons: number, country: string, finished: boolean, nextEpisode: string, description: string?, creation: number?, network: string?, language: string?, episodes: number?}} fields
      * @returns {Promise<boolean>}
      */
-    updateShow = async (id, {poster, kindIds, duration, seasons, country, finished, nextEpisode, description, creation, network, language, episodes}) => {
+    updateShow = async (id, {poster, kinds, duration, seasons, country, finished, nextEpisode, description, creation, network, language, episodes}) => {
         return db.transaction(async (client) => {
             const res = await client.query(`
                 UPDATE shows
@@ -114,7 +123,7 @@ export default class ShowRepository {
             `, [id, poster, duration, seasons, country, finished, nextEpisode, description, creation, network, language, episodes]);
 
             if (res.rowCount === 1) {
-                await this.#syncKinds(client, id, kindIds ?? []);
+                await this.#syncKinds(client, id, kinds ?? []);
             }
             return res.rowCount === 1;
         });

@@ -96,6 +96,7 @@ const validShow = {
     poster: "poster.jpg",
     kinds: ["Drame"],
     kindIds: ["Drama"],
+    kindsById: [{ id: "Drama", name: "Drame" }],
     duration: 45,
     seasons: 5,
     country: "US",
@@ -168,7 +169,7 @@ describe("ShowService.addShow", () => {
 
         expect(searchServiceMocks.getByShowId).toHaveBeenCalledWith(42);
         expect(showRepoMocks.createShow).toHaveBeenCalledWith(
-            42, "Breaking Bad", "poster.jpg", ["Drama"], 45, 5, "US",
+            42, "Breaking Bad", "poster.jpg", [{ id: "Drama", name: "Drame" }], 45, 5, "US",
             "Un prof de chimie se lance dans la méth.", 2008, "AMC", "en", 62
         );
         expect(result).toEqual(validShow);
