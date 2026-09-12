@@ -28,24 +28,32 @@ export default class ShowRepository {
         if (!kinds.length) {
             return;
         }
-        // Upsert first: a show can carry a kind BetaSeries hasn't (yet) returned from
-        // /shows/genres, and we already have its id+name right here - no need to wait
-        // for the separate kinds sync task to catch up before the FK below is satisfied.
-        // Sorted by id so concurrent shows sharing kinds always lock those rows in the
-        // same order - otherwise two shows whose genres come back in a different order
-        // (each show's own object key order, not guaranteed consistent) can deadlock
-        // against each other under CONCURRENCY > 1.
-        const sortedKinds = [...kinds].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-        const kindValues = sortedKinds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(", ");
-        await client.query(
-            `INSERT INTO kinds (id, name) VALUES ${kindValues} ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
-            sortedKinds.flatMap(({id, name}) => [id, name])
-        );
+        // Potential duplicate due to Betaseries
+        const names = [...new Set(kinds.map(({name}) => name))];
+        const existing = await client.query(`SELECT id, name FROM kinds WHERE name = ANY($1::varchar[])`, [names]);
+        const existingIdByName = new Map(existing.rows.map((row) => [row.name, row.id]));
 
-        const showKindValues = kinds.map((_, i) => `($1, $${i + 2})`).join(", ");
+        const resolvedKinds = kinds.map(({id, name}) => ({id: existingIdByName.get(name) ?? id, name}));
+        const newKinds = resolvedKinds.filter(({name}) => !existingIdByName.has(name));
+
+        if (newKinds.length) {
+            // Sorted by id so concurrent shows introducing the same new kinds always
+            // lock those rows in the same order - otherwise two shows whose genres
+            // come back in a different order (each show's own object key order, not
+            // guaranteed consistent) can deadlock against each other under CONCURRENCY > 1.
+            const sortedNewKinds = [...newKinds].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+            const kindValues = sortedNewKinds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(", ");
+            await client.query(
+                `INSERT INTO kinds (id, name) VALUES ${kindValues} ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
+                sortedNewKinds.flatMap(({id, name}) => [id, name])
+            );
+        }
+
+        const resolvedIds = [...new Set(resolvedKinds.map(({id}) => id))];
+        const showKindValues = resolvedIds.map((_, i) => `($1, $${i + 2})`).join(", ");
         await client.query(
             `INSERT INTO shows_kinds (show_id, kind_id) VALUES ${showKindValues}`,
-            [showId, ...kinds.map(({id}) => id)]
+            [showId, ...resolvedIds]
         );
     }
 
