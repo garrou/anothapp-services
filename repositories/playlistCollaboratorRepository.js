@@ -99,4 +99,19 @@ export default class PlaylistCollaboratorRepository {
         `, [playlistId, userId]);
         return res.rowCount === 1 ? {accepted: res.rows[0]["accepted"]} : null;
     }
+
+    /**
+     * @param {string} userId1
+     * @param {string} userId2
+     * @returns {Promise<number>} number of collaborator rows removed
+     */
+    removeAllBetween = async (userId1, userId2) => {
+        const res = await db.query(`
+            DELETE FROM playlists_collaborators pc
+            USING playlists p
+            WHERE pc.playlist_id = p.id
+            AND ((p.user_id = $1 AND pc.user_id = $2) OR (p.user_id = $2 AND pc.user_id = $1))
+        `, [userId1, userId2]);
+        return res.rowCount;
+    }
 }

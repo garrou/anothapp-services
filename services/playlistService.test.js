@@ -1,6 +1,6 @@
 import {describe, it, expect, vi, beforeEach} from "vitest";
 import PlaylistService from "./playlistService.js";
-import { PLAYLIST_NOT_FOUND, ERROR_ALREADY_COLLABORATOR, ERROR_COLLABORATOR_INVITE_NOT_FOUND } from "../constants/errors.js";
+import { PLAYLIST_NOT_FOUND, ERROR_ALREADY_COLLABORATOR, ERROR_COLLABORATOR_INVITE_NOT_FOUND, DUPLICATE_ERROR_CODE } from "../constants/errors.js";
 
 const playlistRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -49,8 +49,8 @@ vi.mock("../helpers/eventBus.js", () => ({
     default: eventBusMocks,
 }));
 
-const ownedPlaylist = {id: 1, userId: "user-1", name: "Mes séries", visible: false};
-const friendPlaylist = {id: 2, userId: "user-2", name: "Anime", visible: true};
+const ownedPlaylist = {id: 1, userId: "user-1", name: "Mes séries", visible: false, createdAt: "2024-01-01"};
+const friendPlaylist = {id: 2, userId: "user-2", name: "Anime", visible: true, createdAt: "2024-02-01"};
 
 describe("PlaylistService.getPlaylists", () => {
     let playlistService;
@@ -70,15 +70,16 @@ describe("PlaylistService.getPlaylists", () => {
         expect(playlistRepoMocks.getVisibleByUserId).not.toHaveBeenCalled();
     });
 
-    it("appends the playlists the user collaborates on, tagged as collaborator", async () => {
+    it("merges owned and collaborating playlists, tagged accordingly and sorted by most recent first", async () => {
         playlistRepoMocks.getByUserId.mockResolvedValue([{...ownedPlaylist}]);
         playlistRepoMocks.getCollaboratingByUserId.mockResolvedValue([{...friendPlaylist}]);
 
         const result = await playlistService.getPlaylists("user-1", undefined);
 
+        // friendPlaylist (2024-02-01) is more recent than ownedPlaylist (2024-01-01)
         expect(result).toEqual([
-            {...ownedPlaylist, role: "owner"},
             {...friendPlaylist, role: "collaborator"},
+            {...ownedPlaylist, role: "owner"},
         ]);
     });
 
@@ -445,6 +446,25 @@ describe("PlaylistService.inviteCollaborator", () => {
             metadata: {playlistId: 1, playlistName: ownedPlaylist.name},
         });
     });
+
+    it("rejects with a 400 when a concurrent invite wins the race (unique constraint violation)", async () => {
+        playlistRepoMocks.getById.mockResolvedValue(ownedPlaylist);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        playlistCollaboratorRepoMocks.checkExists.mockResolvedValue(false);
+        playlistCollaboratorRepoMocks.invite.mockRejectedValue({code: DUPLICATE_ERROR_CODE});
+
+        await expect(playlistService.inviteCollaborator("user-1", 1, "user-3")).rejects.toThrow(ERROR_ALREADY_COLLABORATOR);
+    });
+
+    it("rethrows any other database error unchanged", async () => {
+        playlistRepoMocks.getById.mockResolvedValue(ownedPlaylist);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        playlistCollaboratorRepoMocks.checkExists.mockResolvedValue(false);
+        const unexpected = new Error("connection lost");
+        playlistCollaboratorRepoMocks.invite.mockRejectedValue(unexpected);
+
+        await expect(playlistService.inviteCollaborator("user-1", 1, "user-3")).rejects.toThrow(unexpected);
+    });
 });
 
 describe("PlaylistService.acceptCollaboratorInvite", () => {
@@ -537,9 +557,19 @@ describe("PlaylistService.removeCollaborator", () => {
         });
     });
 
-    it("throws a 500 when nothing was removed", async () => {
+    it("rejects with a 400 when the target isn't a collaborator (already removed, or never invited)", async () => {
         playlistRepoMocks.getById.mockResolvedValue(ownedPlaylist);
         playlistCollaboratorRepoMocks.getOne.mockResolvedValue(null);
+
+        await expect(
+            playlistService.removeCollaborator("user-1", 1, "user-3")
+        ).rejects.toThrow(ERROR_COLLABORATOR_INVITE_NOT_FOUND);
+        expect(playlistCollaboratorRepoMocks.remove).not.toHaveBeenCalled();
+    });
+
+    it("throws a 500 when the collaborator exists but the deletion itself fails", async () => {
+        playlistRepoMocks.getById.mockResolvedValue(ownedPlaylist);
+        playlistCollaboratorRepoMocks.getOne.mockResolvedValue({accepted: true});
         playlistCollaboratorRepoMocks.remove.mockResolvedValue(false);
 
         await expect(

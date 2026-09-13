@@ -11,12 +11,18 @@ const friendRepoMocks = vi.hoisted(() => ({
     sendFriendRequest: vi.fn(),
     deleteFriend: vi.fn(),
 }));
+const playlistCollaboratorRepoMocks = vi.hoisted(() => ({
+    removeAllBetween: vi.fn(),
+}));
 const eventBusMocks = vi.hoisted(() => ({
     emit: vi.fn(),
 }));
 
 vi.mock("../repositories/friendRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return friendRepoMocks; }),
+}));
+vi.mock("../repositories/playlistCollaboratorRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return playlistCollaboratorRepoMocks; }),
 }));
 vi.mock("../helpers/eventBus.js", () => ({
     default: eventBusMocks,
@@ -128,6 +134,7 @@ describe("FriendService.deleteFriend", () => {
             "Impossible de supprimer cet ami"
         );
         expect(eventBusMocks.emit).not.toHaveBeenCalled();
+        expect(playlistCollaboratorRepoMocks.removeAllBetween).not.toHaveBeenCalled();
     });
 
     it("notifies the original requester when their pending request is declined", async () => {
@@ -151,6 +158,13 @@ describe("FriendService.deleteFriend", () => {
 
         await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
         expect(eventBusMocks.emit).not.toHaveBeenCalled();
+    });
+
+    it("revokes any playlist collaboration between the two users, in either direction", async () => {
+        friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
+
+        await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
+        expect(playlistCollaboratorRepoMocks.removeAllBetween).toHaveBeenCalledWith("user-1", "user-2");
     });
 });
 

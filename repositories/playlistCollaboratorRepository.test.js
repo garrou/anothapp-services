@@ -138,4 +138,23 @@ describe("PlaylistCollaboratorRepository", () => {
             expect(result).toBeNull();
         });
     });
+
+    describe("removeAllBetween", () => {
+        it("deletes collaborator rows between the two users in either direction", async () => {
+            db.query.mockResolvedValue({rowCount: 2});
+
+            const result = await repo.removeAllBetween("user-1", "user-2");
+
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("DELETE FROM playlists_collaborators"), ["user-1", "user-2"]);
+            expect(result).toBe(2);
+        });
+
+        it("returns 0 when there was no collaborator relationship between them", async () => {
+            db.query.mockResolvedValue({rowCount: 0});
+
+            const result = await repo.removeAllBetween("user-1", "user-2");
+
+            expect(result).toBe(0);
+        });
+    });
 });

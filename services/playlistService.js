@@ -6,7 +6,7 @@ import ServiceError from "../helpers/serviceError.js";
 import eventBus from "../helpers/eventBus.js";
 import {
     ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND, PLAYLIST_NOT_FOUND,
-    ERROR_ALREADY_COLLABORATOR, ERROR_COLLABORATOR_INVITE_NOT_FOUND,
+    ERROR_ALREADY_COLLABORATOR, ERROR_COLLABORATOR_INVITE_NOT_FOUND, DUPLICATE_ERROR_CODE,
 } from "../constants/errors.js";
 
 const MAX_NAME_LENGTH = 255;
@@ -66,7 +66,7 @@ export default class PlaylistService {
         ]);
         owned.forEach((playlist) => { playlist.role = "owner"; });
         collaborating.forEach((playlist) => { playlist.role = "collaborator"; });
-        return [...owned, ...collaborating];
+        return [...owned, ...collaborating].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
     /**
@@ -205,8 +205,15 @@ export default class PlaylistService {
         if (await this._playlistCollaboratorRepository.checkExists(playlistId, friendUserId)) {
             throw new ServiceError(400, ERROR_ALREADY_COLLABORATOR);
         }
-        const invited = await this._playlistCollaboratorRepository.invite(playlistId, friendUserId);
-
+        let invited;
+        try {
+            invited = await this._playlistCollaboratorRepository.invite(playlistId, friendUserId);
+        } catch (err) {
+            if (err.code === DUPLICATE_ERROR_CODE) {
+                throw new ServiceError(400, ERROR_ALREADY_COLLABORATOR);
+            }
+            throw err;
+        }
         if (!invited) {
             throw new ServiceError(500, "Impossible d'inviter ce collaborateur");
         }
@@ -256,6 +263,10 @@ export default class PlaylistService {
             this.#assertOwner(playlist, currentUserId);
         }
         const collaborator = await this._playlistCollaboratorRepository.getOne(playlistId, targetUserId);
+
+        if (!collaborator) {
+            throw new ServiceError(400, ERROR_COLLABORATOR_INVITE_NOT_FOUND);
+        }
         const removed = await this._playlistCollaboratorRepository.remove(playlistId, targetUserId);
 
         if (!removed) {
@@ -263,7 +274,7 @@ export default class PlaylistService {
         }
         // Only notify the owner when a pending invite is declined - a voluntary departure after
         // accepting, or an owner-initiated removal, stays silent (same as unfriending).
-        if (isSelf && collaborator && !collaborator.accepted) {
+        if (isSelf && !collaborator.accepted) {
             eventBus.emit("playlist.collaborator_declined", {
                 recipientUserId: playlist.userId, actorUserId: currentUserId,
                 metadata: {playlistId, playlistName: playlist.name},
