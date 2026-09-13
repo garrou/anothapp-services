@@ -144,14 +144,28 @@ describe("PlaylistService.getPlaylistById", () => {
     it("rejects with a 400 when a non-owner, non-collaborator requests a private playlist", async () => {
         playlistRepoMocks.getById.mockResolvedValue({...ownedPlaylist});
         playlistCollaboratorRepoMocks.checkIsAcceptedCollaborator.mockResolvedValue(false);
+        playlistCollaboratorRepoMocks.checkExists.mockResolvedValue(false);
 
         await expect(playlistService.getPlaylistById("user-2", 1)).rejects.toThrow(PLAYLIST_NOT_FOUND);
+        expect(friendRepoMocks.checkIfAlreadyFriend).not.toHaveBeenCalled();
+    });
+
+    it("lets an invitee with a pending invite view the playlist read-only", async () => {
+        playlistRepoMocks.getById.mockResolvedValue({...ownedPlaylist});
+        playlistCollaboratorRepoMocks.checkIsAcceptedCollaborator.mockResolvedValue(false);
+        playlistCollaboratorRepoMocks.checkExists.mockResolvedValue(true);
+        playlistRepoMocks.getShowsByPlaylistId.mockResolvedValue([]);
+
+        const result = await playlistService.getPlaylistById("user-2", 1);
+
+        expect(result.playlist).toEqual({...ownedPlaylist, role: "pending"});
         expect(friendRepoMocks.checkIfAlreadyFriend).not.toHaveBeenCalled();
     });
 
     it("rejects with a 400 when a non-friend requests a visible playlist", async () => {
         playlistRepoMocks.getById.mockResolvedValue({...friendPlaylist});
         playlistCollaboratorRepoMocks.checkIsAcceptedCollaborator.mockResolvedValue(false);
+        playlistCollaboratorRepoMocks.checkExists.mockResolvedValue(false);
         friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
 
         await expect(playlistService.getPlaylistById("user-1", 2)).rejects.toThrow(PLAYLIST_NOT_FOUND);

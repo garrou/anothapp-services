@@ -84,6 +84,10 @@ export default class PlaylistService {
             playlist.role = "owner";
         } else if (await this._playlistCollaboratorRepository.checkIsAcceptedCollaborator(id, currentUserId)) {
             playlist.role = "collaborator";
+        } else if (await this._playlistCollaboratorRepository.checkExists(id, currentUserId)) {
+            // a pending (not yet accepted) invite - let the invitee view the playlist so they
+            // can actually see and act on the invite, without granting write access yet
+            playlist.role = "pending";
         } else if (playlist.visible && await this._friendRepository.checkIfAlreadyFriend(currentUserId, playlist.userId)) {
             playlist.role = "viewer";
         } else {
