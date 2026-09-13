@@ -71,4 +71,41 @@ export default class PlaylistController {
             next(e);
         }
     }
+
+    inviteCollaborator = async (req, res, next) => {
+        try {
+            const {userId} = req.body;
+            await this._playlistService.inviteCollaborator(req.userId, req.params.id, userId);
+            res.sendStatus(201);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    getCollaborators = async (req, res, next) => {
+        try {
+            const collaborators = await this._playlistService.getCollaborators(req.userId, req.params.id);
+            res.status(200).json(collaborators);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    acceptCollaboratorInvite = async (req, res, next) => {
+        try {
+            await this._playlistService.acceptCollaboratorInvite(req.userId, req.params.id);
+            res.sendStatus(200);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    removeCollaborator = async (req, res, next) => {
+        try {
+            await this._playlistService.removeCollaborator(req.userId, req.params.id, req.params.userId);
+            res.sendStatus(204);
+        } catch (e) {
+            next(e);
+        }
+    }
 }

@@ -91,6 +91,32 @@ describe("PlaylistRepository.getByUserId", () => {
     });
 });
 
+describe("PlaylistRepository.getCollaboratingByUserId", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new PlaylistRepository();
+    });
+
+    it("maps rows to Playlist instances", async () => {
+        db.query.mockResolvedValue({rows: [{id: "p1", user_id: "user-2", name: "Friend's playlist", created_at: "2024-01-01", visible: false, shows_count: "1", posters: ["a.png"]}]});
+
+        const result = await repo.getCollaboratingByUserId("user-1");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("playlists_collaborators"), ["user-1"]);
+        expect(result).toEqual([{id: "p1", userId: "user-2", name: "Friend's playlist", createdAt: "2024-01-01", visible: false, showsCount: 1, posters: ["a.png"]}]);
+    });
+
+    it("returns an empty array when the user collaborates on nothing", async () => {
+        db.query.mockResolvedValue({rows: []});
+
+        const result = await repo.getCollaboratingByUserId("user-1");
+
+        expect(result).toEqual([]);
+    });
+});
+
 describe("PlaylistRepository.getVisibleByUserId", () => {
     let repo;
 
