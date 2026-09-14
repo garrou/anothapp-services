@@ -25,3 +25,9 @@ export const ERROR_VIEWING_NOT_IN_COLLECTION = "Ce visionnage n'est pas dans vot
 export const ERROR_ACTOR_ALREADY_FAVORITE = "Cet acteur est déjà dans vos favoris";
 
 export const ERROR_UNKNOWN_USER = "Utilisateur inconnu";
+
+export const ERROR_ALREADY_COLLABORATOR = "Cette personne est déjà invitée sur cette playlist";
+
+export const ERROR_COLLABORATOR_INVITE_NOT_FOUND = "Invitation introuvable";
+
+export const ERROR_SHOW_ALREADY_IN_PLAYLIST = "Cette série est déjà dans cette playlist";

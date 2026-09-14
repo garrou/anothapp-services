@@ -1,9 +1,14 @@
 import PlaylistRepository from "../repositories/playlistRepository.js";
+import PlaylistCollaboratorRepository from "../repositories/playlistCollaboratorRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import ShowService from "./showService.js";
 import ServiceError from "../helpers/serviceError.js";
 import eventBus from "../helpers/eventBus.js";
-import {ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND, PLAYLIST_NOT_FOUND} from "../constants/errors.js";
+import {
+    ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND, PLAYLIST_NOT_FOUND,
+    ERROR_ALREADY_COLLABORATOR, ERROR_COLLABORATOR_INVITE_NOT_FOUND, DUPLICATE_ERROR_CODE,
+    ERROR_SHOW_ALREADY_IN_PLAYLIST,
+} from "../constants/errors.js";
 
 const MAX_NAME_LENGTH = 255;
 
@@ -11,6 +16,7 @@ export default class PlaylistService {
 
     constructor() {
         this._playlistRepository = new PlaylistRepository();
+        this._playlistCollaboratorRepository = new PlaylistCollaboratorRepository();
         this._friendRepository = new FriendRepository();
         this._showService = new ShowService();
     }
@@ -26,6 +32,24 @@ export default class PlaylistService {
     }
 
     /**
+     * @param {import("../models/playlist.js").default|null} playlist
+     * @param {string} currentUserId
+     * @returns {Promise<void>}
+     */
+    #assertCanEditShows = async (playlist, currentUserId) => {
+        if (!playlist) {
+            throw new ServiceError(400, PLAYLIST_NOT_FOUND);
+        }
+        if (playlist.userId === currentUserId) {
+            return;
+        }
+        if (await this._playlistCollaboratorRepository.checkIsAcceptedCollaborator(playlist.id, currentUserId)) {
+            return;
+        }
+        throw new ServiceError(400, PLAYLIST_NOT_FOUND);
+    }
+
+    /**
      * @param {string} currentUserId
      * @param {string?} friendId
      * @returns {Promise<import("../models/playlist.js").default[]>}
@@ -37,7 +61,13 @@ export default class PlaylistService {
             }
             return this._playlistRepository.getVisibleByUserId(friendId);
         }
-        return this._playlistRepository.getByUserId(currentUserId);
+        const [owned, collaborating] = await Promise.all([
+            this._playlistRepository.getByUserId(currentUserId),
+            this._playlistRepository.getCollaboratingByUserId(currentUserId),
+        ]);
+        owned.forEach((playlist) => { playlist.role = "owner"; });
+        collaborating.forEach((playlist) => { playlist.role = "collaborator"; });
+        return [...owned, ...collaborating].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
     /**
@@ -51,10 +81,18 @@ export default class PlaylistService {
         if (!playlist) {
             throw new ServiceError(400, PLAYLIST_NOT_FOUND);
         }
-        if (playlist.userId !== currentUserId) {
-            if (!playlist.visible || !await this._friendRepository.checkIfAlreadyFriend(currentUserId, playlist.userId)) {
-                throw new ServiceError(400, PLAYLIST_NOT_FOUND);
-            }
+        if (playlist.userId === currentUserId) {
+            playlist.role = "owner";
+        } else if (await this._playlistCollaboratorRepository.checkIsAcceptedCollaborator(id, currentUserId)) {
+            playlist.role = "collaborator";
+        } else if (await this._playlistCollaboratorRepository.checkExists(id, currentUserId)) {
+            // a pending (not yet accepted) invite - let the invitee view the playlist so they
+            // can actually see and act on the invite, without granting write access yet
+            playlist.role = "pending";
+        } else if (playlist.visible && await this._friendRepository.checkIfAlreadyFriend(currentUserId, playlist.userId)) {
+            playlist.role = "viewer";
+        } else {
+            throw new ServiceError(400, PLAYLIST_NOT_FOUND);
         }
         const shows = await this._playlistRepository.getShowsByPlaylistId(id);
         return {playlist, shows};
@@ -126,10 +164,20 @@ export default class PlaylistService {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         const playlist = await this._playlistRepository.getById(playlistId);
-        this.#assertOwner(playlist, currentUserId);
+        await this.#assertCanEditShows(playlist, currentUserId);
 
         const show = await this._showService.ensureShowExists(showId);
-        await this._playlistRepository.addShow(playlistId, show.id);
+        const added = await this._playlistRepository.addShow(playlistId, show.id);
+
+        if (!added) {
+            throw new ServiceError(400, ERROR_SHOW_ALREADY_IN_PLAYLIST);
+        }
+        if (currentUserId !== playlist.userId) {
+            eventBus.emit("playlist.show_added", {
+                recipientUserId: playlist.userId, actorUserId: currentUserId,
+                metadata: {playlistId, playlistName: playlist.name, showId: show.id, showTitle: show.title},
+            });
+        }
     }
 
     /**
@@ -140,12 +188,133 @@ export default class PlaylistService {
      */
     removeShowFromPlaylist = async (currentUserId, playlistId, showId) => {
         const playlist = await this._playlistRepository.getById(playlistId);
-        this.#assertOwner(playlist, currentUserId);
+        await this.#assertCanEditShows(playlist, currentUserId);
 
         const removed = await this._playlistRepository.removeShow(playlistId, showId);
 
         if (!removed) {
             throw new ServiceError(500, "Impossible de retirer la série de la playlist");
         }
+        if (currentUserId !== playlist.userId) {
+            const show = await this._showService.ensureShowExists(showId);
+            eventBus.emit("playlist.show_removed", {
+                recipientUserId: playlist.userId, actorUserId: currentUserId,
+                metadata: {playlistId, playlistName: playlist.name, showId, showTitle: show.title},
+            });
+        }
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {string} playlistId
+     * @param {string?} friendUserId
+     * @returns {Promise<void>}
+     */
+    inviteCollaborator = async (currentUserId, playlistId, friendUserId) => {
+        if (!friendUserId) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const playlist = await this._playlistRepository.getById(playlistId);
+        this.#assertOwner(playlist, currentUserId);
+
+        if (!await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendUserId)) {
+            throw new ServiceError(400, ERROR_NOT_FRIEND);
+        }
+        if (await this._playlistCollaboratorRepository.checkExists(playlistId, friendUserId)) {
+            throw new ServiceError(400, ERROR_ALREADY_COLLABORATOR);
+        }
+        let invited;
+        try {
+            invited = await this._playlistCollaboratorRepository.invite(playlistId, friendUserId);
+        } catch (err) {
+            if (err.code === DUPLICATE_ERROR_CODE) {
+                throw new ServiceError(400, ERROR_ALREADY_COLLABORATOR);
+            }
+            throw err;
+        }
+        if (!invited) {
+            throw new ServiceError(500, "Impossible d'inviter ce collaborateur");
+        }
+        eventBus.emit("playlist.collaborator_invited", {
+            recipientUserId: friendUserId, actorUserId: currentUserId,
+            metadata: {playlistId, playlistName: playlist.name},
+        });
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {string} playlistId
+     * @returns {Promise<void>}
+     */
+    acceptCollaboratorInvite = async (currentUserId, playlistId) => {
+        const playlist = await this._playlistRepository.getById(playlistId);
+
+        if (!playlist) {
+            throw new ServiceError(400, PLAYLIST_NOT_FOUND);
+        }
+        const accepted = await this._playlistCollaboratorRepository.accept(playlistId, currentUserId);
+
+        if (!accepted) {
+            throw new ServiceError(400, ERROR_COLLABORATOR_INVITE_NOT_FOUND);
+        }
+        eventBus.emit("playlist.collaborator_accepted", {
+            recipientUserId: playlist.userId, actorUserId: currentUserId,
+            metadata: {playlistId, playlistName: playlist.name},
+        });
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {string} playlistId
+     * @param {string} targetUserId
+     * @returns {Promise<void>}
+     */
+    removeCollaborator = async (currentUserId, playlistId, targetUserId) => {
+        const playlist = await this._playlistRepository.getById(playlistId);
+
+        if (!playlist) {
+            throw new ServiceError(400, PLAYLIST_NOT_FOUND);
+        }
+        const isSelf = targetUserId === currentUserId;
+
+        if (!isSelf) {
+            this.#assertOwner(playlist, currentUserId);
+        }
+        const collaborator = await this._playlistCollaboratorRepository.getOne(playlistId, targetUserId);
+
+        if (!collaborator) {
+            throw new ServiceError(400, ERROR_COLLABORATOR_INVITE_NOT_FOUND);
+        }
+        const removed = await this._playlistCollaboratorRepository.remove(playlistId, targetUserId);
+
+        if (!removed) {
+            throw new ServiceError(500, "Impossible de retirer ce collaborateur");
+        }
+        // Only notify the owner when a pending invite is declined - a voluntary departure after
+        // accepting, or an owner-initiated removal, stays silent (same as unfriending).
+        if (isSelf && !collaborator.accepted) {
+            eventBus.emit("playlist.collaborator_declined", {
+                recipientUserId: playlist.userId, actorUserId: currentUserId,
+                metadata: {playlistId, playlistName: playlist.name},
+            });
+        }
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {string} playlistId
+     * @returns {Promise<import("../models/playlistCollaborator.js").default[]>}
+     */
+    getCollaborators = async (currentUserId, playlistId) => {
+        const playlist = await this._playlistRepository.getById(playlistId);
+
+        if (!playlist) {
+            throw new ServiceError(400, PLAYLIST_NOT_FOUND);
+        }
+        if (playlist.userId !== currentUserId
+            && !await this._playlistCollaboratorRepository.checkIsAcceptedCollaborator(playlistId, currentUserId)) {
+            throw new ServiceError(400, PLAYLIST_NOT_FOUND);
+        }
+        return this._playlistCollaboratorRepository.getByPlaylistId(playlistId);
     }
 }

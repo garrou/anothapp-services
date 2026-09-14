@@ -85,6 +85,72 @@ describe("NotificationListener", () => {
         );
     });
 
+    it("notifies the invitee for a playlist collaborator invite, with the playlist metadata", async () => {
+        eventBus.emit("playlist.collaborator_invited", {
+            recipientUserId: "user-2", actorUserId: "user-1",
+            metadata: {playlistId: "p1", playlistName: "Mes séries"},
+        });
+        await flush();
+
+        expect(friendRepoMocks.getFriends).not.toHaveBeenCalled();
+        expect(notificationRepoMocks.create).toHaveBeenCalledWith(
+            "user-2", "user-1", "playlist_collaborator_invited", undefined,
+            {playlistId: "p1", playlistName: "Mes séries"}
+        );
+    });
+
+    it("notifies the owner when a collaborator invite is accepted", async () => {
+        eventBus.emit("playlist.collaborator_accepted", {
+            recipientUserId: "user-1", actorUserId: "user-2",
+            metadata: {playlistId: "p1", playlistName: "Mes séries"},
+        });
+        await flush();
+
+        expect(notificationRepoMocks.create).toHaveBeenCalledWith(
+            "user-1", "user-2", "playlist_collaborator_accepted", undefined,
+            {playlistId: "p1", playlistName: "Mes séries"}
+        );
+    });
+
+    it("notifies the owner when a pending collaborator invite is declined", async () => {
+        eventBus.emit("playlist.collaborator_declined", {
+            recipientUserId: "user-1", actorUserId: "user-2",
+            metadata: {playlistId: "p1", playlistName: "Mes séries"},
+        });
+        await flush();
+
+        expect(notificationRepoMocks.create).toHaveBeenCalledWith(
+            "user-1", "user-2", "playlist_collaborator_declined", undefined,
+            {playlistId: "p1", playlistName: "Mes séries"}
+        );
+    });
+
+    it("notifies the owner when a collaborator adds a show to the playlist", async () => {
+        eventBus.emit("playlist.show_added", {
+            recipientUserId: "user-1", actorUserId: "user-2",
+            metadata: {playlistId: "p1", playlistName: "Mes séries", showId: 42, showTitle: "Breaking Bad"},
+        });
+        await flush();
+
+        expect(notificationRepoMocks.create).toHaveBeenCalledWith(
+            "user-1", "user-2", "playlist_show_added", undefined,
+            {playlistId: "p1", playlistName: "Mes séries", showId: 42, showTitle: "Breaking Bad"}
+        );
+    });
+
+    it("notifies the owner when a collaborator removes a show from the playlist", async () => {
+        eventBus.emit("playlist.show_removed", {
+            recipientUserId: "user-1", actorUserId: "user-2",
+            metadata: {playlistId: "p1", playlistName: "Mes séries", showId: 42, showTitle: "Breaking Bad"},
+        });
+        await flush();
+
+        expect(notificationRepoMocks.create).toHaveBeenCalledWith(
+            "user-1", "user-2", "playlist_show_removed", undefined,
+            {playlistId: "p1", playlistName: "Mes séries", showId: 42, showTitle: "Breaking Bad"}
+        );
+    });
+
     it("a listener failure is isolated and does not throw back into the emitter", async () => {
         friendRepoMocks.getFriends.mockRejectedValue(new Error("db down"));
 

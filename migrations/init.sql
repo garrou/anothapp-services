@@ -240,6 +240,16 @@ CREATE TABLE playlists_shows (
     PRIMARY KEY(playlist_id, show_id)
 );
 
+CREATE TABLE playlists_collaborators (
+    playlist_id UUID,
+    user_id UUID,
+    accepted BOOLEAN NOT NULL DEFAULT FALSE,
+    invited_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY(playlist_id, user_id),
+    FOREIGN KEY(playlist_id) REFERENCES playlists(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE users_platforms (
     user_id UUID,
     platform_id INTEGER,

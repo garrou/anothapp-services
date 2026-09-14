@@ -77,6 +77,22 @@ export default class PlaylistRepository {
 
     /**
      * @param {string} userId
+     * @returns {Promise<Playlist[]>} playlists the user collaborates on (accepted invites only)
+     */
+    getCollaboratingByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT p.*, COUNT(ps.show_id) AS shows_count, ${POSTERS_SUBQUERY} AS posters
+            FROM playlists p
+            JOIN playlists_collaborators pc ON pc.playlist_id = p.id AND pc.user_id = $1 AND pc.accepted = TRUE
+            LEFT JOIN playlists_shows ps ON ps.playlist_id = p.id
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+        `, [userId]);
+        return res.rows.map((row) => new Playlist(row));
+    }
+
+    /**
+     * @param {string} userId
      * @returns {Promise<Playlist[]>}
      */
     getVisibleByUserId = async (userId) => {
@@ -119,14 +135,15 @@ export default class PlaylistRepository {
     /**
      * @param {string} playlistId
      * @param {number} showId
-     * @returns {Promise<void>}
+     * @returns {Promise<boolean>} false when the show was already in the playlist
      */
     addShow = async (playlistId, showId) => {
-        await db.query(`
+        const res = await db.query(`
             INSERT INTO playlists_shows (playlist_id, show_id)
             VALUES ($1, $2)
             ON CONFLICT (playlist_id, show_id) DO NOTHING
         `, [playlistId, showId]);
+        return res.rowCount === 1;
     }
 
     /**

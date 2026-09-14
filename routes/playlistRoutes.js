@@ -18,4 +18,12 @@ router.post("/:id/shows", playlistController.addShowToPlaylist);
 
 router.delete("/:id/shows/:showId", playlistController.removeShowFromPlaylist);
 
+router.get("/:id/collaborators", playlistController.getCollaborators);
+
+router.post("/:id/collaborators", playlistController.inviteCollaborator);
+
+router.patch("/:id/collaborators/accept", playlistController.acceptCollaboratorInvite);
+
+router.delete("/:id/collaborators/:userId", playlistController.removeCollaborator);
+
 export default router;
