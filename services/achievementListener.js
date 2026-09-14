@@ -9,6 +9,8 @@ const FRIEND_ACCEPTED_CODES = ["friends_count"];
 const WATCHED_WITH_CODES = ["friends_watched_with", "duo"];
 const SHOW_FAVORITED_CODES = ["favorites_count"];
 const PLAYLIST_CREATED_CODES = ["playlists_count"];
+const ACTOR_FAVORITED_CODES = ["actors_favorited"];
+const COLLABORATOR_ACCEPTED_CODES = ["playlists_collaborated"];
 
 export default class AchievementListener {
 
@@ -27,6 +29,8 @@ export default class AchievementListener {
         eventBus.on("friend.accepted", this.#evaluate(FRIEND_ACCEPTED_CODES, (p) => [p.actorUserId, p.recipientUserId]));
         eventBus.on("show.favorited", this.#evaluate(SHOW_FAVORITED_CODES, (p) => [p.actorUserId]));
         eventBus.on("playlist.created", this.#evaluate(PLAYLIST_CREATED_CODES, (p) => [p.actorUserId]));
+        eventBus.on("actor.favorited", this.#evaluate(ACTOR_FAVORITED_CODES, (p) => [p.actorUserId]));
+        eventBus.on("playlist.collaborator_accepted", this.#evaluate(COLLABORATOR_ACCEPTED_CODES, (p) => [p.actorUserId]));
     }
 
     /**

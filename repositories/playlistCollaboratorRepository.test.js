@@ -120,6 +120,25 @@ describe("PlaylistCollaboratorRepository", () => {
         });
     });
 
+    describe("getCountByUserId", () => {
+        it("returns the number of playlists this user accepted a collaborator invite on", async () => {
+            db.query.mockResolvedValue({rows: [{total: "4"}]});
+
+            const result = await repo.getCountByUserId("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("FROM playlists_collaborators"), ["user-1"]);
+            expect(result).toBe(4);
+        });
+
+        it("returns 0 when the user isn't collaborating on anything", async () => {
+            db.query.mockResolvedValue({rows: [{total: "0"}]});
+
+            const result = await repo.getCountByUserId("user-1");
+
+            expect(result).toBe(0);
+        });
+    });
+
     describe("getOne", () => {
         it("returns the collaborator's accepted state when found", async () => {
             db.query.mockResolvedValue({rowCount: 1, rows: [{accepted: false}]});

@@ -13,6 +13,8 @@ export const ACHIEVEMENTS = [
     { code: "favorites_count", name: "Sentimental" },
     { code: "playlists_count", name: "Méthodique" },
     { code: "duo", name: "Duo de choc" },
+    { code: "actors_favorited", name: "Admirateur" },
+    { code: "playlists_collaborated", name: "Collaborateur" },
 ];
 
 export const TIERS_CACHE_TTL_SECONDS = 600;
