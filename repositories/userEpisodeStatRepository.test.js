@@ -95,6 +95,28 @@ describe("UserEpisodeStatRepository", () => {
         });
     });
 
+    describe("getRecordViewingTimeDay", () => {
+        it("reverses the rows and maps to Stat instances", async () => {
+            db.query.mockResolvedValue({
+                rows: [{label: "02/02/2024", value: "50"}, {label: "01/02/2024", value: "100"}],
+            });
+
+            const result = await repo.getRecordViewingTimeDay("user-1");
+
+            expect(result).toEqual([
+                {id: 0, label: "01/02/2024", value: 100}, {id: 0, label: "02/02/2024", value: 50},
+            ]);
+        });
+
+        it("uses the provided limit", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getRecordViewingTimeDay("user-1", 5);
+
+            expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 5]);
+        });
+    });
+
     describe("getRankingViewingTimeByShows", () => {
         it("maps rows to Stat instances", async () => {
             db.query.mockResolvedValue({rows: [{label: "Show", value: "42"}]});

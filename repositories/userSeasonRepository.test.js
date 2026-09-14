@@ -264,6 +264,30 @@ describe("UserSeasonRepository", () => {
         });
     });
 
+    describe("getRecordViewingTimeDay", () => {
+        it("reverses the rows and maps to Stat instances", async () => {
+            db.query.mockResolvedValue({
+                rows: [{label: "02/02/2024", value: "20"}, {label: "01/02/2024", value: "40"}],
+            });
+
+            const result = await repo.getRecordViewingTimeDay("user-1");
+
+            expect(result).toEqual([
+                {id: 0, label: "01/02/2024", value: 40}, {id: 0, label: "02/02/2024", value: 20},
+            ]);
+        });
+
+        it("excludes seasons whose own runtime alone exceeds a calendar day", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getRecordViewingTimeDay("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("seasons.episodes * shows.duration <= 1440"), ["user-1", 10]
+            );
+        });
+    });
+
     describe("getSeasonsByAddedYear", () => {
         it("maps rows to Season instances", async () => {
             db.query.mockResolvedValue({rows: [{show_id: 10, number: 1, episodes: 8, image: "img.png"}]});

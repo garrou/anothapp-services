@@ -94,6 +94,25 @@ export default class UserEpisodeStatRepository {
      * @param {number} limit
      * @returns {Promise<Stat[]>}
      */
+    getRecordViewingTimeDay = async (userId, limit = 10) => {
+        const res = await db.query(`
+            SELECT TO_CHAR(ue.watched_at, 'DD/MM/YYYY') AS label, SUM(COALESCE(e.length, s.duration)) AS value
+            FROM users_episodes ue
+            JOIN episodes e ON ue.episode_id = e.id
+            JOIN shows s ON s.id = e.show_id
+            WHERE ue.user_id = $1
+            GROUP BY label
+            ORDER BY value DESC
+            LIMIT $2
+        `, [userId, limit]);
+        return res.rows.reverse().map((row) => new Stat(row));
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} limit
+     * @returns {Promise<Stat[]>}
+     */
     getRankingViewingTimeByShows = async (userId, limit = 10) => {
         const res = await db.query(`
             SELECT shows.title AS label, (SUM(COALESCE(e.length, shows.duration)) / 60) AS value
