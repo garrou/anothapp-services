@@ -316,6 +316,16 @@ describe("UserSeasonRepository", () => {
                 expect.stringContaining("seasons.episodes * shows.duration <= 1440"), ["user-1", 10]
             );
         });
+
+        it("excludes days whose combined total still exceeds 1440 minutes", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getRecordViewingTimeDay("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("HAVING SUM(shows.duration * seasons.episodes) <= 1440"), ["user-1", 10]
+            );
+        });
     });
 
     describe("getSeasonsByAddedYear", () => {

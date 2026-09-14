@@ -334,8 +334,7 @@ export default class UserSeasonRepository {
     /**
      * @param {string} userId
      * @param {number} limit
-     * @returns Promise<Stat[]> - seasons whose own runtime alone exceeds a calendar day (1440 minutes) are
-     * excluded, since they cannot genuinely have been watched within the day they were logged
+     * @returns Promise<Stat[]> - seasons whose own runtime alone exceeds a calendar day (1440 minutes) are excluded
      */
     getRecordViewingTimeDay = async (userId, limit = 10) => {
         const res = await db.query(`
@@ -345,6 +344,7 @@ export default class UserSeasonRepository {
             JOIN shows ON seasons.show_id = shows.id
             WHERE users_seasons.user_id = $1 AND seasons.episodes * shows.duration <= 1440
             GROUP BY label
+            HAVING SUM(shows.duration * seasons.episodes) <= 1440
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
