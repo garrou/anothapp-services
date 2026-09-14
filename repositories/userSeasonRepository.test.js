@@ -437,6 +437,16 @@ describe("UserSeasonRepository", () => {
             expect(result).toBe(18);
         });
 
+        it("excludes seasons whose own runtime alone exceeds a calendar day", async () => {
+            db.query.mockResolvedValue({rows: [{max_count: "18"}]});
+
+            await repo.getMaxEpisodesInOneDayByUserId("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("seasons.episodes * shows.duration <= 1440"), ["user-1"]
+            );
+        });
+
         it("returns 0 when the user has no watched seasons at all", async () => {
             db.query.mockResolvedValue({rows: [{max_count: null}]});
 
