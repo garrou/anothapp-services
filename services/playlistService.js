@@ -172,6 +172,12 @@ export default class PlaylistService {
         if (!added) {
             throw new ServiceError(400, ERROR_SHOW_ALREADY_IN_PLAYLIST);
         }
+        if (currentUserId !== playlist.userId) {
+            eventBus.emit("playlist.show_added", {
+                recipientUserId: playlist.userId, actorUserId: currentUserId,
+                metadata: {playlistId, playlistName: playlist.name, showId: show.id, showTitle: show.title},
+            });
+        }
     }
 
     /**
@@ -188,6 +194,13 @@ export default class PlaylistService {
 
         if (!removed) {
             throw new ServiceError(500, "Impossible de retirer la série de la playlist");
+        }
+        if (currentUserId !== playlist.userId) {
+            const show = await this._showService.ensureShowExists(showId);
+            eventBus.emit("playlist.show_removed", {
+                recipientUserId: playlist.userId, actorUserId: currentUserId,
+                metadata: {playlistId, playlistName: playlist.name, showId, showTitle: show.title},
+            });
         }
     }
 

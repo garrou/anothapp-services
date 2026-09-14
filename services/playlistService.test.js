@@ -362,6 +362,30 @@ describe("PlaylistService.addShowToPlaylist", () => {
             playlistService.addShowToPlaylist("user-1", 1, 42)
         ).rejects.toThrow("Cette série est déjà dans cette playlist");
     });
+
+    it("notifies the owner when a collaborator adds a show", async () => {
+        playlistRepoMocks.getById.mockResolvedValue(friendPlaylist);
+        playlistCollaboratorRepoMocks.checkIsAcceptedCollaborator.mockResolvedValue(true);
+        showServiceMocks.ensureShowExists.mockResolvedValue({id: 42, title: "Breaking Bad"});
+        playlistRepoMocks.addShow.mockResolvedValue(true);
+
+        await playlistService.addShowToPlaylist("user-1", 2, 42);
+
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("playlist.show_added", {
+            recipientUserId: "user-2", actorUserId: "user-1",
+            metadata: {playlistId: 2, playlistName: friendPlaylist.name, showId: 42, showTitle: "Breaking Bad"},
+        });
+    });
+
+    it("doesn't notify anyone when the owner adds a show to their own playlist", async () => {
+        playlistRepoMocks.getById.mockResolvedValue(ownedPlaylist);
+        showServiceMocks.ensureShowExists.mockResolvedValue({id: 42, title: "Breaking Bad"});
+        playlistRepoMocks.addShow.mockResolvedValue(true);
+
+        await playlistService.addShowToPlaylist("user-1", 1, 42);
+
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
+    });
 });
 
 describe("PlaylistService.removeShowFromPlaylist", () => {
@@ -374,6 +398,7 @@ describe("PlaylistService.removeShowFromPlaylist", () => {
 
     it("rejects with a 400 when the playlist isn't owned by the current user", async () => {
         playlistRepoMocks.getById.mockResolvedValue(friendPlaylist);
+        playlistCollaboratorRepoMocks.checkIsAcceptedCollaborator.mockResolvedValue(false);
 
         await expect(playlistService.removeShowFromPlaylist("user-1", 2, 42)).rejects.toThrow(PLAYLIST_NOT_FOUND);
         expect(playlistRepoMocks.removeShow).not.toHaveBeenCalled();
@@ -401,10 +426,35 @@ describe("PlaylistService.removeShowFromPlaylist", () => {
         playlistRepoMocks.getById.mockResolvedValue(friendPlaylist);
         playlistCollaboratorRepoMocks.checkIsAcceptedCollaborator.mockResolvedValue(true);
         playlistRepoMocks.removeShow.mockResolvedValue(true);
+        showServiceMocks.ensureShowExists.mockResolvedValue({id: 42, title: "Breaking Bad"});
 
         await playlistService.removeShowFromPlaylist("user-1", 2, 42);
 
         expect(playlistRepoMocks.removeShow).toHaveBeenCalledWith(2, 42);
+    });
+
+    it("notifies the owner when a collaborator removes a show", async () => {
+        playlistRepoMocks.getById.mockResolvedValue(friendPlaylist);
+        playlistCollaboratorRepoMocks.checkIsAcceptedCollaborator.mockResolvedValue(true);
+        playlistRepoMocks.removeShow.mockResolvedValue(true);
+        showServiceMocks.ensureShowExists.mockResolvedValue({id: 42, title: "Breaking Bad"});
+
+        await playlistService.removeShowFromPlaylist("user-1", 2, 42);
+
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("playlist.show_removed", {
+            recipientUserId: "user-2", actorUserId: "user-1",
+            metadata: {playlistId: 2, playlistName: friendPlaylist.name, showId: 42, showTitle: "Breaking Bad"},
+        });
+    });
+
+    it("doesn't notify anyone when the owner removes a show from their own playlist", async () => {
+        playlistRepoMocks.getById.mockResolvedValue(ownedPlaylist);
+        playlistRepoMocks.removeShow.mockResolvedValue(true);
+
+        await playlistService.removeShowFromPlaylist("user-1", 1, 42);
+
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
+        expect(showServiceMocks.ensureShowExists).not.toHaveBeenCalled();
     });
 });
 

@@ -24,6 +24,8 @@ export default class NotificationListener {
         eventBus.on("playlist.collaborator_invited", this.#notifyOne("playlist_collaborator_invited"));
         eventBus.on("playlist.collaborator_accepted", this.#notifyOne("playlist_collaborator_accepted"));
         eventBus.on("playlist.collaborator_declined", this.#notifyOne("playlist_collaborator_declined"));
+        eventBus.on("playlist.show_added", this.#notifyOne("playlist_show_added"));
+        eventBus.on("playlist.show_removed", this.#notifyOne("playlist_show_removed"));
         eventBus.on("achievement.league_unlocked", this.#notifyFriends("achievement_league_unlocked"));
     }
 
