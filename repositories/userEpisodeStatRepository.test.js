@@ -48,6 +48,16 @@ describe("UserEpisodeStatRepository", () => {
 
             expect(result).toBe(0);
         });
+
+        it("excludes days whose combined total exceeds 43200 minutes", async () => {
+            db.query.mockResolvedValue({rows: [{time: "60"}]});
+
+            await repo.getTimeCurrentMonthByUserId("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("HAVING SUM(COALESCE(e.length, s.duration)) <= 43200"), ["user-1"]
+            );
+        });
     });
 
     describe("getTimeCurrentMonthByUserIds", () => {
@@ -64,6 +74,16 @@ describe("UserEpisodeStatRepository", () => {
             const result = await repo.getTimeCurrentMonthByUserIds(["user-1"]);
 
             expect(result.get("user-1")).toBe(60);
+        });
+
+        it("excludes days whose combined total exceeds 43200 minutes", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getTimeCurrentMonthByUserIds(["user-1"]);
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("HAVING SUM(COALESCE(e.length, s.duration)) <= 43200"), [["user-1"]]
+            );
         });
     });
 
@@ -93,6 +113,16 @@ describe("UserEpisodeStatRepository", () => {
 
             expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 5]);
         });
+
+        it("excludes days whose combined total exceeds 43200 minutes", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getRecordViewingTimeMonth("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("HAVING SUM(COALESCE(e.length, s.duration)) <= 43200"), ["user-1", 10]
+            );
+        });
     });
 
     describe("getRecordViewingTimeDay", () => {
@@ -114,6 +144,16 @@ describe("UserEpisodeStatRepository", () => {
             await repo.getRecordViewingTimeDay("user-1", 5);
 
             expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 5]);
+        });
+
+        it("excludes days whose combined total exceeds 1440 minutes", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getRecordViewingTimeDay("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("HAVING SUM(COALESCE(e.length, s.duration)) <= 1440"), ["user-1", 10]
+            );
         });
     });
 
@@ -248,6 +288,16 @@ describe("UserEpisodeStatRepository", () => {
             const result = await repo.getBestMonthByUserIdByYear("user-1", 2024);
 
             expect(result).toBeNull();
+        });
+
+        it("excludes days whose combined total exceeds 43200 minutes", async () => {
+            db.query.mockResolvedValue({rowCount: 0, rows: []});
+
+            await repo.getBestMonthByUserIdByYear("user-1", 2024);
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("HAVING SUM(COALESCE(e.length, s.duration)) <= 43200"), ["user-1", 2024]
+            );
         });
     });
 

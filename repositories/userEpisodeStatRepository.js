@@ -25,11 +25,16 @@ export default class UserEpisodeStatRepository {
      */
     getTimeCurrentMonthByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT SUM(COALESCE(e.length, s.duration)) AS time
-            FROM users_episodes ue
-            JOIN episodes e ON ue.episode_id = e.id
-            JOIN shows s ON s.id = e.show_id
-            WHERE ue.user_id = $1 AND ue.watched_at >= DATE_TRUNC('month', CURRENT_DATE)
+            SELECT SUM(day_total) AS time
+            FROM (
+                SELECT SUM(COALESCE(e.length, s.duration)) AS day_total
+                FROM users_episodes ue
+                JOIN episodes e ON ue.episode_id = e.id
+                JOIN shows s ON s.id = e.show_id
+                WHERE ue.user_id = $1 AND ue.watched_at >= DATE_TRUNC('month', CURRENT_DATE)
+                GROUP BY DATE(ue.watched_at)
+                HAVING SUM(COALESCE(e.length, s.duration)) <= 43200
+            ) valid_days
         `, [userId]);
         return parseInt(res.rows[0]["time"] ?? 0);
     }
@@ -43,12 +48,17 @@ export default class UserEpisodeStatRepository {
             return new Map();
         }
         const res = await db.query(`
-            SELECT ue.user_id, SUM(COALESCE(e.length, s.duration)) AS time
-            FROM users_episodes ue
-            JOIN episodes e ON ue.episode_id = e.id
-            JOIN shows s ON s.id = e.show_id
-            WHERE ue.user_id = ANY($1::uuid[]) AND ue.watched_at >= DATE_TRUNC('month', CURRENT_DATE)
-            GROUP BY ue.user_id
+            SELECT user_id, SUM(day_total) AS time
+            FROM (
+                SELECT ue.user_id, SUM(COALESCE(e.length, s.duration)) AS day_total
+                FROM users_episodes ue
+                JOIN episodes e ON ue.episode_id = e.id
+                JOIN shows s ON s.id = e.show_id
+                WHERE ue.user_id = ANY($1::uuid[]) AND ue.watched_at >= DATE_TRUNC('month', CURRENT_DATE)
+                GROUP BY ue.user_id, DATE(ue.watched_at)
+                HAVING SUM(COALESCE(e.length, s.duration)) <= 43200
+            ) valid_days
+            GROUP BY user_id
         `, [userIds]);
         return new Map(res.rows.map((row) => [row["user_id"], parseInt(row["time"] ?? 0)]));
     }
@@ -77,11 +87,16 @@ export default class UserEpisodeStatRepository {
      */
     getRecordViewingTimeMonth = async (userId, limit = 10) => {
         const res = await db.query(`
-            SELECT TO_CHAR(ue.watched_at, 'MM/YYYY') AS label, SUM(COALESCE(e.length, s.duration)) AS value
-            FROM users_episodes ue
-            JOIN episodes e ON ue.episode_id = e.id
-            JOIN shows s ON s.id = e.show_id
-            WHERE ue.user_id = $1
+            SELECT TO_CHAR(day, 'MM/YYYY') AS label, SUM(day_total) AS value
+            FROM (
+                SELECT DATE(ue.watched_at) AS day, SUM(COALESCE(e.length, s.duration)) AS day_total
+                FROM users_episodes ue
+                JOIN episodes e ON ue.episode_id = e.id
+                JOIN shows s ON s.id = e.show_id
+                WHERE ue.user_id = $1
+                GROUP BY day
+                HAVING SUM(COALESCE(e.length, s.duration)) <= 43200
+            ) valid_days
             GROUP BY label
             ORDER BY value DESC
             LIMIT $2
@@ -102,6 +117,7 @@ export default class UserEpisodeStatRepository {
             JOIN shows s ON s.id = e.show_id
             WHERE ue.user_id = $1
             GROUP BY label
+            HAVING SUM(COALESCE(e.length, s.duration)) <= 1440
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
@@ -267,11 +283,16 @@ export default class UserEpisodeStatRepository {
      */
     getBestMonthByUserIdByYear = async (userId, year) => {
         const res = await db.query(`
-            SELECT EXTRACT(MONTH FROM ue.watched_at) AS num, SUM(COALESCE(e.length, s.duration)) AS value
-            FROM users_episodes ue
-            JOIN episodes e ON ue.episode_id = e.id
-            JOIN shows s ON s.id = e.show_id
-            WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
+            SELECT EXTRACT(MONTH FROM day) AS num, SUM(day_total) AS value
+            FROM (
+                SELECT DATE(ue.watched_at) AS day, SUM(COALESCE(e.length, s.duration)) AS day_total
+                FROM users_episodes ue
+                JOIN episodes e ON ue.episode_id = e.id
+                JOIN shows s ON s.id = e.show_id
+                WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
+                GROUP BY day
+                HAVING SUM(COALESCE(e.length, s.duration)) <= 43200
+            ) valid_days
             GROUP BY num
             ORDER BY value DESC
             LIMIT 1
