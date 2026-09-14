@@ -39,6 +39,12 @@ const friendRepoMocks = vi.hoisted(() => ({
 const playlistRepoMocks = vi.hoisted(() => ({
     getCountByUserId: vi.fn(),
 }));
+const playlistCollaboratorRepoMocks = vi.hoisted(() => ({
+    getCountByUserId: vi.fn(),
+}));
+const userFavoriteActorRepoMocks = vi.hoisted(() => ({
+    getCountByUserId: vi.fn(),
+}));
 const notificationRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
 }));
@@ -67,6 +73,12 @@ vi.mock("../repositories/friendRepository.js", () => ({
 vi.mock("../repositories/playlistRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return playlistRepoMocks; }),
 }));
+vi.mock("../repositories/playlistCollaboratorRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return playlistCollaboratorRepoMocks; }),
+}));
+vi.mock("../repositories/userFavoriteActorRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return userFavoriteActorRepoMocks; }),
+}));
 vi.mock("../repositories/notificationRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return notificationRepoMocks; }),
 }));
@@ -94,6 +106,8 @@ const mockDefaults = () => {
     userSeasonFriendRepoMocks.getTopFriendsByUserId.mockResolvedValue([]);
     friendRepoMocks.getFriends.mockResolvedValue([]);
     playlistRepoMocks.getCountByUserId.mockResolvedValue(0);
+    playlistCollaboratorRepoMocks.getCountByUserId.mockResolvedValue(0);
+    userFavoriteActorRepoMocks.getCountByUserId.mockResolvedValue(0);
     achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map());
     achievementRepoMocks.upsertUserAchievement.mockResolvedValue(true);
 };
@@ -261,6 +275,8 @@ describe("AchievementService.evaluate", () => {
         expect(userShowRepoMocks.getFavoritesCountByUserId).not.toHaveBeenCalled();
         expect(playlistRepoMocks.getCountByUserId).not.toHaveBeenCalled();
         expect(userSeasonFriendRepoMocks.getTopFriendsByUserId).not.toHaveBeenCalled();
+        expect(userFavoriteActorRepoMocks.getCountByUserId).not.toHaveBeenCalled();
+        expect(playlistCollaboratorRepoMocks.getCountByUserId).not.toHaveBeenCalled();
     });
 
     it("unlocks favorites_count, playlists_count and duo from their own repositories", async () => {
@@ -281,6 +297,22 @@ describe("AchievementService.evaluate", () => {
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "favorites_count", 1, 3);
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "playlists_count", 1, 3);
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "duo", 1, 3);
+    });
+
+    it("unlocks actors_favorited and playlists_collaborated from their own repositories", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "actors_favorited", league: 1, subTier: 3, threshold: 1 },
+            { code: "playlists_collaborated", league: 1, subTier: 3, threshold: 1 },
+        ]);
+        userFavoriteActorRepoMocks.getCountByUserId.mockResolvedValue(4);
+        playlistCollaboratorRepoMocks.getCountByUserId.mockResolvedValue(2);
+
+        await achievementService.evaluate("user-1", ["actors_favorited", "playlists_collaborated"]);
+
+        expect(userFavoriteActorRepoMocks.getCountByUserId).toHaveBeenCalledWith("user-1");
+        expect(playlistCollaboratorRepoMocks.getCountByUserId).toHaveBeenCalledWith("user-1");
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "actors_favorited", 1, 3);
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "playlists_collaborated", 1, 3);
     });
 
     it("defaults duo to 0 when the user has no watched-with friends at all", async () => {

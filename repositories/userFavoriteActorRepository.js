@@ -45,6 +45,19 @@ export default class UserFavoriteActorRepository {
 
     /**
      * @param {string} userId
+     * @returns {Promise<number>}
+     */
+    getCountByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT COUNT(*) AS total
+            FROM users_favorite_actors
+            WHERE user_id = $1
+        `, [userId]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
      * @returns {Promise<Actor[]>}
      */
     getFavoritesByUserId = async (userId) => {

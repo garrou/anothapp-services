@@ -97,6 +97,23 @@ describe("AchievementListener", () => {
         expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1", ["playlists_count"]);
     });
 
+    it("evaluates only actors_favorited for an actor favorited", async () => {
+        eventBus.emit("actor.favorited", { actorUserId: "user-1", metadata: { actorId: 7 } });
+        await flush();
+
+        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1", ["actors_favorited"]);
+    });
+
+    it("evaluates only playlists_collaborated for the invitee accepting a collaborator invite", async () => {
+        eventBus.emit("playlist.collaborator_accepted", {
+            recipientUserId: "owner-1", actorUserId: "user-1", metadata: { playlistId: "p1", playlistName: "Mes séries" },
+        });
+        await flush();
+
+        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1", ["playlists_collaborated"]);
+        expect(achievementServiceMocks.evaluate).not.toHaveBeenCalledWith("owner-1", expect.anything());
+    });
+
     it("never includes account_age in any event's code list - it has its own scheduled task", async () => {
         for (const [event, payload] of [
             ["season.watched", { actorUserId: "u", showId: 1 }],

@@ -87,6 +87,19 @@ export default class PlaylistCollaboratorRepository {
     }
 
     /**
+     * @param {string} userId
+     * @returns {Promise<number>} number of playlists this user is an accepted collaborator on
+     */
+    getCountByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT COUNT(*) AS total
+            FROM playlists_collaborators
+            WHERE user_id = $1 AND accepted = TRUE
+        `, [userId]);
+        return parseInt(res.rows[0]["total"] ?? 0);
+    }
+
+    /**
      * @param {string} playlistId
      * @param {string} userId
      * @returns {Promise<{accepted: boolean}|null>}

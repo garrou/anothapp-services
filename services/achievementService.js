@@ -6,6 +6,8 @@ import UserEpisodeStatRepository from "../repositories/userEpisodeStatRepository
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import PlaylistRepository from "../repositories/playlistRepository.js";
+import PlaylistCollaboratorRepository from "../repositories/playlistCollaboratorRepository.js";
+import UserFavoriteActorRepository from "../repositories/userFavoriteActorRepository.js";
 import NotificationRepository from "../repositories/notificationRepository.js";
 import eventBus from "../helpers/eventBus.js";
 import {computeStreak} from "../helpers/streak.js";
@@ -19,7 +21,7 @@ const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30;
 const STAT_CODES = [
     "streak", "watch_time", "shows_started", "shows_completed", "countries",
     "kinds", "platforms", "friends_watched_with", "friends_count", "notes_count", "account_age",
-    "favorites_count", "playlists_count", "duo",
+    "favorites_count", "playlists_count", "duo", "actors_favorited", "playlists_collaborated",
 ];
 
 const NAME_BY_CODE = new Map(ACHIEVEMENTS.map(({code, name}) => [code, name]));
@@ -34,6 +36,8 @@ export default class AchievementService {
         this._userSeasonFriendRepository = new UserSeasonFriendRepository();
         this._friendRepository = new FriendRepository();
         this._playlistRepository = new PlaylistRepository();
+        this._playlistCollaboratorRepository = new PlaylistCollaboratorRepository();
+        this._userFavoriteActorRepository = new UserFavoriteActorRepository();
         this._notificationRepository = new NotificationRepository();
     }
 
@@ -52,7 +56,7 @@ export default class AchievementService {
         const [
             user, dates, minutes, showsStarted, showsCompleted, countries,
             kinds, platforms, friendsWatchedWith, friends, notedShows,
-            favorites, playlistsCount, topDuo
+            favorites, playlistsCount, topDuo, actorsFavorited, playlistsCollaborated
         ] = await Promise.all([
             need("account_age") ? this._userRepository.getUserById(userId) : null,
             need("streak") ? repo.getWatchedDatesByUserId(userId) : null,
@@ -68,6 +72,8 @@ export default class AchievementService {
             need("favorites_count") ? this._userShowRepository.getFavoritesCountByUserId(userId) : null,
             need("playlists_count") ? this._playlistRepository.getCountByUserId(userId) : null,
             need("duo") ? this._userSeasonFriendRepository.getTopFriendsByUserId(userId, 1) : null,
+            need("actors_favorited") ? this._userFavoriteActorRepository.getCountByUserId(userId) : null,
+            need("playlists_collaborated") ? this._playlistCollaboratorRepository.getCountByUserId(userId) : null,
         ]);
 
         const values = {};
@@ -84,6 +90,8 @@ export default class AchievementService {
         if (need("favorites_count")) values.favorites_count = favorites;
         if (need("playlists_count")) values.playlists_count = playlistsCount;
         if (need("duo")) values.duo = topDuo[0]?.value ?? 0;
+        if (need("actors_favorited")) values.actors_favorited = actorsFavorited;
+        if (need("playlists_collaborated")) values.playlists_collaborated = playlistsCollaborated;
         if (need("account_age")) {
             values.account_age = user ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / MS_PER_MONTH) : 0;
         }

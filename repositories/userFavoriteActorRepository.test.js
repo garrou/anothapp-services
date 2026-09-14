@@ -75,6 +75,32 @@ describe("UserFavoriteActorRepository.checkFavoriteExists", () => {
     });
 });
 
+describe("UserFavoriteActorRepository.getCountByUserId", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserFavoriteActorRepository();
+    });
+
+    it("returns the number of favorited actors", async () => {
+        db.query.mockResolvedValue({rows: [{total: "3"}]});
+
+        const result = await repo.getCountByUserId("user-1");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("FROM users_favorite_actors"), ["user-1"]);
+        expect(result).toBe(3);
+    });
+
+    it("returns 0 when the user has no favorites", async () => {
+        db.query.mockResolvedValue({rows: [{total: "0"}]});
+
+        const result = await repo.getCountByUserId("user-1");
+
+        expect(result).toBe(0);
+    });
+});
+
 describe("UserFavoriteActorRepository.getFavoritesByUserId", () => {
     let repo;
 
