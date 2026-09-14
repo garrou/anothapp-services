@@ -1,6 +1,7 @@
 import db from "../config/db.js";
 import Stat from "../models/stat.js";
 import {frenchMonth} from "../helpers/utils.js";
+import {MAX_MINUTES_PER_DAY, MAX_MINUTES_PER_MONTH} from "../constants/viewingTime.js";
 
 export default class UserEpisodeStatRepository {
 
@@ -33,7 +34,7 @@ export default class UserEpisodeStatRepository {
                 JOIN shows s ON s.id = e.show_id
                 WHERE ue.user_id = $1 AND ue.watched_at >= DATE_TRUNC('month', CURRENT_DATE)
                 GROUP BY DATE(ue.watched_at)
-                HAVING SUM(COALESCE(e.length, s.duration)) <= 43200
+                HAVING SUM(COALESCE(e.length, s.duration)) <= ${MAX_MINUTES_PER_MONTH}
             ) valid_days
         `, [userId]);
         return parseInt(res.rows[0]["time"] ?? 0);
@@ -56,7 +57,7 @@ export default class UserEpisodeStatRepository {
                 JOIN shows s ON s.id = e.show_id
                 WHERE ue.user_id = ANY($1::uuid[]) AND ue.watched_at >= DATE_TRUNC('month', CURRENT_DATE)
                 GROUP BY ue.user_id, DATE(ue.watched_at)
-                HAVING SUM(COALESCE(e.length, s.duration)) <= 43200
+                HAVING SUM(COALESCE(e.length, s.duration)) <= ${MAX_MINUTES_PER_MONTH}
             ) valid_days
             GROUP BY user_id
         `, [userIds]);
@@ -95,7 +96,7 @@ export default class UserEpisodeStatRepository {
                 JOIN shows s ON s.id = e.show_id
                 WHERE ue.user_id = $1
                 GROUP BY day
-                HAVING SUM(COALESCE(e.length, s.duration)) <= 43200
+                HAVING SUM(COALESCE(e.length, s.duration)) <= ${MAX_MINUTES_PER_MONTH}
             ) valid_days
             GROUP BY label
             ORDER BY value DESC
@@ -117,7 +118,7 @@ export default class UserEpisodeStatRepository {
             JOIN shows s ON s.id = e.show_id
             WHERE ue.user_id = $1
             GROUP BY label
-            HAVING SUM(COALESCE(e.length, s.duration)) <= 1440
+            HAVING SUM(COALESCE(e.length, s.duration)) <= ${MAX_MINUTES_PER_DAY}
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
@@ -291,7 +292,7 @@ export default class UserEpisodeStatRepository {
                 JOIN shows s ON s.id = e.show_id
                 WHERE ue.user_id = $1 AND EXTRACT(YEAR FROM ue.watched_at) = $2
                 GROUP BY day
-                HAVING SUM(COALESCE(e.length, s.duration)) <= 43200
+                HAVING SUM(COALESCE(e.length, s.duration)) <= ${MAX_MINUTES_PER_MONTH}
             ) valid_days
             GROUP BY num
             ORDER BY value DESC
