@@ -283,13 +283,13 @@ describe("UserSeasonRepository", () => {
             expect(result).toEqual([{id: 0, label: "01/2024", value: 40}, {id: 0, label: "02/2024", value: 20}]);
         });
 
-        it("excludes seasons whose own runtime alone exceeds a calendar day", async () => {
+        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
             db.query.mockResolvedValue({rows: []});
 
             await repo.getRecordViewingTimeMonth("user-1");
 
             expect(db.query).toHaveBeenCalledWith(
-                expect.stringContaining("seasons.episodes * shows.duration <= 1440"), ["user-1", 10]
+                expect.stringContaining("seasons.episodes * shows.duration <= 43200"), ["user-1", 10]
             );
         });
     });

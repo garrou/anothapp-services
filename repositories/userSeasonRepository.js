@@ -323,7 +323,7 @@ export default class UserSeasonRepository {
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
-            WHERE users_seasons.user_id = $1 AND seasons.episodes * shows.duration <= 1440
+            WHERE users_seasons.user_id = $1 AND seasons.episodes * shows.duration <= 43200
             GROUP BY label
             ORDER BY value DESC
             LIMIT $2
