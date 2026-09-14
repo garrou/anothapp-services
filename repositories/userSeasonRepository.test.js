@@ -427,6 +427,25 @@ describe("UserSeasonRepository", () => {
         });
     });
 
+    describe("getMaxEpisodesInOneDayByUserId", () => {
+        it("returns the highest number of episodes implied by seasons logged the same day", async () => {
+            db.query.mockResolvedValue({rows: [{max_count: "18"}]});
+
+            const result = await repo.getMaxEpisodesInOneDayByUserId("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("FROM users_seasons"), ["user-1"]);
+            expect(result).toBe(18);
+        });
+
+        it("returns 0 when the user has no watched seasons at all", async () => {
+            db.query.mockResolvedValue({rows: [{max_count: null}]});
+
+            const result = await repo.getMaxEpisodesInOneDayByUserId("user-1");
+
+            expect(result).toBe(0);
+        });
+    });
+
     describe("getWatchedDatesByUserId", () => {
         it("returns the list of dates", async () => {
             db.query.mockResolvedValue({rows: [{date: "2024-01-01"}]});

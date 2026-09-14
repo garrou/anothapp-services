@@ -24,10 +24,12 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getTotalTimeByUserId: vi.fn(),
     getPlatformsCountByUserId: vi.fn(),
     getMaxRewatchCountByUserId: vi.fn(),
+    getMaxEpisodesInOneDayByUserId: vi.fn(),
 }));
 const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getWatchedDatesByUserId: vi.fn(),
     getTotalTimeByUserId: vi.fn(),
+    getMaxEpisodesInOneDayByUserId: vi.fn(),
 }));
 const userSeasonFriendRepoMocks = vi.hoisted(() => ({
     getDistinctFriendsCountByUserId: vi.fn(),
@@ -98,6 +100,7 @@ const mockDefaults = () => {
     userSeasonRepoMocks.getTotalTimeByUserId.mockResolvedValue(0);
     userSeasonRepoMocks.getPlatformsCountByUserId.mockResolvedValue(0);
     userSeasonRepoMocks.getMaxRewatchCountByUserId.mockResolvedValue(0);
+    userSeasonRepoMocks.getMaxEpisodesInOneDayByUserId.mockResolvedValue(0);
     userShowRepoMocks.getTotalShowsByUserId.mockResolvedValue(0);
     userShowRepoMocks.getTotalCompletedShowsByUserId.mockResolvedValue(0);
     userShowRepoMocks.getCountriesCountByUserId.mockResolvedValue(0);
@@ -280,6 +283,7 @@ describe("AchievementService.evaluate", () => {
         expect(userFavoriteActorRepoMocks.getCountByUserId).not.toHaveBeenCalled();
         expect(playlistCollaboratorRepoMocks.getCountByUserId).not.toHaveBeenCalled();
         expect(userSeasonRepoMocks.getMaxRewatchCountByUserId).not.toHaveBeenCalled();
+        expect(userSeasonRepoMocks.getMaxEpisodesInOneDayByUserId).not.toHaveBeenCalled();
     });
 
     it("unlocks favorites_count, playlists_count and duo from their own repositories", async () => {
@@ -328,6 +332,33 @@ describe("AchievementService.evaluate", () => {
 
         expect(userSeasonRepoMocks.getMaxRewatchCountByUserId).toHaveBeenCalledWith("user-1");
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "rewatch", 1, 3);
+    });
+
+    it("unlocks binge from the highest number of episodes implied by seasons logged the same day", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "binge", league: 1, subTier: 3, threshold: 4 },
+        ]);
+        userSeasonRepoMocks.getMaxEpisodesInOneDayByUserId.mockResolvedValue(10);
+
+        await achievementService.evaluate("user-1", ["binge"]);
+
+        expect(userSeasonRepoMocks.getMaxEpisodesInOneDayByUserId).toHaveBeenCalledWith("user-1");
+        expect(userEpisodeStatRepoMocks.getMaxEpisodesInOneDayByUserId).not.toHaveBeenCalled();
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "binge", 1, 3);
+    });
+
+    it("unlocks binge from episode watch counts for episode-tracking users instead of season data", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "binge", league: 1, subTier: 3, threshold: 4 },
+        ]);
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userEpisodeStatRepoMocks.getMaxEpisodesInOneDayByUserId.mockResolvedValue(10);
+
+        await achievementService.evaluate("user-1", ["binge"]);
+
+        expect(userEpisodeStatRepoMocks.getMaxEpisodesInOneDayByUserId).toHaveBeenCalledWith("user-1");
+        expect(userSeasonRepoMocks.getMaxEpisodesInOneDayByUserId).not.toHaveBeenCalled();
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "binge", 1, 3);
     });
 
     it("defaults duo to 0 when the user has no watched-with friends at all", async () => {

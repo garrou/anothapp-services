@@ -539,6 +539,24 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
+     * @returns {Promise<number>} the highest number of episodes implied by the seasons the user logged in a single day
+     */
+    getMaxEpisodesInOneDayByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT MAX(daily) AS max_count
+            FROM (
+                SELECT SUM(seasons.episodes) AS daily
+                FROM users_seasons
+                JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
+                WHERE users_seasons.user_id = $1
+                GROUP BY DATE(users_seasons.added_at)
+            ) sub
+        `, [userId]);
+        return parseInt(res.rows[0]["max_count"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
      * @returns {Promise<string[]>} distinct days ('YYYY-MM-DD') the user logged a watched season
      */
     getWatchedDatesByUserId = async (userId) => {

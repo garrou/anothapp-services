@@ -301,4 +301,21 @@ export default class UserEpisodeStatRepository {
         `, [userId]);
         return res.rows.map((row) => ({date: row["date"], value: parseInt(row["value"])}));
     }
+
+    /**
+     * @param {string} userId
+     * @returns {Promise<number>} the highest number of episodes the user has watched in a single day
+     */
+    getMaxEpisodesInOneDayByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT MAX(cnt) AS max_count
+            FROM (
+                SELECT COUNT(*) AS cnt
+                FROM users_episodes
+                WHERE user_id = $1
+                GROUP BY DATE(watched_at)
+            ) sub
+        `, [userId]);
+        return parseInt(res.rows[0]["max_count"] ?? 0);
+    }
 }

@@ -259,4 +259,23 @@ describe("UserEpisodeStatRepository", () => {
             expect(result).toEqual([{date: "2024-01-01", value: 3}]);
         });
     });
+
+    describe("getMaxEpisodesInOneDayByUserId", () => {
+        it("returns the highest number of episodes watched in a single day", async () => {
+            db.query.mockResolvedValue({rows: [{max_count: "12"}]});
+
+            const result = await repo.getMaxEpisodesInOneDayByUserId("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("FROM users_episodes"), ["user-1"]);
+            expect(result).toBe(12);
+        });
+
+        it("returns 0 when the user has no watched episodes at all", async () => {
+            db.query.mockResolvedValue({rows: [{max_count: null}]});
+
+            const result = await repo.getMaxEpisodesInOneDayByUserId("user-1");
+
+            expect(result).toBe(0);
+        });
+    });
 });
