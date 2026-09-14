@@ -16,6 +16,7 @@ export const ACHIEVEMENTS = [
     { code: "actors_favorited", name: "Admirateur" },
     { code: "playlists_collaborated", name: "Collaborateur" },
     { code: "rewatch", name: "Nostalgique" },
+    { code: "binge", name: "Frénétique" },
 ];
 
 export const TIERS_CACHE_TTL_SECONDS = 600;

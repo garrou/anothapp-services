@@ -1,8 +1,8 @@
 import eventBus from "../helpers/eventBus.js";
 import AchievementService from "./achievementService.js";
 
-const EPISODE_CODES = ["streak", "watch_time", "shows_completed", "rewatch"];
-const SEASON_WATCHED_CODES = ["streak", "watch_time", "shows_started", "shows_completed", "countries", "kinds", "platforms", "rewatch"];
+const EPISODE_CODES = ["streak", "watch_time", "shows_completed", "rewatch", "binge"];
+const SEASON_WATCHED_CODES = ["streak", "watch_time", "shows_started", "shows_completed", "countries", "kinds", "platforms", "rewatch", "binge"];
 const SHOW_STARTED_CODES = ["shows_started", "countries", "kinds"];
 const SHOW_RATED_CODES = ["notes_count"];
 const FRIEND_ACCEPTED_CODES = ["friends_count"];

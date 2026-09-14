@@ -173,6 +173,16 @@ describe("UserSeasonRepository", () => {
 
             expect(result).toBe(60);
         });
+
+        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
+            db.query.mockResolvedValue({rows: [{time: "60"}]});
+
+            await repo.getTimeCurrentMonthByUserId("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("seasons.episodes * shows.duration <= 43200"), ["user-1"]
+            );
+        });
     });
 
     describe("getTimeCurrentMonthByUserIds", () => {
@@ -189,6 +199,16 @@ describe("UserSeasonRepository", () => {
             const result = await repo.getTimeCurrentMonthByUserIds(["user-1"]);
 
             expect(result.get("user-1")).toBe(90);
+        });
+
+        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getTimeCurrentMonthByUserIds(["user-1"]);
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("seasons.episodes * shows.duration <= 43200"), [["user-1"]]
+            );
         });
     });
 
@@ -261,6 +281,50 @@ describe("UserSeasonRepository", () => {
             const result = await repo.getRecordViewingTimeMonth("user-1");
 
             expect(result).toEqual([{id: 0, label: "01/2024", value: 40}, {id: 0, label: "02/2024", value: 20}]);
+        });
+
+        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getRecordViewingTimeMonth("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("seasons.episodes * shows.duration <= 43200"), ["user-1", 10]
+            );
+        });
+    });
+
+    describe("getRecordViewingTimeDay", () => {
+        it("reverses the rows and maps to Stat instances", async () => {
+            db.query.mockResolvedValue({
+                rows: [{label: "02/02/2024", value: "20"}, {label: "01/02/2024", value: "40"}],
+            });
+
+            const result = await repo.getRecordViewingTimeDay("user-1");
+
+            expect(result).toEqual([
+                {id: 0, label: "01/02/2024", value: 40}, {id: 0, label: "02/02/2024", value: 20},
+            ]);
+        });
+
+        it("excludes seasons whose own runtime alone exceeds a calendar day", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getRecordViewingTimeDay("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("seasons.episodes * shows.duration <= 1440"), ["user-1", 10]
+            );
+        });
+
+        it("excludes days whose combined total still exceeds 1440 minutes", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getRecordViewingTimeDay("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("HAVING SUM(shows.duration * seasons.episodes) <= 1440"), ["user-1", 10]
+            );
         });
     });
 
@@ -376,6 +440,16 @@ describe("UserSeasonRepository", () => {
             const result = await repo.getBestMonthByUserIdByYear("user-1", 2024);
 
             expect(result).toEqual({id: 0, label: "Juin", value: 250});
+        });
+
+        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
+            db.query.mockResolvedValue({rowCount: 1, rows: [{num: "6", value: "250"}]});
+
+            await repo.getBestMonthByUserIdByYear("user-1", 2024);
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("shows.duration * seasons.episodes <= 43200"), ["user-1", 2024]
+            );
         });
 
         it("returns null when nothing matched", async () => {

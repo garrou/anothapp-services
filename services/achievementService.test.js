@@ -24,10 +24,12 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getTotalTimeByUserId: vi.fn(),
     getPlatformsCountByUserId: vi.fn(),
     getMaxRewatchCountByUserId: vi.fn(),
+    getRecordViewingTimeDay: vi.fn(),
 }));
 const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getWatchedDatesByUserId: vi.fn(),
     getTotalTimeByUserId: vi.fn(),
+    getRecordViewingTimeDay: vi.fn(),
 }));
 const userSeasonFriendRepoMocks = vi.hoisted(() => ({
     getDistinctFriendsCountByUserId: vi.fn(),
@@ -98,6 +100,7 @@ const mockDefaults = () => {
     userSeasonRepoMocks.getTotalTimeByUserId.mockResolvedValue(0);
     userSeasonRepoMocks.getPlatformsCountByUserId.mockResolvedValue(0);
     userSeasonRepoMocks.getMaxRewatchCountByUserId.mockResolvedValue(0);
+    userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
     userShowRepoMocks.getTotalShowsByUserId.mockResolvedValue(0);
     userShowRepoMocks.getTotalCompletedShowsByUserId.mockResolvedValue(0);
     userShowRepoMocks.getCountriesCountByUserId.mockResolvedValue(0);
@@ -246,6 +249,7 @@ describe("AchievementService.evaluate", () => {
         achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
         userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
         userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
+        userEpisodeStatRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
 
         await achievementService.evaluate("user-1");
 
@@ -280,6 +284,7 @@ describe("AchievementService.evaluate", () => {
         expect(userFavoriteActorRepoMocks.getCountByUserId).not.toHaveBeenCalled();
         expect(playlistCollaboratorRepoMocks.getCountByUserId).not.toHaveBeenCalled();
         expect(userSeasonRepoMocks.getMaxRewatchCountByUserId).not.toHaveBeenCalled();
+        expect(userSeasonRepoMocks.getRecordViewingTimeDay).not.toHaveBeenCalled();
     });
 
     it("unlocks favorites_count, playlists_count and duo from their own repositories", async () => {
@@ -328,6 +333,44 @@ describe("AchievementService.evaluate", () => {
 
         expect(userSeasonRepoMocks.getMaxRewatchCountByUserId).toHaveBeenCalledWith("user-1");
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "rewatch", 1, 3);
+    });
+
+    it("unlocks binge from the best single day of viewing time (season data, in hours)", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "binge", league: 1, subTier: 3, threshold: 4 },
+        ]);
+        userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([{ label: "12/03/2024", value: 600 }]);
+
+        await achievementService.evaluate("user-1", ["binge"]);
+
+        expect(userSeasonRepoMocks.getRecordViewingTimeDay).toHaveBeenCalledWith("user-1", 1);
+        expect(userEpisodeStatRepoMocks.getRecordViewingTimeDay).not.toHaveBeenCalled();
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "binge", 1, 3);
+    });
+
+    it("unlocks binge from episode watch time for episode-tracking users instead of season data", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "binge", league: 1, subTier: 3, threshold: 4 },
+        ]);
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userEpisodeStatRepoMocks.getRecordViewingTimeDay.mockResolvedValue([{ label: "12/03/2024", value: 600 }]);
+
+        await achievementService.evaluate("user-1", ["binge"]);
+
+        expect(userEpisodeStatRepoMocks.getRecordViewingTimeDay).toHaveBeenCalledWith("user-1", 1);
+        expect(userSeasonRepoMocks.getRecordViewingTimeDay).not.toHaveBeenCalled();
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "binge", 1, 3);
+    });
+
+    it("defaults binge to 0 when there is no viewing-time record at all", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "binge", league: 1, subTier: 3, threshold: 3 },
+        ]);
+        userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
+
+        await achievementService.evaluate("user-1", ["binge"]);
+
+        expect(achievementRepoMocks.upsertUserAchievement).not.toHaveBeenCalled();
     });
 
     it("defaults duo to 0 when the user has no watched-with friends at all", async () => {

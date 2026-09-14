@@ -5,6 +5,7 @@ import {PartialUserSeason, UserSeason} from "../models/userSeason.js";
 import SeasonTimeline from "../models/seasonTimeline.js";
 import Stat from "../models/stat.js";
 import UserSeasonFriendRepository from "./userSeasonFriendRepository.js";
+import {MAX_MINUTES_PER_DAY, MAX_MINUTES_PER_MONTH} from "../constants/viewingTime.js";
 
 export default class UserSeasonRepository {
 
@@ -192,6 +193,7 @@ export default class UserSeasonRepository {
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
             WHERE users_seasons.user_id = $1 AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
+              AND seasons.episodes * shows.duration <= ${MAX_MINUTES_PER_MONTH}
         `, [userId]);
         return parseInt(res.rows[0]["time"] ?? 0);
     }
@@ -210,6 +212,7 @@ export default class UserSeasonRepository {
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
             WHERE users_seasons.user_id = ANY($1::uuid[]) AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
+              AND seasons.episodes * shows.duration <= ${MAX_MINUTES_PER_MONTH}
             GROUP BY users_seasons.user_id
         `, [userIds]);
         return new Map(res.rows.map((row) => [row["user_id"], parseInt(row["time"] ?? 0)]));
@@ -321,8 +324,28 @@ export default class UserSeasonRepository {
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
-            WHERE users_seasons.user_id = $1
+            WHERE users_seasons.user_id = $1 AND seasons.episodes * shows.duration <= ${MAX_MINUTES_PER_MONTH}
             GROUP BY label
+            ORDER BY value DESC
+            LIMIT $2
+        `, [userId, limit]);
+        return res.rows.reverse().map((row) => new Stat(row));
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} limit
+     * @returns Promise<Stat[]> - seasons whose own runtime alone exceeds a calendar day (1440 minutes) are excluded
+     */
+    getRecordViewingTimeDay = async (userId, limit = 10) => {
+        const res = await db.query(`
+            SELECT TO_CHAR(added_at, 'DD/MM/YYYY') as label, SUM(shows.duration * seasons.episodes) AS value
+            FROM users_seasons
+            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
+            JOIN shows ON seasons.show_id = shows.id
+            WHERE users_seasons.user_id = $1 AND seasons.episodes * shows.duration <= ${MAX_MINUTES_PER_DAY}
+            GROUP BY label
+            HAVING SUM(shows.duration * seasons.episodes) <= ${MAX_MINUTES_PER_DAY}
             ORDER BY value DESC
             LIMIT $2
         `, [userId, limit]);
@@ -482,6 +505,7 @@ export default class UserSeasonRepository {
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
             WHERE users_seasons.user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
+              AND shows.duration * seasons.episodes <= ${MAX_MINUTES_PER_MONTH}
             GROUP BY num
             ORDER BY value DESC
             LIMIT 1

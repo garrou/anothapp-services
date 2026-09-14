@@ -34,7 +34,7 @@ export default class StatService {
         const repo = episodeTrackingEnabled ? this._userEpisodeStatRepository : this._userSeasonRepository;
 
         const [
-            monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes, bestMonthRows,
+            monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes, bestMonthRows, bestDayRows,
             seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
             episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
             seasonsPlatforms, seriesCountries, seriesNotes, watchedDates, topWatchedWithFriends
@@ -45,6 +45,7 @@ export default class StatService {
             this._userSeasonRepository.getTotalSeasonsByUserId(userId),
             repo.getTotalEpisodesByUserId(userId),
             repo.getRecordViewingTimeMonth(userId, 1),
+            repo.getRecordViewingTimeDay(userId, 1),
             this._userSeasonRepository.getNbSeasonsByUserIdGroupByMonthByCurrentYear(userId),
             repo.getNbEpisodesByUserIdGroupByMonthByCurrentYear(userId),
             repo.getTimeHourByUserIdGroupByYear(userId),
@@ -65,6 +66,7 @@ export default class StatService {
         const stats = {
             monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes,
             "bestMonth": bestMonthRows[0],
+            "bestDay": bestDayRows[0],
             seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
             episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
             seasonsPlatforms, seriesCountries, seriesNotes, currentStreak, longestStreak,

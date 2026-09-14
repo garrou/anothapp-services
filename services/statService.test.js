@@ -14,6 +14,7 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getTotalSeasonsByUserId: vi.fn(),
     getTotalEpisodesByUserId: vi.fn(),
     getRecordViewingTimeMonth: vi.fn(),
+    getRecordViewingTimeDay: vi.fn(),
     getNbSeasonsByUserIdGroupByMonthByCurrentYear: vi.fn(),
     getNbEpisodesByUserIdGroupByMonthByCurrentYear: vi.fn(),
     getTimeHourByUserIdGroupByYear: vi.fn(),
@@ -38,6 +39,7 @@ const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getTotalTimeByUserId: vi.fn(),
     getTotalEpisodesByUserId: vi.fn(),
     getRecordViewingTimeMonth: vi.fn(),
+    getRecordViewingTimeDay: vi.fn(),
     getNbEpisodesByUserIdGroupByMonthByCurrentYear: vi.fn(),
     getTotalTimeByUserIdByYear: vi.fn(),
     getTotalEpisodesByUserIdByYear: vi.fn(),
@@ -102,6 +104,7 @@ describe("StatService.getStats", () => {
         userSeasonRepoMocks.getNbSeasonsByUserIdGroupByMonth.mockResolvedValue([]);
         userSeasonRepoMocks.getPlatformsByUserId.mockResolvedValue([]);
         userSeasonRepoMocks.getRecordViewingTimeMonth.mockResolvedValue([]);
+        userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
         userSeasonFriendRepoMocks.getTopFriendsByUserId.mockResolvedValue([]);
 
         for (const repo of [userSeasonRepoMocks, userEpisodeStatRepoMocks]) {
@@ -109,6 +112,7 @@ describe("StatService.getStats", () => {
             repo.getTotalTimeByUserId.mockResolvedValue(0);
             repo.getTotalEpisodesByUserId.mockResolvedValue(0);
             repo.getRecordViewingTimeMonth.mockResolvedValue([]);
+            repo.getRecordViewingTimeDay.mockResolvedValue([]);
             repo.getNbEpisodesByUserIdGroupByMonthByCurrentYear.mockResolvedValue([]);
             repo.getTimeHourByUserIdGroupByYear.mockResolvedValue([]);
             repo.getNbEpisodesByUserIdGroupByYear.mockResolvedValue([]);
@@ -168,6 +172,17 @@ describe("StatService.getStats", () => {
         expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalled();
 
         vi.useRealTimers();
+    });
+
+    it("exposes the best day from the active repo's viewing-time record", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+        userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([{ label: "12/03/2024", value: 420 }]);
+
+        const stats = await statService.getStats("user-1");
+
+        expect(stats.bestDay).toEqual({ label: "12/03/2024", value: 420 });
+        expect(userSeasonRepoMocks.getRecordViewingTimeDay).toHaveBeenCalledWith("user-1", 1);
+        expect(userEpisodeStatRepoMocks.getRecordViewingTimeDay).not.toHaveBeenCalled();
     });
 
     it("exposes the top watched-with friends ranking", async () => {
