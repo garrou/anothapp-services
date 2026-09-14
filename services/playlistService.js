@@ -7,6 +7,7 @@ import eventBus from "../helpers/eventBus.js";
 import {
     ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND, PLAYLIST_NOT_FOUND,
     ERROR_ALREADY_COLLABORATOR, ERROR_COLLABORATOR_INVITE_NOT_FOUND, DUPLICATE_ERROR_CODE,
+    ERROR_SHOW_ALREADY_IN_PLAYLIST,
 } from "../constants/errors.js";
 
 const MAX_NAME_LENGTH = 255;
@@ -166,7 +167,11 @@ export default class PlaylistService {
         await this.#assertCanEditShows(playlist, currentUserId);
 
         const show = await this._showService.ensureShowExists(showId);
-        await this._playlistRepository.addShow(playlistId, show.id);
+        const added = await this._playlistRepository.addShow(playlistId, show.id);
+
+        if (!added) {
+            throw new ServiceError(400, ERROR_SHOW_ALREADY_IN_PLAYLIST);
+        }
     }
 
     /**

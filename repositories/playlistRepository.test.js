@@ -194,12 +194,21 @@ describe("PlaylistRepository.addShow", () => {
         repo = new PlaylistRepository();
     });
 
-    it("calls the insert query with the playlist and show ids", async () => {
-        db.query.mockResolvedValue({});
+    it("calls the insert query with the playlist and show ids and returns true when it was actually inserted", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
 
-        await repo.addShow("p1", 10);
+        const result = await repo.addShow("p1", 10);
 
         expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO playlists_shows"), ["p1", 10]);
+        expect(result).toBe(true);
+    });
+
+    it("returns false when the show was already in the playlist (ON CONFLICT DO NOTHING)", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        const result = await repo.addShow("p1", 10);
+
+        expect(result).toBe(false);
     });
 });
 

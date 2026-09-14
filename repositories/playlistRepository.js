@@ -135,14 +135,15 @@ export default class PlaylistRepository {
     /**
      * @param {string} playlistId
      * @param {number} showId
-     * @returns {Promise<void>}
+     * @returns {Promise<boolean>} false when the show was already in the playlist
      */
     addShow = async (playlistId, showId) => {
-        await db.query(`
+        const res = await db.query(`
             INSERT INTO playlists_shows (playlist_id, show_id)
             VALUES ($1, $2)
             ON CONFLICT (playlist_id, show_id) DO NOTHING
         `, [playlistId, showId]);
+        return res.rowCount === 1;
     }
 
     /**

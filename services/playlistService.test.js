@@ -325,6 +325,7 @@ describe("PlaylistService.addShowToPlaylist", () => {
     it("ensures the show exists locally (even if the owner hasn't tracked it) and adds it", async () => {
         playlistRepoMocks.getById.mockResolvedValue(ownedPlaylist);
         showServiceMocks.ensureShowExists.mockResolvedValue({id: 42, title: "Breaking Bad"});
+        playlistRepoMocks.addShow.mockResolvedValue(true);
 
         await playlistService.addShowToPlaylist("user-1", 1, 42);
 
@@ -336,6 +337,7 @@ describe("PlaylistService.addShowToPlaylist", () => {
         playlistRepoMocks.getById.mockResolvedValue(friendPlaylist);
         playlistCollaboratorRepoMocks.checkIsAcceptedCollaborator.mockResolvedValue(true);
         showServiceMocks.ensureShowExists.mockResolvedValue({id: 42, title: "Breaking Bad"});
+        playlistRepoMocks.addShow.mockResolvedValue(true);
 
         await playlistService.addShowToPlaylist("user-1", 2, 42);
 
@@ -349,6 +351,16 @@ describe("PlaylistService.addShowToPlaylist", () => {
 
         await expect(playlistService.addShowToPlaylist("user-1", 2, 42)).rejects.toThrow(PLAYLIST_NOT_FOUND);
         expect(showServiceMocks.ensureShowExists).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a 400 when the show is already in the playlist", async () => {
+        playlistRepoMocks.getById.mockResolvedValue(ownedPlaylist);
+        showServiceMocks.ensureShowExists.mockResolvedValue({id: 42, title: "Breaking Bad"});
+        playlistRepoMocks.addShow.mockResolvedValue(false);
+
+        await expect(
+            playlistService.addShowToPlaylist("user-1", 1, 42)
+        ).rejects.toThrow("Cette série est déjà dans cette playlist");
     });
 });
 
