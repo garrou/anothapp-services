@@ -378,6 +378,16 @@ describe("UserSeasonRepository", () => {
             expect(result).toEqual({id: 0, label: "Juin", value: 250});
         });
 
+        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
+            db.query.mockResolvedValue({rowCount: 1, rows: [{num: "6", value: "250"}]});
+
+            await repo.getBestMonthByUserIdByYear("user-1", 2024);
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("shows.duration * seasons.episodes <= 43200"), ["user-1", 2024]
+            );
+        });
+
         it("returns null when nothing matched", async () => {
             db.query.mockResolvedValue({rowCount: 0, rows: []});
 

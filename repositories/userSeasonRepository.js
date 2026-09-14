@@ -482,6 +482,7 @@ export default class UserSeasonRepository {
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
             WHERE users_seasons.user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
+              AND shows.duration * seasons.episodes <= 43200
             GROUP BY num
             ORDER BY value DESC
             LIMIT 1
