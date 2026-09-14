@@ -408,6 +408,25 @@ describe("UserSeasonRepository", () => {
         });
     });
 
+    describe("getMaxRewatchCountByUserId", () => {
+        it("returns the highest per-season viewing count", async () => {
+            db.query.mockResolvedValue({rows: [{max_count: "4"}]});
+
+            const result = await repo.getMaxRewatchCountByUserId("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("FROM users_seasons"), ["user-1"]);
+            expect(result).toBe(4);
+        });
+
+        it("returns 0 when the user has no watched seasons at all", async () => {
+            db.query.mockResolvedValue({rows: [{max_count: null}]});
+
+            const result = await repo.getMaxRewatchCountByUserId("user-1");
+
+            expect(result).toBe(0);
+        });
+    });
+
     describe("getWatchedDatesByUserId", () => {
         it("returns the list of dates", async () => {
             db.query.mockResolvedValue({rows: [{date: "2024-01-01"}]});

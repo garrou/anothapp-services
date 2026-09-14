@@ -26,7 +26,7 @@ describe("AchievementListener", () => {
         await flush();
 
         expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith(
-            "user-1", ["streak", "watch_time", "shows_completed"]
+            "user-1", ["streak", "watch_time", "shows_completed", "rewatch"]
         );
     });
 
@@ -35,7 +35,7 @@ describe("AchievementListener", () => {
         await flush();
 
         expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith(
-            "user-1", ["streak", "watch_time", "shows_completed"]
+            "user-1", ["streak", "watch_time", "shows_completed", "rewatch"]
         );
     });
 
@@ -45,7 +45,7 @@ describe("AchievementListener", () => {
 
         expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith(
             "user-1",
-            ["streak", "watch_time", "shows_started", "shows_completed", "countries", "kinds", "platforms"]
+            ["streak", "watch_time", "shows_started", "shows_completed", "countries", "kinds", "platforms", "rewatch"]
         );
     });
 

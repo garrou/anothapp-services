@@ -522,6 +522,23 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
+     * @returns {Promise<number>} the highest number of times the user has watched any single season
+     */
+    getMaxRewatchCountByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT MAX(cnt) AS max_count
+            FROM (
+                SELECT COUNT(*) AS cnt
+                FROM users_seasons
+                WHERE user_id = $1
+                GROUP BY show_id, number
+            ) sub
+        `, [userId]);
+        return parseInt(res.rows[0]["max_count"] ?? 0);
+    }
+
+    /**
+     * @param {string} userId
      * @returns {Promise<string[]>} distinct days ('YYYY-MM-DD') the user logged a watched season
      */
     getWatchedDatesByUserId = async (userId) => {

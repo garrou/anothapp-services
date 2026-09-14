@@ -23,6 +23,7 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getWatchedDatesByUserId: vi.fn(),
     getTotalTimeByUserId: vi.fn(),
     getPlatformsCountByUserId: vi.fn(),
+    getMaxRewatchCountByUserId: vi.fn(),
 }));
 const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getWatchedDatesByUserId: vi.fn(),
@@ -96,6 +97,7 @@ const mockDefaults = () => {
     userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue([]);
     userSeasonRepoMocks.getTotalTimeByUserId.mockResolvedValue(0);
     userSeasonRepoMocks.getPlatformsCountByUserId.mockResolvedValue(0);
+    userSeasonRepoMocks.getMaxRewatchCountByUserId.mockResolvedValue(0);
     userShowRepoMocks.getTotalShowsByUserId.mockResolvedValue(0);
     userShowRepoMocks.getTotalCompletedShowsByUserId.mockResolvedValue(0);
     userShowRepoMocks.getCountriesCountByUserId.mockResolvedValue(0);
@@ -277,6 +279,7 @@ describe("AchievementService.evaluate", () => {
         expect(userSeasonFriendRepoMocks.getTopFriendsByUserId).not.toHaveBeenCalled();
         expect(userFavoriteActorRepoMocks.getCountByUserId).not.toHaveBeenCalled();
         expect(playlistCollaboratorRepoMocks.getCountByUserId).not.toHaveBeenCalled();
+        expect(userSeasonRepoMocks.getMaxRewatchCountByUserId).not.toHaveBeenCalled();
     });
 
     it("unlocks favorites_count, playlists_count and duo from their own repositories", async () => {
@@ -313,6 +316,18 @@ describe("AchievementService.evaluate", () => {
         expect(playlistCollaboratorRepoMocks.getCountByUserId).toHaveBeenCalledWith("user-1");
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "actors_favorited", 1, 3);
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "playlists_collaborated", 1, 3);
+    });
+
+    it("unlocks rewatch from the highest per-season viewing count", async () => {
+        achievementRepoMocks.getTiers.mockResolvedValue([
+            { code: "rewatch", league: 1, subTier: 3, threshold: 2 },
+        ]);
+        userSeasonRepoMocks.getMaxRewatchCountByUserId.mockResolvedValue(4);
+
+        await achievementService.evaluate("user-1", ["rewatch"]);
+
+        expect(userSeasonRepoMocks.getMaxRewatchCountByUserId).toHaveBeenCalledWith("user-1");
+        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "rewatch", 1, 3);
     });
 
     it("defaults duo to 0 when the user has no watched-with friends at all", async () => {

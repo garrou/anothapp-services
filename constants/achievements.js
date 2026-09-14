@@ -15,6 +15,7 @@ export const ACHIEVEMENTS = [
     { code: "duo", name: "Duo de choc" },
     { code: "actors_favorited", name: "Admirateur" },
     { code: "playlists_collaborated", name: "Collaborateur" },
+    { code: "rewatch", name: "Nostalgique" },
 ];
 
 export const TIERS_CACHE_TTL_SECONDS = 600;
