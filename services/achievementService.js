@@ -56,7 +56,7 @@ export default class AchievementService {
         const [
             user, dates, minutes, showsStarted, showsCompleted, countries,
             kinds, platforms, friendsWatchedWith, friends, notedShows,
-            favorites, playlistsCount, topDuo, actorsFavorited, playlistsCollaborated, maxRewatch, maxBinge
+            favorites, playlistsCount, topDuo, actorsFavorited, playlistsCollaborated, maxRewatch, bingeRows
         ] = await Promise.all([
             need("account_age") ? this._userRepository.getUserById(userId) : null,
             need("streak") ? repo.getWatchedDatesByUserId(userId) : null,
@@ -75,7 +75,7 @@ export default class AchievementService {
             need("actors_favorited") ? this._userFavoriteActorRepository.getCountByUserId(userId) : null,
             need("playlists_collaborated") ? this._playlistCollaboratorRepository.getCountByUserId(userId) : null,
             need("rewatch") ? this._userSeasonRepository.getMaxRewatchCountByUserId(userId) : null,
-            need("binge") ? repo.getMaxEpisodesInOneDayByUserId(userId) : null,
+            need("binge") ? repo.getRecordViewingTimeDay(userId, 1) : null,
         ]);
 
         const values = {};
@@ -95,7 +95,7 @@ export default class AchievementService {
         if (need("actors_favorited")) values.actors_favorited = actorsFavorited;
         if (need("playlists_collaborated")) values.playlists_collaborated = playlistsCollaborated;
         if (need("rewatch")) values.rewatch = maxRewatch;
-        if (need("binge")) values.binge = maxBinge;
+        if (need("binge")) values.binge = (bingeRows[0]?.value ?? 0) / 60;
         if (need("account_age")) {
             values.account_age = user ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / MS_PER_MONTH) : 0;
         }

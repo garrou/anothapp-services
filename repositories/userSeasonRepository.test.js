@@ -173,6 +173,16 @@ describe("UserSeasonRepository", () => {
 
             expect(result).toBe(60);
         });
+
+        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
+            db.query.mockResolvedValue({rows: [{time: "60"}]});
+
+            await repo.getTimeCurrentMonthByUserId("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("seasons.episodes * shows.duration <= 43200"), ["user-1"]
+            );
+        });
     });
 
     describe("getTimeCurrentMonthByUserIds", () => {
@@ -189,6 +199,16 @@ describe("UserSeasonRepository", () => {
             const result = await repo.getTimeCurrentMonthByUserIds(["user-1"]);
 
             expect(result.get("user-1")).toBe(90);
+        });
+
+        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getTimeCurrentMonthByUserIds(["user-1"]);
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("seasons.episodes * shows.duration <= 43200"), [["user-1"]]
+            );
         });
     });
 
@@ -261,6 +281,16 @@ describe("UserSeasonRepository", () => {
             const result = await repo.getRecordViewingTimeMonth("user-1");
 
             expect(result).toEqual([{id: 0, label: "01/2024", value: 40}, {id: 0, label: "02/2024", value: 20}]);
+        });
+
+        it("excludes seasons whose own runtime alone exceeds a calendar day", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            await repo.getRecordViewingTimeMonth("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("seasons.episodes * shows.duration <= 1440"), ["user-1", 10]
+            );
         });
     });
 
@@ -456,35 +486,6 @@ describe("UserSeasonRepository", () => {
             db.query.mockResolvedValue({rows: [{max_count: null}]});
 
             const result = await repo.getMaxRewatchCountByUserId("user-1");
-
-            expect(result).toBe(0);
-        });
-    });
-
-    describe("getMaxEpisodesInOneDayByUserId", () => {
-        it("returns the highest number of episodes implied by seasons logged the same day", async () => {
-            db.query.mockResolvedValue({rows: [{max_count: "18"}]});
-
-            const result = await repo.getMaxEpisodesInOneDayByUserId("user-1");
-
-            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("FROM users_seasons"), ["user-1"]);
-            expect(result).toBe(18);
-        });
-
-        it("excludes seasons whose own runtime alone exceeds a calendar day", async () => {
-            db.query.mockResolvedValue({rows: [{max_count: "18"}]});
-
-            await repo.getMaxEpisodesInOneDayByUserId("user-1");
-
-            expect(db.query).toHaveBeenCalledWith(
-                expect.stringContaining("seasons.episodes * shows.duration <= 1440"), ["user-1"]
-            );
-        });
-
-        it("returns 0 when the user has no watched seasons at all", async () => {
-            db.query.mockResolvedValue({rows: [{max_count: null}]});
-
-            const result = await repo.getMaxEpisodesInOneDayByUserId("user-1");
 
             expect(result).toBe(0);
         });

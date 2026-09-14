@@ -192,6 +192,7 @@ export default class UserSeasonRepository {
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
             WHERE users_seasons.user_id = $1 AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
+              AND seasons.episodes * shows.duration <= 43200
         `, [userId]);
         return parseInt(res.rows[0]["time"] ?? 0);
     }
@@ -210,6 +211,7 @@ export default class UserSeasonRepository {
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
             WHERE users_seasons.user_id = ANY($1::uuid[]) AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
+              AND seasons.episodes * shows.duration <= 43200
             GROUP BY users_seasons.user_id
         `, [userIds]);
         return new Map(res.rows.map((row) => [row["user_id"], parseInt(row["time"] ?? 0)]));
@@ -321,7 +323,7 @@ export default class UserSeasonRepository {
             FROM users_seasons
             JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
             JOIN shows ON seasons.show_id = shows.id
-            WHERE users_seasons.user_id = $1
+            WHERE users_seasons.user_id = $1 AND seasons.episodes * shows.duration <= 1440
             GROUP BY label
             ORDER BY value DESC
             LIMIT $2
@@ -553,25 +555,6 @@ export default class UserSeasonRepository {
                 FROM users_seasons
                 WHERE user_id = $1
                 GROUP BY show_id, number
-            ) sub
-        `, [userId]);
-        return parseInt(res.rows[0]["max_count"] ?? 0);
-    }
-
-    /**
-     * @param {string} userId
-     * @returns {Promise<number>}
-     */
-    getMaxEpisodesInOneDayByUserId = async (userId) => {
-        const res = await db.query(`
-            SELECT MAX(daily) AS max_count
-            FROM (
-                SELECT SUM(seasons.episodes) AS daily
-                FROM users_seasons
-                JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-                JOIN shows ON seasons.show_id = shows.id
-                WHERE users_seasons.user_id = $1 AND seasons.episodes * shows.duration <= 1440
-                GROUP BY DATE(users_seasons.added_at)
             ) sub
         `, [userId]);
         return parseInt(res.rows[0]["max_count"] ?? 0);
