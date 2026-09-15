@@ -563,6 +563,28 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
+     * @returns {Promise<{showTitle: string, seasonNumber: number, timesWatched: number}|null>}
+     */
+    getMostRewatchedByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT s.title AS show_title, us.number AS season_number, COUNT(*) AS times_watched
+            FROM users_seasons us
+            JOIN shows s ON s.id = us.show_id
+            WHERE us.user_id = $1
+            GROUP BY s.id, s.title, us.number
+            HAVING COUNT(*) > 1
+            ORDER BY times_watched DESC
+            LIMIT 1
+        `, [userId]);
+        return res.rowCount === 1 ? {
+            showTitle: res.rows[0]["show_title"],
+            seasonNumber: parseInt(res.rows[0]["season_number"]),
+            timesWatched: parseInt(res.rows[0]["times_watched"]),
+        } : null;
+    }
+
+    /**
+     * @param {string} userId
      * @returns {Promise<string[]>} distinct days ('YYYY-MM-DD') the user logged a watched season
      */
     getWatchedDatesByUserId = async (userId) => {

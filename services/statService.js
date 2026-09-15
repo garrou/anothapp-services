@@ -37,7 +37,8 @@ export default class StatService {
             monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes, bestMonthRows, bestDayRows,
             seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
             episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
-            seasonsPlatforms, seriesCountries, seriesNotes, watchedDates, topWatchedWithFriends
+            seasonsPlatforms, seriesCountries, seriesNotes, watchedDates, topWatchedWithFriends,
+            mostRewatched
         ] = await Promise.all([
             repo.getTimeCurrentMonthByUserId(userId),
             repo.getTotalTimeByUserId(userId),
@@ -60,6 +61,7 @@ export default class StatService {
             this._userShowRepository.getNotesByUserId(userId),
             repo.getWatchedDatesByUserId(userId),
             this._userSeasonFriendRepository.getTopFriendsByUserId(userId, 5),
+            this._userSeasonRepository.getMostRewatchedByUserId(userId),
         ]);
         const {current: currentStreak, longest: longestStreak} = computeStreak(watchedDates);
 
@@ -70,7 +72,7 @@ export default class StatService {
             seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
             episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
             seasonsPlatforms, seriesCountries, seriesNotes, currentStreak, longestStreak,
-            topWatchedWithFriends
+            topWatchedWithFriends, mostRewatched
         };
         if (episodeTrackingEnabled) {
             stats.episodesHeatmap = await this._userEpisodeStatRepository.getWatchedByDay(userId);

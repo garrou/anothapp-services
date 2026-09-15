@@ -24,6 +24,7 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getRankingViewingTimeByShows: vi.fn(),
     getPlatformsByUserId: vi.fn(),
     getWatchedDatesByUserId: vi.fn(),
+    getMostRewatchedByUserId: vi.fn(),
     getTotalTimeByUserIdByYear: vi.fn(),
     getTotalEpisodesByUserIdByYear: vi.fn(),
     getTopShowByUserIdByYear: vi.fn(),
@@ -105,6 +106,7 @@ describe("StatService.getStats", () => {
         userSeasonRepoMocks.getPlatformsByUserId.mockResolvedValue([]);
         userSeasonRepoMocks.getRecordViewingTimeMonth.mockResolvedValue([]);
         userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
+        userSeasonRepoMocks.getMostRewatchedByUserId.mockResolvedValue(null);
         userSeasonFriendRepoMocks.getTopFriendsByUserId.mockResolvedValue([]);
 
         for (const repo of [userSeasonRepoMocks, userEpisodeStatRepoMocks]) {
@@ -183,6 +185,18 @@ describe("StatService.getStats", () => {
         expect(stats.bestDay).toEqual({ label: "12/03/2024", value: 420 });
         expect(userSeasonRepoMocks.getRecordViewingTimeDay).toHaveBeenCalledWith("user-1", 1);
         expect(userEpisodeStatRepoMocks.getRecordViewingTimeDay).not.toHaveBeenCalled();
+    });
+
+    it("exposes the most rewatched show/season regardless of episode tracking", async () => {
+        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+        userSeasonRepoMocks.getMostRewatchedByUserId.mockResolvedValue(
+            { showTitle: "Friends", seasonNumber: 3, timesWatched: 5 }
+        );
+
+        const stats = await statService.getStats("user-1");
+
+        expect(stats.mostRewatched).toEqual({ showTitle: "Friends", seasonNumber: 3, timesWatched: 5 });
+        expect(userSeasonRepoMocks.getMostRewatchedByUserId).toHaveBeenCalledWith("user-1");
     });
 
     it("exposes the top watched-with friends ranking", async () => {

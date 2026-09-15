@@ -501,6 +501,28 @@ describe("UserSeasonRepository", () => {
         });
     });
 
+    describe("getMostRewatchedByUserId", () => {
+        it("returns the show/season watched the most times", async () => {
+            db.query.mockResolvedValue({
+                rowCount: 1,
+                rows: [{show_title: "Friends", season_number: "3", times_watched: "5"}],
+            });
+
+            const result = await repo.getMostRewatchedByUserId("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("HAVING COUNT(*) > 1"), ["user-1"]);
+            expect(result).toEqual({showTitle: "Friends", seasonNumber: 3, timesWatched: 5});
+        });
+
+        it("returns null when no season was ever watched more than once", async () => {
+            db.query.mockResolvedValue({rowCount: 0, rows: []});
+
+            const result = await repo.getMostRewatchedByUserId("user-1");
+
+            expect(result).toBeNull();
+        });
+    });
+
     describe("getWatchedDatesByUserId", () => {
         it("returns the list of dates", async () => {
             db.query.mockResolvedValue({rows: [{date: "2024-01-01"}]});
