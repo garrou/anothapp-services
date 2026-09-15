@@ -42,7 +42,7 @@ export default class UserRepository {
         const res = await db.query(`
             SELECT *
             FROM users
-            WHERE UPPER(username) = UPPER($1) OR UPPER(email) = UPPER($1) 
+            WHERE username = $1 OR UPPER(email) = UPPER($1)
             LIMIT 1
         `, [identifier]);
         return res.rowCount === 1 ? new User(res.rows[0]) : null;
