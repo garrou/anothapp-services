@@ -10,6 +10,11 @@ class ExportData {
         this.user = new UserProfile(user, true);
         this.stats = stats;
         this.shows = [];
+        this.friends = [];
+        this.playlists = [];
+        this.favoriteActors = [];
+        this.platforms = [];
+        this.achievements = [];
     }
 }
 
