@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import UserService from "./userService.js";
 import UserUpdate from "../models/userUpdate.js";
 import SecurityHelper from "../helpers/security.js";
+import { ERROR_BAD_PASSWORD } from "../constants/errors.js";
 
 const userRepoMocks = vi.hoisted(() => ({
     updateField: vi.fn(),
@@ -142,7 +143,7 @@ describe("UserService.requestDeletion", () => {
 
     it("rejects an incorrect password without marking the account for deletion", async () => {
         await expect(userService.requestDeletion("user-1", "wrongpassword")).rejects.toThrow(
-            "Mot de passe incorrect"
+            ERROR_BAD_PASSWORD
         );
         expect(userRepoMocks.requestDeletion).not.toHaveBeenCalled();
     });

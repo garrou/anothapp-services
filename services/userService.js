@@ -4,7 +4,7 @@ import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
-import {ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER} from "../constants/errors.js";
+import { ERROR_BAD_PASSWORD, ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER } from "../constants/errors.js";
 
 export default class UserService {
     constructor() {
@@ -85,8 +85,6 @@ export default class UserService {
     }
 
     /**
-     * Marks the account for deletion (does not erase anything yet - the anonymization job
-     * handles that once the grace period has elapsed) and logs the user out everywhere.
      * @param {string} userId
      * @param {string} password
      * @returns {Promise<void>}
@@ -100,7 +98,7 @@ export default class UserService {
         const same = await SecurityHelper.comparePassword(password, user.password);
 
         if (!same) {
-            throw new ServiceError(400, "Mot de passe incorrect");
+            throw new ServiceError(400, ERROR_BAD_PASSWORD);
         }
         const updated = await this._userRepository.requestDeletion(userId);
 
@@ -175,7 +173,7 @@ export default class UserService {
         const same = await SecurityHelper.comparePassword(currentPass, user.password);
 
         if (!same) {
-            throw new ServiceError(400, "Mot de passe incorrect");
+            throw new ServiceError(400, ERROR_BAD_PASSWORD);
         }
         const hash = await SecurityHelper.createHash(newPass);
         const updated = await this._userRepository.updateField(userId, "password", hash);

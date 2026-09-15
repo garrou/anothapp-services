@@ -2,6 +2,7 @@ import {describe, it, expect, vi, beforeAll, beforeEach} from "vitest";
 import request from "supertest";
 import SecurityHelper from "../helpers/security.js";
 import ServiceError from "../helpers/serviceError.js";
+import { ERROR_BAD_PASSWORD } from "../constants/errors.js";
 
 const userServiceMocks = vi.hoisted(() => ({
     getUsers: vi.fn(),
@@ -117,7 +118,7 @@ describe("DELETE /users/me", () => {
     });
 
     it("returns 400 when the password is incorrect (delegated to the service)", async () => {
-        userServiceMocks.requestDeletion.mockRejectedValue(new ServiceError(400, "Mot de passe incorrect"));
+        userServiceMocks.requestDeletion.mockRejectedValue(new ServiceError(400, ERROR_BAD_PASSWORD));
 
         const res = await request(app).delete("/users/me").set("Cookie", cookie).send({password: "wrongpassword"});
 
