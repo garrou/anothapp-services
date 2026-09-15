@@ -52,9 +52,13 @@ export default class PlaylistService {
     /**
      * @param {string} currentUserId
      * @param {string?} friendId
-     * @returns {Promise<import("../models/playlist.js").default[]>}
+     * @param {string?} status "pending" returns this user's unanswered collaboration invites instead
+     * @returns {Promise<import("../models/playlist.js").default[]|import("../models/playlistInvitation.js").default[]>}
      */
-    getPlaylists = async (currentUserId, friendId) => {
+    getPlaylists = async (currentUserId, friendId, status) => {
+        if (status === "pending") {
+            return this._playlistCollaboratorRepository.getPendingByUserId(currentUserId);
+        }
         if (friendId) {
             if (!await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendId)) {
                 throw new ServiceError(400, ERROR_NOT_FRIEND);

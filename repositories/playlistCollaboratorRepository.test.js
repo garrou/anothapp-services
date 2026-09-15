@@ -176,4 +176,30 @@ describe("PlaylistCollaboratorRepository", () => {
             expect(result).toBe(0);
         });
     });
+
+    describe("getPendingByUserId", () => {
+        it("returns every playlist invitation still awaiting this user's response", async () => {
+            db.query.mockResolvedValue({
+                rows: [{
+                    playlist_id: "p1", playlist_name: "Cosy", invited_at: "2026-01-01",
+                    owner_id: "user-2", owner_username: "bob", owner_picture: null,
+                }],
+            });
+
+            const result = await repo.getPendingByUserId("user-1");
+
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("accepted = FALSE"), ["user-1"]);
+            expect(result).toEqual([expect.objectContaining({
+                playlistId: "p1", playlistName: "Cosy", ownerUsername: "bob",
+            })]);
+        });
+
+        it("returns an empty array when there are no pending invitations", async () => {
+            db.query.mockResolvedValue({rows: []});
+
+            const result = await repo.getPendingByUserId("user-1");
+
+            expect(result).toEqual([]);
+        });
+    });
 });

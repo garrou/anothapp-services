@@ -22,6 +22,7 @@ const playlistCollaboratorRepoMocks = vi.hoisted(() => ({
     checkIsAcceptedCollaborator: vi.fn(),
     getByPlaylistId: vi.fn(),
     getOne: vi.fn(),
+    getPendingByUserId: vi.fn(),
 }));
 const friendRepoMocks = vi.hoisted(() => ({
     checkIfAlreadyFriend: vi.fn(),
@@ -81,6 +82,17 @@ describe("PlaylistService.getPlaylists", () => {
             {...friendPlaylist, role: "collaborator"},
             {...ownedPlaylist, role: "owner"},
         ]);
+    });
+
+    it("returns pending invitations instead when status is \"pending\", bypassing the owner/friend logic", async () => {
+        const invitation = {playlistId: "p1", playlistName: "Cosy", ownerUsername: "bob"};
+        playlistCollaboratorRepoMocks.getPendingByUserId.mockResolvedValue([invitation]);
+
+        const result = await playlistService.getPlaylists("user-1", undefined, "pending");
+
+        expect(playlistCollaboratorRepoMocks.getPendingByUserId).toHaveBeenCalledWith("user-1");
+        expect(result).toEqual([invitation]);
+        expect(playlistRepoMocks.getByUserId).not.toHaveBeenCalled();
     });
 
     it("rejects with a 400 when filtering by a friendId that isn't actually a friend", async () => {
