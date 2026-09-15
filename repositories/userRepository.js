@@ -186,7 +186,7 @@ export default class UserRepository {
         const res = await db.query(`
             UPDATE users
             SET username = 'deleted-' || substr(md5(random()::text || id::text), 1, 16),
-                email = 'deleted-' || id || '@anothapp.invalid',
+                email = 'deleted-' || id::text || '@anothapp.invalid',
                 picture = NULL
             WHERE deleted_at IS NOT NULL
               AND deleted_at <= NOW() - ($1 * INTERVAL '1 day')

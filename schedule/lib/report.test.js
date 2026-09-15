@@ -117,6 +117,11 @@ describe("formatReport", () => {
         expect(report).toBe("💾 Taille de la base : <b>128 MB</b>");
     });
 
+    it("formats deletedAccounts results", () => {
+        const report = formatReport({deletedAccounts: {anonymized: 3}});
+        expect(report).toBe("🗑️ <b>3</b> compte(s) anonymisé(s)");
+    });
+
     it("formats accountAgeAchievements results", () => {
         const report = formatReport({
             accountAgeAchievements: {
