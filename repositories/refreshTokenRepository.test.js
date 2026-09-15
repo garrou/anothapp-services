@@ -79,6 +79,24 @@ describe("RefreshTokenRepository.revoke", () => {
     });
 });
 
+describe("RefreshTokenRepository.revokeAllForUser", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new RefreshTokenRepository();
+    });
+
+    it("returns the number of tokens revoked", async () => {
+        db.query.mockResolvedValue({rowCount: 2});
+
+        const result = await repo.revokeAllForUser("user-1");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("WHERE user_id = $1"), ["user-1"]);
+        expect(result).toBe(2);
+    });
+});
+
 describe("RefreshTokenRepository.deleteRevokedOlderThanDays", () => {
     let repo;
 

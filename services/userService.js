@@ -1,5 +1,6 @@
 import UserProfile from "../models/userProfile.js";
 import UserRepository from "../repositories/userRepository.js";
+import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
 import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
@@ -9,6 +10,7 @@ import {ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER} from "../constants/errors.js"
 export default class UserService {
     constructor() {
         this._userRepository = new UserRepository();
+        this._refreshTokenRepository = new RefreshTokenRepository();
         this._episodeService = new EpisodeService();
     }
 
@@ -82,6 +84,32 @@ export default class UserService {
             return userUpdate.episodeTrackingEnabled ? "Suivi des épisodes activé" : "Suivi des épisodes désactivé";
         }
         throw new ServiceError(400, ERROR_INVALID_REQUEST);
+    }
+
+    /**
+     * Marks the account for deletion (does not erase anything yet - the anonymization job
+     * handles that once the grace period has elapsed) and logs the user out everywhere.
+     * @param {string} userId
+     * @param {string} password
+     * @returns {Promise<void>}
+     */
+    requestDeletion = async (userId, password) => {
+        const user = await this._userRepository.getUserById(userId);
+
+        if (!user) {
+            throw new ServiceError(404, ERROR_UNKNOWN_USER);
+        }
+        const same = await SecurityHelper.comparePassword(password, user.password);
+
+        if (!same) {
+            throw new ServiceError(400, "Mot de passe incorrect");
+        }
+        const updated = await this._userRepository.requestDeletion(userId);
+
+        if (!updated) {
+            throw new ServiceError(500, "Impossible de supprimer le compte");
+        }
+        await this._refreshTokenRepository.revokeAllForUser(userId);
     }
 
     /**

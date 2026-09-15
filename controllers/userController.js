@@ -1,5 +1,7 @@
 import UserService from "../services/userService.js";
 import UserUpdate from "../models/userUpdate.js";
+import { isProdMode } from "../helpers/utils.js";
+import SecurityHelper from "../helpers/security.js";
 
 export default class UserController {
     constructor() {
@@ -34,5 +36,24 @@ export default class UserController {
         } catch (e) {
             next(e);
         }
+    }
+
+    requestDeletion = async (req, res, next) => {
+        try {
+            const { password } = req.body;
+            await this._userService.requestDeletion(req.userId, password);
+
+            this.#clearAuthCookies(res);
+            res.sendStatus(204);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    #clearAuthCookies = (res) => {
+        const sameSite = isProdMode() ? "none" : "lax";
+
+        res.clearCookie("access_token", { httpOnly: true, secure: isProdMode(), sameSite, path: "/" });
+        res.clearCookie("refresh_token", { httpOnly: true, secure: isProdMode(), sameSite, path: SecurityHelper.refreshPath });
     }
 }

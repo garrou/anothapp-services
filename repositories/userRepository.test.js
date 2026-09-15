@@ -260,3 +260,75 @@ describe("UserRepository.markExported", () => {
         expect(result).toBe(false);
     });
 });
+
+describe("UserRepository.requestDeletion", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserRepository();
+    });
+
+    it("returns true when the account was marked for deletion", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        const result = await repo.requestDeletion("user-1");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("deleted_at = NOW()"), ["user-1"]);
+        expect(result).toBe(true);
+    });
+
+    it("returns false when no matching user was found", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        const result = await repo.requestDeletion("user-1");
+
+        expect(result).toBe(false);
+    });
+});
+
+describe("UserRepository.cancelDeletion", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserRepository();
+    });
+
+    it("returns true when the deletion was cancelled", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        const result = await repo.cancelDeletion("user-1");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("deleted_at = NULL"), ["user-1"]);
+        expect(result).toBe(true);
+    });
+});
+
+describe("UserRepository.anonymizeEligibleAccounts", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserRepository();
+    });
+
+    it("returns the number of accounts anonymized, passing the grace period in days", async () => {
+        db.query.mockResolvedValue({rowCount: 3});
+
+        const result = await repo.anonymizeEligibleAccounts(30);
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE users"), [30]);
+        expect(result).toBe(3);
+    });
+
+    it("skips accounts already anonymized", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        await repo.anonymizeEligibleAccounts(30);
+
+        expect(db.query).toHaveBeenCalledWith(
+            expect.stringContaining("email NOT LIKE 'deleted-%@anothapp.invalid'"), [30]
+        );
+    });
+});

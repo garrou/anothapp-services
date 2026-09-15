@@ -45,6 +45,19 @@ export default class RefreshTokenRepository {
     }
 
     /**
+     * @param {string} userId
+     * @returns {Promise<number>} number of tokens revoked
+     */
+    revokeAllForUser = async (userId) => {
+        const res = await db.query(`
+            UPDATE refresh_tokens
+            SET revoked_at = NOW()
+            WHERE user_id = $1 AND revoked_at IS NULL
+        `, [userId]);
+        return res.rowCount;
+    }
+
+    /**
      * @param {number} days
      * @returns {Promise<number>} number of tokens deleted
      */

@@ -16,7 +16,8 @@ export default class AuthService {
     /**
      * @param {string?} identifier
      * @param {string?} password
-     * @returns {Promise<Object>}
+     * @returns {Promise<Object>} a normal session, or {pendingDeletion: true, cancellationToken} when the
+     * account is scheduled for deletion - the caller must not open a session in that case
      */
     login = async (identifier, password) => {
         if (typeof identifier !== "string" || typeof password !== "string") {
@@ -29,10 +30,37 @@ export default class AuthService {
         if (!found || !same) {
             throw new ServiceError(400, ERROR_LOGIN_PASSWORD);
         }
-        const token = SecurityHelper.signJwt(found.id, process.env.JWT_SECRET);
+        if (found.deletedAt) {
+            const cancellationToken = SecurityHelper.signJwt(found.id, SecurityHelper.deletionCancellationSecret());
+            return { pendingDeletion: true, cancellationToken };
+        }
+        return this.#issueSession(found);
+    }
+
+    /**
+     * @param {string} cancellationToken
+     * @returns {Promise<Object>}
+     */
+    cancelDeletion = async (cancellationToken) => {
+        const { sub: userId } = SecurityHelper.verifyJwt(cancellationToken, SecurityHelper.deletionCancellationSecret());
+        const cancelled = await this._userRepository.cancelDeletion(userId);
+
+        if (!cancelled) {
+            throw new ServiceError(500, "Impossible d'annuler la suppression du compte");
+        }
+        const user = await this._userRepository.getUserById(userId);
+        return this.#issueSession(user);
+    }
+
+    /**
+     * @param {User} user
+     * @returns {Promise<Object>}
+     */
+    #issueSession = async (user) => {
+        const token = SecurityHelper.signJwt(user.id, process.env.JWT_SECRET);
         const refreshToken = SecurityHelper.generateRefreshToken();
         const created = await this._refreshTokenRepository.create(
-            found.id,
+            user.id,
             SecurityHelper.hashToken(refreshToken),
             new Date(Date.now() + SecurityHelper.refreshTokenExpires)
         );
@@ -40,8 +68,7 @@ export default class AuthService {
         if (!created) {
             throw new ServiceError(500, "Erreur durant l'authentification");
         }
-        const user = new UserProfile(found, true);
-        return { token, refreshToken, user };
+        return { token, refreshToken, user: new UserProfile(user, true) };
     }
 
     /**

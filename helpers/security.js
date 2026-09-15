@@ -30,6 +30,16 @@ export default class SecurityHelper {
     static signJwt = (userId, secret) => jwt.sign({ sub: userId }, secret, { expiresIn: "15m" });
 
     /**
+     * A secret distinct from JWT_SECRET, derived from it - a token signed with this one can never
+     * be mistaken for a real access token by the auth guard, which only ever checks JWT_SECRET.
+     * @returns {string}
+     */
+    static deletionCancellationSecret = () => crypto
+        .createHash("sha256")
+        .update(`${process.env.JWT_SECRET}:deletion-cancellation`)
+        .digest("hex");
+
+    /**
      * @returns {string}
      */
     static generateRefreshToken = () => crypto.randomBytes(64).toString("hex");

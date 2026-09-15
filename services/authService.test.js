@@ -6,6 +6,8 @@ import { DUPLICATE_ERROR_CODE } from "../constants/errors.js";
 const userRepoMocks = vi.hoisted(() => ({
     getUserByIdentifier: vi.fn(),
     createUser: vi.fn(),
+    cancelDeletion: vi.fn(),
+    getUserById: vi.fn(),
 }));
 const refreshRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -85,6 +87,62 @@ describe("AuthService.login", () => {
 
         await expect(authService.login("adrien@test.fr", "goodpassword")).rejects.toThrow(
             "Erreur durant l'authentification"
+        );
+    });
+
+    it("returns a pending-deletion response instead of a session when the account is scheduled for deletion", async () => {
+        const hash = await SecurityHelper.createHash("goodpassword");
+        userRepoMocks.getUserByIdentifier.mockResolvedValue({
+            id: "1",
+            email: "adrien@test.fr",
+            password: hash,
+            deletedAt: "2024-01-01T00:00:00.000Z",
+        });
+
+        const result = await authService.login("adrien@test.fr", "goodpassword");
+
+        expect(result.pendingDeletion).toBe(true);
+        expect(result.cancellationToken).toBeDefined();
+        expect(result.token).toBeUndefined();
+        expect(refreshRepoMocks.create).not.toHaveBeenCalled();
+    });
+});
+
+describe("AuthService.cancelDeletion", () => {
+    let authService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        authService = new AuthService();
+    });
+
+    it("rejects a token that wasn't signed with the deletion-cancellation secret", async () => {
+        const token = SecurityHelper.signJwt("1", "wrong-secret");
+
+        await expect(authService.cancelDeletion(token)).rejects.toThrow("Session invalide");
+        expect(userRepoMocks.cancelDeletion).not.toHaveBeenCalled();
+    });
+
+    it("cancels the deletion and opens a real session", async () => {
+        const token = SecurityHelper.signJwt("1", SecurityHelper.deletionCancellationSecret());
+        userRepoMocks.cancelDeletion.mockResolvedValue(true);
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", email: "adrien@test.fr", username: "adrien" });
+        refreshRepoMocks.create.mockResolvedValue(true);
+
+        const result = await authService.cancelDeletion(token);
+
+        expect(userRepoMocks.cancelDeletion).toHaveBeenCalledWith("1");
+        expect(result.token).toBeDefined();
+        expect(result.refreshToken).toBeDefined();
+        expect(result.pendingDeletion).toBeUndefined();
+    });
+
+    it("throws a 500 error when cancelling the deletion fails in the database", async () => {
+        const token = SecurityHelper.signJwt("1", SecurityHelper.deletionCancellationSecret());
+        userRepoMocks.cancelDeletion.mockResolvedValue(false);
+
+        await expect(authService.cancelDeletion(token)).rejects.toThrow(
+            "Impossible d'annuler la suppression du compte"
         );
     });
 });
