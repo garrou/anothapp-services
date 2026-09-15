@@ -76,15 +76,14 @@ describe("UserRepository.getUserByIdentifier", () => {
         expect(result.username).toBe("bob");
     });
 
-    it("matches the username case-sensitively, but the email case-insensitively", async () => {
+    it("matches both username and email case-insensitively", async () => {
         db.query.mockResolvedValue({rowCount: 1, rows: [validUserRow]});
 
         await repo.getUserByIdentifier("bob");
 
         const [query] = db.query.mock.calls[0];
-        expect(query).toContain("WHERE username = $1");
+        expect(query).toContain("UPPER(username) = UPPER($1)");
         expect(query).toContain("UPPER(email) = UPPER($1)");
-        expect(query).not.toContain("UPPER(username)");
     });
 
     it("returns null when not found", async () => {

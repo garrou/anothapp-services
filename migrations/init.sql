@@ -681,3 +681,5 @@ CREATE INDEX idx_playlists_user_id ON playlists(user_id);
 CREATE INDEX idx_notifications_recipient_unread ON notifications(recipient_user_id, read_at);
 CREATE INDEX idx_users_achievements_user_id ON users_achievements(user_id);
 CREATE INDEX idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);
+
+CREATE UNIQUE INDEX idx_users_username_ci ON users(UPPER(username));
