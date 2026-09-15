@@ -313,12 +313,14 @@ describe("UserRepository.anonymizeEligibleAccounts", () => {
         repo = new UserRepository();
     });
 
-    it("returns the number of accounts anonymized, passing the grace period in days", async () => {
+    it("returns the number of accounts anonymized, passing the grace period in days and an unusable password hash", async () => {
         db.query.mockResolvedValue({rowCount: 3});
 
         const result = await repo.anonymizeEligibleAccounts(30);
 
-        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE users"), [30]);
+        expect(db.query).toHaveBeenCalledWith(
+            expect.stringContaining("UPDATE users"), [30, expect.any(String)]
+        );
         expect(result).toBe(3);
     });
 
@@ -328,7 +330,18 @@ describe("UserRepository.anonymizeEligibleAccounts", () => {
         await repo.anonymizeEligibleAccounts(30);
 
         expect(db.query).toHaveBeenCalledWith(
-            expect.stringContaining("email NOT LIKE 'deleted-%@anothapp.invalid'"), [30]
+            expect.stringContaining("email NOT LIKE 'deleted-%@anothapp.invalid'"), [30, expect.any(String)]
         );
+    });
+
+    it("generates a password hash unrelated to any real password, different on every run", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        await repo.anonymizeEligibleAccounts(30);
+        const [, firstHash] = db.query.mock.calls[0][1];
+        await repo.anonymizeEligibleAccounts(30);
+        const [, secondHash] = db.query.mock.calls[1][1];
+
+        expect(firstHash).not.toBe(secondHash);
     });
 });

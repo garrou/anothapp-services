@@ -86,4 +86,9 @@ export default class SecurityHelper {
      * @returns {Promise<boolean>}
      */
     static comparePassword = (password, hash) => bcrypt.compare(password, hash);
+
+    /**
+     * @returns {Promise<string>}
+     */
+    static createDummyPassword = async () => await this.createHash(crypto.randomBytes(32).toString("hex"));
 }

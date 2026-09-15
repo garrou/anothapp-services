@@ -1,6 +1,7 @@
 import db from "../config/db.js";
 import User from "../models/user.js";
 import ServiceError from "../helpers/serviceError.js";
+import SecurityHelper from "../helpers/security.js";
 
 export default class UserRepository {
 
@@ -177,21 +178,21 @@ export default class UserRepository {
     }
 
     /**
-     * Anonymizes every account whose deletion grace period has elapsed - a one-way operation,
-     * skipped for accounts already anonymized (their email already carries the deleted-user marker).
      * @param {number} graceDays
      * @returns {Promise<number>} number of accounts anonymized
      */
     anonymizeEligibleAccounts = async (graceDays) => {
+        const unusablePasswordHash = await SecurityHelper.createDummyPassword();
         const res = await db.query(`
             UPDATE users
             SET username = 'deleted-' || substr(md5(random()::text || id::text), 1, 16),
                 email = 'deleted-' || id::text || '@anothapp.invalid',
-                picture = NULL
+                picture = NULL,
+                password = $2
             WHERE deleted_at IS NOT NULL
               AND deleted_at <= NOW() - ($1 * INTERVAL '1 day')
               AND email NOT LIKE 'deleted-%@anothapp.invalid'
-        `, [graceDays]);
+        `, [graceDays, unusablePasswordHash]);
         return res.rowCount;
     }
 }
