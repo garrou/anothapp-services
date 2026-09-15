@@ -130,9 +130,6 @@ export default class PlaylistCollaboratorRepository {
     }
 
     /**
-     * Every collaboration invite still awaiting this user's response, regardless of which
-     * playlist it's on - so it stays discoverable even if the notification that announced it
-     * gets lost among others, without the owner having to delete and resend the invite.
      * @param {string} userId
      * @returns {Promise<PlaylistInvitation[]>}
      */

@@ -209,9 +209,6 @@ export default class AchievementService {
     }
 
     /**
-     * The full threshold ladder for every achievement, grouped by code and sorted ascending -
-     * static catalog data, identical for every user, used by the frontend to show the tiers
-     * a badge still has to climb.
      * @returns {Promise<Object<string, {league: number, subTier: number, threshold: number}[]>>}
      */
     getTierCatalog = async () => {
