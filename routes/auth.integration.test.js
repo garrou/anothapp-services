@@ -5,6 +5,8 @@ import SecurityHelper from "../helpers/security.js";
 const userRepoMocks = vi.hoisted(() => ({
     getUserByIdentifier: vi.fn(),
     createUser: vi.fn(),
+    cancelDeletion: vi.fn(),
+    getUserById: vi.fn(),
 }));
 const refreshRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -52,6 +54,54 @@ describe("POST /auth/login", () => {
         expect(res.headers["set-cookie"].some((c) => c.startsWith("access_token="))).toBe(true);
         // the raw token must not leak into the body for a web client (cookies only)
         expect(res.body.token).toBeUndefined();
+    });
+});
+
+describe("POST /auth/login - pending deletion", () => {
+    it("returns 200 with pendingDeletion, without setting auth cookies", async () => {
+        const hash = await SecurityHelper.createHash("goodpassword");
+
+        userRepoMocks.getUserByIdentifier.mockResolvedValue({
+            id: "1",
+            email: "adrien@test.fr",
+            username: "adrien",
+            password: hash,
+            deletedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+
+        const res = await request(app)
+            .post("/auth/login")
+            .send({ identifier: "adrien@test.fr", password: "goodpassword" });
+
+        expect(res.status).toBe(200);
+        expect(res.body.pendingDeletion).toBe(true);
+        expect(res.body.cancellationToken).toBeDefined();
+        expect(res.headers["set-cookie"]).toBeUndefined();
+    });
+});
+
+describe("POST /auth/cancel-deletion", () => {
+    it("returns 401 for an invalid cancellation token", async () => {
+        const res = await request(app)
+            .post("/auth/cancel-deletion")
+            .send({ cancellationToken: "not-a-valid-token" });
+
+        expect(res.status).toBe(401);
+        expect(userRepoMocks.cancelDeletion).not.toHaveBeenCalled();
+    });
+
+    it("cancels the deletion and sets auth cookies with a valid token", async () => {
+        const cancellationToken = SecurityHelper.signJwt("1", SecurityHelper.deletionCancellationSecret());
+        userRepoMocks.cancelDeletion.mockResolvedValue(true);
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", email: "adrien@test.fr", username: "adrien" });
+        refreshRepoMocks.create.mockResolvedValue(true);
+
+        const res = await request(app)
+            .post("/auth/cancel-deletion")
+            .send({ cancellationToken });
+
+        expect(res.status).toBe(200);
+        expect(res.headers["set-cookie"].some((c) => c.startsWith("access_token="))).toBe(true);
     });
 });
 

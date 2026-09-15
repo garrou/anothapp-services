@@ -1,3 +1,4 @@
+import { ERROR_BAD_PASSWORD } from "../constants/errors.js";
 import {
     EMAIL_PATTERN,
     IMAGE_PATTERN,
@@ -45,7 +46,7 @@ export default class Validator {
      */
     static isValidPassword = (password, confirm) => {
         if (typeof password !== "string") {
-            return new ValidatorStatus(false, "Mot de passe incorrect");
+            return new ValidatorStatus(false, ERROR_BAD_PASSWORD);
         }
         if (password !== confirm) {
             return new ValidatorStatus(false, "Mots de passe différents");
@@ -64,7 +65,7 @@ export default class Validator {
      */
     static isValidChangePassword = (oldPass, newPass, confPass) => {
         if (typeof oldPass !== "string") {
-            return new ValidatorStatus(false, "Mot de passe incorrect");
+            return new ValidatorStatus(false, ERROR_BAD_PASSWORD);
         }
         if (oldPass === newPass) {
             return new ValidatorStatus(false, "Le nouveau mot de passe doit être différent de l'ancien ");

@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import UserService from "./userService.js";
 import UserUpdate from "../models/userUpdate.js";
+import SecurityHelper from "../helpers/security.js";
+import { ERROR_BAD_PASSWORD } from "../constants/errors.js";
 
 const userRepoMocks = vi.hoisted(() => ({
     updateField: vi.fn(),
     getUserById: vi.fn(),
     getUsersByUsername: vi.fn(),
+    requestDeletion: vi.fn(),
 }));
 const episodeServiceMocks = vi.hoisted(() => ({
     backfillForUser: vi.fn(),
@@ -118,5 +121,46 @@ describe("UserService.getUsers", () => {
         const [profile] = await userService.getUsers("user-1", "user2");
 
         expect(profile.email).toBeUndefined();
+    });
+});
+
+describe("UserService.requestDeletion", () => {
+    let userService;
+
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        userService = new UserService();
+        userRepoMocks.getUserById.mockResolvedValue({
+            id: "user-1", password: await SecurityHelper.createHash("goodpassword"),
+        });
+    });
+
+    it("throws a 404 when the user doesn't exist", async () => {
+        userRepoMocks.getUserById.mockResolvedValue(null);
+
+        await expect(userService.requestDeletion("user-1", "goodpassword")).rejects.toThrow("Utilisateur inconnu");
+    });
+
+    it("rejects an incorrect password without marking the account for deletion", async () => {
+        await expect(userService.requestDeletion("user-1", "wrongpassword")).rejects.toThrow(
+            ERROR_BAD_PASSWORD
+        );
+        expect(userRepoMocks.requestDeletion).not.toHaveBeenCalled();
+    });
+
+    it("marks the account for deletion", async () => {
+        userRepoMocks.requestDeletion.mockResolvedValue(true);
+
+        await userService.requestDeletion("user-1", "goodpassword");
+
+        expect(userRepoMocks.requestDeletion).toHaveBeenCalledWith("user-1");
+    });
+
+    it("throws a 500 when the database update fails", async () => {
+        userRepoMocks.requestDeletion.mockResolvedValue(false);
+
+        await expect(userService.requestDeletion("user-1", "goodpassword")).rejects.toThrow(
+            "Impossible de supprimer le compte"
+        );
     });
 });

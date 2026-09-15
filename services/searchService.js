@@ -176,7 +176,7 @@ export default class SearchService {
         const results = await Promise.all(promises);
 
         for (const result of results) {
-            const {shows} = result.data;
+            const {shows} = result;
             allShows.push(...shows.map(show => new ApiShow(show)));
         }
         return allShows;
@@ -203,7 +203,7 @@ export default class SearchService {
         const results = await Promise.all(promises);
 
         for (const result of results) {
-            const {shows} = result.data;
+            const {shows} = result;
             allShows.push(...shows.map((s) => new ApiShowPreview(s)));
         }
         return allShows;

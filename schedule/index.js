@@ -11,8 +11,10 @@ import cleanupNotifications from "./tasks/cleanupNotifications.js";
 import reportUserCount from "./tasks/reportUserCount.js";
 import reportDatabaseSize from "./tasks/reportDatabaseSize.js";
 import evaluateAccountAgeAchievements from "./tasks/evaluateAccountAgeAchievements.js";
+import anonymizeDeletedAccounts from "./tasks/anonymizeDeletedAccounts.js";
 import sendTelegramMessage from "./lib/notify.js";
 import {formatReport} from "./lib/report.js";
+import { isProdMode } from "../helpers/utils.js";
 
 const TASKS = {
     platforms: updatePlatforms,
@@ -27,6 +29,7 @@ const TASKS = {
     users: reportUserCount,
     database: reportDatabaseSize,
     accountAgeAchievements: evaluateAccountAgeAchievements,
+    deletedAccounts: anonymizeDeletedAccounts,
 };
 
 /**
@@ -50,7 +53,9 @@ const run = async () => {
         results[name] = await TASKS[name]();
         console.log(results[name]);
     }
-    await sendTelegramMessage(formatReport(results));
+    if (isProdMode()) {
+        await sendTelegramMessage(formatReport(results));
+    }
     return Object.values(results).some((r) => (r.failed?.length ?? 0) > 0);
 };
 

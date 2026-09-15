@@ -3,6 +3,7 @@ export const WHITELIST = [
     "/auth/register",
     "/auth/refresh",
     "/auth/logout",
+    "/auth/cancel-deletion",
     "/search/images",
 ];
 

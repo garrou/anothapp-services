@@ -101,6 +101,9 @@ const formatReport = (results) => {
     if (results.database) {
         lines.push(`💾 Taille de la base : <b>${results.database.size}</b>`);
     }
+    if (results.deletedAccounts) {
+        lines.push(`🗑️ <b>${results.deletedAccounts.anonymized}</b> compte(s) anonymisé(s)`);
+    }
     if (errorGroups.length > 0) {
         const totalErrors = errorGroups.reduce((acc, group) => acc + group.items.length, 0);
         lines.push("", `🚨 <b>Détail des erreurs (${totalErrors})</b>`, "<blockquote>");

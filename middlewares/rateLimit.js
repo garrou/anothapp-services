@@ -57,6 +57,17 @@ export const logoutLimiter = rateLimit({
     },
 });
 
+export const cancelDeletionLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    ipv6Subnet: 56,
+    handler: (req, res) => {
+        res.status(429).json({ message: "Too many attempts, please try again later." });
+    },
+});
+
 export const exportLimiter = rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
     limit: 5,
@@ -65,5 +76,16 @@ export const exportLimiter = rateLimit({
     keyGenerator: (req) => req.userId ?? ipKeyGenerator(req.ip),
     handler: (req, res) => {
         res.status(429).json({ message: "Too many export requests, please try again later." });
+    },
+});
+
+export const requestDeletionLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    keyGenerator: (req) => req.userId ?? ipKeyGenerator(req.ip),
+    handler: (req, res) => {
+        res.status(429).json({ message: "Too many attempts, please try again later." });
     },
 });

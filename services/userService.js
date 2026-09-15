@@ -4,7 +4,7 @@ import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
-import {ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER} from "../constants/errors.js";
+import { ERROR_BAD_PASSWORD, ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER } from "../constants/errors.js";
 
 export default class UserService {
     constructor() {
@@ -85,6 +85,29 @@ export default class UserService {
     }
 
     /**
+     * @param {string} userId
+     * @param {string} password
+     * @returns {Promise<void>}
+     */
+    requestDeletion = async (userId, password) => {
+        const user = await this._userRepository.getUserById(userId);
+
+        if (!user) {
+            throw new ServiceError(404, ERROR_UNKNOWN_USER);
+        }
+        const same = await SecurityHelper.comparePassword(password, user.password);
+
+        if (!same) {
+            throw new ServiceError(400, ERROR_BAD_PASSWORD);
+        }
+        const updated = await this._userRepository.requestDeletion(userId);
+
+        if (!updated) {
+            throw new ServiceError(500, "Impossible de supprimer le compte");
+        }
+    }
+
+    /**
      * @param {string} currentUserId
      * @param {boolean} enabled
      * @returns {Promise<void>}
@@ -150,7 +173,7 @@ export default class UserService {
         const same = await SecurityHelper.comparePassword(currentPass, user.password);
 
         if (!same) {
-            throw new ServiceError(400, "Mot de passe incorrect");
+            throw new ServiceError(400, ERROR_BAD_PASSWORD);
         }
         const hash = await SecurityHelper.createHash(newPass);
         const updated = await this._userRepository.updateField(userId, "password", hash);

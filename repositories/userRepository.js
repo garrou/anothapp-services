@@ -1,6 +1,7 @@
 import db from "../config/db.js";
 import User from "../models/user.js";
 import ServiceError from "../helpers/serviceError.js";
+import SecurityHelper from "../helpers/security.js";
 
 export default class UserRepository {
 
@@ -148,5 +149,61 @@ export default class UserRepository {
             WHERE id = $1 AND (last_export IS NULL OR last_export <= NOW() - INTERVAL '1 day')
         `, [id]);
         return res.rowCount === 1;
+    }
+
+    /**
+     * @param {string} id
+     * @returns {Promise<boolean>}
+     */
+    requestDeletion = async (id) => {
+        return db.transaction(async (client) => {
+            const res = await client.query(`
+                UPDATE users
+                SET deleted_at = NOW()
+                WHERE id = $1
+            `, [id]);
+
+            if (res.rowCount !== 1) {
+                return false;
+            }
+            await client.query(`
+                UPDATE refresh_tokens
+                SET revoked_at = NOW()
+                WHERE user_id = $1 AND revoked_at IS NULL
+            `, [id]);
+            return true;
+        });
+    }
+
+    /**
+     * @param {string} id
+     * @returns {Promise<boolean>}
+     */
+    cancelDeletion = async (id) => {
+        const res = await db.query(`
+            UPDATE users
+            SET deleted_at = NULL
+            WHERE id = $1 AND email NOT LIKE 'deleted-%@anothapp.invalid'
+        `, [id]);
+        return res.rowCount === 1;
+    }
+
+    /**
+     * @param {number} graceDays
+     * @returns {Promise<number>} number of accounts anonymized
+     */
+    anonymizeEligibleAccounts = async (graceDays) => {
+        const unusablePasswordHash = await SecurityHelper.createDummyPassword();
+        const res = await db.query(`
+            UPDATE users
+            SET username = 'deleted-' || substr(md5(random()::text || id::text), 1, 16),
+                email = 'deleted-' || id::text || '@anothapp.invalid',
+                picture = NULL,
+                password = $2
+            WHERE deleted_at IS NOT NULL
+              AND deleted_at <= NOW() - ($1 * INTERVAL '1 day')
+              AND email NOT LIKE 'deleted-%@anothapp.invalid'
+        `, [graceDays, unusablePasswordHash]);
+        return res.rowCount;
     }
 }

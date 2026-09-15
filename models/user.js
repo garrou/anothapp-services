@@ -11,6 +11,7 @@ export default class User {
         this.lastExport = user["last_export"];
         this.episodeTrackingEnabled = user["episode_tracking_enabled"];
         this.createdAt = user["created_at"];
+        this.deletedAt = user["deleted_at"];
     }
 
     /**

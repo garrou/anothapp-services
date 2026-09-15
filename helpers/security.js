@@ -30,6 +30,16 @@ export default class SecurityHelper {
     static signJwt = (userId, secret) => jwt.sign({ sub: userId }, secret, { expiresIn: "15m" });
 
     /**
+     * A secret distinct from JWT_SECRET, derived from it - a token signed with this one can never
+     * be mistaken for a real access token by the auth guard, which only ever checks JWT_SECRET.
+     * @returns {string}
+     */
+    static deletionCancellationSecret = () => crypto
+        .createHash("sha256")
+        .update(`${process.env.JWT_SECRET}:deletion-cancellation`)
+        .digest("hex");
+
+    /**
      * @returns {string}
      */
     static generateRefreshToken = () => crypto.randomBytes(64).toString("hex");
@@ -52,7 +62,7 @@ export default class SecurityHelper {
      */
     static verifyJwt = (token, secret) => {
         try {
-            return jwt.verify(token, secret);
+            return jwt.verify(token, secret, { algorithms: ["HS256"] });
         } catch (e) {
             if (e instanceof jwt.TokenExpiredError) {
                 throw new ServiceError(401, ERROR_TOKEN_EXPIRED);
@@ -76,4 +86,9 @@ export default class SecurityHelper {
      * @returns {Promise<boolean>}
      */
     static comparePassword = (password, hash) => bcrypt.compare(password, hash);
+
+    /**
+     * @returns {Promise<string>}
+     */
+    static createDummyPassword = async () => await this.createHash(crypto.randomBytes(32).toString("hex"));
 }

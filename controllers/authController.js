@@ -14,7 +14,27 @@ export default class AuthController {
     login = async (req, res, next) => {
         try {
             const { identifier, password } = req.body;
-            const { token, refreshToken, user } = await this._authService.login(identifier, password);
+            const result = await this._authService.login(identifier, password);
+
+            if (result.pendingDeletion) {
+                return res.status(200).json({ pendingDeletion: true, cancellationToken: result.cancellationToken });
+            }
+            const { token, refreshToken, user } = result;
+            this.#setAuthCookies(res, token, refreshToken);
+
+            if (this.#isNativeClient(req)) {
+                return res.status(200).json({ token, refreshToken, ...user });
+            }
+            res.status(200).json(user);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    cancelDeletion = async (req, res, next) => {
+        try {
+            const { cancellationToken } = req.body;
+            const { token, refreshToken, user } = await this._authService.cancelDeletion(cancellationToken);
 
             this.#setAuthCookies(res, token, refreshToken);
 

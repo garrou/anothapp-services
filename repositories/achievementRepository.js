@@ -1,11 +1,11 @@
-import Cache from "node-cache";
+import createCache from "../helpers/cacheClient.js";
 import db from "../config/db.js";
 import AchievementTier from "../models/achievementTier.js";
 import { TIERS_CACHE_TTL_SECONDS } from "../constants/achievements.js";
 
 const TIERS_CACHE_KEY = "tiers";
 
-const tiersCache = new Cache({stdTTL: TIERS_CACHE_TTL_SECONDS, checkperiod: 60});
+const tiersCache = createCache({stdTTL: TIERS_CACHE_TTL_SECONDS, checkperiod: 60});
 
 export default class AchievementRepository {
 

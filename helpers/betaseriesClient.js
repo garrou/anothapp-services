@@ -1,4 +1,4 @@
-import axios from "axios";
+import HttpClient from "./httpClient.js";
 
 const BASE_URL = "https://api.betaseries.com";
 
@@ -17,7 +17,6 @@ export default class BetaseriesClient {
      * @returns {Promise<any>} the parsed response body
      */
     get = async (path) => {
-        const {data} = await axios.get(`${this.baseUrl}${path}`, {headers: this.headers});
-        return data;
+        return HttpClient.get(`${this.baseUrl}${path}`, this.headers);
     }
 }

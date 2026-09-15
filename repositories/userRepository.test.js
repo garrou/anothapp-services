@@ -260,3 +260,103 @@ describe("UserRepository.markExported", () => {
         expect(result).toBe(false);
     });
 });
+
+describe("UserRepository.requestDeletion", () => {
+    let repo;
+    let client;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserRepository();
+        client = {query: vi.fn()};
+        db.transaction.mockImplementation(async (callback) => callback(client));
+    });
+
+    it("marks the account for deletion and revokes its refresh tokens in the same transaction", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 1}); // UPDATE users
+        client.query.mockResolvedValueOnce({rowCount: 2}); // UPDATE refresh_tokens
+
+        const result = await repo.requestDeletion("user-1");
+
+        expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining("deleted_at = NOW()"), ["user-1"]);
+        expect(client.query).toHaveBeenNthCalledWith(2, expect.stringContaining("UPDATE refresh_tokens"), ["user-1"]);
+        expect(result).toBe(true);
+    });
+
+    it("returns false and does not touch refresh tokens when no matching user was found", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 0}); // UPDATE users
+
+        const result = await repo.requestDeletion("user-1");
+
+        expect(client.query).toHaveBeenCalledTimes(1);
+        expect(result).toBe(false);
+    });
+});
+
+describe("UserRepository.cancelDeletion", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserRepository();
+    });
+
+    it("returns true when the deletion was cancelled", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        const result = await repo.cancelDeletion("user-1");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("deleted_at = NULL"), ["user-1"]);
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("email NOT LIKE 'deleted-%@anothapp.invalid'"), ["user-1"]);
+        expect(result).toBe(true);
+    });
+
+    it("returns false when the account was already anonymized by the grace-period job", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        const result = await repo.cancelDeletion("user-1");
+
+        expect(result).toBe(false);
+    });
+});
+
+describe("UserRepository.anonymizeEligibleAccounts", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserRepository();
+    });
+
+    it("returns the number of accounts anonymized, passing the grace period in days and an unusable password hash", async () => {
+        db.query.mockResolvedValue({rowCount: 3});
+
+        const result = await repo.anonymizeEligibleAccounts(30);
+
+        expect(db.query).toHaveBeenCalledWith(
+            expect.stringContaining("UPDATE users"), [30, expect.any(String)]
+        );
+        expect(result).toBe(3);
+    });
+
+    it("skips accounts already anonymized", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        await repo.anonymizeEligibleAccounts(30);
+
+        expect(db.query).toHaveBeenCalledWith(
+            expect.stringContaining("email NOT LIKE 'deleted-%@anothapp.invalid'"), [30, expect.any(String)]
+        );
+    });
+
+    it("generates a password hash unrelated to any real password, different on every run", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        await repo.anonymizeEligibleAccounts(30);
+        const [, firstHash] = db.query.mock.calls[0][1];
+        await repo.anonymizeEligibleAccounts(30);
+        const [, secondHash] = db.query.mock.calls[1][1];
+
+        expect(firstHash).not.toBe(secondHash);
+    });
+});

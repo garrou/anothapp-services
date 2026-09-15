@@ -1,4 +1,4 @@
-import axios from "axios";
+import HttpClient from "../../helpers/httpClient.js";
 
 const TELEGRAM_MAX_LENGTH = 4096;
 
@@ -27,7 +27,7 @@ const sendTelegramMessage = async (message) => {
         return;
     }
     try {
-        await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+        await HttpClient.post(`https://api.telegram.org/bot${token}/sendMessage`, {
             chat_id: chatId,
             text: shorten(message),
             parse_mode: "HTML",

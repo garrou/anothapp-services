@@ -63,6 +63,25 @@ describe("SecurityHelper.signJwt / verifyJwt", () => {
     });
 });
 
+describe("SecurityHelper.deletionCancellationSecret", () => {
+    it("is deterministic for the same JWT_SECRET", () => {
+        expect(SecurityHelper.deletionCancellationSecret()).toBe(SecurityHelper.deletionCancellationSecret());
+    });
+
+    it("is different from the real JWT_SECRET, so a token signed with it never verifies against JWT_SECRET", () => {
+        const cancellationToken = SecurityHelper.signJwt("user-1", SecurityHelper.deletionCancellationSecret());
+        expect(() => SecurityHelper.verifyJwt(cancellationToken, SECRET)).toThrow("Session invalide");
+    });
+
+    it("changes when JWT_SECRET changes", () => {
+        const first = SecurityHelper.deletionCancellationSecret();
+        process.env.JWT_SECRET = "different-secret";
+        const second = SecurityHelper.deletionCancellationSecret();
+        process.env.JWT_SECRET = SECRET;
+        expect(first).not.toBe(second);
+    });
+});
+
 describe("SecurityHelper.extractBearerToken", () => {
     it("returns undefined when the header is missing", () => {
         expect(SecurityHelper.extractBearerToken(undefined)).toBeUndefined();
