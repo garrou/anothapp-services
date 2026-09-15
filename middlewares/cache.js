@@ -1,6 +1,6 @@
-import Cache from "node-cache";
+import createCache from "../helpers/cacheClient.js";
 
-const cache = new Cache({checkperiod: 20});
+const cache = createCache({checkperiod: 20});
 
 /**
  * @param {number} duration

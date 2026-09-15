@@ -1,4 +1,4 @@
-import axios from "axios";
+import HttpClient from "./httpClient.js";
 import {DEFAULT_LIMIT, MAX_LIMIT} from "../constants/fetch.js";
 
 export class Param {
@@ -68,7 +68,7 @@ export class FetchHelper {
      * @param {Object} headers
      * @param {string} queryPage
      * @param {number} limit
-     * @returns {Promise[]}
+     * @returns {Promise[]} each resolving to a parsed response body
      */
     static fetchPromises = (url, headers, queryPage, limit) => {
         const promises = [];
@@ -76,7 +76,7 @@ export class FetchHelper {
 
         for (let page = 0; page < limits.length; page += 1) {
             const currUrl = this.#buildUrl(this.#buildUrl(url, queryPage, page), "limit", limits[page]);
-            promises.push(axios.get(currUrl, { headers }));
+            promises.push(HttpClient.get(currUrl, headers));
         }
         return promises;
     }
