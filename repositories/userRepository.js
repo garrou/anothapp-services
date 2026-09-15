@@ -183,7 +183,7 @@ export default class UserRepository {
         const res = await db.query(`
             UPDATE users
             SET deleted_at = NULL
-            WHERE id = $1
+            WHERE id = $1 AND email NOT LIKE 'deleted-%@anothapp.invalid'
         `, [id]);
         return res.rowCount === 1;
     }

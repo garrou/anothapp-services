@@ -307,7 +307,16 @@ describe("UserRepository.cancelDeletion", () => {
         const result = await repo.cancelDeletion("user-1");
 
         expect(db.query).toHaveBeenCalledWith(expect.stringContaining("deleted_at = NULL"), ["user-1"]);
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("email NOT LIKE 'deleted-%@anothapp.invalid'"), ["user-1"]);
         expect(result).toBe(true);
+    });
+
+    it("returns false when the account was already anonymized by the grace-period job", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        const result = await repo.cancelDeletion("user-1");
+
+        expect(result).toBe(false);
     });
 });
 

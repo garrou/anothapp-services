@@ -62,7 +62,7 @@ export default class SecurityHelper {
      */
     static verifyJwt = (token, secret) => {
         try {
-            return jwt.verify(token, secret);
+            return jwt.verify(token, secret, { algorithms: ["HS256"] });
         } catch (e) {
             if (e instanceof jwt.TokenExpiredError) {
                 throw new ServiceError(401, ERROR_TOKEN_EXPIRED);

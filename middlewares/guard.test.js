@@ -32,7 +32,7 @@ describe("checkJwt", () => {
         expect(res.status).not.toHaveBeenCalled();
     });
 
-    it("matches whitelisted prefixes, not just exact paths", () => {
+    it("matches a whitelisted route even with a query string", () => {
         const req = buildReq({ url: "/search/images?q=test" });
         const res = buildRes();
         const next = vi.fn();
@@ -40,6 +40,17 @@ describe("checkJwt", () => {
         checkJwt(req, res, next);
 
         expect(next).toHaveBeenCalledWith();
+    });
+
+    it("does not treat a route merely sharing a whitelisted prefix as whitelisted", () => {
+        const req = buildReq({ url: "/auth/loginX" });
+        const res = buildRes();
+        const next = vi.fn();
+
+        checkJwt(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(next).not.toHaveBeenCalled();
     });
 
     it("returns 401 when no token is present on a protected route", () => {

@@ -7,7 +7,9 @@ export const checkJwt = (req, res, next) => {
     if (isDevMode()) {
         console.log(Date.now(), req.originalUrl, req.query, Object.keys(req.cookies));
     }
-    if (WHITELIST.some((url) => req.originalUrl.startsWith(url))) {
+    const path = req.originalUrl.split("?")[0];
+
+    if (WHITELIST.includes(path)) {
         return next();
     }
     const accessToken = req.cookies["access_token"] ?? SecurityHelper.extractBearerToken(req.headers["authorization"]);
