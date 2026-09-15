@@ -669,17 +669,17 @@ CREATE TABLE users_achievements (
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE INDEX idx_users_shows_user_id ON users_shows(user_id);
 CREATE INDEX idx_users_seasons_user_id ON users_seasons(user_id);
 CREATE INDEX idx_episodes_show_season ON episodes(show_id, season_number);
 CREATE INDEX idx_users_episodes_user_id ON users_episodes(user_id);
 CREATE INDEX idx_users_episodes_users_seasons_id ON users_episodes(users_seasons_id);
 CREATE INDEX idx_friends_sec_user_id ON friends(sec_user_id);
 CREATE INDEX idx_users_seasons_friends_friend ON users_seasons_friends(friend_user_id);
-CREATE INDEX idx_users_list_user_id ON users_list(user_id);
 CREATE INDEX idx_playlists_user_id ON playlists(user_id);
 CREATE INDEX idx_notifications_recipient_unread ON notifications(recipient_user_id, read_at);
-CREATE INDEX idx_users_achievements_user_id ON users_achievements(user_id);
 CREATE INDEX idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);
-
 CREATE UNIQUE INDEX idx_users_username_ci ON users(UPPER(username));
+CREATE UNIQUE INDEX idx_users_email_ci ON users(UPPER(email));
+CREATE INDEX idx_seasons_show_id ON seasons(show_id);
+CREATE INDEX idx_playlists_collaborators_user_id ON playlists_collaborators(user_id);
+CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
