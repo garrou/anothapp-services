@@ -1,6 +1,5 @@
 import UserProfile from "../models/userProfile.js";
 import UserRepository from "../repositories/userRepository.js";
-import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
 import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
@@ -10,7 +9,6 @@ import {ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER} from "../constants/errors.js"
 export default class UserService {
     constructor() {
         this._userRepository = new UserRepository();
-        this._refreshTokenRepository = new RefreshTokenRepository();
         this._episodeService = new EpisodeService();
     }
 
@@ -109,7 +107,6 @@ export default class UserService {
         if (!updated) {
             throw new ServiceError(500, "Impossible de supprimer le compte");
         }
-        await this._refreshTokenRepository.revokeAllForUser(userId);
     }
 
     /**

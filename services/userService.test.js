@@ -9,18 +9,12 @@ const userRepoMocks = vi.hoisted(() => ({
     getUsersByUsername: vi.fn(),
     requestDeletion: vi.fn(),
 }));
-const refreshTokenRepoMocks = vi.hoisted(() => ({
-    revokeAllForUser: vi.fn(),
-}));
 const episodeServiceMocks = vi.hoisted(() => ({
     backfillForUser: vi.fn(),
 }));
 
 vi.mock("../repositories/userRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
-}));
-vi.mock("../repositories/refreshTokenRepository.js", () => ({
-    default: vi.fn().mockImplementation(function () { return refreshTokenRepoMocks; }),
 }));
 vi.mock("./episodeService.js", () => ({
     default: vi.fn().mockImplementation(function () { return episodeServiceMocks; }),
@@ -153,21 +147,19 @@ describe("UserService.requestDeletion", () => {
         expect(userRepoMocks.requestDeletion).not.toHaveBeenCalled();
     });
 
-    it("marks the account for deletion and revokes every refresh token", async () => {
+    it("marks the account for deletion", async () => {
         userRepoMocks.requestDeletion.mockResolvedValue(true);
 
         await userService.requestDeletion("user-1", "goodpassword");
 
         expect(userRepoMocks.requestDeletion).toHaveBeenCalledWith("user-1");
-        expect(refreshTokenRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1");
     });
 
-    it("throws a 500 when the database update fails, without revoking tokens", async () => {
+    it("throws a 500 when the database update fails", async () => {
         userRepoMocks.requestDeletion.mockResolvedValue(false);
 
         await expect(userService.requestDeletion("user-1", "goodpassword")).rejects.toThrow(
             "Impossible de supprimer le compte"
         );
-        expect(refreshTokenRepoMocks.revokeAllForUser).not.toHaveBeenCalled();
     });
 });

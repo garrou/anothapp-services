@@ -156,12 +156,23 @@ export default class UserRepository {
      * @returns {Promise<boolean>}
      */
     requestDeletion = async (id) => {
-        const res = await db.query(`
-            UPDATE users
-            SET deleted_at = NOW()
-            WHERE id = $1
-        `, [id]);
-        return res.rowCount === 1;
+        return db.transaction(async (client) => {
+            const res = await client.query(`
+                UPDATE users
+                SET deleted_at = NOW()
+                WHERE id = $1
+            `, [id]);
+
+            if (res.rowCount !== 1) {
+                return false;
+            }
+            await client.query(`
+                UPDATE refresh_tokens
+                SET revoked_at = NOW()
+                WHERE user_id = $1 AND revoked_at IS NULL
+            `, [id]);
+            return true;
+        });
     }
 
     /**

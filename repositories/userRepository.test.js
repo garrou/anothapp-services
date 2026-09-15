@@ -263,26 +263,32 @@ describe("UserRepository.markExported", () => {
 
 describe("UserRepository.requestDeletion", () => {
     let repo;
+    let client;
 
     beforeEach(() => {
         vi.clearAllMocks();
         repo = new UserRepository();
+        client = {query: vi.fn()};
+        db.transaction.mockImplementation(async (callback) => callback(client));
     });
 
-    it("returns true when the account was marked for deletion", async () => {
-        db.query.mockResolvedValue({rowCount: 1});
+    it("marks the account for deletion and revokes its refresh tokens in the same transaction", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 1}); // UPDATE users
+        client.query.mockResolvedValueOnce({rowCount: 2}); // UPDATE refresh_tokens
 
         const result = await repo.requestDeletion("user-1");
 
-        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("deleted_at = NOW()"), ["user-1"]);
+        expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining("deleted_at = NOW()"), ["user-1"]);
+        expect(client.query).toHaveBeenNthCalledWith(2, expect.stringContaining("UPDATE refresh_tokens"), ["user-1"]);
         expect(result).toBe(true);
     });
 
-    it("returns false when no matching user was found", async () => {
-        db.query.mockResolvedValue({rowCount: 0});
+    it("returns false and does not touch refresh tokens when no matching user was found", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 0}); // UPDATE users
 
         const result = await repo.requestDeletion("user-1");
 
+        expect(client.query).toHaveBeenCalledTimes(1);
         expect(result).toBe(false);
     });
 });

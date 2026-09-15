@@ -1,8 +1,8 @@
 import {describe, it, expect, vi, beforeEach} from "vitest";
-import axios from "axios";
+import HttpClient from "../helpers/httpClient.js";
 import SearchService from "./searchService.js";
 
-vi.mock("axios", () => ({default: {get: vi.fn()}}));
+vi.mock("../helpers/httpClient.js", () => ({default: {get: vi.fn()}}));
 
 const platformRepoMocks = vi.hoisted(() => ({getPlatforms: vi.fn()}));
 const noteRepoMocks = vi.hoisted(() => ({getNotes: vi.fn()}));
@@ -28,29 +28,29 @@ describe("SearchService", () => {
 
     describe("getShows", () => {
         it("fetches from the discover endpoint when no filter is given", async () => {
-            axios.get.mockResolvedValue({data: {shows: [{id: 1, title: "Show", images: {}, length: "0", seasons: "1", episodes: "1", genres: {}}]}});
+            HttpClient.get.mockResolvedValue({shows: [{id: 1, title: "Show", images: {}, length: "0", seasons: "1", episodes: "1", genres: {}}]});
 
             const result = await service.getShows(undefined, undefined, undefined, undefined, undefined);
 
-            expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("/shows/discover"), expect.any(Object));
+            expect(HttpClient.get).toHaveBeenCalledWith(expect.stringContaining("/shows/discover"), expect.any(Object));
             expect(result).toHaveLength(1);
             expect(result[0].id).toBe(1);
         });
 
         it("fetches from the search endpoint when a filter is given", async () => {
-            axios.get.mockResolvedValue({data: {shows: [{id: 1, title: "Show", poster: "poster.png", svods: []}]}});
+            HttpClient.get.mockResolvedValue({shows: [{id: 1, title: "Show", poster: "poster.png", svods: []}]});
 
             const result = await service.getShows("Show", undefined, undefined, undefined, undefined);
 
-            expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("/search/shows"), expect.any(Object));
-            expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("text=Show"), expect.any(Object));
+            expect(HttpClient.get).toHaveBeenCalledWith(expect.stringContaining("/search/shows"), expect.any(Object));
+            expect(HttpClient.get).toHaveBeenCalledWith(expect.stringContaining("text=Show"), expect.any(Object));
             expect(result[0].title).toBe("Show");
         });
     });
 
     describe("getImages", () => {
         it("returns the poster of each discovered show", async () => {
-            axios.get.mockResolvedValue({data: {shows: [{id: 1, title: "Show", images: {poster: "poster.png"}}]}});
+            HttpClient.get.mockResolvedValue({shows: [{id: 1, title: "Show", images: {poster: "poster.png"}}]});
 
             const result = await service.getImages(undefined);
 
@@ -61,15 +61,15 @@ describe("SearchService", () => {
     describe("getByShowId", () => {
         it("throws when id is missing", async () => {
             await expect(service.getByShowId(undefined)).rejects.toMatchObject({status: 400});
-            expect(axios.get).not.toHaveBeenCalled();
+            expect(HttpClient.get).not.toHaveBeenCalled();
         });
 
         it("returns an ApiShow for a valid id", async () => {
-            axios.get.mockResolvedValue({data: {show: {id: 10, title: "Show", images: {}, length: "42", seasons: "1", episodes: "8", genres: {}}}});
+            HttpClient.get.mockResolvedValue({show: {id: 10, title: "Show", images: {}, length: "42", seasons: "1", episodes: "8", genres: {}}});
 
             const result = await service.getByShowId(10);
 
-            expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("/shows/display?id=10"), expect.any(Object));
+            expect(HttpClient.get).toHaveBeenCalledWith(expect.stringContaining("/shows/display?id=10"), expect.any(Object));
             expect(result.id).toBe(10);
             expect(result.duration).toBe(42);
         });
@@ -81,7 +81,7 @@ describe("SearchService", () => {
         });
 
         it("maps seasons with cumulated episode intervals", async () => {
-            axios.get.mockResolvedValue({data: {seasons: [{number: 1, episodes: 8, image: "img1.png"}, {number: 2, episodes: 10, image: "img2.png"}]}});
+            HttpClient.get.mockResolvedValue({seasons: [{number: 1, episodes: 8, image: "img1.png"}, {number: 2, episodes: 10, image: "img2.png"}]});
 
             const result = await service.getSeasonsByShowId(10);
 
@@ -99,7 +99,7 @@ describe("SearchService", () => {
         });
 
         it("returns the matching season", async () => {
-            axios.get.mockResolvedValue({data: {seasons: [{number: 1, episodes: 8, image: "img.png"}, {number: 2, episodes: 10, image: "img2.png"}]}});
+            HttpClient.get.mockResolvedValue({seasons: [{number: 1, episodes: 8, image: "img.png"}, {number: 2, episodes: 10, image: "img2.png"}]});
 
             const result = await service.getSeasonByShowIdByNumber(10, 2);
 
@@ -107,7 +107,7 @@ describe("SearchService", () => {
         });
 
         it("returns null when no season matches", async () => {
-            axios.get.mockResolvedValue({data: {seasons: [{number: 1, episodes: 8, image: "img.png"}]}});
+            HttpClient.get.mockResolvedValue({seasons: [{number: 1, episodes: 8, image: "img.png"}]});
 
             const result = await service.getSeasonByShowIdByNumber(10, 99);
 
@@ -121,11 +121,11 @@ describe("SearchService", () => {
         });
 
         it("maps episodes to ApiEpisode instances", async () => {
-            axios.get.mockResolvedValue({data: {episodes: [{id: 1, title: "Pilot", code: "S01E01", episode: 1}]}});
+            HttpClient.get.mockResolvedValue({episodes: [{id: 1, title: "Pilot", code: "S01E01", episode: 1}]});
 
             const result = await service.getEpisodesByShowIdBySeason(10, 1);
 
-            expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("/shows/episodes?id=10&season=1"), expect.any(Object));
+            expect(HttpClient.get).toHaveBeenCalledWith(expect.stringContaining("/shows/episodes?id=10&season=1"), expect.any(Object));
             expect(result[0].id).toBe(1);
             expect(result[0].number).toBe(1);
         });
@@ -137,7 +137,7 @@ describe("SearchService", () => {
         });
 
         it("maps characters to ApiCharacter instances", async () => {
-            axios.get.mockResolvedValue({data: {characters: [{person_id: "5", name: "Character", actor: "Actor", picture: "pic.png"}]}});
+            HttpClient.get.mockResolvedValue({characters: [{person_id: "5", name: "Character", actor: "Actor", picture: "pic.png"}]});
 
             const result = await service.getCharactersByShowId(10);
 
@@ -151,7 +151,7 @@ describe("SearchService", () => {
         });
 
         it("maps similars to ApiEntity instances", async () => {
-            axios.get.mockResolvedValue({data: {similars: [{show_id: 20, show_title: "Other Show"}]}});
+            HttpClient.get.mockResolvedValue({similars: [{show_id: 20, show_title: "Other Show"}]});
 
             const result = await service.getSimilarsByShowId(10);
 
@@ -175,7 +175,7 @@ describe("SearchService", () => {
         });
 
         it("returns the picture urls", async () => {
-            axios.get.mockResolvedValue({data: {pictures: [{url: "a.png"}, {url: "b.png"}]}});
+            HttpClient.get.mockResolvedValue({pictures: [{url: "a.png"}, {url: "b.png"}]});
 
             const result = await service.getImagesByShowId(10);
 
@@ -189,7 +189,7 @@ describe("SearchService", () => {
         });
 
         it("returns an ApiPerson", async () => {
-            axios.get.mockResolvedValue({data: {person: {id: "5", name: "Actor", shows: []}}});
+            HttpClient.get.mockResolvedValue({person: {id: "5", name: "Actor", shows: []}});
 
             const result = await service.getPersonById(5);
 

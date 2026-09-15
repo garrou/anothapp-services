@@ -1,6 +1,6 @@
 import UserRepository from "../../repositories/userRepository.js";
 
-const DELETION_GRACE_DAYS = parseInt(process.env.DELETION_GRACE_DAYS ?? "30", 10);
+const DELETION_GRACE_DAYS = 15;
 
 /**
  * @returns {Promise<{anonymized: number}>}
