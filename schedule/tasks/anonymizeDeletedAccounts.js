@@ -1,6 +1,5 @@
 import UserRepository from "../../repositories/userRepository.js";
-
-const DELETION_GRACE_DAYS = 15;
+import { DELETION_GRACE_DAYS } from "../../constants/deletion.js";
 
 /**
  * @returns {Promise<{anonymized: number}>}

@@ -66,7 +66,7 @@ describe("POST /auth/login - pending deletion", () => {
             email: "adrien@test.fr",
             username: "adrien",
             password: hash,
-            deletedAt: "2024-01-01T00:00:00.000Z",
+            deletedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
         });
 
         const res = await request(app)

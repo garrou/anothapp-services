@@ -5,7 +5,10 @@ import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
 import { DUPLICATE_ERROR_CODE, ERROR_LOGIN_PASSWORD, ERROR_REFRESH_TOKEN_INVALID } from "../constants/errors.js";
 import { DUMMY_HASH } from "../constants/security.js";
+import { DELETION_GRACE_DAYS } from "../constants/deletion.js";
 import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
+
+const GRACE_PERIOD_MS = DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000;
 
 export default class AuthService {
     constructor() {
@@ -31,6 +34,11 @@ export default class AuthService {
             throw new ServiceError(400, ERROR_LOGIN_PASSWORD);
         }
         if (found.deletedAt) {
+            const gracePeriodElapsed = Date.now() - new Date(found.deletedAt).getTime() >= GRACE_PERIOD_MS;
+
+            if (gracePeriodElapsed) {
+                throw new ServiceError(400, ERROR_LOGIN_PASSWORD);
+            }
             const cancellationToken = SecurityHelper.signJwt(found.id, SecurityHelper.deletionCancellationSecret());
             return { pendingDeletion: true, cancellationToken };
         }

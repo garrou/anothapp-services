@@ -90,13 +90,13 @@ describe("AuthService.login", () => {
         );
     });
 
-    it("returns a pending-deletion response instead of a session when the account is scheduled for deletion", async () => {
+    it("returns a pending-deletion response instead of a session when the account is scheduled for deletion, still within its grace period", async () => {
         const hash = await SecurityHelper.createHash("goodpassword");
         userRepoMocks.getUserByIdentifier.mockResolvedValue({
             id: "1",
             email: "adrien@test.fr",
             password: hash,
-            deletedAt: "2024-01-01T00:00:00.000Z",
+            deletedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
         });
 
         const result = await authService.login("adrien@test.fr", "goodpassword");
@@ -105,6 +105,20 @@ describe("AuthService.login", () => {
         expect(result.cancellationToken).toBeDefined();
         expect(result.token).toBeUndefined();
         expect(refreshRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects the login without issuing a cancellation token once the grace period has elapsed", async () => {
+        const hash = await SecurityHelper.createHash("goodpassword");
+        userRepoMocks.getUserByIdentifier.mockResolvedValue({
+            id: "1",
+            email: "adrien@test.fr",
+            password: hash,
+            deletedAt: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+
+        await expect(authService.login("adrien@test.fr", "goodpassword")).rejects.toThrow(
+            "Identifiant ou mot de passe incorrect"
+        );
     });
 });
 
