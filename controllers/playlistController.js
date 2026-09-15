@@ -7,8 +7,8 @@ export default class PlaylistController {
 
     getPlaylists = async (req, res, next) => {
         try {
-            const {friendId} = req.query;
-            const playlists = await this._playlistService.getPlaylists(req.userId, friendId);
+            const {friendId, status} = req.query;
+            const playlists = await this._playlistService.getPlaylists(req.userId, friendId, status);
             res.status(200).json(playlists);
         } catch (e) {
             next(e);

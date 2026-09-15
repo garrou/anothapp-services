@@ -46,8 +46,18 @@ describe("GET /playlists", () => {
 
         const res = await request(app).get("/playlists").set("Cookie", cookie);
 
-        expect(playlistServiceMocks.getPlaylists).toHaveBeenCalledWith("user-1", undefined);
+        expect(playlistServiceMocks.getPlaylists).toHaveBeenCalledWith("user-1", undefined, undefined);
         expect(res.status).toBe(200);
+    });
+
+    it("returns pending collaboration invitations when status=pending", async () => {
+        playlistServiceMocks.getPlaylists.mockResolvedValue([{playlistId: "p1", playlistName: "Cosy"}]);
+
+        const res = await request(app).get("/playlists?status=pending").set("Cookie", cookie);
+
+        expect(playlistServiceMocks.getPlaylists).toHaveBeenCalledWith("user-1", undefined, "pending");
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual([{playlistId: "p1", playlistName: "Cosy"}]);
     });
 });
 

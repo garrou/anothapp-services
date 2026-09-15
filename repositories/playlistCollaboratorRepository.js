@@ -1,5 +1,6 @@
 import db from "../config/db.js";
 import PlaylistCollaborator from "../models/playlistCollaborator.js";
+import PlaylistInvitation from "../models/playlistInvitation.js";
 
 export default class PlaylistCollaboratorRepository {
 
@@ -126,5 +127,25 @@ export default class PlaylistCollaboratorRepository {
             AND ((p.user_id = $1 AND pc.user_id = $2) OR (p.user_id = $2 AND pc.user_id = $1))
         `, [userId1, userId2]);
         return res.rowCount;
+    }
+
+    /**
+     * Every collaboration invite still awaiting this user's response, regardless of which
+     * playlist it's on - so it stays discoverable even if the notification that announced it
+     * gets lost among others, without the owner having to delete and resend the invite.
+     * @param {string} userId
+     * @returns {Promise<PlaylistInvitation[]>}
+     */
+    getPendingByUserId = async (userId) => {
+        const res = await db.query(`
+            SELECT p.id AS playlist_id, p.name AS playlist_name, pc.invited_at,
+                   u.id AS owner_id, u.username AS owner_username, u.picture AS owner_picture
+            FROM playlists_collaborators pc
+            JOIN playlists p ON p.id = pc.playlist_id
+            JOIN users u ON u.id = p.user_id
+            WHERE pc.user_id = $1 AND pc.accepted = FALSE
+            ORDER BY pc.invited_at DESC
+        `, [userId]);
+        return res.rows.map((row) => new PlaylistInvitation(row));
     }
 }
