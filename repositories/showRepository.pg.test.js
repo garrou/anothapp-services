@@ -58,6 +58,38 @@ describe("ShowRepository (real Postgres)", () => {
             expect(showKinds.rows[0]["kind_id"]).toBe("Existing_CustomKind");
         });
 
+        it("collapses two Betaseries keys sharing the same known display name into a single kind, without duplicate-key errors", async () => {
+            // Betaseries is inconsistent about genre keys: the same displayed name ("Science-fiction")
+            // can come back under different ids within one show's genre list (e.g. "Science_Fiction"
+            // and "Science Fiction"). Both resolve, via existingIdByName, to the SAME already-known
+            // kind id - without collapsing resolvedIds to a Set before inserting, that would produce
+            // two identical (show_id, kind_id) rows in the same INSERT, violating shows_kinds'
+            // PRIMARY KEY(show_id, kind_id).
+            await db.query(`INSERT INTO kinds (id, name) VALUES ('Existing_SciFi', 'Science-fiction custom')`);
+
+            const result = await repo.createShow(1, "Show", null, [
+                { id: "Science_Fiction", name: "Science-fiction custom" },
+                { id: "Science Fiction", name: "Science-fiction custom" },
+            ], 30, 1, "FR", null, null, null, null, null);
+
+            expect(result).toBe(true);
+            const showKinds = await db.query(`SELECT kind_id FROM shows_kinds WHERE show_id = 1`);
+            expect(showKinds.rows).toEqual([{ kind_id: "Existing_SciFi" }]);
+            const kinds = await db.query(`SELECT id FROM kinds WHERE name = 'Science-fiction custom'`);
+            expect(kinds.rowCount).toBe(1);
+        });
+
+        it("does not crash when the raw kinds array contains a literal duplicate id", async () => {
+            const result = await repo.createShow(1, "Show", null, [
+                { id: "Drama", name: "Drame" },
+                { id: "Drama", name: "Drame" },
+            ], 30, 1, "FR", null, null, null, null, null);
+
+            expect(result).toBe(true);
+            const showKinds = await db.query(`SELECT kind_id FROM shows_kinds WHERE show_id = 1`);
+            expect(showKinds.rows).toEqual([{ kind_id: "Drama" }]);
+        });
+
         it("getShow returns null for an unknown show", async () => {
             const result = await repo.getShow(9999);
 
