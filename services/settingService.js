@@ -150,11 +150,12 @@ export default class SettingService {
         if (playlist.role && playlist.role !== "owner") {
             return;
         }
-        const created = await this._playlistRepository.create(userId, playlist.name, !!playlist.visible);
+        const existing = await this._playlistRepository.getByUserIdAndName(userId, playlist.name);
+        const target = existing ?? await this._playlistRepository.create(userId, playlist.name, !!playlist.visible);
 
         for (const show of playlist.shows ?? []) {
             await this._showService.ensureShowExistsFromImport(show);
-            await this._playlistRepository.addShow(created.id, show.id);
+            await this._playlistRepository.addShow(target.id, show.id);
         }
     }
 

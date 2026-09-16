@@ -191,6 +191,20 @@ describe("ShowService (real Postgres)", () => {
                 id: 778, title: "No API", kinds: [], country: "FR", seasonsNumber: 1, episodeDuration: 30,
             })).resolves.toBeUndefined();
         });
+
+        it("does not fail when two imports race to create the same not-yet-known show", async () => {
+            const showData = {
+                id: 779, title: "Raced Show", kinds: [], country: "FR", seasonsNumber: 1, episodeDuration: 30,
+            };
+
+            await expect(Promise.all([
+                service.ensureShowExistsFromImport(showData),
+                service.ensureShowExistsFromImport(showData),
+            ])).resolves.toBeDefined();
+
+            const show = await db.query(`SELECT title FROM shows WHERE id = 779`);
+            expect(show.rows[0].title).toBe("Raced Show");
+        });
     });
 
     describe("ensureSeasonExistsFromImport", () => {

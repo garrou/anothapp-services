@@ -24,6 +24,32 @@ describe("PlaylistRepository.create", () => {
     });
 });
 
+describe("PlaylistRepository.getByUserIdAndName", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new PlaylistRepository();
+    });
+
+    it("returns the matching Playlist when found", async () => {
+        db.query.mockResolvedValue({rowCount: 1, rows: [{id: "p1", user_id: "user-1", name: "My playlist", created_at: "2024-01-01", visible: true}]});
+
+        const result = await repo.getByUserIdAndName("user-1", "My playlist");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("FROM playlists"), ["user-1", "My playlist"]);
+        expect(result.id).toBe("p1");
+    });
+
+    it("returns null when no playlist matches that name", async () => {
+        db.query.mockResolvedValue({rowCount: 0, rows: []});
+
+        const result = await repo.getByUserIdAndName("user-1", "Unknown");
+
+        expect(result).toBeNull();
+    });
+});
+
 describe("PlaylistRepository.getById", () => {
     let repo;
 

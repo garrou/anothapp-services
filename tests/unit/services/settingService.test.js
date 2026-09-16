@@ -17,7 +17,9 @@ const userFavoriteActorRepoMocks = vi.hoisted(() => ({
     getFavoritesByUserId: vi.fn(), checkFavoriteExists: vi.fn(), create: vi.fn(),
 }));
 const userPlatformRepoMocks = vi.hoisted(() => ({getUserPlatforms: vi.fn(), addUserPlatforms: vi.fn()}));
-const playlistRepoMocks = vi.hoisted(() => ({getShowsByPlaylistId: vi.fn(), create: vi.fn(), addShow: vi.fn()}));
+const playlistRepoMocks = vi.hoisted(() => ({
+    getShowsByPlaylistId: vi.fn(), create: vi.fn(), addShow: vi.fn(), getByUserIdAndName: vi.fn(),
+}));
 const actorRepoMocks = vi.hoisted(() => ({getActorById: vi.fn(), createActor: vi.fn()}));
 const showServiceMocks = vi.hoisted(() => ({
     ensureShowExistsFromImport: vi.fn(), ensureSeasonExistsFromImport: vi.fn(),
@@ -186,6 +188,7 @@ describe("SettingService.importData", () => {
         userEpisodeRepoMocks.createIfMissing.mockResolvedValue(true);
         playlistRepoMocks.create.mockResolvedValue({id: 1});
         playlistRepoMocks.addShow.mockResolvedValue(true);
+        playlistRepoMocks.getByUserIdAndName.mockResolvedValue(null);
         actorRepoMocks.getActorById.mockResolvedValue(null);
         userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
         userPlatformRepoMocks.addUserPlatforms.mockResolvedValue(true);
@@ -266,6 +269,18 @@ describe("SettingService.importData", () => {
         expect(playlistRepoMocks.create).toHaveBeenCalledWith("user-1", "My playlist", false);
         expect(showServiceMocks.ensureShowExistsFromImport).toHaveBeenCalledWith({id: 10, title: "Show"});
         expect(playlistRepoMocks.addShow).toHaveBeenCalledWith(1, 10);
+        expect(summary.playlists).toEqual({imported: 1, errors: 0});
+    });
+
+    it("reuses an already-imported playlist by name instead of creating a duplicate", async () => {
+        playlistRepoMocks.getByUserIdAndName.mockResolvedValue({id: 7});
+
+        const summary = await service.importData("user-1", {
+            shows: [], playlists: [{name: "My playlist", role: "owner", shows: [{id: 10, title: "Show"}]}],
+        });
+
+        expect(playlistRepoMocks.create).not.toHaveBeenCalled();
+        expect(playlistRepoMocks.addShow).toHaveBeenCalledWith(7, 10);
         expect(summary.playlists).toEqual({imported: 1, errors: 0});
     });
 

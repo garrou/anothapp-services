@@ -653,6 +653,24 @@ describe("ShowService.ensureShowExistsFromImport", () => {
 
         await expect(showService.ensureShowExistsFromImport(importedShow)).rejects.toMatchObject({status: 500});
     });
+
+    it("does not fail when a concurrent import already created the same show", async () => {
+        showRepoMocks.getShow.mockResolvedValue(null);
+        kindRepoMocks.getKinds.mockResolvedValue([]);
+        const duplicateKeyError = new Error("duplicate key value");
+        duplicateKeyError.code = "23505";
+        showRepoMocks.createShow.mockRejectedValue(duplicateKeyError);
+
+        await expect(showService.ensureShowExistsFromImport(importedShow)).resolves.toBeUndefined();
+    });
+
+    it("still rethrows an unrelated database error", async () => {
+        showRepoMocks.getShow.mockResolvedValue(null);
+        kindRepoMocks.getKinds.mockResolvedValue([]);
+        showRepoMocks.createShow.mockRejectedValue(new Error("connection lost"));
+
+        await expect(showService.ensureShowExistsFromImport(importedShow)).rejects.toThrow("connection lost");
+    });
 });
 
 describe("ShowService.ensureSeasonExistsFromImport", () => {

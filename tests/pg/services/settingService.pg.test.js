@@ -175,6 +175,20 @@ describe("SettingService (real Postgres)", () => {
             expect(shows.rows.map((r) => r.title)).toEqual(["Playlist Show"]);
         });
 
+        it("does not duplicate a playlist already imported on a second run", async () => {
+            const userId = await insertUser();
+            const payload = {
+                shows: [],
+                playlists: [{ name: "My playlist", role: "owner", visible: false, shows: [] }],
+            };
+
+            await service.importData(userId, payload);
+            await service.importData(userId, payload);
+
+            const playlists = await db.query(`SELECT * FROM playlists WHERE user_id = $1 AND name = 'My playlist'`, [userId]);
+            expect(playlists.rows).toHaveLength(1);
+        });
+
         it("recreates a favorite actor and a platform, then recomputes achievements", async () => {
             const userId = await insertUser();
             const payload = {

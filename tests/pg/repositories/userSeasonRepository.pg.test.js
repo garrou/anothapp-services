@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import db from "../../../config/db.js";
 import UserSeasonRepository from "../../../repositories/userSeasonRepository.js";
 import { resetDb } from "../resetDb.js";
 import { insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason } from "../fixtures.js";
@@ -49,6 +50,21 @@ describe("UserSeasonRepository (real Postgres)", () => {
             const result = await repo.findImportedViewing(userId, showId, 1, "2024-01-01T00:00:00.000Z");
 
             expect(result).toBeNull();
+        });
+
+        it("matches a viewing whose added_at is NULL against a null addedAt, instead of never matching", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const res = await db.query(`
+                INSERT INTO users_seasons (user_id, show_id, number, platform_id, added_at)
+                VALUES ($1, $2, 1, 999, NULL) RETURNING id
+            `, [userId, showId]);
+
+            const result = await repo.findImportedViewing(userId, showId, 1, null);
+
+            expect(result).toBe(res.rows[0].id);
         });
     });
 

@@ -59,14 +59,24 @@ export default class ShowService {
             return;
         }
         const kinds = await this.#resolveKindsByName(showData.kinds);
-        const created = await this._showRepository.createShow(
-            showData.id, showData.title, showData.poster, kinds, showData.episodeDuration,
-            showData.seasonsNumber, showData.country, showData.description, showData.creation ?? null,
-            showData.network, showData.language, showData.totalEpisodes ?? null
-        );
 
-        if (!created) {
-            throw new ServiceError(500, "Impossible de recréer la série importée");
+        try {
+            const created = await this._showRepository.createShow(
+                showData.id, showData.title, showData.poster, kinds, showData.episodeDuration,
+                showData.seasonsNumber, showData.country, showData.description, showData.creation ?? null,
+                showData.network, showData.language, showData.totalEpisodes ?? null
+            );
+
+            if (!created) {
+                throw new ServiceError(500, "Impossible de recréer la série importée");
+            }
+        } catch (err) {
+            // The same not-yet-known show can be referenced by several playlists imported
+            // concurrently (mapWithConcurrency) - if another worker won that race, the show now
+            // exists, which is exactly what this method promises; only a genuine failure is fatal.
+            if (err.code !== DUPLICATE_ERROR_CODE) {
+                throw err;
+            }
         }
     }
 
