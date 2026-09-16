@@ -75,19 +75,6 @@ export default class EpisodeService {
     /**
      * @param {number} showId
      * @param {number} seasonNumber
-     * @param {Object} episodeData
-     * @returns {Promise<void>}
-     */
-    upsertEpisodeFromImport = async (showId, seasonNumber, episodeData) => {
-        await this._episodeRepository.upsertEpisode(
-            episodeData.id, showId, seasonNumber, episodeData.number, episodeData.title,
-            episodeData.code, episodeData.global, episodeData.length, episodeData.date, episodeData.description
-        );
-    }
-
-    /**
-     * @param {number} showId
-     * @param {number} seasonNumber
      * @returns {Promise<Episode[]>}
      */
     #ensureEpisodesExist = async (showId, seasonNumber) => {

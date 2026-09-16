@@ -5,14 +5,11 @@ import FriendRepository from "../repositories/friendRepository.js";
 import UserFavoriteActorRepository from "../repositories/userFavoriteActorRepository.js";
 import UserPlatformRepository from "../repositories/userPlatformRepository.js";
 import PlaylistRepository from "../repositories/playlistRepository.js";
-import ActorRepository from "../repositories/actorRepository.js";
 import {ExportData, ExportShow} from "../models/exportData.js";
 import StatService from "./statService.js";
 import UserService from "./userService.js";
 import PlaylistService from "./playlistService.js";
 import AchievementService from "./achievementService.js";
-import ShowService from "./showService.js";
-import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import {DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST, TOO_MUCH_EXPORT_REQUEST} from "../constants/errors.js";
 import mapWithConcurrency from "../schedule/lib/concurrency.js";
@@ -29,13 +26,10 @@ export default class SettingService {
         this._friendRepository = new FriendRepository();
         this._userFavoriteActorRepository = new UserFavoriteActorRepository();
         this._userPlatformRepository = new UserPlatformRepository();
-        this._actorRepository = new ActorRepository();
         this._statService = new StatService();
         this._playlistService = new PlaylistService();
         this._playlistRepository = new PlaylistRepository();
         this._achievementService = new AchievementService();
-        this._showService = new ShowService();
-        this._episodeService = new EpisodeService();
     }
 
     /**
@@ -93,13 +87,16 @@ export default class SettingService {
     }
 
     /**
+     * Only writes to the user's own collection - shows/seasons/episodes/actors are the shared
+     * catalog, populated exclusively from Betaseries. A show only ever appears in an export
+     * because it was already joined against that catalog, so it's guaranteed to exist here too;
+     * if it somehow doesn't (e.g. a payload edited by hand), the FK constraint on users_shows
+     * rejects the row and this show is reported as a failure instead of fabricating catalog data.
      * @param {string} userId
      * @param {ExportShow} show
      * @returns {Promise<void>}
      */
     #importShow = async (userId, show) => {
-        await this._showService.ensureShowExistsFromImport(show);
-
         const alreadyInCollection = await this._userShowRepository.checkShowExistsByUserIdByShowId(userId, show.id);
 
         if (!alreadyInCollection) {
@@ -119,8 +116,6 @@ export default class SettingService {
      * @returns {Promise<void>}
      */
     #importSeason = async (userId, showId, season) => {
-        await this._showService.ensureSeasonExistsFromImport(showId, season);
-
         const alreadyImported = await this._userSeasonRepository.findImportedViewing(
             userId, showId, season.number, season.addedAt
         );
@@ -129,10 +124,6 @@ export default class SettingService {
         );
 
         for (const episode of season.episodes ?? []) {
-            await this._episodeService.upsertEpisodeFromImport(showId, season.number, {
-                id: episode.episodeId, number: episode.number, title: episode.title, code: episode.code,
-                global: episode.global, length: episode.length, date: episode.date, description: episode.description,
-            });
             await this._userEpisodeRepository.createIfMissing(
                 userId, userSeasonId, episode.episodeId, episode.watchedAt ?? season.addedAt, season.platformId
             );
@@ -154,7 +145,6 @@ export default class SettingService {
         const target = existing ?? await this._playlistRepository.create(userId, playlist.name, !!playlist.visible);
 
         for (const show of playlist.shows ?? []) {
-            await this._showService.ensureShowExistsFromImport(show);
             await this._playlistRepository.addShow(target.id, show.id);
         }
     }
@@ -165,13 +155,6 @@ export default class SettingService {
      * @returns {Promise<void>}
      */
     #importFavoriteActor = async (userId, actor) => {
-        const existingActor = await this._actorRepository.getActorById(actor.id);
-
-        if (!existingActor) {
-            await this._actorRepository.createActor(
-                actor.id, actor.name, actor.picture, actor.birthday, actor.deathday, actor.nationality, actor.description
-            );
-        }
         const alreadyFavorite = await this._userFavoriteActorRepository.checkFavoriteExists(userId, actor.id);
 
         if (!alreadyFavorite) {

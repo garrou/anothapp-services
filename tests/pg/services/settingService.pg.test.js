@@ -78,20 +78,18 @@ describe("SettingService (real Postgres)", () => {
             await expect(service.importData(userId, {})).rejects.toMatchObject({ status: 400 });
         });
 
-        it("recreates a show/season/episode tree from an export, without needing it to exist locally first", async () => {
+        it("links a show/season/episode already in the shared catalog to the user's collection", async () => {
             const userId = await insertUser();
+            const showId = await insertShow({ title: "Catalog Show" });
+            await insertSeason(showId, 1, { episodes: 5, image: "s1.jpg" });
+            const episodeId = await insertEpisode(showId, 1, { title: "Pilot" });
             const payload = {
                 shows: [{
-                    id: 900, title: "Imported Show", kinds: ["Drame"], country: "FR", seasonsNumber: 1,
-                    episodeDuration: 40, isFavorite: true, isWatching: false, note: 4, addedAt: "2024-01-01T00:00:00.000Z",
-                    poster: "poster.jpg", description: "desc", creation: 2020, network: "TF1", language: "fr",
-                    totalEpisodes: 5, finished: false,
+                    id: showId, title: "Catalog Show", isFavorite: true, isWatching: false, note: 4,
+                    addedAt: "2024-01-01T00:00:00.000Z",
                     seasons: [{
-                        number: 1, platformId: 999, addedAt: "2024-01-02T00:00:00.000Z", image: "s1.jpg", episodesCount: 5,
-                        episodes: [{
-                            episodeId: 9001, number: 1, title: "Pilot", code: "S01E01", global: 1, length: 40,
-                            date: "2020-01-01", description: "ep desc", watchedAt: "2024-01-03T00:00:00.000Z",
-                        }],
+                        number: 1, platformId: 999, addedAt: "2024-01-02T00:00:00.000Z",
+                        episodes: [{ episodeId, number: 1, title: "Pilot", watchedAt: "2024-01-03T00:00:00.000Z" }],
                     }],
                 }],
             };
@@ -100,63 +98,85 @@ describe("SettingService (real Postgres)", () => {
 
             expect(summary.shows).toEqual({ imported: 1, errors: 0 });
 
-            const show = await db.query(`SELECT * FROM shows WHERE id = 900`);
-            expect(show.rows[0].title).toBe("Imported Show");
-            expect(show.rows[0].poster).toBe("poster.jpg");
-
-            const kinds = await db.query(`
-                SELECT k.name FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = 900
-            `);
-            expect(kinds.rows.map((r) => r.name)).toEqual(["Drame"]);
-
-            const userShow = await db.query(`SELECT * FROM users_shows WHERE user_id = $1 AND show_id = 900`, [userId]);
+            const userShow = await db.query(`SELECT * FROM users_shows WHERE user_id = $1 AND show_id = $2`, [userId, showId]);
             expect(userShow.rows[0].favorite).toBe(true);
             expect(userShow.rows[0].continue).toBe(false);
             expect(userShow.rows[0].note_id).toBe(4);
 
-            const season = await db.query(`SELECT * FROM seasons WHERE show_id = 900 AND number = 1`);
-            expect(season.rows[0].image).toBe("s1.jpg");
-            expect(season.rows[0].episodes).toBe(5);
-
-            const episode = await db.query(`SELECT * FROM episodes WHERE id = 9001`);
-            expect(episode.rows[0].title).toBe("Pilot");
+            const userSeason = await db.query(`SELECT * FROM users_seasons WHERE user_id = $1 AND show_id = $2`, [userId, showId]);
+            expect(userSeason.rows).toHaveLength(1);
 
             const userEpisode = await db.query(`
                 SELECT ue.* FROM users_episodes ue
                 JOIN users_seasons us ON us.id = ue.users_seasons_id
-                WHERE us.user_id = $1 AND us.show_id = 900
-            `, [userId]);
+                WHERE us.user_id = $1 AND us.show_id = $2
+            `, [userId, showId]);
             expect(userEpisode.rows).toHaveLength(1);
+        });
+
+        it("never writes to the shared catalog - the show/season/episode rows are left untouched", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow({ title: "Catalog Show", poster: "original.jpg", duration: 30 });
+            await insertSeason(showId, 1, { episodes: 5, image: "original.jpg" });
+            const payload = {
+                shows: [{
+                    // Deliberately mismatched fields, mirroring a stale or hand-edited export -
+                    // none of this should ever reach the shows/seasons rows.
+                    id: showId, title: "Tampered Title", poster: "tampered.jpg", description: "tampered",
+                    seasons: [{ number: 1, image: "tampered.jpg", episodesCount: 999 }],
+                }],
+            };
+
+            await service.importData(userId, payload);
+
+            const show = await db.query(`SELECT title, poster, duration FROM shows WHERE id = $1`, [showId]);
+            expect(show.rows[0].title).toBe("Catalog Show");
+            expect(show.rows[0].poster).toBe("original.jpg");
+            expect(show.rows[0].duration).toBe(30);
+
+            const season = await db.query(`SELECT image, episodes FROM seasons WHERE show_id = $1 AND number = 1`, [showId]);
+            expect(season.rows[0].image).toBe("original.jpg");
+            expect(season.rows[0].episodes).toBe(5);
+        });
+
+        it("reports a per-show error instead of fabricating a show missing from the shared catalog", async () => {
+            const userId = await insertUser();
+
+            const summary = await service.importData(userId, {
+                shows: [{ id: 999999, title: "Unknown show", seasons: [] }],
+            });
+
+            expect(summary.shows).toEqual({ imported: 0, errors: 1 });
+            expect(summary.errors[0]).toContain("Unknown show");
+            const show = await db.query(`SELECT * FROM shows WHERE id = 999999`);
+            expect(show.rows).toHaveLength(0);
         });
 
         it("does not duplicate a viewing already imported on a second run", async () => {
             const userId = await insertUser();
+            const showId = await insertShow({ title: "Rewatch Show" });
+            await insertSeason(showId, 1);
             const payload = {
                 shows: [{
-                    id: 901, title: "Rewatch Show", kinds: [], country: "FR", seasonsNumber: 1, episodeDuration: 30,
-                    isFavorite: false, isWatching: true, note: null, addedAt: "2024-01-01T00:00:00.000Z",
-                    poster: null, description: null, creation: null, network: null, language: null,
-                    totalEpisodes: 1, finished: false,
-                    seasons: [{ number: 1, platformId: 999, addedAt: "2024-01-02T00:00:00.000Z", image: null, episodesCount: 1, episodes: [] }],
+                    id: showId, title: "Rewatch Show", isWatching: true, addedAt: "2024-01-01T00:00:00.000Z",
+                    seasons: [{ number: 1, platformId: 999, addedAt: "2024-01-02T00:00:00.000Z", episodes: [] }],
                 }],
             };
 
             await service.importData(userId, payload);
             await service.importData(userId, payload);
 
-            const seasons = await db.query(`SELECT * FROM users_seasons WHERE user_id = $1 AND show_id = 901`, [userId]);
+            const seasons = await db.query(`SELECT * FROM users_seasons WHERE user_id = $1 AND show_id = $2`, [userId, showId]);
             expect(seasons.rows).toHaveLength(1);
         });
 
         it("recreates an owned playlist and its shows, but skips a playlist the export user only collaborated on", async () => {
             const userId = await insertUser();
+            const showId = await insertShow({ title: "Playlist Show" });
             const payload = {
                 shows: [],
                 playlists: [
-                    {
-                        name: "My playlist", role: "owner", visible: true,
-                        shows: [{ id: 902, title: "Playlist Show", kinds: [], country: "FR", seasonsNumber: 1, episodeDuration: 30 }],
-                    },
+                    { name: "My playlist", role: "owner", visible: true, shows: [{ id: showId, title: "Playlist Show" }] },
                     { name: "Shared playlist", role: "collaborator", shows: [] },
                 ],
             };
@@ -175,6 +195,17 @@ describe("SettingService (real Postgres)", () => {
             expect(shows.rows.map((r) => r.title)).toEqual(["Playlist Show"]);
         });
 
+        it("reports a per-playlist error instead of fabricating a show missing from the shared catalog", async () => {
+            const userId = await insertUser();
+
+            const summary = await service.importData(userId, {
+                shows: [],
+                playlists: [{ name: "My playlist", role: "owner", shows: [{ id: 999999, title: "Unknown show" }] }],
+            });
+
+            expect(summary.playlists).toEqual({ imported: 0, errors: 1 });
+        });
+
         it("does not duplicate a playlist already imported on a second run", async () => {
             const userId = await insertUser();
             const payload = {
@@ -191,9 +222,10 @@ describe("SettingService (real Postgres)", () => {
 
         it("recreates a favorite actor and a platform, then recomputes achievements", async () => {
             const userId = await insertUser();
+            const actorId = await insertActor({ name: "Catalog Actor" });
             const payload = {
                 shows: [],
-                favoriteActors: [{ id: 903, name: "Imported Actor", picture: null, birthday: null, deathday: null, nationality: null, description: null }],
+                favoriteActors: [{ id: actorId, name: "Catalog Actor" }],
                 platforms: [1],
             };
 
@@ -202,23 +234,31 @@ describe("SettingService (real Postgres)", () => {
             expect(summary.favoriteActors).toEqual({ imported: 1, errors: 0 });
             expect(summary.platforms).toEqual({ imported: 1, errors: 0 });
 
-            const actor = await db.query(`SELECT * FROM actors WHERE id = 903`);
-            expect(actor.rows[0].name).toBe("Imported Actor");
-
-            const favorite = await db.query(`SELECT * FROM users_favorite_actors WHERE user_id = $1 AND actor_id = 903`, [userId]);
+            const favorite = await db.query(`SELECT * FROM users_favorite_actors WHERE user_id = $1 AND actor_id = $2`, [userId, actorId]);
             expect(favorite.rows).toHaveLength(1);
 
             const platform = await db.query(`SELECT * FROM users_platforms WHERE user_id = $1 AND platform_id = 1`, [userId]);
             expect(platform.rows).toHaveLength(1);
         });
 
+        it("reports a per-actor error instead of fabricating an actor missing from the shared catalog", async () => {
+            const userId = await insertUser();
+
+            const summary = await service.importData(userId, {
+                shows: [], favoriteActors: [{ id: 999999, name: "Unknown actor" }],
+            });
+
+            expect(summary.favoriteActors).toEqual({ imported: 0, errors: 1 });
+            expect(summary.errors[0]).toContain("Unknown actor");
+        });
+
         it("keeps going and reports a per-show error instead of failing the whole import", async () => {
             const userId = await insertUser();
+            const showId = await insertShow({ title: "Good show" });
             const payload = {
                 shows: [
-                    { id: 904, title: "Good show", kinds: [], country: "FR", seasonsNumber: 1, episodeDuration: 30, seasons: [] },
-                    // Missing the required fields createShow needs (duration NOT NULL) - triggers a per-show failure.
-                    { id: 905, title: "Broken show", seasons: [] },
+                    { id: showId, title: "Good show", seasons: [] },
+                    { id: 999999, title: "Unknown show", seasons: [] },
                 ],
             };
 
@@ -226,7 +266,7 @@ describe("SettingService (real Postgres)", () => {
 
             expect(summary.shows.imported).toBe(1);
             expect(summary.shows.errors).toBe(1);
-            expect(summary.errors[0]).toContain("Broken show");
+            expect(summary.errors[0]).toContain("Unknown show");
         });
     });
 });

@@ -6,7 +6,6 @@ import FriendRepository from "../repositories/friendRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import SeasonRepository from "../repositories/seasonRepository.js";
 import UserRepository from "../repositories/userRepository.js";
-import KindRepository from "../repositories/kindRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import UserListRepository from "../repositories/userListRepository.js";
 import Validator from "../helpers/validator.js";
@@ -26,79 +25,6 @@ export default class ShowService {
         this._friendRepository = new FriendRepository();
         this._seasonRepository = new SeasonRepository();
         this._userRepository = new UserRepository();
-        this._kindRepository = new KindRepository();
-    }
-
-    /**
-     * Resolves imported kind display names against the local (small, near-identically seeded)
-     * kinds catalog instead of depending on Betaseries. A name with no local match is dropped.
-     * @param {string[]} kindNames
-     * @returns {Promise<{id: string, name: string}[]>}
-     */
-    #resolveKindsByName = async (kindNames) => {
-        if (!kindNames?.length) {
-            return [];
-        }
-        const kinds = await this._kindRepository.getKinds();
-        const idByName = new Map(kinds.map((kind) => [kind.name, kind.value]));
-
-        return kindNames
-            .filter((name) => idByName.has(name))
-            .map((name) => ({id: idByName.get(name), name}));
-    }
-
-    /**
-     * Recreates a show from a previously exported ExportShow, without calling Betaseries.
-     * @param {ExportShow} showData
-     * @returns {Promise<void>}
-     */
-    ensureShowExistsFromImport = async (showData) => {
-        const existing = await this._showRepository.getShow(showData.id);
-
-        if (existing) {
-            return;
-        }
-        const kinds = await this.#resolveKindsByName(showData.kinds);
-
-        try {
-            const created = await this._showRepository.createShow(
-                showData.id, showData.title, showData.poster, kinds, showData.episodeDuration,
-                showData.seasonsNumber, showData.country, showData.description, showData.creation ?? null,
-                showData.network, showData.language, showData.totalEpisodes ?? null
-            );
-
-            if (!created) {
-                throw new ServiceError(500, "Impossible de recréer la série importée");
-            }
-        } catch (err) {
-            // The same not-yet-known show can be referenced by several playlists imported
-            // concurrently (mapWithConcurrency) - if another worker won that race, the show now
-            // exists, which is exactly what this method promises; only a genuine failure is fatal.
-            if (err.code !== DUPLICATE_ERROR_CODE) {
-                throw err;
-            }
-        }
-    }
-
-    /**
-     * Recreates a season from a previously exported viewing, without calling Betaseries.
-     * @param {number} showId
-     * @param {UserSeason} seasonData
-     * @returns {Promise<void>}
-     */
-    ensureSeasonExistsFromImport = async (showId, seasonData) => {
-        const existing = await this._seasonRepository.getSeasonByShowIdByNumber(showId, seasonData.number);
-
-        if (existing) {
-            return;
-        }
-        const created = await this._seasonRepository.createSeason(
-            seasonData.episodesCount ?? 0, seasonData.number, seasonData.image ?? null, showId
-        );
-
-        if (!created) {
-            throw new ServiceError(500, "Impossible de recréer la saison importée");
-        }
     }
 
     /**

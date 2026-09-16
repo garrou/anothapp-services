@@ -171,20 +171,4 @@ describe("EpisodeService (real Postgres)", () => {
             expect(parseInt(res.rows[0].total)).toBe(1);
         });
     });
-
-    describe("upsertEpisodeFromImport", () => {
-        it("recreates the episode from the imported data without calling Betaseries", async () => {
-            const showId = await insertShow();
-            await insertSeason(showId, 1);
-
-            await service.upsertEpisodeFromImport(showId, 1, {
-                id: 12345, number: 1, title: "Pilot", code: "S01E01", global: 1, length: 45,
-                date: "2020-01-01", description: "desc",
-            });
-
-            const res = await db.query(`SELECT * FROM episodes WHERE id = 12345`);
-            expect(res.rows[0].title).toBe("Pilot");
-            expect(res.rows[0].description).toBe("desc");
-        });
-    });
 });
