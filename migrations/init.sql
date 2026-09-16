@@ -683,3 +683,4 @@ CREATE UNIQUE INDEX idx_users_email_ci ON users(UPPER(email));
 CREATE INDEX idx_seasons_show_id ON seasons(show_id);
 CREATE INDEX idx_playlists_collaborators_user_id ON playlists_collaborators(user_id);
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+CREATE UNIQUE INDEX idx_friends_unordered_pair ON friends (LEAST(fst_user_id, sec_user_id), GREATEST(fst_user_id, sec_user_id));
