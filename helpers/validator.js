@@ -109,4 +109,50 @@ export default class Validator {
         const {id, title, kinds, seasons} = show;
         return !!id && !!title && Array.isArray(kinds) && !!kinds.length && !!seasons;
     }
+
+    /**
+     * @param {ExportShow} show
+     * @returns {boolean}
+     */
+    static isValidImportedShow = (show) => {
+        return !!show && typeof show === "object" && Number.isInteger(show.id);
+    }
+
+    /**
+     * @param {UserSeason} season
+     * @returns {boolean}
+     */
+    static isValidImportedSeason = (season) => {
+        return !!season && typeof season === "object" && Number.isInteger(season.number);
+    }
+
+    /**
+     * @param {UserEpisode} episode
+     * @returns {boolean}
+     */
+    static isValidImportedEpisode = (episode) => {
+        return !!episode && typeof episode === "object" && Number.isInteger(episode.episodeId);
+    }
+
+    /**
+     * @param {ExportPlaylist} playlist
+     * @returns {boolean}
+     */
+    static isValidImportedPlaylist = (playlist) => {
+        return !!playlist && typeof playlist === "object" && typeof playlist.name === "string" && !!playlist.name;
+    }
+
+    /**
+     * @param {Actor} actor
+     * @returns {boolean}
+     */
+    static isValidImportedActor = (actor) => {
+        return !!actor && typeof actor === "object" && Number.isInteger(actor.id);
+    }
+
+    /**
+     * @param {number} platformId
+     * @returns {boolean}
+     */
+    static isValidImportedPlatformId = (platformId) => Number.isInteger(platformId);
 }

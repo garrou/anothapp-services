@@ -153,6 +153,26 @@ describe("SettingService (real Postgres)", () => {
             expect(show.rows).toHaveLength(0);
         });
 
+        it("reports a per-show error instead of creating a garbage users_seasons row for a season missing its number", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow({ title: "Catalog Show" });
+            await insertSeason(showId, 1, { episodes: 5 });
+
+            const summary = await service.importData(userId, {
+                shows: [{
+                    id: showId, title: "Catalog Show",
+                    seasons: [{ addedAt: "2024-01-01T00:00:00.000Z", episodes: [] }],
+                }],
+            });
+
+            expect(summary.shows).toEqual({ imported: 0, errors: 1 });
+            expect(summary.errors[0]).toContain("Saison invalide");
+            const userSeason = await db.query(
+                `SELECT * FROM users_seasons WHERE user_id = $1 AND show_id = $2`, [userId, showId]
+            );
+            expect(userSeason.rows).toHaveLength(0);
+        });
+
         it("does not duplicate a viewing already imported on a second run", async () => {
             const userId = await insertUser();
             const showId = await insertShow({ title: "Rewatch Show" });

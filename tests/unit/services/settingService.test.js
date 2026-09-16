@@ -353,4 +353,73 @@ describe("SettingService.importData", () => {
         expect(summary.errors.some((e) => e.includes("Suivi des épisodes"))).toBe(true);
         expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1");
     });
+
+    it("rejects a payload whose playlists/favoriteActors/platforms aren't arrays", async () => {
+        await expect(service.importData("user-1", {shows: [], playlists: "nope"}))
+            .rejects.toMatchObject({status: 400});
+        await expect(service.importData("user-1", {shows: [], favoriteActors: {}}))
+            .rejects.toMatchObject({status: 400});
+        await expect(service.importData("user-1", {shows: [], platforms: "nope"}))
+            .rejects.toMatchObject({status: 400});
+    });
+
+    it("reports a per-show error instead of creating a garbage row for a malformed show", async () => {
+        const summary = await service.importData("user-1", {shows: [{title: "No id"}]});
+
+        expect(summary.shows).toEqual({imported: 0, errors: 1});
+        expect(userShowRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("reports a per-show error instead of creating a garbage users_seasons row for a season missing its number", async () => {
+        const summary = await service.importData("user-1", {
+            shows: [{id: 10, title: "Show", seasons: [{addedAt: "2024-01-01", episodes: []}]}],
+        });
+
+        expect(summary.shows).toEqual({imported: 0, errors: 1});
+        expect(summary.errors[0]).toContain("Saison invalide");
+        expect(userSeasonRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("reports a per-show error for an episode missing its episodeId", async () => {
+        const summary = await service.importData("user-1", {
+            shows: [{
+                id: 10, title: "Show",
+                seasons: [{number: 1, addedAt: "2024-01-01", episodes: [{watchedAt: "2024-01-02"}]}],
+            }],
+        });
+
+        expect(summary.shows).toEqual({imported: 0, errors: 1});
+        expect(summary.errors[0]).toContain("Épisode invalide");
+        expect(userEpisodeRepoMocks.createIfMissing).not.toHaveBeenCalled();
+    });
+
+    it("reports a per-playlist error for a playlist without a name", async () => {
+        const summary = await service.importData("user-1", {shows: [], playlists: [{role: "owner", shows: []}]});
+
+        expect(summary.playlists).toEqual({imported: 0, errors: 1});
+        expect(playlistRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("reports a per-playlist error for a playlist show without an id", async () => {
+        const summary = await service.importData("user-1", {
+            shows: [], playlists: [{name: "My playlist", role: "owner", shows: [{title: "No id"}]}],
+        });
+
+        expect(summary.playlists).toEqual({imported: 0, errors: 1});
+        expect(playlistRepoMocks.addShow).not.toHaveBeenCalled();
+    });
+
+    it("reports a per-actor error for a favorite actor without an id", async () => {
+        const summary = await service.importData("user-1", {shows: [], favoriteActors: [{name: "No id"}]});
+
+        expect(summary.favoriteActors).toEqual({imported: 0, errors: 1});
+        expect(userFavoriteActorRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("reports a per-platform error for a non-integer platform id", async () => {
+        const summary = await service.importData("user-1", {shows: [], platforms: ["not-an-id"]});
+
+        expect(summary.platforms).toEqual({imported: 0, errors: 1});
+        expect(userPlatformRepoMocks.addUserPlatforms).not.toHaveBeenCalled();
+    });
 });

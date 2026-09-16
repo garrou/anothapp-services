@@ -73,3 +73,82 @@ describe("Validator.isValidShow", () => {
         expect(Validator.isValidShow({ id: 1, title: "Breaking Bad", kinds: ["Drame"], seasons: 5 })).toBe(true);
     });
 });
+
+describe("Validator.isValidImportedShow", () => {
+    it("rejects null/undefined", () => {
+        expect(Validator.isValidImportedShow(null)).toBe(false);
+        expect(Validator.isValidImportedShow(undefined)).toBe(false);
+    });
+
+    it("rejects a non-object", () => {
+        expect(Validator.isValidImportedShow("1")).toBe(false);
+    });
+
+    it("rejects a show with a non-integer id", () => {
+        expect(Validator.isValidImportedShow({ id: "1" })).toBe(false);
+        expect(Validator.isValidImportedShow({ id: 1.5 })).toBe(false);
+        expect(Validator.isValidImportedShow({})).toBe(false);
+    });
+
+    it("accepts a show with an integer id", () => {
+        expect(Validator.isValidImportedShow({ id: 1, title: "Breaking Bad" })).toBe(true);
+    });
+});
+
+describe("Validator.isValidImportedSeason", () => {
+    it("rejects a season without a number", () => {
+        expect(Validator.isValidImportedSeason({})).toBe(false);
+        expect(Validator.isValidImportedSeason({ number: null })).toBe(false);
+    });
+
+    it("rejects a season with a non-integer number", () => {
+        expect(Validator.isValidImportedSeason({ number: "1" })).toBe(false);
+    });
+
+    it("accepts a season with an integer number", () => {
+        expect(Validator.isValidImportedSeason({ number: 1 })).toBe(true);
+    });
+});
+
+describe("Validator.isValidImportedEpisode", () => {
+    it("rejects an episode without an episodeId", () => {
+        expect(Validator.isValidImportedEpisode({})).toBe(false);
+    });
+
+    it("accepts an episode with an integer episodeId", () => {
+        expect(Validator.isValidImportedEpisode({ episodeId: 42 })).toBe(true);
+    });
+});
+
+describe("Validator.isValidImportedPlaylist", () => {
+    it("rejects a playlist without a name", () => {
+        expect(Validator.isValidImportedPlaylist({})).toBe(false);
+        expect(Validator.isValidImportedPlaylist({ name: "" })).toBe(false);
+        expect(Validator.isValidImportedPlaylist({ name: 42 })).toBe(false);
+    });
+
+    it("accepts a playlist with a name", () => {
+        expect(Validator.isValidImportedPlaylist({ name: "Ma playlist" })).toBe(true);
+    });
+});
+
+describe("Validator.isValidImportedActor", () => {
+    it("rejects an actor without an id", () => {
+        expect(Validator.isValidImportedActor({})).toBe(false);
+    });
+
+    it("accepts an actor with an integer id", () => {
+        expect(Validator.isValidImportedActor({ id: 1, name: "Bryan Cranston" })).toBe(true);
+    });
+});
+
+describe("Validator.isValidImportedPlatformId", () => {
+    it("rejects a non-integer platform id", () => {
+        expect(Validator.isValidImportedPlatformId("1")).toBe(false);
+        expect(Validator.isValidImportedPlatformId(null)).toBe(false);
+    });
+
+    it("accepts an integer platform id", () => {
+        expect(Validator.isValidImportedPlatformId(1)).toBe(true);
+    });
+});
