@@ -6,6 +6,7 @@ import UserFavoriteActorRepository from "../repositories/userFavoriteActorReposi
 import UserPlatformRepository from "../repositories/userPlatformRepository.js";
 import PlaylistRepository from "../repositories/playlistRepository.js";
 import {ExportData, ExportShow} from "../models/exportData.js";
+import UserUpdate from "../models/userUpdate.js";
 import StatService from "./statService.js";
 import UserService from "./userService.js";
 import PlaylistService from "./playlistService.js";
@@ -163,6 +164,18 @@ export default class SettingService {
     }
 
     /**
+     * @param {string} userId
+     * @param {boolean?} episodeTrackingEnabled
+     * @returns {Promise<void>}
+     */
+    #importEpisodeTrackingPreference = async (userId, episodeTrackingEnabled) => {
+        if (typeof episodeTrackingEnabled !== "boolean") {
+            return;
+        }
+        await this._userService.updateUser(userId, new UserUpdate({episodeTrackingEnabled}));
+    }
+
+    /**
      * Re-imports a previously exported ExportData. The target account (userId, always the
      * currently authenticated user) is never modified by this: friends, playlist collaborators,
      * and the export's own `user` block (username/email/password/picture) are never read here.
@@ -228,6 +241,12 @@ export default class SettingService {
                 }
             }
         });
+
+        try {
+            await this.#importEpisodeTrackingPreference(userId, payload.user?.episodeTrackingEnabled);
+        } catch (err) {
+            summary.errors.push(`Suivi des épisodes : ${err.message}`);
+        }
 
         await this._achievementService.evaluate(userId);
 

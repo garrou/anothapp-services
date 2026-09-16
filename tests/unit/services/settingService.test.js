@@ -1,7 +1,7 @@
 import {describe, it, expect, vi, beforeEach} from "vitest";
 import SettingService from "../../../services/settingService.js";
 
-const userServiceMocks = vi.hoisted(() => ({markExported: vi.fn(), getUser: vi.fn()}));
+const userServiceMocks = vi.hoisted(() => ({markExported: vi.fn(), getUser: vi.fn(), updateUser: vi.fn()}));
 const statServiceMocks = vi.hoisted(() => ({getStats: vi.fn()}));
 const playlistServiceMocks = vi.hoisted(() => ({getPlaylists: vi.fn()}));
 const achievementServiceMocks = vi.hoisted(() => ({getAchievements: vi.fn(), evaluate: vi.fn()}));
@@ -98,9 +98,9 @@ describe("SettingService.exportData", () => {
 
         expect(filename).toMatch(/^user-data-user-1-\d{4}-\d{2}-\d{2}\.json$/);
         expect(exportedData.user).toEqual({
-            username: "bob", email: "a@b.com", picture: null, episodeTrackingEnabled: true, createdAt: "2023-01-01",
+            id: "user-1", username: "bob", email: "a@b.com", picture: null, current: true,
+            episodeTrackingEnabled: true, createdAt: "2023-01-01",
         });
-        expect(exportedData.user.id).toBeUndefined();
         expect(exportedData.stats).toEqual({total: 1});
         expect(exportedData.shows).toHaveLength(1);
         expect(exportedData.shows[0].id).toBe(10);
@@ -176,6 +176,7 @@ describe("SettingService.importData", () => {
         playlistRepoMocks.getByUserIdAndName.mockResolvedValue(null);
         userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
         userPlatformRepoMocks.addUserPlatforms.mockResolvedValue(true);
+        userServiceMocks.updateUser.mockResolvedValue("Suivi des épisodes activé");
         achievementServiceMocks.evaluate.mockResolvedValue([]);
     });
 
@@ -320,5 +321,36 @@ describe("SettingService.importData", () => {
         const summary = await service.importData("user-1", {shows: [], platforms: [1, 2]});
 
         expect(summary.platforms).toEqual({imported: 1, errors: 0});
+    });
+
+    it("restores the exported episode-tracking preference", async () => {
+        await service.importData("user-1", {shows: [], user: {episodeTrackingEnabled: true}});
+
+        expect(userServiceMocks.updateUser).toHaveBeenCalledWith(
+            "user-1", expect.objectContaining({episodeTrackingEnabled: true})
+        );
+    });
+
+    it("can restore a disabled episode-tracking preference too", async () => {
+        await service.importData("user-1", {shows: [], user: {episodeTrackingEnabled: false}});
+
+        expect(userServiceMocks.updateUser).toHaveBeenCalledWith(
+            "user-1", expect.objectContaining({episodeTrackingEnabled: false})
+        );
+    });
+
+    it("does not touch episode tracking when the export carries no such preference", async () => {
+        await service.importData("user-1", {shows: []});
+
+        expect(userServiceMocks.updateUser).not.toHaveBeenCalled();
+    });
+
+    it("keeps going and reports an error if restoring episode tracking fails", async () => {
+        userServiceMocks.updateUser.mockRejectedValue(new Error("boom"));
+
+        const summary = await service.importData("user-1", {shows: [], user: {episodeTrackingEnabled: true}});
+
+        expect(summary.errors.some((e) => e.includes("Suivi des épisodes"))).toBe(true);
+        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1");
     });
 });

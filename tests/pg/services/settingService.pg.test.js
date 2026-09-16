@@ -40,9 +40,10 @@ describe("SettingService (real Postgres)", () => {
 
             expect(filename).toContain(userId);
             expect(data.user.username).toBe("Exporter");
-            // The exported user is self-sufficient for RGPD access but never usable to overwrite
-            // the target account on import: id must be gone, email stays (see models/exportData.js).
-            expect(data.user.id).toBeUndefined();
+            // The exported user's id/email are never read back on import - only req.userId (the
+            // destination account) ever is - but they're harmless to include, and email in
+            // particular is part of "my own data" for RGPD access (see models/exportData.js).
+            expect(data.user.id).toBe(userId);
             expect(data.user.email).toBe("exporter@test.fr");
             expect(data.shows).toHaveLength(1);
             expect(data.shows[0].title).toBe("Exported Show");
@@ -239,6 +240,41 @@ describe("SettingService (real Postgres)", () => {
 
             const platform = await db.query(`SELECT * FROM users_platforms WHERE user_id = $1 AND platform_id = 1`, [userId]);
             expect(platform.rows).toHaveLength(1);
+        });
+
+        it("restores the exported episode-tracking preference, backfilling episode history for already-imported shows", async () => {
+            const userId = await insertUser({ episodeTrackingEnabled: false });
+            const showId = await insertShow({ title: "Tracked Show" });
+            await insertSeason(showId, 1, { episodes: 1 });
+            await insertEpisode(showId, 1, { number: 1, date: "2020-01-01" });
+            const payload = {
+                shows: [{
+                    id: showId, title: "Tracked Show", addedAt: "2024-01-01T00:00:00.000Z",
+                    seasons: [{ number: 1, platformId: 999, addedAt: "2024-01-02T00:00:00.000Z", episodes: [] }],
+                }],
+                user: { episodeTrackingEnabled: true },
+            };
+
+            await service.importData(userId, payload);
+
+            const user = await db.query(`SELECT episode_tracking_enabled FROM users WHERE id = $1`, [userId]);
+            expect(user.rows[0].episode_tracking_enabled).toBe(true);
+
+            const userEpisodes = await db.query(`
+                SELECT ue.* FROM users_episodes ue
+                JOIN users_seasons us ON us.id = ue.users_seasons_id
+                WHERE us.user_id = $1 AND us.show_id = $2
+            `, [userId, showId]);
+            expect(userEpisodes.rows).toHaveLength(1);
+        });
+
+        it("does not touch episode tracking when the export carries no such preference", async () => {
+            const userId = await insertUser({ episodeTrackingEnabled: false });
+
+            await service.importData(userId, { shows: [] });
+
+            const user = await db.query(`SELECT episode_tracking_enabled FROM users WHERE id = $1`, [userId]);
+            expect(user.rows[0].episode_tracking_enabled).toBe(false);
         });
 
         it("reports a per-actor error instead of fabricating an actor missing from the shared catalog", async () => {

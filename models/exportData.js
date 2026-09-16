@@ -1,3 +1,5 @@
+import UserProfile from "./userProfile.js";
+
 class ExportData {
 
     /**
@@ -5,13 +7,7 @@ class ExportData {
      * @param {Object} stats
      */
     constructor(user, stats) {
-        this.user = {
-            username: user.username,
-            email: user.email,
-            picture: user.picture,
-            episodeTrackingEnabled: user.episodeTrackingEnabled,
-            createdAt: user.createdAt,
-        };
+        this.user = new UserProfile(user, true);
         this.stats = stats;
         this.shows = [];
         this.friends = [];
