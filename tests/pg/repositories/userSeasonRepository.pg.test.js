@@ -12,6 +12,77 @@ describe("UserSeasonRepository (real Postgres)", () => {
         repo = new UserSeasonRepository();
     });
 
+    describe("create", () => {
+        it("restores an explicit addedAt, e.g. to preserve an imported viewing's date", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+
+            const id = await repo.create(userId, showId, 1, 999, "2024-01-01");
+
+            const result = await repo.getUserSeasonsByUserId(userId);
+            expect(result).toEqual([expect.objectContaining({ id, addedAt: expect.any(Date) })]);
+            expect(result[0].addedAt.toISOString()).toContain("2024-01-01");
+        });
+    });
+
+    describe("findImportedViewing", () => {
+        it("finds an already-imported viewing by its exact added date", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const id = await insertUserSeason(userId, showId, 1, { addedAt: "2024-01-01T00:00:00.000Z" });
+
+            const result = await repo.findImportedViewing(userId, showId, 1, "2024-01-01T00:00:00.000Z");
+
+            expect(result).toBe(id);
+        });
+
+        it("returns null when no viewing matches that date yet", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+
+            const result = await repo.findImportedViewing(userId, showId, 1, "2024-01-01T00:00:00.000Z");
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe("getUserSeasonsByUserId", () => {
+        it("includes the season's catalog image and episode count alongside the viewing", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1, { episodes: 8, image: "s1.jpg" });
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+
+            const result = await repo.getUserSeasonsByUserId(userId);
+
+            expect(result).toEqual([{
+                id: userSeasonId, number: 1, addedAt: expect.any(Date), platform: "Autres", platformId: 999,
+                showId, image: "s1.jpg", episodesCount: 8,
+            }]);
+        });
+
+        it("returns every viewing including rewatches, each carrying its own season metadata", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1, { episodes: 5 });
+            await insertUserShow(userId, showId);
+            await insertUserSeason(userId, showId, 1);
+            await insertUserSeason(userId, showId, 1);
+
+            const result = await repo.getUserSeasonsByUserId(userId);
+
+            expect(result).toHaveLength(2);
+            expect(result.every((s) => s.episodesCount === 5)).toBe(true);
+        });
+    });
+
     describe("getMostRewatchedByUserId", () => {
         it("returns the show/season watched the most times", async () => {
             const userId = await insertUser();

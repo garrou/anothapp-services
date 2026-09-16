@@ -512,3 +512,23 @@ describe("EpisodeService.backfillForUser", () => {
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 1, "2023-05-01", 999);
     });
 });
+
+describe("EpisodeService.upsertEpisodeFromImport", () => {
+    let episodeService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        episodeService = new EpisodeService();
+    });
+
+    it("recreates the episode from the imported data without calling Betaseries", async () => {
+        await episodeService.upsertEpisodeFromImport(42, 1, {
+            id: 1, title: "Pilot", code: "S01E01", global: 1, number: 1, length: 45, date: "2020-01-01", description: "desc",
+        });
+
+        expect(searchServiceMocks.getEpisodesByShowIdBySeason).not.toHaveBeenCalled();
+        expect(episodeRepoMocks.upsertEpisode).toHaveBeenCalledWith(
+            1, 42, 1, 1, "Pilot", "S01E01", 1, 45, "2020-01-01", "desc"
+        );
+    });
+});

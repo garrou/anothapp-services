@@ -20,7 +20,9 @@ describe("UserSeasonRepository", () => {
 
             const result = await repo.create("user-1", 10, 1, 2);
 
-            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users_seasons"), ["user-1", 10, 1, 2]);
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("INSERT INTO users_seasons"), ["user-1", 10, 1, 2, null]
+            );
             expect(result).toBe(5);
         });
 
@@ -29,13 +31,42 @@ describe("UserSeasonRepository", () => {
 
             await repo.create("user-1", 10, 1);
 
-            expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 10, 1, 999]);
+            expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 10, 1, 999, null]);
+        });
+
+        it("passes an explicit addedAt, e.g. to restore an imported viewing's date", async () => {
+            db.query.mockResolvedValue({rowCount: 1, rows: [{id: 5}]});
+
+            await repo.create("user-1", 10, 1, 2, "2024-01-01");
+
+            expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 10, 1, 2, "2024-01-01"]);
         });
 
         it("returns null when nothing was inserted", async () => {
             db.query.mockResolvedValue({rowCount: 0, rows: []});
 
             const result = await repo.create("user-1", 10, 1);
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe("findImportedViewing", () => {
+        it("returns the id of an already-imported viewing", async () => {
+            db.query.mockResolvedValue({rowCount: 1, rows: [{id: 5}]});
+
+            const result = await repo.findImportedViewing("user-1", 10, 1, "2024-01-01");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("FROM users_seasons"), ["user-1", 10, 1, "2024-01-01"]
+            );
+            expect(result).toBe(5);
+        });
+
+        it("returns null when no matching viewing exists yet", async () => {
+            db.query.mockResolvedValue({rowCount: 0, rows: []});
+
+            const result = await repo.findImportedViewing("user-1", 10, 1, "2024-01-01");
 
             expect(result).toBeNull();
         });

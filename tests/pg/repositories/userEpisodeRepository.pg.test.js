@@ -233,6 +233,21 @@ describe("UserEpisodeRepository (real Postgres)", () => {
             expect(result.map((r) => r.episode.number)).toEqual([1, 2]);
             expect(result.every((r) => r.userSeasonId === userSeasonId)).toBe(true);
         });
+
+        it("includes the episode's length and description, needed to recreate it on a re-import", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            const episodeId = await insertEpisode(showId, 1, { length: 52, description: "desc" });
+            await insertUserEpisode(userId, userSeasonId, episodeId);
+
+            const [result] = await repo.getAllByUserId(userId);
+
+            expect(result.episode.length).toBe(52);
+            expect(result.episode.description).toBe("desc");
+        });
     });
 
     describe("getByUserSeasonId", () => {

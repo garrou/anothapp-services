@@ -49,6 +49,9 @@ const seasonRepoMocks = vi.hoisted(() => ({
     getSeasonByShowIdByNumber: vi.fn(),
     createSeason: vi.fn(),
 }));
+const kindRepoMocks = vi.hoisted(() => ({
+    getKinds: vi.fn(),
+}));
 const userRepoMocks = vi.hoisted(() => ({
     hasEpisodeTrackingEnabled: vi.fn(),
 }));
@@ -88,6 +91,9 @@ vi.mock("../../../repositories/userSeasonRepository.js", () => ({
 }));
 vi.mock("../../../repositories/seasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return seasonRepoMocks; }),
+}));
+vi.mock("../../../repositories/kindRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return kindRepoMocks; }),
 }));
 
 const validShow = {
@@ -591,5 +597,96 @@ describe("ShowService.getRecommendations", () => {
 
         expect(result).toBe(recommendations);
         expect(userShowRepoMocks.getRecommendationsByUserId).toHaveBeenCalledWith("user-1");
+    });
+});
+
+describe("ShowService.ensureShowExistsFromImport", () => {
+    let showService;
+
+    const importedShow = {
+        id: 42, title: "Breaking Bad", poster: "poster.jpg", kinds: ["Drame", "Inconnu"],
+        country: "US", seasonsNumber: 5, episodeDuration: 45, description: "desc",
+        creation: 2008, network: "AMC", language: "en", totalEpisodes: 62,
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        showService = new ShowService();
+    });
+
+    it("does nothing when the show already exists locally", async () => {
+        showRepoMocks.getShow.mockResolvedValue({id: 42});
+
+        await showService.ensureShowExistsFromImport(importedShow);
+
+        expect(showRepoMocks.createShow).not.toHaveBeenCalled();
+    });
+
+    it("recreates the show without calling Betaseries, resolving kinds by name locally", async () => {
+        showRepoMocks.getShow.mockResolvedValue(null);
+        kindRepoMocks.getKinds.mockResolvedValue([{value: "Drama", name: "Drame"}]);
+        showRepoMocks.createShow.mockResolvedValue(true);
+
+        await showService.ensureShowExistsFromImport(importedShow);
+
+        expect(searchServiceMocks.getByShowId).not.toHaveBeenCalled();
+        expect(showRepoMocks.createShow).toHaveBeenCalledWith(
+            42, "Breaking Bad", "poster.jpg", [{id: "Drama", name: "Drame"}], 45, 5, "US", "desc", 2008, "AMC", "en", 62
+        );
+    });
+
+    it("drops a kind name with no local match instead of failing", async () => {
+        showRepoMocks.getShow.mockResolvedValue(null);
+        kindRepoMocks.getKinds.mockResolvedValue([{value: "Drama", name: "Drame"}]);
+        showRepoMocks.createShow.mockResolvedValue(true);
+
+        await showService.ensureShowExistsFromImport(importedShow);
+
+        const [, , , kinds] = showRepoMocks.createShow.mock.calls[0];
+        expect(kinds).toEqual([{id: "Drama", name: "Drame"}]);
+    });
+
+    it("throws a 500 when creation fails", async () => {
+        showRepoMocks.getShow.mockResolvedValue(null);
+        kindRepoMocks.getKinds.mockResolvedValue([]);
+        showRepoMocks.createShow.mockResolvedValue(false);
+
+        await expect(showService.ensureShowExistsFromImport(importedShow)).rejects.toMatchObject({status: 500});
+    });
+});
+
+describe("ShowService.ensureSeasonExistsFromImport", () => {
+    let showService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        showService = new ShowService();
+    });
+
+    it("does nothing when the season already exists locally", async () => {
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({number: 1});
+
+        await showService.ensureSeasonExistsFromImport(42, {number: 1, image: "s1.jpg", episodesCount: 8});
+
+        expect(seasonRepoMocks.createSeason).not.toHaveBeenCalled();
+    });
+
+    it("recreates the season from the imported data without calling Betaseries", async () => {
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue(null);
+        seasonRepoMocks.createSeason.mockResolvedValue(true);
+
+        await showService.ensureSeasonExistsFromImport(42, {number: 1, image: "s1.jpg", episodesCount: 8});
+
+        expect(searchServiceMocks.getSeasonByShowIdByNumber).not.toHaveBeenCalled();
+        expect(seasonRepoMocks.createSeason).toHaveBeenCalledWith(8, 1, "s1.jpg", 42);
+    });
+
+    it("throws a 500 when creation fails", async () => {
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue(null);
+        seasonRepoMocks.createSeason.mockResolvedValue(false);
+
+        await expect(
+            showService.ensureSeasonExistsFromImport(42, {number: 1, image: null, episodesCount: 8})
+        ).rejects.toMatchObject({status: 500});
     });
 });

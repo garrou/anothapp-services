@@ -16,4 +16,13 @@ export default class SettingsController {
             next(e);
         }
     }
+
+    importData = async (req, res, next) => {
+        try {
+            const summary = await this._settingService.importData(req.userId, req.body);
+            res.json(summary);
+        } catch (e) {
+            next(e);
+        }
+    }
 }

@@ -161,6 +161,61 @@ describe("ShowService (real Postgres)", () => {
         });
     });
 
+    describe("ensureShowExistsFromImport", () => {
+        it("does nothing when the show already exists locally", async () => {
+            const showId = await insertShow({ title: "Known" });
+
+            await service.ensureShowExistsFromImport({ id: showId, title: "Should not overwrite" });
+
+            const res = await db.query(`SELECT title FROM shows WHERE id = $1`, [showId]);
+            expect(res.rows[0].title).toBe("Known");
+        });
+
+        it("recreates the show from the imported data, resolving kinds by name locally", async () => {
+            await service.ensureShowExistsFromImport({
+                id: 777, title: "Imported Show", poster: "p.jpg", kinds: ["Drame"], country: "FR",
+                seasonsNumber: 2, episodeDuration: 45, description: "desc", creation: 2021,
+                network: "TF1", language: "fr", totalEpisodes: 20,
+            });
+
+            const show = await db.query(`SELECT * FROM shows WHERE id = 777`);
+            expect(show.rows[0].title).toBe("Imported Show");
+            const kinds = await db.query(`
+                SELECT k.name FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = 777
+            `);
+            expect(kinds.rows.map((r) => r.name)).toEqual(["Drame"]);
+        });
+
+        it("never calls Betaseries even when the show is missing locally", async () => {
+            await expect(service.ensureShowExistsFromImport({
+                id: 778, title: "No API", kinds: [], country: "FR", seasonsNumber: 1, episodeDuration: 30,
+            })).resolves.toBeUndefined();
+        });
+    });
+
+    describe("ensureSeasonExistsFromImport", () => {
+        it("does nothing when the season already exists locally", async () => {
+            const showId = await insertShow();
+            await insertSeason(showId, 1, { episodes: 3, image: "known.jpg" });
+
+            await service.ensureSeasonExistsFromImport(showId, { number: 1, image: "should-not-overwrite.jpg", episodesCount: 99 });
+
+            const res = await db.query(`SELECT image, episodes FROM seasons WHERE show_id = $1 AND number = 1`, [showId]);
+            expect(res.rows[0].image).toBe("known.jpg");
+            expect(res.rows[0].episodes).toBe(3);
+        });
+
+        it("recreates the season from the imported data without calling Betaseries", async () => {
+            const showId = await insertShow();
+
+            await service.ensureSeasonExistsFromImport(showId, { number: 1, image: "s1.jpg", episodesCount: 8 });
+
+            const res = await db.query(`SELECT image, episodes FROM seasons WHERE show_id = $1 AND number = 1`, [showId]);
+            expect(res.rows[0].image).toBe("s1.jpg");
+            expect(res.rows[0].episodes).toBe(8);
+        });
+    });
+
     describe("updateByShowId", () => {
         it("toggles favorite", async () => {
             const userId = await insertUser();
