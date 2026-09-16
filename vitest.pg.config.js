@@ -5,11 +5,7 @@ import { defineConfig } from "vitest/config";
 // the fast default `npm test` suite - only via `npm run test:pg`.
 export default defineConfig({
     test: {
-        include: ["**/*.pg.test.js"],
-        exclude: [
-            "**/node_modules/**", "**/dist/**", "**/cypress/**",
-            "**/.{idea,git,cache,output,temp}/**",
-        ],
+        include: ["tests/pg/**/*.pg.test.js"],
         environment: "node",
         globals: false,
         testTimeout: 15000,
