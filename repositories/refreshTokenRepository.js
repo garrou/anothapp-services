@@ -39,7 +39,7 @@ export default class RefreshTokenRepository {
         const res = await db.query(`
             UPDATE refresh_tokens
             SET revoked_at = NOW()
-            WHERE id = $1
+            WHERE id = $1 AND revoked_at IS NULL
         `, [tokenId]);
         return res.rowCount === 1;
     }

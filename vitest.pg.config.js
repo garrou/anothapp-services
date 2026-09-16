@@ -19,6 +19,11 @@ export default defineConfig({
             POSTGRES_DB: "anothapp_test",
             POSTGRES_HOST: "localhost",
             POSTGRES_PORT: "5433",
+            // SecurityHelper.refreshPath and the auth cookies' secure/sameSite attributes are
+            // computed once at module load from isProdMode() - the e2e tests need MODE set before
+            // any import touches helpers/security.js, and a per-test beforeAll is too late for a
+            // static top-level import, so it has to be set here at the process level.
+            MODE: "dev",
         },
     },
 });

@@ -82,6 +82,17 @@ describe("RefreshTokenRepository (real Postgres)", () => {
 
             expect(result).toBe(false);
         });
+
+        it("returns false when the token is already revoked", async () => {
+            const userId = await insertUser();
+            await repo.create(userId, "alreadyrevoked", new Date(Date.now() + 86400000));
+            const token = await repo.find("alreadyrevoked");
+            await repo.revoke(token.id);
+
+            const result = await repo.revoke(token.id);
+
+            expect(result).toBe(false);
+        });
     });
 
     describe("deleteRevokedOlderThanDays", () => {
