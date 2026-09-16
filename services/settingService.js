@@ -97,18 +97,14 @@ export default class SettingService {
      * @returns {Promise<Object>} a per-category summary of what was imported
      */
     importData = async (userId, payload) => {
-        if (!payload || typeof payload !== "object" 
-            || (typeof payload.user?.episodeTrackingEnabled !== "boolean")
-            || !Array.isArray(payload.shows)
-            || (payload.playlists !== undefined && !Array.isArray(payload.playlists))
-            || (payload.favoriteActors !== undefined && !Array.isArray(payload.favoriteActors))
-            || (payload.platforms !== undefined && !Array.isArray(payload.platforms))) {
+        if (!Validator.isValidImportFile(payload)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         const shows = payload.shows ?? [];
         const playlists = payload.playlists ?? [];
         const favoriteActors = payload.favoriteActors ?? [];
         const platforms = payload.platforms ?? [];
+        const episodeTrackingEnabled = payload.user.episodeTrackingEnabled;
 
         const summary = {
             shows: { imported: 0, errors: 0 },
@@ -119,14 +115,14 @@ export default class SettingService {
         };
 
         try {
-            await this.#importEpisodeTrackingPreference(userId, payload.user?.episodeTrackingEnabled);
+            await this.#importEpisodeTrackingPreference(userId, episodeTrackingEnabled);
         } catch (err) {
             summary.errors.push(`Suivi des épisodes : ${err.message}`);
         }
 
         await mapWithConcurrency(shows, CONCURRENCY, async (show) => {
             try {
-                await this.#importShow(userId, show, payload.user?.episodeTrackingEnabled);
+                await this.#importShow(userId, show, episodeTrackingEnabled);
                 summary.shows.imported++;
             } catch (err) {
                 summary.shows.errors++;

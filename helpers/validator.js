@@ -111,6 +111,22 @@ export default class Validator {
     }
 
     /**
+     * @param {Object} payload 
+     * @returns {boolean}
+     */
+    static isValidImportFile = (payload) => {
+        return payload && typeof payload === "object" 
+            && typeof payload.user === "object"
+            && typeof payload.username === "string"
+            && typeof payload.email === "string"
+            && typeof payload.user.episodeTrackingEnabled === "boolean"
+            && Array.isArray(payload.shows)
+            && Array.isArray(payload.playlists)
+            && Array.isArray(payload.favoriteActors)
+            && Array.isArray(payload.platforms)
+    }
+
+    /**
      * @param {ExportShow} show
      * @returns {boolean}
      */
