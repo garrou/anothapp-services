@@ -20,7 +20,7 @@ class App {
     }
 
     #setupMiddleware() {
-        this._app.use("/settings/import-data", express.json({limit: "20mb"}));
+        this._app.use("/settings/import-data", express.json({limit: "50mb"}));
         this._app.use(express.json());
         this._app.use(cookieParser());
         this._app.use(limiter);
