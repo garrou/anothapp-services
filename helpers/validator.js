@@ -152,7 +152,8 @@ export default class Validator {
      * @returns {boolean}
      */
     static isValidImportedShow = (show) => {
-        return Validator.isPlainObject(show) && Number.isInteger(show.id);
+        return Validator.isPlainObject(show) && Number.isInteger(show.id)
+            && (show.seasons === undefined || Array.isArray(show.seasons));
     }
 
     /**
@@ -160,7 +161,8 @@ export default class Validator {
      * @returns {boolean}
      */
     static isValidImportedSeason = (season) => {
-        return Validator.isPlainObject(season) && Number.isInteger(season.number);
+        return Validator.isPlainObject(season) && Number.isInteger(season.number)
+            && (season.episodes === undefined || Array.isArray(season.episodes));
     }
 
     /**
@@ -176,7 +178,16 @@ export default class Validator {
      * @returns {boolean}
      */
     static isValidImportedPlaylist = (playlist) => {
-        return Validator.isPlainObject(playlist) && Validator.isString(playlist.name) && !!playlist.name;
+        return Validator.isPlainObject(playlist) && Validator.isString(playlist.name) && !!playlist.name
+            && (playlist.shows === undefined || Array.isArray(playlist.shows));
+    }
+
+    /**
+     * @param {{id: number}} show
+     * @returns {boolean}
+     */
+    static isValidImportedPlaylistShow = (show) => {
+        return Validator.isPlainObject(show) && Number.isInteger(show.id);
     }
 
     /**

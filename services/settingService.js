@@ -113,7 +113,7 @@ export default class SettingService {
 
         const summary = {
             shows: { imported: 0, errors: 0 },
-            playlists: { imported: 0, errors: 0 },
+            playlists: { imported: 0, skipped: 0, errors: 0 },
             favoriteActors: { imported: 0, errors: 0 },
             platforms: { imported: 0, errors: 0 },
             errors: [],
@@ -131,8 +131,13 @@ export default class SettingService {
 
         await mapWithConcurrency(playlists, CONCURRENCY, async (playlist) => {
             try {
-                await this.#importPlaylist(userId, playlist);
-                summary.playlists.imported++;
+                const imported = await this.#importPlaylist(userId, playlist);
+
+                if (imported) {
+                    summary.playlists.imported++;
+                } else {
+                    summary.playlists.skipped++;
+                }
             } catch (err) {
                 summary.playlists.errors++;
                 summary.errors.push(`Playlist "${playlist?.name ?? "?"}" : ${err.message}`);
@@ -196,7 +201,14 @@ export default class SettingService {
                 favorite: show.isFavorite, watch: show.isWatching, note: show.note, addedAt: show.addedAt,
             });
         }
-        await Promise.all((show.seasons ?? []).map((season) => this.#importSeason(userId, show.id, season)));
+        const results = await mapWithConcurrency(
+            show.seasons ?? [], CONCURRENCY, (season) => this.#importSeason(userId, show.id, season)
+        );
+        const failed = results.find((result) => result.status === "rejected");
+
+        if (failed) {
+            throw failed.reason;
+        }
     }
 
     /**
@@ -216,14 +228,19 @@ export default class SettingService {
             userId, showId, season.number, season.platformId, season.addedAt
         );
 
-        await Promise.all((season.episodes ?? []).map(async (episode) => {
+        const results = await mapWithConcurrency(season.episodes ?? [], CONCURRENCY, async (episode) => {
             if (!Validator.isValidImportedEpisode(episode)) {
                 throw new Error("Épisode invalide");
             }
             await this._userEpisodeRepository.createIfMissing(
                 userId, userSeasonId, episode.episodeId, episode.watchedAt ?? season.addedAt, season.platformId
             );
-        }));
+        });
+        const failed = results.find((result) => result.status === "rejected");
+
+        if (failed) {
+            throw failed.reason;
+        }
     }
 
     /**
@@ -231,24 +248,25 @@ export default class SettingService {
      * recreated unilaterally (see the export/import plan's decision on this).
      * @param {string} userId
      * @param {Object} playlist
-     * @returns {Promise<void>}
+     * @returns {Promise<boolean>} false when the playlist was skipped (collaborator-only), true when it was imported
      */
     #importPlaylist = async (userId, playlist) => {
         if (!Validator.isValidImportedPlaylist(playlist)) {
             throw new Error("Playlist invalide");
         }
         if (playlist.role && playlist.role !== "owner") {
-            return;
+            return false;
         }
         const existing = await this._playlistRepository.getByUserIdAndName(userId, playlist.name);
         const target = existing ?? await this._playlistRepository.create(userId, playlist.name, !!playlist.visible);
 
         await Promise.all((playlist.shows ?? []).map(async (show) => {
-            if (!Validator.isValidImportedShow(show)) {
+            if (!Validator.isValidImportedPlaylistShow(show)) {
                 throw new Error("Série de playlist invalide");
             }
             await this._playlistRepository.addShow(target.id, show.id);
         }));
+        return true;
     }
 
     /**

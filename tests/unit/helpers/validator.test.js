@@ -156,6 +156,18 @@ describe("Validator.isValidImportedShow", () => {
     it("accepts a show with an integer id", () => {
         expect(Validator.isValidImportedShow({ id: 1, title: "Breaking Bad" })).toBe(true);
     });
+
+    it("accepts a show with no seasons field", () => {
+        expect(Validator.isValidImportedShow({ id: 1 })).toBe(true);
+    });
+
+    it("rejects a show whose seasons field isn't an array", () => {
+        expect(Validator.isValidImportedShow({ id: 1, seasons: "oops" })).toBe(false);
+    });
+
+    it("accepts a show with a seasons array", () => {
+        expect(Validator.isValidImportedShow({ id: 1, seasons: [] })).toBe(true);
+    });
 });
 
 describe("Validator.isValidImportedSeason", () => {
@@ -170,6 +182,14 @@ describe("Validator.isValidImportedSeason", () => {
 
     it("accepts a season with an integer number", () => {
         expect(Validator.isValidImportedSeason({ number: 1 })).toBe(true);
+    });
+
+    it("rejects a season whose episodes field isn't an array", () => {
+        expect(Validator.isValidImportedSeason({ number: 1, episodes: "oops" })).toBe(false);
+    });
+
+    it("accepts a season with an episodes array", () => {
+        expect(Validator.isValidImportedSeason({ number: 1, episodes: [] })).toBe(true);
     });
 });
 
@@ -192,6 +212,27 @@ describe("Validator.isValidImportedPlaylist", () => {
 
     it("accepts a playlist with a name", () => {
         expect(Validator.isValidImportedPlaylist({ name: "Ma playlist" })).toBe(true);
+    });
+
+    it("rejects a playlist whose shows field isn't an array", () => {
+        expect(Validator.isValidImportedPlaylist({ name: "Ma playlist", shows: "oops" })).toBe(false);
+    });
+
+    it("accepts a playlist with a shows array", () => {
+        expect(Validator.isValidImportedPlaylist({ name: "Ma playlist", shows: [] })).toBe(true);
+    });
+});
+
+describe("Validator.isValidImportedPlaylistShow", () => {
+    it("rejects a show without an integer id", () => {
+        expect(Validator.isValidImportedPlaylistShow({})).toBe(false);
+        expect(Validator.isValidImportedPlaylistShow({ id: "1" })).toBe(false);
+    });
+
+    it("accepts a show with just an id, even with a numeric (non-array) seasons count", () => {
+        // a playlist's exported shows are raw catalog rows - `seasons` is a season count here,
+        // not the nested seasons array a top-level exported show carries under the same key
+        expect(Validator.isValidImportedPlaylistShow({ id: 1, title: "Dark", seasons: 3 })).toBe(true);
     });
 });
 

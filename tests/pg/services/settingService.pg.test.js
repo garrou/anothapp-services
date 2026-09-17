@@ -200,7 +200,7 @@ describe("SettingService (real Postgres)", () => {
             expect(seasons.rows).toHaveLength(1);
         });
 
-        it("recreates an owned playlist and its shows, but skips a playlist the export user only collaborated on", async () => {
+        it("recreates an owned playlist and its shows, but skips (without counting as imported) a playlist the export user only collaborated on", async () => {
             const userId = await insertUser();
             const showId = await insertShow({ title: "Playlist Show" });
             const payload = {
@@ -213,7 +213,7 @@ describe("SettingService (real Postgres)", () => {
 
             const summary = await service.importData(userId, payload);
 
-            expect(summary.playlists).toEqual({ imported: 2, errors: 0 });
+            expect(summary.playlists).toEqual({ imported: 1, skipped: 1, errors: 0 });
 
             const playlists = await db.query(`SELECT * FROM playlists WHERE user_id = $1`, [userId]);
             expect(playlists.rows.map((r) => r.name)).toEqual(["My playlist"]);
@@ -233,7 +233,7 @@ describe("SettingService (real Postgres)", () => {
                 playlists: [{ name: "My playlist", role: "owner", shows: [{ id: 999999, title: "Unknown show" }] }],
             });
 
-            expect(summary.playlists).toEqual({ imported: 0, errors: 1 });
+            expect(summary.playlists).toEqual({ imported: 0, skipped: 0, errors: 1 });
         });
 
         it("does not duplicate a playlist already imported on a second run", async () => {

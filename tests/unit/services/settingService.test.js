@@ -287,7 +287,7 @@ describe("SettingService.importData", () => {
 
         expect(playlistRepoMocks.create).toHaveBeenCalledWith("user-1", "My playlist", false);
         expect(playlistRepoMocks.addShow).toHaveBeenCalledWith(1, 10);
-        expect(summary.playlists).toEqual({imported: 1, errors: 0});
+        expect(summary.playlists).toEqual({imported: 1, skipped: 0, errors: 0});
     });
 
     it("reuses an already-imported playlist by name instead of creating a duplicate", async () => {
@@ -299,15 +299,16 @@ describe("SettingService.importData", () => {
 
         expect(playlistRepoMocks.create).not.toHaveBeenCalled();
         expect(playlistRepoMocks.addShow).toHaveBeenCalledWith(7, 10);
-        expect(summary.playlists).toEqual({imported: 1, errors: 0});
+        expect(summary.playlists).toEqual({imported: 1, skipped: 0, errors: 0});
     });
 
-    it("skips playlists the exporting user only collaborated on", async () => {
-        await service.importData("user-1", {
+    it("skips playlists the exporting user only collaborated on, without counting them as imported", async () => {
+        const summary = await service.importData("user-1", {
             shows: [], playlists: [{id: 2, name: "Shared", role: "collaborator", shows: []}],
         });
 
         expect(playlistRepoMocks.create).not.toHaveBeenCalled();
+        expect(summary.playlists).toEqual({imported: 0, skipped: 1, errors: 0});
     });
 
     it("adds a favorite actor to the user's own favorites, without touching the shared catalog", async () => {
@@ -420,7 +421,7 @@ describe("SettingService.importData", () => {
     it("reports a per-playlist error for a playlist without a name", async () => {
         const summary = await service.importData("user-1", {shows: [], playlists: [{role: "owner", shows: []}]});
 
-        expect(summary.playlists).toEqual({imported: 0, errors: 1});
+        expect(summary.playlists).toEqual({imported: 0, skipped: 0, errors: 1});
         expect(playlistRepoMocks.create).not.toHaveBeenCalled();
     });
 
@@ -429,7 +430,7 @@ describe("SettingService.importData", () => {
             shows: [], playlists: [{name: "My playlist", role: "owner", shows: [{title: "No id"}]}],
         });
 
-        expect(summary.playlists).toEqual({imported: 0, errors: 1});
+        expect(summary.playlists).toEqual({imported: 0, skipped: 0, errors: 1});
         expect(playlistRepoMocks.addShow).not.toHaveBeenCalled();
     });
 

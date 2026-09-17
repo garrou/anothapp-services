@@ -53,7 +53,7 @@ describe("Export/import journey (real Postgres, real HTTP)", () => {
 
         expect(importRes.status).toBe(200);
         expect(importRes.body.shows).toEqual({ imported: 1, errors: 0 });
-        expect(importRes.body.playlists).toEqual({ imported: 1, errors: 0 });
+        expect(importRes.body.playlists).toEqual({ imported: 1, skipped: 0, errors: 0 });
         expect(importRes.body.favoriteActors).toEqual({ imported: 1, errors: 0 });
         expect(importRes.body.platforms).toEqual({ imported: 1, errors: 0 });
 
