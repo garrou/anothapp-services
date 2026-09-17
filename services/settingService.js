@@ -97,12 +97,6 @@ export default class SettingService {
     }
 
     /**
-     * Re-imports a previously exported ExportData. The target account (userId, always the
-     * currently authenticated user) is never modified by this: friends, playlist collaborators,
-     * and the export's own `user` block (username/email/password/picture) are never read here.
-     * The file's `signature` field (see SecurityHelper.signExportData/verifyExportSignature) is
-     * required and checked before anything else - it's the only thing standing between a real
-     * export and a hand-edited one crafted to fabricate viewings, streaks or achievements.
      * @param {string} userId
      * @param {Object} payload
      * @returns {Promise<Object>} a per-category summary of what was imported
@@ -136,7 +130,7 @@ export default class SettingService {
 
         await mapWithConcurrency(shows, CONCURRENCY, async (show) => {
             try {
-                await this.#importShow(userId, show, episodeTrackingEnabled);
+                await this.#importShow(userId, show);
                 summary.shows.imported++;
             } catch (err) {
                 summary.shows.errors++;
@@ -192,10 +186,9 @@ export default class SettingService {
      * rejects the row and this show is reported as a failure instead of fabricating catalog data.
      * @param {string} userId
      * @param {ExportShow} show
-     * @param {boolean} episodeTrackingEnabled
      * @returns {Promise<void>}
      */
-    #importShow = async (userId, show, episodeTrackingEnabled) => {
+    #importShow = async (userId, show) => {
         if (!Validator.isValidImportedShow(show)) {
             throw new Error("Série invalide");
         }
@@ -207,7 +200,7 @@ export default class SettingService {
             });
         }
         for (const season of show.seasons ?? []) {
-            await this.#importSeason(userId, show.id, season, episodeTrackingEnabled);
+            await this.#importSeason(userId, show.id, season);
         }
     }
 
@@ -215,10 +208,9 @@ export default class SettingService {
      * @param {string} userId
      * @param {number} showId
      * @param {UserSeason} season one exported viewing - a rewatch of the same season is a separate entry
-     * @param {boolean} episodeTrackingEnabled
      * @returns {Promise<void>}
      */
-    #importSeason = async (userId, showId, season, episodeTrackingEnabled) => {
+    #importSeason = async (userId, showId, season) => {
         if (!Validator.isValidImportedSeason(season)) {
             throw new Error("Saison invalide");
         }
@@ -228,8 +220,6 @@ export default class SettingService {
         const userSeasonId = alreadyImported ?? await this._userSeasonRepository.create(
             userId, showId, season.number, season.platformId, season.addedAt
         );
-
-        if (!episodeTrackingEnabled) return;
 
         for (const episode of season.episodes ?? []) {
             if (!Validator.isValidImportedEpisode(episode)) {
