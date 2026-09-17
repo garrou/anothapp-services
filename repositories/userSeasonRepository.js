@@ -41,7 +41,7 @@ export default class UserSeasonRepository {
     findImportedViewing = async (userId, showId, number, addedAt) => {
         const res = await db.query(`
             SELECT id FROM users_seasons
-            WHERE user_id = $1 AND show_id = $2 AND number = $3 AND added_at IS NOT DISTINCT FROM $4
+            WHERE user_id = $1 AND show_id = $2 AND number = $3 AND added_at = $4
         `, [userId, showId, number, addedAt]);
         return res.rowCount === 1 ? res.rows[0]["id"] : null;
     }

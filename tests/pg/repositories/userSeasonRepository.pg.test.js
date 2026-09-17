@@ -66,6 +66,23 @@ describe("UserSeasonRepository (real Postgres)", () => {
 
             expect(result).toBe(res.rows[0].id);
         });
+
+        it("matches a viewing created by NOW() against its own export round-trip, sub-second noise included", async () => {
+            // added_at has microsecond precision in Postgres, but an export serializes it through
+            // a JS Date (millisecond precision only) - simulate that exact round-trip instead of
+            // a clean, hand-written date, which would never have exposed the mismatch.
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const id = await insertUserSeason(userId, showId, 1);
+            const [{ addedAt }] = await repo.getUserSeasonsByUserId(userId);
+            const exportedAddedAt = JSON.parse(JSON.stringify(addedAt));
+
+            const result = await repo.findImportedViewing(userId, showId, 1, exportedAddedAt);
+
+            expect(result).toBe(id);
+        });
     });
 
     describe("getUserSeasonsByUserId", () => {
