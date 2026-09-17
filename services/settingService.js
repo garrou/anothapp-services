@@ -196,9 +196,7 @@ export default class SettingService {
                 favorite: show.isFavorite, watch: show.isWatching, note: show.note, addedAt: show.addedAt,
             });
         }
-        for (const season of show.seasons ?? []) {
-            await this.#importSeason(userId, show.id, season);
-        }
+        await Promise.all((show.seasons ?? []).map((season) => this.#importSeason(userId, show.id, season)));
     }
 
     /**
@@ -218,14 +216,14 @@ export default class SettingService {
             userId, showId, season.number, season.platformId, season.addedAt
         );
 
-        for (const episode of season.episodes ?? []) {
+        await Promise.all((season.episodes ?? []).map(async (episode) => {
             if (!Validator.isValidImportedEpisode(episode)) {
                 throw new Error("Épisode invalide");
             }
             await this._userEpisodeRepository.createIfMissing(
                 userId, userSeasonId, episode.episodeId, episode.watchedAt ?? season.addedAt, season.platformId
             );
-        }
+        }));
     }
 
     /**
@@ -245,12 +243,12 @@ export default class SettingService {
         const existing = await this._playlistRepository.getByUserIdAndName(userId, playlist.name);
         const target = existing ?? await this._playlistRepository.create(userId, playlist.name, !!playlist.visible);
 
-        for (const show of playlist.shows ?? []) {
+        await Promise.all((playlist.shows ?? []).map(async (show) => {
             if (!Validator.isValidImportedShow(show)) {
                 throw new Error("Série de playlist invalide");
             }
             await this._playlistRepository.addShow(target.id, show.id);
-        }
+        }));
     }
 
     /**
