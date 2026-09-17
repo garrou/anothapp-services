@@ -26,6 +26,8 @@ class UserSeason {
         this.platform = obj.platform;
         this.platformId = obj["platform_id"];
         this.showId = obj["show_id"];
+        this.image = obj.image;
+        this.episodesCount = obj.episodes;
     }
 }
 

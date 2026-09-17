@@ -23,13 +23,15 @@ export default class UserShowRepository {
     /**
      * @param {string} userId
      * @param {number} showId
+     * @param {{favorite?: boolean, watch?: boolean, note?: number|null, addedAt?: string|null}} [overrides] used on import, to restore the exported state instead of the defaults
      * @returns {Promise<boolean>}
      */
-    create = async (userId, showId) => {
+    create = async (userId, showId, overrides = {}) => {
+        const {favorite = false, watch = true, note = null, addedAt = null} = overrides;
         const res = await db.query(`
-            INSERT INTO users_shows (user_id, show_id)
-            VALUES ($1, $2)
-        `, [userId, showId]);
+            INSERT INTO users_shows (user_id, show_id, favorite, continue, note_id, added_at)
+            VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()))
+        `, [userId, showId, favorite, watch, note, addedAt]);
         return res.rowCount === 1;
     }
 

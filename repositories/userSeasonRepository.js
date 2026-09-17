@@ -18,14 +18,36 @@ export default class UserSeasonRepository {
      * @param {number} showId
      * @param {number} number
      * @param {number} platform
+     * @param {string?} addedAt used on import, to restore the exported viewing date instead of NOW()
      * @returns {Promise<number|null>} the created row's id, or null on failure
      */
-    create = async (userId, showId, number, platform = 999) => {
+    create = async (userId, showId, number, platform = 999, addedAt = null) => {
         const res = await db.query(`
-            INSERT INTO users_seasons (user_id, show_id, number, platform_id)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO users_seasons (user_id, show_id, number, platform_id, added_at)
+            VALUES ($1, $2, $3, $4, COALESCE($5, NOW()))
             RETURNING id
-        `, [userId, showId, number, platform]);
+        `, [userId, showId, number, platform, addedAt]);
+        return res.rowCount === 1 ? res.rows[0]["id"] : null;
+    }
+
+    /**
+     * Guards import re-runs against duplicating the same viewing (e.g. a rewatch) twice.
+     * added_at is compared truncated to milliseconds, since it round-trips through a JS Date
+     * during export (millisecond precision only) while Postgres itself stores microseconds -
+     * an exact match would miss a viewing whose original added_at wasn't itself millisecond-aligned
+     * (e.g. one set by NOW()). IS NOT DISTINCT FROM also lets a NULL addedAt match a NULL column.
+     * @param {string} userId
+     * @param {number} showId
+     * @param {number} number
+     * @param {string?} addedAt
+     * @returns {Promise<number|null>} the id of the already-imported viewing, if any
+     */
+    findImportedViewing = async (userId, showId, number, addedAt) => {
+        const res = await db.query(`
+            SELECT id FROM users_seasons
+            WHERE user_id = $1 AND show_id = $2 AND number = $3
+              AND date_trunc('milliseconds', added_at) IS NOT DISTINCT FROM date_trunc('milliseconds', $4::timestamptz)
+        `, [userId, showId, number, addedAt]);
         return res.rowCount === 1 ? res.rows[0]["id"] : null;
     }
 
@@ -68,9 +90,11 @@ export default class UserSeasonRepository {
      */
     getUserSeasonsByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT us.id, us.added_at, us.show_id, us.number, us.platform_id, p.name as platform
+            SELECT us.id, us.added_at, us.show_id, us.number, us.platform_id, p.name as platform,
+                   s.image, s.episodes
             FROM users_seasons us
             JOIN platforms p on us.platform_id = p.id
+            JOIN seasons s ON s.show_id = us.show_id AND s.number = us.number
             WHERE us.user_id = $1
             ORDER BY us.show_id, us.number, us.added_at
         `, [userId]);

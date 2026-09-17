@@ -32,6 +32,18 @@ describe("UserShowRepository (real Postgres)", () => {
 
             expect(await repo.checkShowExistsByUserIdByShowId(userId, showId)).toBe(false);
         });
+
+        it("uses the provided overrides, e.g. to restore an imported show's state", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+
+            await repo.create(userId, showId, { favorite: true, watch: false, note: null, addedAt: "2024-01-01" });
+
+            const res = await db.query(`SELECT * FROM users_shows WHERE user_id = $1 AND show_id = $2`, [userId, showId]);
+            expect(res.rows[0].favorite).toBe(true);
+            expect(res.rows[0].continue).toBe(false);
+            expect(res.rows[0].added_at.toISOString()).toContain("2024-01-01");
+        });
     });
 
     describe("deleteByUserIdShowId", () => {

@@ -153,7 +153,8 @@ export default class UserEpisodeRepository {
      */
     getAllByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT ue.id, ue.users_seasons_id, e.id AS episode_id, e.title, e.code, e.number, e.global, e.date, ue.watched_at
+            SELECT ue.id, ue.users_seasons_id, e.id AS episode_id, e.title, e.code, e.number, e.global,
+                   e.length, e.date, e.description, ue.watched_at
             FROM users_episodes ue
             JOIN episodes e ON ue.episode_id = e.id
             WHERE ue.user_id = $1

@@ -34,6 +34,18 @@ export default class PlaylistRepository {
     }
 
     /**
+     * @param {string} userId
+     * @param {string} name
+     * @returns {Promise<Playlist|null>}
+     */
+    getByUserIdAndName = async (userId, name) => {
+        const res = await db.query(`
+            SELECT * FROM playlists WHERE user_id = $1 AND name = $2 LIMIT 1
+        `, [userId, name]);
+        return res.rowCount === 1 ? new Playlist(res.rows[0]) : null;
+    }
+
+    /**
      * @param {string} id
      * @returns {Promise<Playlist|null>}
      */

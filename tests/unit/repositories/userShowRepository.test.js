@@ -27,13 +27,25 @@ describe("UserShowRepository", () => {
     });
 
     describe("create", () => {
-        it("returns true when a row was inserted", async () => {
+        it("returns true when a row was inserted, defaulting overrides", async () => {
             db.query.mockResolvedValue({rowCount: 1});
 
             const result = await repo.create("user-1", 10);
 
-            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users_shows"), ["user-1", 10]);
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("INSERT INTO users_shows"), ["user-1", 10, false, true, null, null]
+            );
             expect(result).toBe(true);
+        });
+
+        it("uses the provided overrides, e.g. to restore an imported show's state", async () => {
+            db.query.mockResolvedValue({rowCount: 1});
+
+            await repo.create("user-1", 10, {favorite: true, watch: false, note: 3, addedAt: "2024-01-01"});
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.any(String), ["user-1", 10, true, false, 3, "2024-01-01"]
+            );
         });
     });
 

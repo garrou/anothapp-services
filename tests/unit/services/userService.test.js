@@ -56,6 +56,18 @@ describe("UserService.updateUser - episode tracking", () => {
         ).rejects.toThrow("Impossible de modifier le suivi des épisodes");
         expect(episodeServiceMocks.backfillForUser).not.toHaveBeenCalled();
     });
+
+    it("enables the flag without a backfill when the caller passes skipBackfill, e.g. a data import", async () => {
+        userRepoMocks.updateField.mockResolvedValue(true);
+
+        const message = await userService.updateUser(
+            "user-1", new UserUpdate({ episodeTrackingEnabled: true }), { skipBackfill: true }
+        );
+
+        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "episode_tracking_enabled", true);
+        expect(episodeServiceMocks.backfillForUser).not.toHaveBeenCalled();
+        expect(message).toBe("Suivi des épisodes activé");
+    });
 });
 
 describe("UserService.getProfile", () => {

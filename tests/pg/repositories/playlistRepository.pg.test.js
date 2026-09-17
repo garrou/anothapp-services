@@ -32,6 +32,27 @@ describe("PlaylistRepository (real Postgres)", () => {
         });
     });
 
+    describe("getByUserIdAndName", () => {
+        it("finds the user's own playlist by exact name", async () => {
+            const userId = await insertUser();
+            await insertPlaylist(userId, { name: "My Playlist" });
+
+            const result = await repo.getByUserIdAndName(userId, "My Playlist");
+
+            expect(result?.name).toBe("My Playlist");
+        });
+
+        it("returns null when no playlist matches that name for that user", async () => {
+            const userId = await insertUser();
+            const otherUserId = await insertUser();
+            await insertPlaylist(otherUserId, { name: "Someone Else's" });
+
+            const result = await repo.getByUserIdAndName(userId, "Someone Else's");
+
+            expect(result).toBeNull();
+        });
+    });
+
     describe("getCountByUserId", () => {
         it("counts only the requesting user's playlists", async () => {
             const userId = await insertUser();

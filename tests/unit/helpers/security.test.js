@@ -96,6 +96,71 @@ describe("SecurityHelper.extractBearerToken", () => {
     });
 });
 
+describe("SecurityHelper.canonicalStringify", () => {
+    it("is insensitive to key order", () => {
+        const a = SecurityHelper.canonicalStringify({ a: 1, b: 2 });
+        const b = SecurityHelper.canonicalStringify({ b: 2, a: 1 });
+        expect(a).toBe(b);
+    });
+
+    it("sorts keys recursively, including inside arrays", () => {
+        const result = SecurityHelper.canonicalStringify({ shows: [{ title: "X", id: 1 }] });
+        expect(result).toBe('{"shows":[{"id":1,"title":"X"}]}');
+    });
+
+    it("drops undefined-valued object properties, like JSON.stringify does", () => {
+        expect(SecurityHelper.canonicalStringify({ a: 1, b: undefined })).toBe('{"a":1}');
+    });
+});
+
+describe("SecurityHelper.signExportData / verifyExportSignature", () => {
+    it("is deterministic and insensitive to key order", () => {
+        const a = SecurityHelper.signExportData({ shows: [], user: { id: "u1" } });
+        const b = SecurityHelper.signExportData({ user: { id: "u1" }, shows: [] });
+        expect(a).toBe(b);
+    });
+
+    it("changes when the content changes", () => {
+        const a = SecurityHelper.signExportData({ shows: [] });
+        const b = SecurityHelper.signExportData({ shows: [{ id: 1 }] });
+        expect(a).not.toBe(b);
+    });
+
+    it("round-trips: a freshly signed export verifies", () => {
+        const data = { shows: [{ id: 1, title: "Show" }] };
+        const signature = SecurityHelper.signExportData(data);
+        expect(SecurityHelper.verifyExportSignature({ ...data, signature })).toBe(true);
+    });
+
+    it("rejects a payload whose content was edited after signing", () => {
+        const data = { shows: [{ id: 1, title: "Show" }] };
+        const signature = SecurityHelper.signExportData(data);
+        const tampered = { ...data, shows: [{ id: 1, title: "Tampered" }], signature };
+        expect(SecurityHelper.verifyExportSignature(tampered)).toBe(false);
+    });
+
+    it("rejects a payload with no signature field", () => {
+        expect(SecurityHelper.verifyExportSignature({ shows: [] })).toBe(false);
+    });
+
+    it("rejects a payload with a non-string signature", () => {
+        expect(SecurityHelper.verifyExportSignature({ shows: [], signature: 12345 })).toBe(false);
+    });
+
+    it("rejects null/undefined payloads", () => {
+        expect(SecurityHelper.verifyExportSignature(null)).toBe(false);
+        expect(SecurityHelper.verifyExportSignature(undefined)).toBe(false);
+    });
+
+    it("survives a pretty-printed JSON round-trip (reordered whitespace, same content)", () => {
+        const data = { shows: [{ id: 1, title: "Show" }], user: { episodeTrackingEnabled: true } };
+        const signature = SecurityHelper.signExportData(data);
+        const file = JSON.stringify({ ...data, signature }, null, 4);
+        const reparsed = JSON.parse(file);
+        expect(SecurityHelper.verifyExportSignature(reparsed)).toBe(true);
+    });
+});
+
 describe("SecurityHelper.createHash / comparePassword", () => {
     it("round-trips: the original password matches its own hash", async () => {
         const hash = await SecurityHelper.createHash("goodpassword");

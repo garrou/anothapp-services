@@ -10,6 +10,7 @@ export default class UserEpisode {
         this.code = obj.code;
         this.number = obj.number;
         this.global = obj.global;
+        this.length = obj.length;
         this.date = obj.date;
         this.description = obj.description;
         this.watchedAt = obj["watched_at"] ?? null;
