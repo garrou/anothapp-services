@@ -23,7 +23,7 @@ export default class AuthService {
      * account is scheduled for deletion - the caller must not open a session in that case
      */
     login = async (identifier, password) => {
-        if (typeof identifier !== "string" || typeof password !== "string") {
+        if (!Validator.isString(identifier) || !Validator.isString(password)) {
             throw new ServiceError(400, "Identifiant ou mot de passe incorrect");
         }
         const found = await this._userRepository.getUserByIdentifier(identifier);

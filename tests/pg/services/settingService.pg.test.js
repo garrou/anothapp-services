@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import db from "../../../config/db.js";
 import SettingService from "../../../services/settingService.js";
 import { resetDb } from "../resetDb.js";
@@ -6,6 +6,15 @@ import {
     insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason, insertEpisode, insertUserEpisode,
     insertActor, insertPlaylist,
 } from "../fixtures.js";
+
+// These tests hand-build import payloads without a signature - what's under test here is the
+// import/DB logic (FK handling, catalog isolation, dedup...), not the signature mechanism, which
+// already has its own coverage (tests/unit/helpers/security.test.js) and is exercised for real,
+// end-to-end, in tests/pg/e2e/exportImport.e2e.pg.test.js.
+vi.mock("../../../helpers/security.js", async (importOriginal) => {
+    const actual = await importOriginal();
+    return { default: { ...actual.default, verifyExportSignature: () => true } };
+});
 
 describe("SettingService (real Postgres)", () => {
     /** @type {SettingService} */

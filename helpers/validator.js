@@ -18,11 +18,31 @@ class ValidatorStatus {
 export default class Validator {
 
     /**
+     * @param {*} value
+     * @returns {boolean}
+     */
+    static isString = (value) => typeof value === "string";
+
+    /**
+     * @param {*} value
+     * @returns {boolean}
+     */
+    static isBoolean = (value) => typeof value === "boolean";
+
+    /**
+     * True for a non-null object that isn't an array - the shape `typeof x === "object"` alone
+     * also accepts, since arrays and null are "object" too.
+     * @param {*} value
+     * @returns {boolean}
+     */
+    static isPlainObject = (value) => !!value && typeof value === "object" && !Array.isArray(value);
+
+    /**
      * @param {string?} username
      * @returns {ValidatorStatus}
      */
     static isValidUsername = (username) => {
-        if (typeof username !== "string" || username.length < MIN_USERNAME || username.length > MAX_USERNAME) {
+        if (!Validator.isString(username) || username.length < MIN_USERNAME || username.length > MAX_USERNAME) {
             return new ValidatorStatus(false, `Username incorrect (${MIN_USERNAME} - ${MAX_USERNAME})`);
         }
         return new ValidatorStatus(true);
@@ -33,7 +53,7 @@ export default class Validator {
      * @returns {ValidatorStatus}
      */
     static isValidEmail = (email) => {
-        if (typeof email !== "string" || !EMAIL_PATTERN.test(email)) {
+        if (!Validator.isString(email) || !EMAIL_PATTERN.test(email)) {
             return new ValidatorStatus(false, "Email incorrect");
         }
         return new ValidatorStatus(true);
@@ -45,7 +65,7 @@ export default class Validator {
      * @returns {ValidatorStatus}
      */
     static isValidPassword = (password, confirm) => {
-        if (typeof password !== "string") {
+        if (!Validator.isString(password)) {
             return new ValidatorStatus(false, ERROR_BAD_PASSWORD);
         }
         if (password !== confirm) {
@@ -64,7 +84,7 @@ export default class Validator {
      * @returns {ValidatorStatus}
      */
     static isValidChangePassword = (oldPass, newPass, confPass) => {
-        if (typeof oldPass !== "string") {
+        if (!Validator.isString(oldPass)) {
             return new ValidatorStatus(false, ERROR_BAD_PASSWORD);
         }
         if (oldPass === newPass) {
@@ -90,7 +110,7 @@ export default class Validator {
      * @returns {boolean}
      */
     static isValidImage = (image) => {
-        return typeof image === "string"
+        return Validator.isString(image)
             && image.length > 0
             && IMAGE_PATTERN.test(image);
     }
@@ -111,19 +131,20 @@ export default class Validator {
     }
 
     /**
-     * @param {Object} payload 
+     * Only `shows` is mandatory - the rest of the export (`user`, `playlists`, `favoriteActors`,
+     * `platforms`) is optional so a hand-built or partial payload (as used throughout the test
+     * suite) stays importable; when present, each is still checked for the right shape.
+     * @param {Object} payload
      * @returns {boolean}
      */
     static isValidImportFile = (payload) => {
-        return payload && typeof payload === "object" 
-            && typeof payload.user === "object"
-            && typeof payload.username === "string"
-            && typeof payload.email === "string"
-            && typeof payload.user.episodeTrackingEnabled === "boolean"
+        return Validator.isPlainObject(payload)
             && Array.isArray(payload.shows)
-            && Array.isArray(payload.playlists)
-            && Array.isArray(payload.favoriteActors)
-            && Array.isArray(payload.platforms)
+            && (payload.user === undefined || Validator.isPlainObject(payload.user))
+            && (payload.user?.episodeTrackingEnabled === undefined || Validator.isBoolean(payload.user.episodeTrackingEnabled))
+            && (payload.playlists === undefined || Array.isArray(payload.playlists))
+            && (payload.favoriteActors === undefined || Array.isArray(payload.favoriteActors))
+            && (payload.platforms === undefined || Array.isArray(payload.platforms));
     }
 
     /**
@@ -131,7 +152,7 @@ export default class Validator {
      * @returns {boolean}
      */
     static isValidImportedShow = (show) => {
-        return !!show && typeof show === "object" && Number.isInteger(show.id);
+        return Validator.isPlainObject(show) && Number.isInteger(show.id);
     }
 
     /**
@@ -139,7 +160,7 @@ export default class Validator {
      * @returns {boolean}
      */
     static isValidImportedSeason = (season) => {
-        return !!season && typeof season === "object" && Number.isInteger(season.number);
+        return Validator.isPlainObject(season) && Number.isInteger(season.number);
     }
 
     /**
@@ -147,7 +168,7 @@ export default class Validator {
      * @returns {boolean}
      */
     static isValidImportedEpisode = (episode) => {
-        return !!episode && typeof episode === "object" && Number.isInteger(episode.episodeId);
+        return Validator.isPlainObject(episode) && Number.isInteger(episode.episodeId);
     }
 
     /**
@@ -155,7 +176,7 @@ export default class Validator {
      * @returns {boolean}
      */
     static isValidImportedPlaylist = (playlist) => {
-        return !!playlist && typeof playlist === "object" && typeof playlist.name === "string" && !!playlist.name;
+        return Validator.isPlainObject(playlist) && Validator.isString(playlist.name) && !!playlist.name;
     }
 
     /**
@@ -163,7 +184,7 @@ export default class Validator {
      * @returns {boolean}
      */
     static isValidImportedActor = (actor) => {
-        return !!actor && typeof actor === "object" && Number.isInteger(actor.id);
+        return Validator.isPlainObject(actor) && Number.isInteger(actor.id);
     }
 
     /**

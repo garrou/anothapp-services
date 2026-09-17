@@ -91,4 +91,67 @@ export default class SecurityHelper {
      * @returns {Promise<string>}
      */
     static createDummyPassword = async () => await this.createHash(crypto.randomBytes(32).toString("hex"));
+
+    /**
+     * Deterministic JSON serialization: object keys are sorted, so the same logical content
+     * always produces the same string no matter the property insertion order - needed for the
+     * export signature to survive a round-trip through a file a text editor may have reformatted.
+     * Mirrors JSON.stringify's own handling of undefined/function values (dropped from objects,
+     * turned into null in arrays) so it only ever needs to run on already-JSON-safe data.
+     * @param {*} value
+     * @returns {string}
+     */
+    static canonicalStringify = (value) => {
+        if (value instanceof Date) {
+            return JSON.stringify(value);
+        }
+        if (Array.isArray(value)) {
+            return `[${value.map((item) => SecurityHelper.canonicalStringify(item) ?? "null").join(",")}]`;
+        }
+        if (value && typeof value === "object") {
+            const entries = Object.keys(value)
+                .filter((key) => value[key] !== undefined && typeof value[key] !== "function")
+                .sort()
+                .map((key) => `${JSON.stringify(key)}:${SecurityHelper.canonicalStringify(value[key])}`);
+            return `{${entries.join(",")}}`;
+        }
+        return JSON.stringify(value);
+    }
+
+    /**
+     * A secret distinct from JWT_SECRET, derived from it the same way deletionCancellationSecret
+     * is - so an export signature can never be replayed as anything else derived from JWT_SECRET.
+     * @returns {string}
+     */
+    static exportSignatureSecret = () => crypto
+        .createHash("sha256")
+        .update(`${process.env.JWT_SECRET}:export-signature`)
+        .digest("hex");
+
+    /**
+     * @param {Object} data the export payload, without its own `signature` field
+     * @returns {string} hex-encoded HMAC-SHA256
+     */
+    static signExportData = (data) => crypto
+        .createHmac("sha256", SecurityHelper.exportSignatureSecret())
+        .update(SecurityHelper.canonicalStringify(data))
+        .digest("hex");
+
+    /**
+     * Stateless tamper check: recomputes the HMAC over everything but the `signature` field
+     * and compares it, in constant time, to the one carried in the file. No storage, no
+     * migration - any edit made to the file after export changes the recomputed value.
+     * @param {Object} payload a parsed export file, signature field included
+     * @returns {boolean}
+     */
+    static verifyExportSignature = (payload) => {
+        if (!payload || typeof payload !== "object" || typeof payload.signature !== "string") {
+            return false;
+        }
+        const { signature, ...rest } = payload;
+        const expected = Buffer.from(SecurityHelper.signExportData(rest), "hex");
+        const provided = Buffer.from(signature, "hex");
+
+        return expected.length === provided.length && crypto.timingSafeEqual(expected, provided);
+    }
 }

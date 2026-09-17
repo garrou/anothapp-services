@@ -11,7 +11,7 @@ export default class SettingsController {
             const [filename, data] = await this._settingService.exportData(req.userId);
             res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
             res.setHeader("Content-Type", "application/json; charset=utf-8");
-            res.json(data);
+            res.send(JSON.stringify(data, null, 4));
         } catch (e) {
             next(e);
         }

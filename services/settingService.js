@@ -8,12 +8,15 @@ import PlaylistRepository from "../repositories/playlistRepository.js";
 import { ExportData, ExportShow } from "../models/exportData.js";
 import UserUpdate from "../models/userUpdate.js";
 import Validator from "../helpers/validator.js";
+import SecurityHelper from "../helpers/security.js";
 import StatService from "./statService.js";
 import UserService from "./userService.js";
 import PlaylistService from "./playlistService.js";
 import AchievementService from "./achievementService.js";
 import ServiceError from "../helpers/serviceError.js";
-import { DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST, TOO_MUCH_EXPORT_REQUEST } from "../constants/errors.js";
+import {
+    DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST, ERROR_INVALID_SIGNATURE, TOO_MUCH_EXPORT_REQUEST
+} from "../constants/errors.js";
 import mapWithConcurrency from "../schedule/lib/concurrency.js";
 
 const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
@@ -85,13 +88,21 @@ export default class SettingService {
         }
         const date = new Date().toISOString().split('T')[0];
         const filename = `user-data-${userId}-${date}.json`;
-        return [filename, exportedData];
+        // Normalized once through JSON so the signature is computed on exactly what the client
+        // will receive and later re-parse - not on the live ExportData instance, whose class
+        // fields wouldn't round-trip identically (and would make the signature unverifiable).
+        const normalizedData = JSON.parse(JSON.stringify(exportedData));
+        normalizedData.signature = SecurityHelper.signExportData(normalizedData);
+        return [filename, normalizedData];
     }
 
     /**
      * Re-imports a previously exported ExportData. The target account (userId, always the
      * currently authenticated user) is never modified by this: friends, playlist collaborators,
      * and the export's own `user` block (username/email/password/picture) are never read here.
+     * The file's `signature` field (see SecurityHelper.signExportData/verifyExportSignature) is
+     * required and checked before anything else - it's the only thing standing between a real
+     * export and a hand-edited one crafted to fabricate viewings, streaks or achievements.
      * @param {string} userId
      * @param {Object} payload
      * @returns {Promise<Object>} a per-category summary of what was imported
@@ -100,11 +111,14 @@ export default class SettingService {
         if (!Validator.isValidImportFile(payload)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
+        if (!SecurityHelper.verifyExportSignature(payload)) {
+            throw new ServiceError(400, ERROR_INVALID_SIGNATURE);
+        }
         const shows = payload.shows ?? [];
         const playlists = payload.playlists ?? [];
         const favoriteActors = payload.favoriteActors ?? [];
         const platforms = payload.platforms ?? [];
-        const episodeTrackingEnabled = payload.user.episodeTrackingEnabled;
+        const episodeTrackingEnabled = payload.user?.episodeTrackingEnabled;
 
         const summary = {
             shows: { imported: 0, errors: 0 },
@@ -274,7 +288,7 @@ export default class SettingService {
      * @returns {Promise<void>}
      */
     #importEpisodeTrackingPreference = async (userId, episodeTrackingEnabled) => {
-        if (typeof episodeTrackingEnabled !== "boolean") {
+        if (!Validator.isBoolean(episodeTrackingEnabled)) {
             return;
         }
         await this._userService.updateUser(userId, new UserUpdate({ episodeTrackingEnabled }));

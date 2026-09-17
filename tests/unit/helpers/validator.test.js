@@ -60,6 +60,69 @@ describe("Validator.isValidChangePassword", () => {
     });
 });
 
+describe("Validator.isString / isBoolean / isPlainObject", () => {
+    it("isString accepts only strings", () => {
+        expect(Validator.isString("abc")).toBe(true);
+        expect(Validator.isString("")).toBe(true);
+        expect(Validator.isString(1)).toBe(false);
+        expect(Validator.isString(undefined)).toBe(false);
+    });
+
+    it("isBoolean accepts only booleans", () => {
+        expect(Validator.isBoolean(true)).toBe(true);
+        expect(Validator.isBoolean(false)).toBe(true);
+        expect(Validator.isBoolean("true")).toBe(false);
+        expect(Validator.isBoolean(undefined)).toBe(false);
+    });
+
+    it("isPlainObject accepts an object but rejects null and arrays", () => {
+        expect(Validator.isPlainObject({})).toBe(true);
+        expect(Validator.isPlainObject({ a: 1 })).toBe(true);
+        expect(Validator.isPlainObject(null)).toBe(false);
+        expect(Validator.isPlainObject([])).toBe(false);
+        expect(Validator.isPlainObject("object")).toBe(false);
+        expect(Validator.isPlainObject(undefined)).toBe(false);
+    });
+});
+
+describe("Validator.isValidImportFile", () => {
+    it("rejects null/undefined/non-object payloads", () => {
+        expect(Validator.isValidImportFile(null)).toBe(false);
+        expect(Validator.isValidImportFile(undefined)).toBe(false);
+        expect(Validator.isValidImportFile("shows")).toBe(false);
+    });
+
+    it("rejects a payload without a shows array", () => {
+        expect(Validator.isValidImportFile({})).toBe(false);
+        expect(Validator.isValidImportFile({ shows: "nope" })).toBe(false);
+    });
+
+    it("accepts the bare minimum: just a shows array", () => {
+        expect(Validator.isValidImportFile({ shows: [] })).toBe(true);
+    });
+
+    it("accepts a real export - user/email live under user, not at the top level", () => {
+        expect(Validator.isValidImportFile({
+            user: { id: "u1", username: "test2", email: "test2@gmail.com", episodeTrackingEnabled: false },
+            shows: [], playlists: [], favoriteActors: [], platforms: [],
+        })).toBe(true);
+    });
+
+    it("accepts a payload with no user block at all", () => {
+        expect(Validator.isValidImportFile({ shows: [], playlists: [{ name: "P" }] })).toBe(true);
+    });
+
+    it("rejects a non-boolean episodeTrackingEnabled", () => {
+        expect(Validator.isValidImportFile({ shows: [], user: { episodeTrackingEnabled: "yes" } })).toBe(false);
+    });
+
+    it("rejects playlists/favoriteActors/platforms that aren't arrays when present", () => {
+        expect(Validator.isValidImportFile({ shows: [], playlists: "nope" })).toBe(false);
+        expect(Validator.isValidImportFile({ shows: [], favoriteActors: {} })).toBe(false);
+        expect(Validator.isValidImportFile({ shows: [], platforms: "nope" })).toBe(false);
+    });
+});
+
 describe("Validator.isValidShow", () => {
     it("rejects a show without an id", () => {
         expect(Validator.isValidShow({ title: "Breaking Bad", kinds: ["Drame"], seasons: 5 })).toBe(false);

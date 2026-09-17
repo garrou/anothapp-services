@@ -1,6 +1,9 @@
 import {describe, it, expect, vi, beforeEach} from "vitest";
 import SettingService from "../../../services/settingService.js";
 
+const securityMocks = vi.hoisted(() => ({
+    signExportData: vi.fn(() => "mock-signature"), verifyExportSignature: vi.fn(() => true),
+}));
 const userServiceMocks = vi.hoisted(() => ({markExported: vi.fn(), getUser: vi.fn(), updateUser: vi.fn()}));
 const statServiceMocks = vi.hoisted(() => ({getStats: vi.fn()}));
 const playlistServiceMocks = vi.hoisted(() => ({getPlaylists: vi.fn()}));
@@ -52,6 +55,9 @@ vi.mock("../../../repositories/userPlatformRepository.js", () => ({
 }));
 vi.mock("../../../repositories/playlistRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return playlistRepoMocks; }),
+}));
+vi.mock("../../../helpers/security.js", () => ({
+    default: securityMocks,
 }));
 
 describe("SettingService.exportData", () => {
@@ -106,6 +112,16 @@ describe("SettingService.exportData", () => {
         expect(exportedData.shows[0].id).toBe(10);
         expect(exportedData.shows[0].seasons).toHaveLength(1);
         expect(exportedData.shows[0].seasons[0].episodes).toEqual([{id: 1, title: "Pilot", code: "S01E01", number: 1}]);
+    });
+
+    it("signs the export with a tamper-detection signature", async () => {
+        userServiceMocks.markExported.mockResolvedValue(true);
+        userServiceMocks.getUser.mockResolvedValue({id: "user-1"});
+
+        const [, exportedData] = await service.exportData("user-1");
+
+        expect(exportedData.signature).toBe("mock-signature");
+        expect(securityMocks.signExportData).toHaveBeenCalled();
     });
 
     it("leaves a show's seasons empty when the user has no season logged for it", async () => {
@@ -187,6 +203,14 @@ describe("SettingService.importData", () => {
 
     it("rejects a missing payload", async () => {
         await expect(service.importData("user-1", null)).rejects.toMatchObject({status: 400});
+    });
+
+    it("rejects a payload whose signature doesn't verify", async () => {
+        securityMocks.verifyExportSignature.mockReturnValueOnce(false);
+
+        await expect(service.importData("user-1", {shows: [], signature: "tampered"}))
+            .rejects.toMatchObject({status: 400});
+        expect(userShowRepoMocks.create).not.toHaveBeenCalled();
     });
 
     it("adds a show to the user's collection and its seasons/episodes, without touching the shared catalog", async () => {
