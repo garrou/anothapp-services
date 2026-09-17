@@ -122,12 +122,6 @@ export default class SettingService {
             errors: [],
         };
 
-        try {
-            await this.#importEpisodeTrackingPreference(userId, episodeTrackingEnabled);
-        } catch (err) {
-            summary.errors.push(`Suivi des épisodes : ${err.message}`);
-        }
-
         await mapWithConcurrency(shows, CONCURRENCY, async (show) => {
             try {
                 await this.#importShow(userId, show);
@@ -172,6 +166,12 @@ export default class SettingService {
                 }
             }
         });
+
+        try {
+            await this.#importEpisodeTrackingPreference(userId, episodeTrackingEnabled);
+        } catch (err) {
+            summary.errors.push(`Suivi des épisodes : ${err.message}`);
+        }
 
         await this._achievementService.evaluate(userId);
 
