@@ -32,16 +32,21 @@ export default class UserSeasonRepository {
 
     /**
      * Guards import re-runs against duplicating the same viewing (e.g. a rewatch) twice.
+     * added_at is compared truncated to milliseconds, since it round-trips through a JS Date
+     * during export (millisecond precision only) while Postgres itself stores microseconds -
+     * an exact match would miss a viewing whose original added_at wasn't itself millisecond-aligned
+     * (e.g. one set by NOW()). IS NOT DISTINCT FROM also lets a NULL addedAt match a NULL column.
      * @param {string} userId
      * @param {number} showId
      * @param {number} number
-     * @param {string} addedAt
+     * @param {string?} addedAt
      * @returns {Promise<number|null>} the id of the already-imported viewing, if any
      */
     findImportedViewing = async (userId, showId, number, addedAt) => {
         const res = await db.query(`
             SELECT id FROM users_seasons
-            WHERE user_id = $1 AND show_id = $2 AND number = $3 AND added_at = $4
+            WHERE user_id = $1 AND show_id = $2 AND number = $3
+              AND date_trunc('milliseconds', added_at) IS NOT DISTINCT FROM date_trunc('milliseconds', $4::timestamptz)
         `, [userId, showId, number, addedAt]);
         return res.rowCount === 1 ? res.rows[0]["id"] : null;
     }

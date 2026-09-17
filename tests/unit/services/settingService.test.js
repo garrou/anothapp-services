@@ -347,11 +347,11 @@ describe("SettingService.importData", () => {
         expect(summary.platforms).toEqual({imported: 1, errors: 0});
     });
 
-    it("restores the exported episode-tracking preference", async () => {
+    it("restores the exported episode-tracking preference without backfilling episodes", async () => {
         await service.importData("user-1", {shows: [], user: {episodeTrackingEnabled: true}});
 
         expect(userServiceMocks.updateUser).toHaveBeenCalledWith(
-            "user-1", expect.objectContaining({episodeTrackingEnabled: true})
+            "user-1", expect.objectContaining({episodeTrackingEnabled: true}), {skipBackfill: true}
         );
     });
 
@@ -359,7 +359,7 @@ describe("SettingService.importData", () => {
         await service.importData("user-1", {shows: [], user: {episodeTrackingEnabled: false}});
 
         expect(userServiceMocks.updateUser).toHaveBeenCalledWith(
-            "user-1", expect.objectContaining({episodeTrackingEnabled: false})
+            "user-1", expect.objectContaining({episodeTrackingEnabled: false}), {skipBackfill: true}
         );
     });
 

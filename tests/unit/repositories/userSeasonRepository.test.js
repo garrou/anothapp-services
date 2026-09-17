@@ -70,6 +70,27 @@ describe("UserSeasonRepository", () => {
 
             expect(result).toBeNull();
         });
+
+        it("compares added_at null-safely, so a null addedAt can still match", async () => {
+            db.query.mockResolvedValue({rowCount: 1, rows: [{id: 5}]});
+
+            await repo.findImportedViewing("user-1", 10, 1, null);
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("IS NOT DISTINCT FROM"), ["user-1", 10, 1, null]
+            );
+        });
+
+        it("compares added_at truncated to milliseconds, so Postgres' extra microsecond precision doesn't break the match", async () => {
+            db.query.mockResolvedValue({rowCount: 1, rows: [{id: 5}]});
+
+            await repo.findImportedViewing("user-1", 10, 1, "2024-01-01T00:00:00.000Z");
+
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining("date_trunc('milliseconds', added_at)"),
+                ["user-1", 10, 1, "2024-01-01T00:00:00.000Z"]
+            );
+        });
     });
 
     describe("getOwnedSeasonViewing", () => {

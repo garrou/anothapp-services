@@ -271,7 +271,7 @@ describe("SettingService (real Postgres)", () => {
             expect(platform.rows).toHaveLength(1);
         });
 
-        it("restores the exported episode-tracking preference, backfilling episode history for already-imported shows", async () => {
+        it("restores the exported episode-tracking preference without backfilling episodes the export didn't list", async () => {
             const userId = await insertUser({ episodeTrackingEnabled: false });
             const showId = await insertShow({ title: "Tracked Show" });
             await insertSeason(showId, 1, { episodes: 1 });
@@ -279,6 +279,9 @@ describe("SettingService (real Postgres)", () => {
             const payload = {
                 shows: [{
                     id: showId, title: "Tracked Show", addedAt: "2024-01-01T00:00:00.000Z",
+                    // the source account never marked this aired episode as watched (season tracked
+                    // at season-level only, or genuinely unwatched) - the export faithfully says so
+                    // with an empty episodes array, and the import must not fabricate a viewing for it
                     seasons: [{ number: 1, platformId: 999, addedAt: "2024-01-02T00:00:00.000Z", episodes: [] }],
                 }],
                 user: { episodeTrackingEnabled: true },
@@ -288,6 +291,32 @@ describe("SettingService (real Postgres)", () => {
 
             const user = await db.query(`SELECT episode_tracking_enabled FROM users WHERE id = $1`, [userId]);
             expect(user.rows[0].episode_tracking_enabled).toBe(true);
+
+            const userEpisodes = await db.query(`
+                SELECT ue.* FROM users_episodes ue
+                JOIN users_seasons us ON us.id = ue.users_seasons_id
+                WHERE us.user_id = $1 AND us.show_id = $2
+            `, [userId, showId]);
+            expect(userEpisodes.rows).toHaveLength(0);
+        });
+
+        it("still recreates the episodes the export did list, alongside restoring the preference", async () => {
+            const userId = await insertUser({ episodeTrackingEnabled: false });
+            const showId = await insertShow({ title: "Tracked Show" });
+            await insertSeason(showId, 1, { episodes: 1 });
+            const episodeId = await insertEpisode(showId, 1, { number: 1, date: "2020-01-01" });
+            const payload = {
+                shows: [{
+                    id: showId, title: "Tracked Show", addedAt: "2024-01-01T00:00:00.000Z",
+                    seasons: [{
+                        number: 1, platformId: 999, addedAt: "2024-01-02T00:00:00.000Z",
+                        episodes: [{ episodeId, watchedAt: "2024-01-03T00:00:00.000Z" }],
+                    }],
+                }],
+                user: { episodeTrackingEnabled: true },
+            };
+
+            await service.importData(userId, payload);
 
             const userEpisodes = await db.query(`
                 SELECT ue.* FROM users_episodes ue

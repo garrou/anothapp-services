@@ -276,6 +276,6 @@ export default class SettingService {
         if (!Validator.isBoolean(episodeTrackingEnabled)) {
             return;
         }
-        await this._userService.updateUser(userId, new UserUpdate({ episodeTrackingEnabled }));
+        await this._userService.updateUser(userId, new UserUpdate({ episodeTrackingEnabled }), { skipBackfill: true });
     }
 }
