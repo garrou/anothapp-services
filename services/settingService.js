@@ -88,9 +88,6 @@ export default class SettingService {
         }
         const date = new Date().toISOString().split('T')[0];
         const filename = `user-data-${userId}-${date}.json`;
-        // Normalized once through JSON so the signature is computed on exactly what the client
-        // will receive and later re-parse - not on the live ExportData instance, whose class
-        // fields wouldn't round-trip identically (and would make the signature unverifiable).
         const normalizedData = JSON.parse(JSON.stringify(exportedData));
         normalizedData.signature = SecurityHelper.signExportData(normalizedData);
         return [filename, normalizedData];
