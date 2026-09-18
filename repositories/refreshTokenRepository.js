@@ -46,10 +46,11 @@ export default class RefreshTokenRepository {
 
     /**
      * @param {string} userId
+     * @param {{query: Function}} [client]
      * @returns {Promise<number>} number of tokens revoked
      */
-    revokeAllForUser = async (userId) => {
-        const res = await db.query(`
+    revokeAllForUser = async (userId, client = db) => {
+        const res = await client.query(`
             UPDATE refresh_tokens
             SET revoked_at = NOW()
             WHERE user_id = $1 AND revoked_at IS NULL

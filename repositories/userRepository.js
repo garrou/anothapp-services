@@ -2,8 +2,13 @@ import db from "../config/db.js";
 import User from "../models/user.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
+import RefreshTokenRepository from "./refreshTokenRepository.js";
 
 export default class UserRepository {
+
+    constructor() {
+        this._refreshTokenRepository = new RefreshTokenRepository();
+    }
 
     /**
      * @param {string} email
@@ -167,11 +172,7 @@ export default class UserRepository {
             if (res.rowCount !== 1) {
                 return false;
             }
-            await client.query(`
-                UPDATE refresh_tokens
-                SET revoked_at = NOW()
-                WHERE user_id = $1 AND revoked_at IS NULL
-            `, [id]);
+            await this._refreshTokenRepository.revokeAllForUser(id, client);
             return true;
         });
     }

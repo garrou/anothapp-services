@@ -95,6 +95,16 @@ describe("RefreshTokenRepository.revokeAllForUser", () => {
         expect(db.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE refresh_tokens"), ["user-1"]);
         expect(result).toBe(2);
     });
+
+    it("runs on a given client instead, e.g. to join an existing transaction", async () => {
+        const client = {query: vi.fn().mockResolvedValue({rowCount: 3})};
+
+        const result = await repo.revokeAllForUser("user-1", client);
+
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE refresh_tokens"), ["user-1"]);
+        expect(db.query).not.toHaveBeenCalled();
+        expect(result).toBe(3);
+    });
 });
 
 describe("RefreshTokenRepository.deleteRevokedOlderThanDays", () => {
