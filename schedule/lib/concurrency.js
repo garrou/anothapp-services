@@ -16,6 +16,7 @@ const mapWithConcurrency = async (items, limit, fn) => {
     const results = new Array(items.length);
     let cursor = 0;
 
+    /** @returns {Promise<void>} */
     const worker = async () => {
         while (cursor < items.length) {
             const index = cursor;

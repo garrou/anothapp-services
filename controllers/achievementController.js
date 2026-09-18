@@ -6,6 +6,9 @@ export default class AchievementController {
         this._achievementService = new AchievementService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getAchievements = async (req, res, next) => {
         try {
             const {id} = req.query;
@@ -16,6 +19,9 @@ export default class AchievementController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getTiers = async (req, res, next) => {
         try {
             const tiers = await this._achievementService.getTierCatalog();

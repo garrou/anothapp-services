@@ -5,6 +5,9 @@ export default class StatController {
         this._statService = new StatService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getStats = async (req, res, next) => {
         try {
             const {id} = req.query;
@@ -15,6 +18,9 @@ export default class StatController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getWrapped = async (req, res, next) => {
         try {
             const {year} = req.query;
@@ -25,6 +31,9 @@ export default class StatController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getLeaderboard = async (req, res, next) => {
         try {
             const leaderboard = await this._statService.getLeaderboard(req.userId);

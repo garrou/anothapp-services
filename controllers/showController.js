@@ -5,6 +5,9 @@ export default class ShowController {
         this._showService = new ShowService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     addShow = async (req, res, next) => {
         try {
             const {id, list} = req.body;
@@ -15,6 +18,9 @@ export default class ShowController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     deleteByShowId = async (req, res, next) => {
         try {
             const {id} = req.params;
@@ -26,6 +32,9 @@ export default class ShowController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getShow = async (req, res, next) => {
         try {
             const {id} = req.params;
@@ -36,6 +45,9 @@ export default class ShowController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getShows = async (req, res, next) => {
         try {
             const shows = await this._showService.getShows(req.userId, req.query);
@@ -45,6 +57,9 @@ export default class ShowController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getRecommendations = async (req, res, next) => {
         try {
             const recommendations = await this._showService.getRecommendations(req.userId);
@@ -54,6 +69,9 @@ export default class ShowController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     addSeasonByShowId = async (req, res, next) => {
         try {
             const {id, num} = req.body;
@@ -64,6 +82,9 @@ export default class ShowController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getSeasonInfosByShowIdBySeason = async (req, res, next) => {
         try {
             const {id, num} = req.params;
@@ -74,6 +95,9 @@ export default class ShowController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getSeasonWatchedTime = async (req, res, next) => {
         try {
             const {id, num} = req.params;
@@ -84,6 +108,9 @@ export default class ShowController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     updateByShowId = async (req, res, next) => {
         try {
             const result = await this._showService.updateByShowId(req.userId, req.params.id, req.body);

@@ -11,6 +11,9 @@ export default class AuthController {
         res.sendStatus(200);
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     login = async (req, res, next) => {
         try {
             const { identifier, password } = req.body;
@@ -31,6 +34,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     cancelDeletion = async (req, res, next) => {
         try {
             const { cancellationToken } = req.body;
@@ -47,6 +53,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     logout = async (req, res, next) => {
         try {
             const refreshToken = req.cookies["refresh_token"]
@@ -60,6 +69,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     refreshToken = async (req, res, next) => {
         try {
             const refreshToken = req.cookies["refresh_token"]
@@ -81,6 +93,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     register = async (req, res, next) => {
         try {
             const { email, username, password, confirm } = req.body;
@@ -91,6 +106,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     verifyEmail = async (req, res, next) => {
         try {
             const { token } = req.body;
@@ -101,6 +119,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     resendVerification = async (req, res, next) => {
         try {
             const { email } = req.body;
@@ -111,6 +132,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     forgotPassword = async (req, res, next) => {
         try {
             const { email } = req.body;
@@ -121,6 +145,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     resetPassword = async (req, res, next) => {
         try {
             const { token, password, confirm } = req.body;

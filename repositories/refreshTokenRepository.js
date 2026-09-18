@@ -19,7 +19,7 @@ export default class RefreshTokenRepository {
 
     /**
      * @param {string} hashToken 
-     * @returns {RefreshToken}
+     * @returns {Promise<RefreshToken>}
      */
     find = async (hashToken) => {
         const res = await db.query(`

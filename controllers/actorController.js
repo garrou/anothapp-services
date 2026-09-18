@@ -6,6 +6,9 @@ export default class ActorController {
         this._actorService = new ActorService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     addFavorite = async (req, res, next) => {
         try {
             const actor = await this._actorService.addFavorite(req.userId, parseInt(req.params.id));
@@ -15,6 +18,9 @@ export default class ActorController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     removeFavorite = async (req, res, next) => {
         try {
             await this._actorService.removeFavorite(req.userId, parseInt(req.params.id));
@@ -24,6 +30,9 @@ export default class ActorController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getFavorites = async (req, res, next) => {
         try {
             const {friendId} = req.query;

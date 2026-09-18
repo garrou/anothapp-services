@@ -5,6 +5,9 @@ export default class SearchController {
         this._searchService = new SearchService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getImages = async (req, res, next) => {
         try {
             const {limit} = req.query;
@@ -15,6 +18,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getShows = async (req, res, next) => {
         try {
             const {title, year, kinds, platforms, limit} = req.query;
@@ -25,6 +31,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getByShowId = async (req, res, next) => {
         try {
             const {showId} = req.params;
@@ -35,6 +44,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getSeasonsByShowId = async (req, res, next) => {
         try {
             const {showId} = req.params;
@@ -45,6 +57,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getEpisodesByShowIdBySeason = async (req, res, next) => {
         try {
             const {showId, num} = req.params;
@@ -55,6 +70,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getCharactersByShowId = async (req, res, next) => {
         try {
             const {showId} = req.params;
@@ -65,6 +83,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getSimilarsByShowId = async (req, res, next) => {
         try {
             const {showId} = req.params;
@@ -75,6 +96,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getKinds = async (_, res, next) => {
         try {
             const kinds = await this._searchService.getKinds();
@@ -84,6 +108,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getImagesByShowId = async (req, res, next) => {
         try {
             const {showId} = req.params;
@@ -94,6 +121,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getPersonById = async (req, res, next) => {
         try {
             const {personId} = req.params;
@@ -104,6 +134,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getPlatforms = async (_, res, next) => {
         try {
             const platforms = await this._searchService.getPlatforms();
@@ -113,6 +146,9 @@ export default class SearchController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getNotes = async (_, res, next) => {
         try {
             const notes = await this._searchService.getNotes();

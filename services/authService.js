@@ -88,7 +88,8 @@ export default class AuthService {
     }
 
     /**
-     * @param {string} token 
+     * @param {string} token
+     * @returns {Promise<void>}
      */
     logout = async (token) => {
         if (!token) {
@@ -107,7 +108,8 @@ export default class AuthService {
     }
 
     /**
-     * @param {string} token 
+     * @param {string} token
+     * @returns {Promise<{accessToken: string, refreshToken: string}>}
      */
     refreshToken = async (token) => {
         const found = await this._refreshTokenRepository.find(SecurityHelper.hashToken(token));
