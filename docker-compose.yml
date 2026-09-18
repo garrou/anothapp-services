@@ -26,7 +26,7 @@ services:
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: anothapp_db
     volumes: 
-      - ./pgdata:/var/lib/postgresql/data
+      - ./pgdata:/var/lib/postgresql
       - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: always
     healthcheck:
