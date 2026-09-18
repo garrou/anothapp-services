@@ -4,7 +4,7 @@ import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
 import {
-    DUPLICATE_ERROR_CODE, ERROR_EMAIL_NOT_VERIFIED, ERROR_INVALID_REQUEST, ERROR_LOGIN_PASSWORD,
+    DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST, ERROR_LOGIN_PASSWORD,
     ERROR_REFRESH_TOKEN_INVALID, ERROR_TOKEN_INVALID
 } from "../constants/errors.js";
 import { DUMMY_HASH } from "../constants/security.js";
@@ -23,10 +23,14 @@ export default class AuthService {
     }
 
     /**
+     * A correct password never opens a session on its own: every login (a brand-new unverified
+     * account's first one included) needs its code confirmed through confirmLogin. This also
+     * closes the old email-verified/not-verified oracle, since both cases now get the exact same
+     * {pendingApproval} response.
      * @param {string?} identifier
      * @param {string?} password
-     * @returns {Promise<Object>} a normal session, or {pendingDeletion: true, cancellationToken} when the
-     * account is scheduled for deletion - the caller must not open a session in that case
+     * @returns {Promise<Object>} {pendingApproval: true, approvalToken}, or {pendingDeletion: true,
+     * cancellationToken} when the account is scheduled for deletion
      */
     login = async (identifier, password) => {
         if (!Validator.isString(identifier) || !Validator.isString(password)) {
@@ -39,9 +43,6 @@ export default class AuthService {
         if (!found || !same) {
             throw new ServiceError(400, ERROR_LOGIN_PASSWORD);
         }
-        if (!found.emailVerified) {
-            throw new ServiceError(403, ERROR_EMAIL_NOT_VERIFIED);
-        }
         if (found.deletedAt) {
             const gracePeriodElapsed = Date.now() - new Date(found.deletedAt).getTime() >= GRACE_PERIOD_MS;
 
@@ -51,7 +52,40 @@ export default class AuthService {
             const cancellationToken = SecurityHelper.signJwt(found.id, SecurityHelper.deletionCancellationSecret());
             return { pendingDeletion: true, cancellationToken };
         }
-        return this.#issueSession(found);
+        const code = SecurityHelper.generateLoginCode();
+        const approvalToken = SecurityHelper.signJwt(found.id, SecurityHelper.loginApprovalSecret(code), "10m");
+
+        await this._mailerService.sendLoginCodeEmail(found.email, code);
+        return { pendingApproval: true, approvalToken };
+    }
+
+    /**
+     * Confirms the code sent by login and opens the session - also marks the account's email as
+     * verified if it wasn't already, since receiving and typing back this code already proves
+     * ownership of the address.
+     * @param {string?} approvalToken
+     * @param {string?} code
+     * @returns {Promise<Object>}
+     */
+    confirmLogin = async (approvalToken, code) => {
+        if (!Validator.isString(approvalToken) || !Validator.isString(code)) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const { sub: userId } = SecurityHelper.verifyJwt(approvalToken, SecurityHelper.loginApprovalSecret(code));
+        const user = await this._userRepository.getUserById(userId);
+
+        if (!user) {
+            throw new ServiceError(401, ERROR_TOKEN_INVALID);
+        }
+        if (!user.emailVerified) {
+            const updated = await this._userRepository.updateField(userId, "email_verified", true);
+
+            if (!updated) {
+                throw new ServiceError(400, "Impossible de confirmer cet email");
+            }
+            user.emailVerified = true;
+        }
+        return this.#issueSession(user);
     }
 
     /**
@@ -160,10 +194,9 @@ export default class AuthService {
             if (!result.status) throw new ServiceError(400, result.message);
         }
         const hash = await SecurityHelper.createHash(password);
-        let userId;
 
         try {
-            userId = await this._userRepository.createUser(email, hash, username);
+            const userId = await this._userRepository.createUser(email, hash, username);
             if (!userId) throw new ServiceError(500, "Impossible de créer le compte");
         } catch (err) {
             if (err.code === DUPLICATE_ERROR_CODE) {
@@ -171,10 +204,6 @@ export default class AuthService {
             }
             throw err;
         }
-
-        this.issueEmailVerification(userId, email).catch((err) => {
-            console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
-        });
     }
 
     /**
@@ -185,6 +214,9 @@ export default class AuthService {
         const { sub: userId } = SecurityHelper.verifyJwt(token, SecurityHelper.emailVerificationSecret());
         const user = await this._userRepository.getUserById(userId);
 
+        // a pending_email means this token confirms an email *change* (see UserService.#changeEmail)
+        // rather than the initial registration - move it into email instead of touching
+        // email_verified, which never left true for the account's already-proven old address
         if (user?.pendingEmail) {
             let updated;
 
@@ -209,32 +241,8 @@ export default class AuthService {
     }
 
     /**
-     * Accepts a username or an email, exactly like login - so a user who signed up and then
-     * tried logging in with their username can resend without having to remember/re-type their
-     * email. The link always goes to the account's real email (never to the raw identifier,
-     * which may not be an address at all). Always resolves the same way regardless of whether
-     * the account exists or is already verified - the caller (see authController.js) reports
-     * one generic success message either way, so this endpoint can't be used to enumerate
-     * accounts.
-     * @param {string?} identifier
-     * @returns {Promise<void>}
-     */
-    resendVerification = async (identifier) => {
-        if (!Validator.isString(identifier)) {
-            throw new ServiceError(400, ERROR_INVALID_REQUEST);
-        }
-        const user = await this._userRepository.getUserByIdentifier(identifier);
-
-        if (user && !user.emailVerified) {
-            this.issueEmailVerification(user.id, user.email).catch((err) => {
-                console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
-            });
-        }
-    }
-
-    /**
-     * Always resolves the same way whether or not the email has an account - see
-     * resendVerification for why (this endpoint has the exact same enumeration risk).
+     * Always resolves the same way whether or not the email has an account, so this endpoint
+     * can't be used to enumerate accounts.
      * @param {string?} email
      * @returns {Promise<void>}
      */

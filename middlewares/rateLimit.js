@@ -23,8 +23,16 @@ export const limiter = createLimiter({
     limit: 2500, message: "Too many requests, please try again later.",
 });
 
+// skipSuccessfulRequests is deliberately NOT set here: a correct password now always returns a
+// 200 (pendingApproval), never a session directly, so without this every attempt with a known
+// password would be free to spam-trigger login-code emails to the victim
 export const loginLimiter = createLimiter({
-    limit: 5, message: "Too many login attempts, please try again later.", skipSuccessfulRequests: true,
+    limit: 5, message: "Too many login attempts, please try again later.",
+});
+
+// separate from loginLimiter since it's brute-forcing a 6-digit code, not a password
+export const confirmLoginLimiter = createLimiter({
+    limit: 10, message: "Too many attempts, please try again later.",
 });
 
 export const registerLimiter = createLimiter({
@@ -53,10 +61,6 @@ export const importLimiter = createLimiter({
 
 export const verifyEmailLimiter = createLimiter({
     limit: 10, message: "Too many attempts, please try again later.",
-});
-
-export const resendVerificationLimiter = createLimiter({
-    limit: 3, message: "Too many attempts, please try again later.",
 });
 
 export const forgotPasswordLimiter = createLimiter({

@@ -1,18 +1,36 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 import request from "supertest";
 import db from "../../../config/db.js";
 import SecurityHelper from "../../../helpers/security.js";
+import MailerService from "../../../services/mailerService.js";
+import { loginLimiter, confirmLoginLimiter, registerLimiter } from "../../../middlewares/rateLimit.js";
 import { resetDb } from "../resetDb.js";
 
 // EMAIL_HOST is unset in this test env, so MailerService logs instead of really sending the
-// verification/reset link - these tests sign the same token the server would have emailed,
-// using the same secret derivation, and feed it back into the real verify/reset endpoint.
-const signVerification = (userId) => SecurityHelper.signJwt(userId, SecurityHelper.emailVerificationSecret(), "1d");
+// reset link - this test signs the same token the server would have emailed, using the same
+// secret derivation, and feeds it back into the real reset endpoint.
 // the reset secret is derived from the account's *current* password hash (see
 // SecurityHelper.passwordResetSecret), so it has to be looked up right before signing
 const signReset = async (userId) => {
     const { rows } = await db.query(`SELECT password FROM users WHERE id = $1`, [userId]);
     return SecurityHelper.signJwt(userId, SecurityHelper.passwordResetSecret(rows[0].password), "1h");
+};
+// unlike the verification/reset links, the login code is random and only known by whatever
+// receives the email - so instead of re-deriving it, this spies on the mailer to capture the
+// code the server actually generated and would have sent.
+const login = async (requester, identifier, password) => {
+    const spy = vi.spyOn(MailerService.prototype, "sendLoginCodeEmail");
+    const res = await requester.post("/auth/login").send({ identifier, password });
+    const code = spy.mock.calls.at(-1)?.[1];
+    spy.mockRestore();
+    return { res, code };
+};
+// full round trip: login, then confirm the captured code - only valid when login actually
+// issued a pendingApproval (a wrong password or a pending-deletion account won't).
+const loginAndConfirm = async (requester, identifier, password) => {
+    const { res: loginRes, code } = await login(requester, identifier, password);
+    const confirmRes = await requester.post("/auth/confirm-login").send({ approvalToken: loginRes.body.approvalToken, code });
+    return { loginRes, confirmRes };
 };
 
 // True end-to-end: the real Express app (config/app.js), real controllers/services/repositories,
@@ -20,13 +38,10 @@ const signReset = async (userId) => {
 // a real HTTPS connection (secure/sameSite=none otherwise, which no local HTTP client - browser or
 // supertest - will send back), matching how this app is actually run locally.
 //
-// /auth/register and /auth/login are capped at 5 requests per 15 minutes per IP (see
-// middlewares/rateLimit.js), and that limiter's state lives in this file's own module instance for
-// the whole file (not reset between tests) - so only the tests that are actually ABOUT register/
-// login go through those real endpoints. Every other flow (refresh, logout, protected-route access)
-// seeds its user directly in the database with a real bcrypt hash, the same way SecurityHelper
-// itself would produce it, so it's still exercising the real login verification path when it
-// eventually happens - just not re-spending the shared register/login budget to get there.
+// /auth/login and /auth/confirm-login are capped at 5 and 10 requests per 15 minutes per IP (see
+// middlewares/rateLimit.js) - every supertest request against an Express app hits that limiter as
+// the same key ("127.0.0.1", however the loopback address is spelled), so it's reset before every
+// test here rather than shared across the whole file.
 describe("Auth journey (real Postgres, real HTTP)", () => {
     /** @type {import("express").Express} */
     let app;
@@ -35,6 +50,12 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         process.env.JWT_SECRET = "test-secret";
         const module = await import("../../../config/app.js");
         app = module.default.app;
+    });
+
+    beforeEach(() => {
+        loginLimiter.resetKey("127.0.0.1");
+        confirmLoginLimiter.resetKey("127.0.0.1");
+        registerLimiter.resetKey("127.0.0.1");
     });
 
     describe("register", () => {
@@ -81,7 +102,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             expect(res.status).toBe(401);
         });
 
-        it("logs in and grants access to a protected route via the session cookie", async () => {
+        it("logs in and grants access to a protected route via the session cookie, once the code is confirmed", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
             await db.query(`
@@ -89,9 +110,11 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             `, [hash]);
             const agent = request.agent(app);
 
-            const loginRes = await agent.post("/auth/login").send({ identifier: "LoginUser", password: "GoodPassword1" });
+            const { loginRes, confirmRes } = await loginAndConfirm(agent, "LoginUser", "GoodPassword1");
             expect(loginRes.status).toBe(200);
-            expect(loginRes.body.username).toBe("LoginUser");
+            expect(loginRes.body.pendingApproval).toBe(true);
+            expect(confirmRes.status).toBe(200);
+            expect(confirmRes.body.username).toBe("LoginUser");
 
             const meRes = await agent.get("/auth/me");
             expect(meRes.status).toBe(200);
@@ -118,7 +141,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
                 INSERT INTO users (username, email, password, email_verified) VALUES ('SessionUser', 'session@test.fr', $1, TRUE)
             `, [hash]);
             const agent = request.agent(app);
-            await agent.post("/auth/login").send({ identifier: "SessionUser", password: "GoodPassword1" });
+            await loginAndConfirm(agent, "SessionUser", "GoodPassword1");
 
             const refreshRes = await agent.post("/auth/refresh");
             expect(refreshRes.status).toBe(204);
@@ -154,59 +177,66 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             expect(cancelRes.status).toBe(200);
             expect(cancelRes.body.username).toBe("PendingUser");
 
-            const normalLoginRes = await request(app).post("/auth/login").send({ identifier: "PendingUser", password: "GoodPassword1" });
+            const { res: normalLoginRes } = await login(request(app), "PendingUser", "GoodPassword1");
             expect(normalLoginRes.status).toBe(200);
             expect(normalLoginRes.body.pendingDeletion).toBeUndefined();
+            expect(normalLoginRes.body.pendingApproval).toBe(true);
         });
     });
 
-    describe("email verification", () => {
-        it("blocks login until the email is confirmed, then lets it through", async () => {
+    describe("login confirmation", () => {
+        it("returns the exact same pending-approval response for a verified and an unverified account", async () => {
+            await resetDb();
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            await db.query(`
+                INSERT INTO users (username, email, password, email_verified) VALUES ('Verified', 'verified@test.fr', $1, TRUE)
+            `, [hash]);
+            await db.query(`
+                INSERT INTO users (username, email, password, email_verified) VALUES ('Unverified', 'unverified@test.fr', $1, FALSE)
+            `, [hash]);
+
+            const { res: verifiedRes } = await login(request(app), "Verified", "GoodPassword1");
+            const { res: unverifiedRes } = await login(request(app), "Unverified", "GoodPassword1");
+
+            expect(verifiedRes.status).toBe(200);
+            expect(unverifiedRes.status).toBe(200);
+            expect(Object.keys(verifiedRes.body).sort()).toEqual(Object.keys(unverifiedRes.body).sort());
+            expect(unverifiedRes.body.pendingApproval).toBe(true);
+        });
+
+        it("confirms a brand-new account's email as part of its very first login", async () => {
             await resetDb();
             const res = await request(app).post("/auth/register").send({
-                email: "unverified@test.fr", username: "Unverified", password: "GoodPassword1", confirm: "GoodPassword1",
+                email: "newlogin@test.fr", username: "NewLogin", password: "GoodPassword1", confirm: "GoodPassword1",
             });
             expect(res.status).toBe(201);
-            const { id: userId } = (await db.query(`SELECT id FROM users WHERE email = 'unverified@test.fr'`)).rows[0];
+            const { id: userId } = (await db.query(`SELECT id FROM users WHERE email = 'newlogin@test.fr'`)).rows[0];
+            const before = await db.query(`SELECT email_verified FROM users WHERE id = $1`, [userId]);
+            expect(before.rows[0]["email_verified"]).toBe(false);
 
-            const blockedRes = await request(app).post("/auth/login").send({ identifier: "Unverified", password: "GoodPassword1" });
-            expect(blockedRes.status).toBe(403);
+            const { loginRes, confirmRes } = await loginAndConfirm(request(app), "NewLogin", "GoodPassword1");
+            expect(loginRes.status).toBe(200);
+            expect(loginRes.body.pendingApproval).toBe(true);
+            expect(confirmRes.status).toBe(200);
+            expect(confirmRes.body.username).toBe("NewLogin");
 
-            const verifyRes = await request(app).post("/auth/verify-email").send({ token: signVerification(userId) });
-            expect(verifyRes.status).toBe(200);
-
-            const allowedRes = await request(app).post("/auth/login").send({ identifier: "Unverified", password: "GoodPassword1" });
-            expect(allowedRes.status).toBe(200);
+            const after = await db.query(`SELECT email_verified FROM users WHERE id = $1`, [userId]);
+            expect(after.rows[0]["email_verified"]).toBe(true);
         });
 
-        it("resend-verification issues a usable new token for an unverified account", async () => {
+        it("rejects a code that doesn't match the approval token", async () => {
             await resetDb();
+            const hash = await SecurityHelper.createHash("GoodPassword1");
             await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('ToResend', 'resend@test.fr', 'hash', FALSE)
-            `);
-            const { id: userId } = (await db.query(`SELECT id FROM users WHERE email = 'resend@test.fr'`)).rows[0];
+                INSERT INTO users (username, email, password, email_verified) VALUES ('BadCode', 'badcode@test.fr', $1, TRUE)
+            `, [hash]);
 
-            const resendRes = await request(app).post("/auth/resend-verification").send({ identifier: "resend@test.fr" });
-            expect(resendRes.status).toBe(200);
+            const { res: loginRes } = await login(request(app), "BadCode", "GoodPassword1");
+            const confirmRes = await request(app).post("/auth/confirm-login").send({
+                approvalToken: loginRes.body.approvalToken, code: "000000",
+            });
 
-            const verifyRes = await request(app).post("/auth/verify-email").send({ token: signVerification(userId) });
-            expect(verifyRes.status).toBe(200);
-            const user = await db.query(`SELECT email_verified FROM users WHERE id = $1`, [userId]);
-            expect(user.rows[0]["email_verified"]).toBe(true);
-        });
-
-        it("resend-verification also accepts the username", async () => {
-            await resetDb();
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('ToResendByName', 'resendbyname@test.fr', 'hash', FALSE)
-            `);
-            const { id: userId } = (await db.query(`SELECT id FROM users WHERE email = 'resendbyname@test.fr'`)).rows[0];
-
-            const resendRes = await request(app).post("/auth/resend-verification").send({ identifier: "ToResendByName" });
-            expect(resendRes.status).toBe(200);
-
-            const verifyRes = await request(app).post("/auth/verify-email").send({ token: signVerification(userId) });
-            expect(verifyRes.status).toBe(200);
+            expect(confirmRes.status).toBe(401);
         });
     });
 
@@ -220,7 +250,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             `, [hash]);
             const userId = userRes.rows[0].id;
             const agent = request.agent(app);
-            await agent.post("/auth/login").send({ identifier: "ResetUser", password: "OldPassword1" });
+            await loginAndConfirm(agent, "ResetUser", "OldPassword1");
 
             const forgotRes = await request(app).post("/auth/forgot-password").send({ email: "reset@test.fr" });
             expect(forgotRes.status).toBe(200);
@@ -239,8 +269,9 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             const loginWithOld = await request(app).post("/auth/login").send({ identifier: "ResetUser", password: "OldPassword1" });
             expect(loginWithOld.status).toBe(400);
 
-            const loginWithNew = await request(app).post("/auth/login").send({ identifier: "ResetUser", password: "NewPassword1" });
+            const { res: loginWithNew } = await login(request(app), "ResetUser", "NewPassword1");
             expect(loginWithNew.status).toBe(200);
+            expect(loginWithNew.body.pendingApproval).toBe(true);
         });
 
         it("returns the same generic success response for an unknown email (no enumeration)", async () => {

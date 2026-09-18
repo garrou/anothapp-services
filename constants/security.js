@@ -1,11 +1,11 @@
 export const WHITELIST = [
     "/auth/login",
+    "/auth/confirm-login",
     "/auth/register",
     "/auth/refresh",
     "/auth/logout",
     "/auth/cancel-deletion",
     "/auth/verify-email",
-    "/auth/resend-verification",
     "/auth/forgot-password",
     "/auth/reset-password",
     "/search/images",
