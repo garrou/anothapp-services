@@ -22,7 +22,20 @@ export default class AuthController {
             if (result.pendingDeletion) {
                 return res.status(200).json({ pendingDeletion: true, cancellationToken: result.cancellationToken });
             }
-            const { token, refreshToken, user } = result;
+            res.status(200).json({ pendingApproval: true, approvalToken: result.approvalToken });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    confirmLogin = async (req, res, next) => {
+        try {
+            const { approvalToken, code } = req.body;
+            const { token, refreshToken, user } = await this._authService.confirmLogin(approvalToken, code);
+
             this.#setAuthCookies(res, token, refreshToken);
 
             if (this.#isNativeClient(req)) {
@@ -114,19 +127,6 @@ export default class AuthController {
             const { token } = req.body;
             await this._authService.verifyEmail(token);
             res.status(200).json({ "message": "Email confirmé" });
-        } catch (e) {
-            next(e);
-        }
-    }
-
-    /**
-     * @returns {Promise<void>}
-     */
-    resendVerification = async (req, res, next) => {
-        try {
-            const { email } = req.body;
-            await this._authService.resendVerification(email);
-            res.status(200).json({ "message": "Email de confirmation envoyé" });
         } catch (e) {
             next(e);
         }

@@ -97,22 +97,36 @@ describe("UserService.updateUser - email change", () => {
         userService = new UserService();
     });
 
-    it("changes the email, clears the verification flag, revokes sessions, and sends a new verification email", async () => {
+    it("sets a pending email, revokes sessions, and sends a confirmation to the new address - without touching the current (already verified) email", async () => {
         const hash = await SecurityHelper.createHash("GoodPassword1");
         userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
         userRepoMocks.getUserByEmail.mockResolvedValue(null);
         userRepoMocks.updateField.mockResolvedValue(true);
 
         const message = await userService.updateUser(
-            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "GoodPassword1" })
+            "user-1", new UserUpdate({ newEmail: "new@test.fr", confirmEmail: "new@test.fr", currentPassword: "GoodPassword1" })
         );
 
-        expect(message).toBe("Email modifié");
-        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email", "new@test.fr", expect.anything());
-        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email_verified", false, expect.anything());
+        expect(message).toBe("Vérifiez votre nouvelle adresse email pour confirmer le changement");
+        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "pending_email", "new@test.fr", expect.anything());
+        expect(userRepoMocks.updateField).not.toHaveBeenCalledWith("user-1", "email", expect.anything(), expect.anything());
+        expect(userRepoMocks.updateField).not.toHaveBeenCalledWith("user-1", "email_verified", expect.anything(), expect.anything());
         expect(refreshTokenRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1", expect.anything());
         expect(authServiceMocks.issueEmailVerification).toHaveBeenCalledWith("user-1", "new@test.fr");
         expect(dbMocks.transaction).toHaveBeenCalled();
+    });
+
+    it("rejects mismatched email confirmation, without touching anything", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ newEmail: "new@test.fr", confirmEmail: "different@test.fr", currentPassword: "GoodPassword1" })
+        )).rejects.toMatchObject({ status: 400 });
+
+        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+        expect(refreshTokenRepoMocks.revokeAllForUser).not.toHaveBeenCalled();
+        expect(authServiceMocks.issueEmailVerification).not.toHaveBeenCalled();
     });
 
     it("rejects a missing or wrong current password, without touching anything", async () => {
@@ -120,11 +134,11 @@ describe("UserService.updateUser - email change", () => {
         userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
 
         await expect(userService.updateUser(
-            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr" })
+            "user-1", new UserUpdate({ newEmail: "new@test.fr", confirmEmail: "new@test.fr" })
         )).rejects.toMatchObject({ status: 400, message: ERROR_BAD_PASSWORD });
 
         await expect(userService.updateUser(
-            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "WrongPassword" })
+            "user-1", new UserUpdate({ newEmail: "new@test.fr", confirmEmail: "new@test.fr", currentPassword: "WrongPassword" })
         )).rejects.toMatchObject({ status: 400, message: ERROR_BAD_PASSWORD });
 
         expect(userRepoMocks.updateField).not.toHaveBeenCalled();
@@ -138,7 +152,7 @@ describe("UserService.updateUser - email change", () => {
         userRepoMocks.getUserByEmail.mockResolvedValue({ id: "user-2" });
 
         await expect(userService.updateUser(
-            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "taken@test.fr", currentPassword: "GoodPassword1" })
+            "user-1", new UserUpdate({ newEmail: "taken@test.fr", confirmEmail: "taken@test.fr", currentPassword: "GoodPassword1" })
         )).rejects.toMatchObject({ status: 409 });
         expect(userRepoMocks.updateField).not.toHaveBeenCalled();
         expect(authServiceMocks.issueEmailVerification).not.toHaveBeenCalled();
@@ -153,10 +167,10 @@ describe("UserService.updateUser - email change", () => {
         const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
         const message = await userService.updateUser(
-            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "GoodPassword1" })
+            "user-1", new UserUpdate({ newEmail: "new@test.fr", confirmEmail: "new@test.fr", currentPassword: "GoodPassword1" })
         );
 
-        expect(message).toBe("Email modifié");
+        expect(message).toBe("Vérifiez votre nouvelle adresse email pour confirmer le changement");
         expect(consoleSpy).toHaveBeenCalled();
         consoleSpy.mockRestore();
     });

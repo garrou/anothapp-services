@@ -7,8 +7,8 @@ export default class UserUpdate {
         this.currentPassword = obj.currentPassword;
         this.newPassword = obj.newPassword;
         this.confirmPassword = obj.confirmPassword;
-        this.email = obj.email;
         this.newEmail = obj.newEmail;
+        this.confirmEmail = obj.confirmEmail;
         this.image = obj.image;
         this.lastExport = obj.lastExport;
         this.episodeTrackingEnabled = obj.episodeTrackingEnabled;
@@ -25,7 +25,7 @@ export default class UserUpdate {
      * @returns {boolean}
      */
     isEmailUpdate() {
-        return !!this.email && !!this.newEmail;
+        return !!this.newEmail && !!this.confirmEmail;
     }
 
     /**

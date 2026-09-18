@@ -90,6 +90,7 @@ CREATE TABLE users (
     last_export TIMESTAMPTZ,
     episode_tracking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    pending_email VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     PRIMARY KEY(id)

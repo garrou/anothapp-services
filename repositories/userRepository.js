@@ -146,6 +146,22 @@ export default class UserRepository {
     }
 
     /**
+     * Moves `pending_email` into `email` and clears it - only touched once the link sent to the
+     * new address is actually confirmed, so a typo'd pending address never overwrites the one
+     * that's already proven to work (see AuthService.verifyEmail).
+     * @param {string} id
+     * @returns {Promise<boolean>}
+     */
+    confirmPendingEmail = async (id) => {
+        const res = await db.query(`
+            UPDATE users
+            SET email = pending_email, pending_email = NULL
+            WHERE id = $1 AND pending_email IS NOT NULL
+        `, [id]);
+        return res.rowCount === 1;
+    }
+
+    /**
      * @param {string} id
      * @returns {Promise<boolean>}
      */

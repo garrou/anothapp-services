@@ -19,6 +19,7 @@ const refreshRepoMocks = vi.hoisted(() => ({
 const mailerServiceMocks = vi.hoisted(() => ({
     sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
     sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+    sendLoginCodeEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../../repositories/userRepository.js", () => ({
@@ -45,7 +46,7 @@ describe("POST /auth/login", () => {
         expect(res.status).toBe(400);
     });
 
-    it("returns 200 and sets httpOnly cookies when credentials are valid", async () => {
+    it("returns 200 with a pending-approval response, without setting auth cookies, when credentials are valid", async () => {
         const hash = await SecurityHelper.createHash("goodpassword");
 
         userRepoMocks.getUserByIdentifier.mockResolvedValue({
@@ -55,16 +56,45 @@ describe("POST /auth/login", () => {
             password: hash,
             emailVerified: true,
         });
-        refreshRepoMocks.create.mockResolvedValue(true);
 
         const res = await request(app)
             .post("/auth/login")
             .send({ identifier: "adrien@test.fr", password: "goodpassword" });
 
         expect(res.status).toBe(200);
+        expect(res.body.pendingApproval).toBe(true);
+        expect(res.body.approvalToken).toBeDefined();
+        expect(res.headers["set-cookie"]).toBeUndefined();
+    });
+});
+
+describe("POST /auth/confirm-login", () => {
+    it("returns 200 and sets httpOnly cookies when the code matches the approval token", async () => {
+        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
+        userRepoMocks.getUserById.mockResolvedValue({
+            id: "1", email: "adrien@test.fr", username: "adrien", emailVerified: true,
+        });
+        refreshRepoMocks.create.mockResolvedValue(true);
+
+        const res = await request(app)
+            .post("/auth/confirm-login")
+            .send({ approvalToken, code: "123456" });
+
+        expect(res.status).toBe(200);
         expect(res.headers["set-cookie"].some((c) => c.startsWith("access_token="))).toBe(true);
         // the raw token must not leak into the body for a web client (cookies only)
         expect(res.body.token).toBeUndefined();
+    });
+
+    it("returns 401 without setting auth cookies for a code that doesn't match", async () => {
+        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
+
+        const res = await request(app)
+            .post("/auth/confirm-login")
+            .send({ approvalToken, code: "000000" });
+
+        expect(res.status).toBe(401);
+        expect(res.headers["set-cookie"]).toBeUndefined();
     });
 });
 
@@ -131,17 +161,6 @@ describe("POST /auth/verify-email", () => {
         const res = await request(app).post("/auth/verify-email").send({ token: "garbage" });
 
         expect(res.status).toBe(401);
-    });
-});
-
-describe("POST /auth/resend-verification", () => {
-    it("is reachable without an access cookie/token", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", emailVerified: false });
-
-        const res = await request(app).post("/auth/resend-verification").send({ email: "adrien@test.fr" });
-
-        expect(res.status).toBe(200);
-        expect(mailerServiceMocks.sendVerificationEmail).toHaveBeenCalled();
     });
 });
 

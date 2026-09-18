@@ -76,8 +76,8 @@ export default class UserService {
             await this.#changePassword(currentUserId, userUpdate.currentPassword, userUpdate.newPassword, userUpdate.confirmPassword);
             return "Mot de passe modifié";
         } else if (userUpdate.isEmailUpdate()) {
-            await this.#changeEmail(currentUserId, userUpdate.email, userUpdate.newEmail, userUpdate.currentPassword);
-            return "Email modifié";
+            await this.#changeEmail(currentUserId, userUpdate.newEmail, userUpdate.confirmEmail, userUpdate.currentPassword);
+            return "Vérifiez votre nouvelle adresse email pour confirmer le changement";
         } else if (userUpdate.image) {
             await this.#changeImage(currentUserId, userUpdate.image);
             return "Image de profil définie";
@@ -193,17 +193,12 @@ export default class UserService {
 
     /**
      * @param {string} currentUserId
-     * @param {string} email
      * @param {string} newEmail
-     * @param {string} currentPassword 
+     * @param {string} confirmEmail
+     * @param {string} currentPassword
      * @returns {Promise<void>}
      */
-    #changeEmail = async (currentUserId, email, newEmail, currentPassword) => {
-        const changeValid = Validator.isValidChangeEmail(email, newEmail);
-
-        if (!changeValid.status) {
-            throw new ServiceError(400, changeValid.message);
-        }
+    #changeEmail = async (currentUserId, newEmail, confirmEmail, currentPassword) => {
         if (!Validator.isString(currentPassword)) {
             throw new ServiceError(400, ERROR_BAD_PASSWORD);
         }
@@ -212,11 +207,10 @@ export default class UserService {
         if (!user) {
             throw new ServiceError(404, ERROR_UNKNOWN_USER);
         }
-        if (user.email !== email) {
-            throw new ServiceError(400, "Email incorrect");
-        }
-        if (email === newEmail) {
-            throw new ServiceError(400, "Le nouvel email doit être différent de l'ancien");
+        const changeValid = Validator.isValidChangeEmail(user.email, newEmail, confirmEmail);
+
+        if (!changeValid.status) {
+            throw new ServiceError(400, changeValid.message);
         }
         const same = await SecurityHelper.comparePassword(currentPassword, user.password);
 
@@ -228,20 +222,18 @@ export default class UserService {
         if (user) {
             throw new ServiceError(409, "Cet email est déjà associé à un compte");
         }
-        // all three writes must land together - a failure partway through must never leave the new,
-        // unproven address marked verified, or a stolen session still valid
+        // the account keeps working with the old, already-proven address until the new one is
+        // confirmed (see AuthService.verifyEmail) - so a typo'd new address never locks the user
+        // out the way overwriting `email` directly used to
         const updated = await db.transaction(async (client) => {
-            const changed = await this._userRepository.updateField(currentUserId, "email", newEmail, client);
+            const changed = await this._userRepository.updateField(currentUserId, "pending_email", newEmail, client);
 
             if (!changed) {
                 return false;
             }
-            // the new address hasn't been proven yet - clear the flag inherited from the old one
-            // and let the user (re)confirm it, exactly like a fresh registration would
-            await this._userRepository.updateField(currentUserId, "email_verified", false, client);
             // a stolen session (not the password, which was just re-checked above) must not be
-            // enough to silently redirect password-reset emails to an attacker's inbox and keep
-            // going unnoticed
+            // enough to silently redirect the confirmation to an attacker's inbox and keep going
+            // unnoticed
             await this._refreshTokenRepository.revokeAllForUser(currentUserId, client);
             return true;
         });

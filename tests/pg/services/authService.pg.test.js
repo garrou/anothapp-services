@@ -1,9 +1,21 @@
-import { describe, it, expect, beforeEach, beforeAll } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
+import crypto from "crypto";
 import db from "../../../config/db.js";
 import AuthService from "../../../services/authService.js";
 import SecurityHelper from "../../../helpers/security.js";
 import { resetDb } from "../resetDb.js";
 import { insertUser } from "../fixtures.js";
+
+// login() generates a random code (see SecurityHelper.generateLoginCode) and only sends it by
+// email - fixing crypto.randomInt lets these tests know that code upfront instead of having to
+// intercept the mailer (which is unmockable here: sendLoginCodeEmail is a class field, so it only
+// exists on the instance, never on MailerService.prototype).
+const LOGIN_CODE = "123456";
+
+const loginAndConfirm = async (service, identifier, password) => {
+    const { approvalToken } = await service.login(identifier, password);
+    return service.confirmLogin(approvalToken, LOGIN_CODE);
+};
 
 describe("AuthService (real Postgres)", () => {
     /** @type {AuthService} */
@@ -11,6 +23,7 @@ describe("AuthService (real Postgres)", () => {
 
     beforeAll(() => {
         process.env.JWT_SECRET = "test-secret";
+        vi.spyOn(crypto, "randomInt").mockReturnValue(Number(LOGIN_CODE));
     });
 
     beforeEach(async () => {
@@ -40,17 +53,32 @@ describe("AuthService (real Postgres)", () => {
     });
 
     describe("login", () => {
-        it("issues a session for correct credentials", async () => {
+        it("returns a pending-approval response, then issues a session once the code is confirmed", async () => {
             const hash = await SecurityHelper.createHash("GoodPassword1");
             const userId = await insertUser({ username: "LoginUser", password: hash });
 
-            const result = await service.login("LoginUser", "GoodPassword1");
+            const loginResult = await service.login("LoginUser", "GoodPassword1");
+
+            expect(loginResult.pendingApproval).toBe(true);
+            expect(loginResult.approvalToken).toBeDefined();
+
+            const result = await service.confirmLogin(loginResult.approvalToken, LOGIN_CODE);
 
             expect(result.token).toBeDefined();
             expect(result.refreshToken).toBeDefined();
             expect(result.user.id).toBe(userId);
             const tokens = await db.query(`SELECT * FROM refresh_tokens WHERE user_id = $1`, [userId]);
             expect(tokens.rowCount).toBe(1);
+        });
+
+        it("marks a first login's email as verified once its code is confirmed", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            const userId = await insertUser({ username: "FirstLoginUser", password: hash, emailVerified: false });
+
+            await loginAndConfirm(service, "FirstLoginUser", "GoodPassword1");
+
+            const res = await db.query(`SELECT email_verified FROM users WHERE id = $1`, [userId]);
+            expect(res.rows[0]["email_verified"]).toBe(true);
         });
 
         it("rejects a wrong password with the same generic error as an unknown user", async () => {
@@ -86,6 +114,16 @@ describe("AuthService (real Postgres)", () => {
         });
     });
 
+    describe("confirmLogin", () => {
+        it("rejects a code that doesn't match the approval token", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            await insertUser({ username: "BadCodeUser", password: hash });
+            const { approvalToken } = await service.login("BadCodeUser", "GoodPassword1");
+
+            await expect(service.confirmLogin(approvalToken, "000000")).rejects.toMatchObject({ status: 401 });
+        });
+    });
+
     describe("cancelDeletion", () => {
         it("cancels the deletion and issues a session from a valid cancellation token", async () => {
             const hash = await SecurityHelper.createHash("GoodPassword1");
@@ -109,7 +147,7 @@ describe("AuthService (real Postgres)", () => {
         it("revokes the refresh token on logout", async () => {
             const hash = await SecurityHelper.createHash("GoodPassword1");
             const userId = await insertUser({ username: "LogoutUser", password: hash });
-            const { refreshToken } = await service.login("LogoutUser", "GoodPassword1");
+            const { refreshToken } = await loginAndConfirm(service, "LogoutUser", "GoodPassword1");
 
             await service.logout(refreshToken);
 
@@ -124,7 +162,7 @@ describe("AuthService (real Postgres)", () => {
         it("rotates the refresh token", async () => {
             const hash = await SecurityHelper.createHash("GoodPassword1");
             await insertUser({ username: "RefreshUser", password: hash });
-            const { refreshToken } = await service.login("RefreshUser", "GoodPassword1");
+            const { refreshToken } = await loginAndConfirm(service, "RefreshUser", "GoodPassword1");
 
             const result = await service.refreshToken(refreshToken);
 
