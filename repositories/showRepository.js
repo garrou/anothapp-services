@@ -28,7 +28,7 @@ export default class ShowRepository {
         if (!kinds.length) {
             return;
         }
-        // Potential duplicate due to Betaseries
+        // Potential duplicate due to API
         const names = [...new Set(kinds.map(({name}) => name))];
         const existing = await client.query(`SELECT id, name FROM kinds WHERE name = ANY($1::varchar[])`, [names]);
         const existingIdByName = new Map(existing.rows.map((row) => [row.name, row.id]));

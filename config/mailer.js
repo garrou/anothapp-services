@@ -1,7 +1,5 @@
 import nodemailer from "nodemailer";
 
-// null when EMAIL_HOST isn't set (local dev, tests) - MailerService treats that as "log instead
-// of send" rather than crashing on a missing SMTP config.
 const transporter = process.env.EMAIL_HOST
     ? nodemailer.createTransport({
         host: process.env.EMAIL_HOST,

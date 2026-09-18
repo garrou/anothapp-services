@@ -36,10 +36,6 @@ export default class AuthService {
         const hashToCompare = found?.password ?? DUMMY_HASH;
         const same = await SecurityHelper.comparePassword(password, hashToCompare);
 
-        // an unverified account is rejected with the exact same status/message as a wrong
-        // password - distinguishing it (e.g. via a dedicated 403) would only be reachable once
-        // the password is confirmed correct, turning login into an oracle that validates leaked
-        // credential pairs one at a time without ever completing a session
         if (!found || !same || !found.emailVerified) {
             throw new ServiceError(400, ERROR_LOGIN_PASSWORD);
         }
@@ -173,9 +169,6 @@ export default class AuthService {
             throw err;
         }
 
-        // fire-and-forget: the account already exists at this point, so registration must not
-        // wait on (or fail because of) a slow or broken SMTP round trip - the user can always ask
-        // for a new link via resendVerification
         this.issueEmailVerification(userId, email).catch((err) => {
             console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
         });
@@ -208,7 +201,6 @@ export default class AuthService {
         const user = await this._userRepository.getUserByEmail(email);
 
         if (user && !user.emailVerified) {
-            // fire-and-forget: see register() for why this isn't awaited
             this.issueEmailVerification(user.id, email).catch((err) => {
                 console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
             });
@@ -231,7 +223,6 @@ export default class AuthService {
             const token = SecurityHelper.signJwt(user.id, SecurityHelper.passwordResetSecret(user.password), "1h");
             const url = `${process.env.ORIGIN}/reset-password/${token}`;
 
-            // fire-and-forget: see register() for why this isn't awaited
             this._mailerService.sendPasswordResetEmail(email, url).catch((err) => {
                 console.error("Échec de l'envoi de l'email de réinitialisation", sanitizeErrorForLog(err));
             });
