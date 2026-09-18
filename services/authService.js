@@ -4,7 +4,7 @@ import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
 import {
-    DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST, ERROR_LOGIN_PASSWORD,
+    DUPLICATE_ERROR_CODE, ERROR_EMAIL_NOT_VERIFIED, ERROR_INVALID_REQUEST, ERROR_LOGIN_PASSWORD,
     ERROR_REFRESH_TOKEN_INVALID, ERROR_TOKEN_INVALID
 } from "../constants/errors.js";
 import { DUMMY_HASH } from "../constants/security.js";
@@ -36,8 +36,11 @@ export default class AuthService {
         const hashToCompare = found?.password ?? DUMMY_HASH;
         const same = await SecurityHelper.comparePassword(password, hashToCompare);
 
-        if (!found || !same || !found.emailVerified) {
+        if (!found || !same) {
             throw new ServiceError(400, ERROR_LOGIN_PASSWORD);
+        }
+        if (!found.emailVerified) {
+            throw new ServiceError(403, ERROR_EMAIL_NOT_VERIFIED);
         }
         if (found.deletedAt) {
             const gracePeriodElapsed = Date.now() - new Date(found.deletedAt).getTime() >= GRACE_PERIOD_MS;
@@ -188,20 +191,24 @@ export default class AuthService {
     }
 
     /**
-     * Always resolves the same way regardless of whether the email has an account or is already
-     * verified - the caller (see authController.js) reports one generic success message either
-     * way, so this endpoint can't be used to enumerate which addresses have an anothapp account.
-     * @param {string?} email
+     * Accepts a username or an email, exactly like login - so a user who signed up and then
+     * tried logging in with their username can resend without having to remember/re-type their
+     * email. The link always goes to the account's real email (never to the raw identifier,
+     * which may not be an address at all). Always resolves the same way regardless of whether
+     * the account exists or is already verified - the caller (see authController.js) reports
+     * one generic success message either way, so this endpoint can't be used to enumerate
+     * accounts.
+     * @param {string?} identifier
      * @returns {Promise<void>}
      */
-    resendVerification = async (email) => {
-        if (!Validator.isString(email)) {
+    resendVerification = async (identifier) => {
+        if (!Validator.isString(identifier)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const user = await this._userRepository.getUserByEmail(email);
+        const user = await this._userRepository.getUserByIdentifier(identifier);
 
         if (user && !user.emailVerified) {
-            this.issueEmailVerification(user.id, email).catch((err) => {
+            this.issueEmailVerification(user.id, user.email).catch((err) => {
                 console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
             });
         }

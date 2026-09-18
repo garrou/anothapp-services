@@ -87,7 +87,7 @@ describe("AuthService.login", () => {
         expect(result.user).toBeDefined();
     });
 
-    it("rejects an unverified account with the exact same status/message as a wrong password, so login can't be used to confirm a correct password (no oracle)", async () => {
+    it("rejects login with a distinct error when the email hasn't been verified yet", async () => {
         const hash = await SecurityHelper.createHash("goodpassword");
         userRepoMocks.getUserByIdentifier.mockResolvedValue({
             id: "1",
@@ -97,10 +97,25 @@ describe("AuthService.login", () => {
         });
 
         await expect(authService.login("adrien@test.fr", "goodpassword")).rejects.toMatchObject({
+            status: 403,
+            message: "Veuillez confirmer votre adresse email avant de vous connecter",
+        });
+        expect(refreshRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects an unverified account with the generic wrong-password error when the password is also wrong", async () => {
+        const hash = await SecurityHelper.createHash("goodpassword");
+        userRepoMocks.getUserByIdentifier.mockResolvedValue({
+            id: "1",
+            email: "adrien@test.fr",
+            password: hash,
+            emailVerified: false,
+        });
+
+        await expect(authService.login("adrien@test.fr", "wrongpassword")).rejects.toMatchObject({
             status: 400,
             message: "Identifiant ou mot de passe incorrect",
         });
-        expect(refreshRepoMocks.create).not.toHaveBeenCalled();
     });
 
     it("throws a 500 error when creating the refresh token fails in the database", async () => {
@@ -291,22 +306,22 @@ describe("AuthService.resendVerification", () => {
         authService = new AuthService();
     });
 
-    it("resolves without sending anything when no account matches the email (no enumeration)", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue(null);
+    it("resolves without sending anything when no account matches the identifier (no enumeration)", async () => {
+        userRepoMocks.getUserByIdentifier.mockResolvedValue(null);
 
         await expect(authService.resendVerification("unknown@test.fr")).resolves.toBeUndefined();
         expect(mailerServiceMocks.sendVerificationEmail).not.toHaveBeenCalled();
     });
 
-    it("resolves without sending anything when the email is already verified (no enumeration)", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", emailVerified: true });
+    it("resolves without sending anything when the account is already verified (no enumeration)", async () => {
+        userRepoMocks.getUserByIdentifier.mockResolvedValue({ id: "1", email: "adrien@test.fr", emailVerified: true });
 
         await expect(authService.resendVerification("adrien@test.fr")).resolves.toBeUndefined();
         expect(mailerServiceMocks.sendVerificationEmail).not.toHaveBeenCalled();
     });
 
     it("sends a new verification email otherwise", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", emailVerified: false });
+        userRepoMocks.getUserByIdentifier.mockResolvedValue({ id: "1", email: "adrien@test.fr", emailVerified: false });
 
         await authService.resendVerification("adrien@test.fr");
 
@@ -315,8 +330,19 @@ describe("AuthService.resendVerification", () => {
         );
     });
 
+    it("accepts a username too, and always sends to the account's real email (not the raw identifier)", async () => {
+        userRepoMocks.getUserByIdentifier.mockResolvedValue({ id: "1", email: "adrien@test.fr", emailVerified: false });
+
+        await authService.resendVerification("adrien");
+
+        expect(userRepoMocks.getUserByIdentifier).toHaveBeenCalledWith("adrien");
+        expect(mailerServiceMocks.sendVerificationEmail).toHaveBeenCalledWith(
+            "adrien@test.fr", expect.stringContaining("/verify-email/")
+        );
+    });
+
     it("does not wait on or fail because the email couldn't be sent (fire-and-forget)", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", emailVerified: false });
+        userRepoMocks.getUserByIdentifier.mockResolvedValue({ id: "1", email: "adrien@test.fr", emailVerified: false });
         mailerServiceMocks.sendVerificationEmail.mockRejectedValueOnce(new Error("SMTP down"));
         const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 

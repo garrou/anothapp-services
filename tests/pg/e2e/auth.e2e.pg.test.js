@@ -169,10 +169,8 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             expect(res.status).toBe(201);
             const { id: userId } = (await db.query(`SELECT id FROM users WHERE email = 'unverified@test.fr'`)).rows[0];
 
-            // same status/message as a wrong password - no oracle revealing "unverified but
-            // correct password" vs "wrong password" (see AuthService.login)
             const blockedRes = await request(app).post("/auth/login").send({ identifier: "Unverified", password: "GoodPassword1" });
-            expect(blockedRes.status).toBe(400);
+            expect(blockedRes.status).toBe(403);
 
             const verifyRes = await request(app).post("/auth/verify-email").send({ token: signVerification(userId) });
             expect(verifyRes.status).toBe(200);
@@ -188,13 +186,27 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             `);
             const { id: userId } = (await db.query(`SELECT id FROM users WHERE email = 'resend@test.fr'`)).rows[0];
 
-            const resendRes = await request(app).post("/auth/resend-verification").send({ email: "resend@test.fr" });
+            const resendRes = await request(app).post("/auth/resend-verification").send({ identifier: "resend@test.fr" });
             expect(resendRes.status).toBe(200);
 
             const verifyRes = await request(app).post("/auth/verify-email").send({ token: signVerification(userId) });
             expect(verifyRes.status).toBe(200);
             const user = await db.query(`SELECT email_verified FROM users WHERE id = $1`, [userId]);
             expect(user.rows[0]["email_verified"]).toBe(true);
+        });
+
+        it("resend-verification also accepts the username", async () => {
+            await resetDb();
+            await db.query(`
+                INSERT INTO users (username, email, password, email_verified) VALUES ('ToResendByName', 'resendbyname@test.fr', 'hash', FALSE)
+            `);
+            const { id: userId } = (await db.query(`SELECT id FROM users WHERE email = 'resendbyname@test.fr'`)).rows[0];
+
+            const resendRes = await request(app).post("/auth/resend-verification").send({ identifier: "ToResendByName" });
+            expect(resendRes.status).toBe(200);
+
+            const verifyRes = await request(app).post("/auth/verify-email").send({ token: signVerification(userId) });
+            expect(verifyRes.status).toBe(200);
         });
     });
 

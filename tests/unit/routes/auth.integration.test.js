@@ -136,12 +136,21 @@ describe("POST /auth/verify-email", () => {
 
 describe("POST /auth/resend-verification", () => {
     it("is reachable without an access cookie/token", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", emailVerified: false });
+        userRepoMocks.getUserByIdentifier.mockResolvedValue({ id: "1", email: "adrien@test.fr", emailVerified: false });
 
-        const res = await request(app).post("/auth/resend-verification").send({ email: "adrien@test.fr" });
+        const res = await request(app).post("/auth/resend-verification").send({ identifier: "adrien@test.fr" });
 
         expect(res.status).toBe(200);
         expect(mailerServiceMocks.sendVerificationEmail).toHaveBeenCalled();
+    });
+
+    it("accepts a username as the identifier too", async () => {
+        userRepoMocks.getUserByIdentifier.mockResolvedValue({ id: "1", email: "adrien@test.fr", emailVerified: false });
+
+        const res = await request(app).post("/auth/resend-verification").send({ identifier: "adrien" });
+
+        expect(res.status).toBe(200);
+        expect(mailerServiceMocks.sendVerificationEmail).toHaveBeenCalledWith("adrien@test.fr", expect.any(String));
     });
 });
 

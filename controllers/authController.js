@@ -124,8 +124,8 @@ export default class AuthController {
      */
     resendVerification = async (req, res, next) => {
         try {
-            const { email } = req.body;
-            await this._authService.resendVerification(email);
+            const { identifier } = req.body;
+            await this._authService.resendVerification(identifier);
             res.status(200).json({ "message": "Email de confirmation envoyé" });
         } catch (e) {
             next(e);
