@@ -6,6 +6,9 @@ export default class NotificationController {
         this._notificationService = new NotificationService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getNotifications = async (req, res, next) => {
         try {
             const notifications = await this._notificationService.getNotifications(req.userId);
@@ -15,6 +18,9 @@ export default class NotificationController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     markAsRead = async (req, res, next) => {
         try {
             await this._notificationService.markAsRead(req.userId, Number(req.params.id));
@@ -24,6 +30,9 @@ export default class NotificationController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     markAllAsRead = async (req, res, next) => {
         try {
             await this._notificationService.markAllAsRead(req.userId);

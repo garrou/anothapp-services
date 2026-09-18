@@ -6,6 +6,9 @@ export default class EpisodeController {
         this._episodeService = new EpisodeService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getViewedByMonthAgo = async (req, res, next) => {
         try {
             const {month} = req.query;
@@ -16,6 +19,9 @@ export default class EpisodeController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     updateViewing = async (req, res, next) => {
         try {
             const {id} = req.params;
@@ -27,6 +33,9 @@ export default class EpisodeController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     deleteViewing = async (req, res, next) => {
         try {
             const {id} = req.params;

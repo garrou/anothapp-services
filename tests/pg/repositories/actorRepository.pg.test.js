@@ -20,7 +20,7 @@ describe("ActorRepository (real Postgres)", () => {
             const actor = await repo.getActorById(1);
             expect(actor).toEqual({
                 id: 1, name: "Bryan Cranston", picture: "pic.jpg",
-                birthday: new Date("1956-03-07"), deathday: null, nationality: "American", description: "desc",
+                birthday: "1956-03-07", deathday: null, nationality: "American", description: "desc",
             });
         });
 

@@ -8,6 +8,9 @@ export default class UserController {
         this._userService = new UserService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getUsers = async (req, res, next) => {
         try {
             const {username} = req.query;
@@ -18,6 +21,9 @@ export default class UserController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getProfile = async (req, res, next) => {
         try {
             const {id} = req.params;
@@ -29,6 +35,9 @@ export default class UserController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     changeProfile = async (req, res, next) => {
         try {
             const message = await this._userService.updateUser(req.userId, new UserUpdate(req.body));
@@ -38,6 +47,9 @@ export default class UserController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     requestDeletion = async (req, res, next) => {
         try {
             const { password } = req.body;

@@ -11,6 +11,9 @@ export default class AuthController {
         res.sendStatus(200);
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     login = async (req, res, next) => {
         try {
             const { identifier, password } = req.body;
@@ -31,6 +34,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     cancelDeletion = async (req, res, next) => {
         try {
             const { cancellationToken } = req.body;
@@ -47,6 +53,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     logout = async (req, res, next) => {
         try {
             const refreshToken = req.cookies["refresh_token"]
@@ -60,6 +69,9 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     refreshToken = async (req, res, next) => {
         try {
             const refreshToken = req.cookies["refresh_token"]
@@ -81,11 +93,66 @@ export default class AuthController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     register = async (req, res, next) => {
         try {
             const { email, username, password, confirm } = req.body;
             await this._authService.register(email, username, password, confirm);
             res.status(201).json({ "message": "Compte créé" });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    verifyEmail = async (req, res, next) => {
+        try {
+            const { token } = req.body;
+            await this._authService.verifyEmail(token);
+            res.status(200).json({ "message": "Email confirmé" });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    resendVerification = async (req, res, next) => {
+        try {
+            const { email } = req.body;
+            await this._authService.resendVerification(email);
+            res.status(200).json({ "message": "Email de confirmation envoyé" });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    forgotPassword = async (req, res, next) => {
+        try {
+            const { email } = req.body;
+            await this._authService.forgotPassword(email);
+            res.status(200).json({ "message": "Email de réinitialisation envoyé" });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    resetPassword = async (req, res, next) => {
+        try {
+            const { token, password, confirm } = req.body;
+            await this._authService.resetPassword(token, password, confirm);
+            res.status(200).json({ "message": "Mot de passe réinitialisé" });
         } catch (e) {
             next(e);
         }

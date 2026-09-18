@@ -20,6 +20,17 @@ const isProdMode = () => !isDevMode();
  */
 const isOwnRequest = (currentUserId, requestedId) => !requestedId || requestedId === currentUserId;
 
+const EMAIL_PATTERN_LOG = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+
+/**
+ * Strips anything that looks like an email address from an error before it's logged - SMTP
+ * rejection errors (nodemailer) commonly echo the bounced recipient's address in their message
+ * or response text, which must not end up verbatim in production logs.
+ * @param {unknown} err
+ * @returns {string}
+ */
+const sanitizeErrorForLog = (err) => String(err?.message ?? err).replace(EMAIL_PATTERN_LOG, "[email]");
+
 const MONTHS_FR = [
     "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
     "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
@@ -36,5 +47,6 @@ export {
     frenchMonth,
     isDevMode,
     isOwnRequest,
-    isProdMode
+    isProdMode,
+    sanitizeErrorForLog
 }

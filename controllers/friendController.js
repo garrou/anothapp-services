@@ -5,6 +5,9 @@ export default class FriendController {
         this._friendService = new FriendService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getFriends = async (req, res, next) => {
         try {
             const {status, serieId} = req.query;
@@ -15,6 +18,9 @@ export default class FriendController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     sendFriendRequest = async (req, res, next) => {
         try {
             const {userId} = req.body;
@@ -25,6 +31,9 @@ export default class FriendController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     acceptFriend = async (req, res, next) => {
         try {
             await this._friendService.acceptFriend(req.userId, req.body.userId, req.params.userId);
@@ -34,6 +43,9 @@ export default class FriendController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     deleteFriend = async (req, res, next) => {
         try {
             const {userId} = req.params;

@@ -3,10 +3,15 @@ import UserProfile from "../models/userProfile.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
-import { DUPLICATE_ERROR_CODE, ERROR_LOGIN_PASSWORD, ERROR_REFRESH_TOKEN_INVALID } from "../constants/errors.js";
+import {
+    DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST, ERROR_LOGIN_PASSWORD,
+    ERROR_REFRESH_TOKEN_INVALID, ERROR_TOKEN_INVALID
+} from "../constants/errors.js";
 import { DUMMY_HASH } from "../constants/security.js";
 import { DELETION_GRACE_DAYS } from "../constants/deletion.js";
 import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
+import MailerService from "./mailerService.js";
+import { sanitizeErrorForLog } from "../helpers/utils.js";
 
 const GRACE_PERIOD_MS = DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000;
 
@@ -14,6 +19,7 @@ export default class AuthService {
     constructor() {
         this._userRepository = new UserRepository();
         this._refreshTokenRepository = new RefreshTokenRepository();
+        this._mailerService = new MailerService();
     }
 
     /**
@@ -30,7 +36,7 @@ export default class AuthService {
         const hashToCompare = found?.password ?? DUMMY_HASH;
         const same = await SecurityHelper.comparePassword(password, hashToCompare);
 
-        if (!found || !same) {
+        if (!found || !same || !found.emailVerified) {
             throw new ServiceError(400, ERROR_LOGIN_PASSWORD);
         }
         if (found.deletedAt) {
@@ -80,7 +86,8 @@ export default class AuthService {
     }
 
     /**
-     * @param {string} token 
+     * @param {string} token
+     * @returns {Promise<void>}
      */
     logout = async (token) => {
         if (!token) {
@@ -99,7 +106,8 @@ export default class AuthService {
     }
 
     /**
-     * @param {string} token 
+     * @param {string} token
+     * @returns {Promise<{accessToken: string, refreshToken: string}>}
      */
     refreshToken = async (token) => {
         const found = await this._refreshTokenRepository.find(SecurityHelper.hashToken(token));
@@ -149,15 +157,124 @@ export default class AuthService {
             if (!result.status) throw new ServiceError(400, result.message);
         }
         const hash = await SecurityHelper.createHash(password);
+        let userId;
 
         try {
-            const created = await this._userRepository.createUser(email, hash, username);
-            if (!created) throw new ServiceError(500, "Impossible de créer le compte");
+            userId = await this._userRepository.createUser(email, hash, username);
+            if (!userId) throw new ServiceError(500, "Impossible de créer le compte");
         } catch (err) {
             if (err.code === DUPLICATE_ERROR_CODE) {
                 throw new ServiceError(409, "Un compte est déjà associé à ces informations");
             }
             throw err;
         }
+
+        this.issueEmailVerification(userId, email).catch((err) => {
+            console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
+        });
+    }
+
+    /**
+     * @param {string} token
+     * @returns {Promise<void>}
+     */
+    verifyEmail = async (token) => {
+        const { sub: userId } = SecurityHelper.verifyJwt(token, SecurityHelper.emailVerificationSecret());
+        const updated = await this._userRepository.updateField(userId, "email_verified", true);
+
+        if (!updated) {
+            throw new ServiceError(400, "Impossible de confirmer cet email");
+        }
+    }
+
+    /**
+     * Always resolves the same way regardless of whether the email has an account or is already
+     * verified - the caller (see authController.js) reports one generic success message either
+     * way, so this endpoint can't be used to enumerate which addresses have an anothapp account.
+     * @param {string?} email
+     * @returns {Promise<void>}
+     */
+    resendVerification = async (email) => {
+        if (!Validator.isString(email)) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const user = await this._userRepository.getUserByEmail(email);
+
+        if (user && !user.emailVerified) {
+            this.issueEmailVerification(user.id, email).catch((err) => {
+                console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
+            });
+        }
+    }
+
+    /**
+     * Always resolves the same way whether or not the email has an account - see
+     * resendVerification for why (this endpoint has the exact same enumeration risk).
+     * @param {string?} email
+     * @returns {Promise<void>}
+     */
+    forgotPassword = async (email) => {
+        if (!Validator.isString(email)) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const user = await this._userRepository.getUserByEmail(email);
+
+        if (user) {
+            const token = SecurityHelper.signJwt(user.id, SecurityHelper.passwordResetSecret(user.password), "1h");
+            const url = `${process.env.ORIGIN}/reset-password/${token}`;
+
+            this._mailerService.sendPasswordResetEmail(email, url).catch((err) => {
+                console.error("Échec de l'envoi de l'email de réinitialisation", sanitizeErrorForLog(err));
+            });
+        }
+    }
+
+    /**
+     * The token's signature is checked against a secret derived from the target account's
+     * *current* password hash (see SecurityHelper.passwordResetSecret), so its `sub` claim can't
+     * be trusted until that account is looked up - decoding it first (without verifying) is only
+     * used to know which user's hash to derive the secret from.
+     * @param {string} token
+     * @param {string?} password
+     * @param {string?} confirm
+     * @returns {Promise<void>}
+     */
+    resetPassword = async (token, password, confirm) => {
+        const decoded = SecurityHelper.decodeJwt(token);
+        let user = null;
+
+        try {
+            user = decoded?.sub ? await this._userRepository.getUserById(decoded.sub) : null;
+        } catch {
+            // e.g. a malformed `sub` that isn't even a valid UUID - treat exactly like "no user"
+            user = null;
+        }
+        if (!user) {
+            throw new ServiceError(401, ERROR_TOKEN_INVALID);
+        }
+        const { sub: userId } = SecurityHelper.verifyJwt(token, SecurityHelper.passwordResetSecret(user.password));
+        const validation = Validator.isValidPassword(password, confirm);
+
+        if (!validation.status) {
+            throw new ServiceError(400, validation.message);
+        }
+        const hash = await SecurityHelper.createHash(password);
+        const updated = await this._userRepository.updateField(userId, "password", hash);
+
+        if (!updated) {
+            throw new ServiceError(500, "Impossible de réinitialiser le mot de passe");
+        }
+        await this._refreshTokenRepository.revokeAllForUser(userId);
+    }
+
+    /**
+     * @param {string} userId
+     * @param {string} email
+     * @returns {Promise<void>}
+     */
+    issueEmailVerification = async (userId, email) => {
+        const token = SecurityHelper.signJwt(userId, SecurityHelper.emailVerificationSecret(), "1d");
+        const url = `${process.env.ORIGIN}/verify-email/${token}`;
+        await this._mailerService.sendVerificationEmail(email, url);
     }
 }

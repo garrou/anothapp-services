@@ -1,5 +1,11 @@
 import pg from 'pg';
 
+// By default pg parses DATE columns (OID 1082) into a JS Date set to local-timezone midnight,
+// which silently shifts the calendar day when the process runs outside UTC (e.g. birthday
+// "1956-03-07" becomes 1956-03-06T23:00:00Z at UTC+1). Every consumer of birthday/deathday
+// treats them as opaque "YYYY-MM-DD" strings, so keep the raw string instead of parsing it.
+pg.types.setTypeParser(1082, (value) => value);
+
 const pool =  new pg.Pool({
     user: process.env.POSTGRES_USER,
     host: process.env.POSTGRES_HOST,

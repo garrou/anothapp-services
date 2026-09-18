@@ -6,6 +6,9 @@ export default class SeasonController {
         this._seasonService = new SeasonService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     deleteBySeasonId = async (req, res, next) => {
         try {
             const {id} = req.params;
@@ -16,6 +19,9 @@ export default class SeasonController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getSeasons = async (req, res, next) => {
         try {
             const {year, month} = req.query;
@@ -26,6 +32,9 @@ export default class SeasonController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getEpisodesBySeasonId = async (req, res, next) => {
         try {
             const {id} = req.params;
@@ -36,6 +45,9 @@ export default class SeasonController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     addEpisodeViewing = async (req, res, next) => {
         try {
             const {id, episodeId} = req.params;
@@ -46,6 +58,9 @@ export default class SeasonController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     addAllEpisodesViewing = async (req, res, next) => {
         try {
             const {id} = req.params;
@@ -56,6 +71,9 @@ export default class SeasonController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     updateBySeasonId = async (req, res, next) => {
         try {
             const {id} = req.params;
@@ -67,6 +85,9 @@ export default class SeasonController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     updateWatchedWith = async (req, res, next) => {
         try {
             const {id} = req.params;

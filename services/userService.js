@@ -1,15 +1,21 @@
 import UserProfile from "../models/userProfile.js";
 import UserRepository from "../repositories/userRepository.js";
+import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
 import EpisodeService from "./episodeService.js";
+import AuthService from "./authService.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
 import { ERROR_BAD_PASSWORD, ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER } from "../constants/errors.js";
+import { sanitizeErrorForLog } from "../helpers/utils.js";
+import db from "../config/db.js";
 
 export default class UserService {
     constructor() {
         this._userRepository = new UserRepository();
         this._episodeService = new EpisodeService();
+        this._authService = new AuthService();
+        this._refreshTokenRepository = new RefreshTokenRepository();
     }
 
     /**
@@ -70,7 +76,7 @@ export default class UserService {
             await this.#changePassword(currentUserId, userUpdate.currentPassword, userUpdate.newPassword, userUpdate.confirmPassword);
             return "Mot de passe modifié";
         } else if (userUpdate.isEmailUpdate()) {
-            await this.#changeEmail(currentUserId, userUpdate.email, userUpdate.newEmail);
+            await this.#changeEmail(currentUserId, userUpdate.email, userUpdate.newEmail, userUpdate.currentPassword);
             return "Email modifié";
         } else if (userUpdate.image) {
             await this.#changeImage(currentUserId, userUpdate.image);
@@ -189,13 +195,17 @@ export default class UserService {
      * @param {string} currentUserId
      * @param {string} email
      * @param {string} newEmail
+     * @param {string} currentPassword 
      * @returns {Promise<void>}
      */
-    #changeEmail = async (currentUserId, email, newEmail) => {
+    #changeEmail = async (currentUserId, email, newEmail, currentPassword) => {
         const changeValid = Validator.isValidChangeEmail(email, newEmail);
 
         if (!changeValid.status) {
             throw new ServiceError(400, changeValid.message);
+        }
+        if (!Validator.isString(currentPassword)) {
+            throw new ServiceError(400, ERROR_BAD_PASSWORD);
         }
         let user = await this._userRepository.getUserById(currentUserId);
 
@@ -208,15 +218,40 @@ export default class UserService {
         if (email === newEmail) {
             throw new ServiceError(400, "Le nouvel email doit être différent de l'ancien");
         }
+        const same = await SecurityHelper.comparePassword(currentPassword, user.password);
+
+        if (!same) {
+            throw new ServiceError(400, ERROR_BAD_PASSWORD);
+        }
         user = await this._userRepository.getUserByEmail(newEmail);
 
         if (user) {
             throw new ServiceError(409, "Cet email est déjà associé à un compte");
         }
-        const updated = await this._userRepository.updateField(currentUserId, "email", newEmail);
+        // all three writes must land together - a failure partway through must never leave the new,
+        // unproven address marked verified, or a stolen session still valid
+        const updated = await db.transaction(async (client) => {
+            const changed = await this._userRepository.updateField(currentUserId, "email", newEmail, client);
+
+            if (!changed) {
+                return false;
+            }
+            // the new address hasn't been proven yet - clear the flag inherited from the old one
+            // and let the user (re)confirm it, exactly like a fresh registration would
+            await this._userRepository.updateField(currentUserId, "email_verified", false, client);
+            // a stolen session (not the password, which was just re-checked above) must not be
+            // enough to silently redirect password-reset emails to an attacker's inbox and keep
+            // going unnoticed
+            await this._refreshTokenRepository.revokeAllForUser(currentUserId, client);
+            return true;
+        });
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier l'email");
         }
+        // fire-and-forget: see AuthService.register for why this isn't awaited
+        this._authService.issueEmailVerification(currentUserId, newEmail).catch((err) => {
+            console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
+        });
     }
 }

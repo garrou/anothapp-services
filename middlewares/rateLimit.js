@@ -1,102 +1,72 @@
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit'
 
-export const limiter = rateLimit({
-	windowMs: 15 * 60 * 1000,
-	limit: 2500,
-	standardHeaders: 'draft-8',
-	legacyHeaders: false,
-	ipv6Subnet: 56,
+const WINDOW_15_MIN = 15 * 60 * 1000;
+const WINDOW_24_HOURS = 24 * 60 * 60 * 1000;
+
+/**
+ * @param {{limit: number, message: string, windowMs?: number, skipSuccessfulRequests?: boolean, byUser?: boolean}} options
+ * @returns {import('express-rate-limit').RateLimitRequestHandler}
+ */
+const createLimiter = ({ limit, message, windowMs = WINDOW_15_MIN, skipSuccessfulRequests = false, byUser = false }) => rateLimit({
+    windowMs,
+    limit,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    skipSuccessfulRequests,
+    ...(byUser ? { keyGenerator: (req) => req.userId ?? ipKeyGenerator(req.ip) } : { ipv6Subnet: 56 }),
     handler: (req, res) => {
-        res.status(429).json({ message: "Too many requests, please try again later." });
+        res.status(429).json({ message });
     },
 });
 
-export const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 5,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    ipv6Subnet: 56,
-    skipSuccessfulRequests: true,
-    handler: (req, res) => {
-        res.status(429).json({ message: "Too many login attempts, please try again later." });
-    },
+export const limiter = createLimiter({
+    limit: 2500, message: "Too many requests, please try again later.",
 });
 
-export const registerLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 5,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    ipv6Subnet: 56,
-    handler: (req, res) => {
-        res.status(429).json({ message: "Too many registration attempts, please try again later." });
-    },
+export const loginLimiter = createLimiter({
+    limit: 5, message: "Too many login attempts, please try again later.", skipSuccessfulRequests: true,
 });
 
-export const refreshLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 20,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    ipv6Subnet: 56,
-    skipSuccessfulRequests: true,
-    handler: (req, res) => {
-        res.status(429).json({ message: "Too many refresh attempts, please try again later." });
-    },
+export const registerLimiter = createLimiter({
+    limit: 5, message: "Too many registration attempts, please try again later.",
 });
 
-export const logoutLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 20,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    ipv6Subnet: 56,
-    handler: (req, res) => {
-        res.status(429).json({ message: "Too many requests, please try again later." });
-    },
+export const refreshLimiter = createLimiter({
+    limit: 20, message: "Too many refresh attempts, please try again later.", skipSuccessfulRequests: true,
 });
 
-export const cancelDeletionLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 5,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    ipv6Subnet: 56,
-    handler: (req, res) => {
-        res.status(429).json({ message: "Too many attempts, please try again later." });
-    },
+export const logoutLimiter = createLimiter({
+    limit: 20, message: "Too many requests, please try again later.",
 });
 
-export const exportLimiter = rateLimit({
-    windowMs: 24 * 60 * 60 * 1000,
-    limit: 5,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    keyGenerator: (req) => req.userId ?? ipKeyGenerator(req.ip),
-    handler: (req, res) => {
-        res.status(429).json({ message: "Too many export requests, please try again later." });
-    },
+export const cancelDeletionLimiter = createLimiter({
+    limit: 5, message: "Too many attempts, please try again later.",
 });
 
-export const importLimiter = rateLimit({
-    windowMs: 24 * 60 * 60 * 1000,
-    limit: 5,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    keyGenerator: (req) => req.userId ?? ipKeyGenerator(req.ip),
-    handler: (req, res) => {
-        res.status(429).json({ message: "Too many import requests, please try again later." });
-    },
+export const exportLimiter = createLimiter({
+    limit: 5, message: "Too many export requests, please try again later.", windowMs: WINDOW_24_HOURS, byUser: true,
 });
 
-export const requestDeletionLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 5,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    keyGenerator: (req) => req.userId ?? ipKeyGenerator(req.ip),
-    handler: (req, res) => {
-        res.status(429).json({ message: "Too many attempts, please try again later." });
-    },
+export const importLimiter = createLimiter({
+    limit: 5, message: "Too many import requests, please try again later.", windowMs: WINDOW_24_HOURS, byUser: true,
+});
+
+export const verifyEmailLimiter = createLimiter({
+    limit: 10, message: "Too many attempts, please try again later.",
+});
+
+export const resendVerificationLimiter = createLimiter({
+    limit: 3, message: "Too many attempts, please try again later.",
+});
+
+export const forgotPasswordLimiter = createLimiter({
+    limit: 3, message: "Too many attempts, please try again later.",
+});
+
+export const resetPasswordLimiter = createLimiter({
+    limit: 5, message: "Too many attempts, please try again later.",
+});
+
+export const requestDeletionLimiter = createLimiter({
+    limit: 5, message: "Too many attempts, please try again later.", byUser: true,
 });

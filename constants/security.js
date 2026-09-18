@@ -4,6 +4,10 @@ export const WHITELIST = [
     "/auth/refresh",
     "/auth/logout",
     "/auth/cancel-deletion",
+    "/auth/verify-email",
+    "/auth/resend-verification",
+    "/auth/forgot-password",
+    "/auth/reset-password",
     "/search/images",
 ];
 

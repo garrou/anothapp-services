@@ -19,7 +19,7 @@ export default class RefreshTokenRepository {
 
     /**
      * @param {string} hashToken 
-     * @returns {RefreshToken}
+     * @returns {Promise<RefreshToken>}
      */
     find = async (hashToken) => {
         const res = await db.query(`
@@ -42,6 +42,20 @@ export default class RefreshTokenRepository {
             WHERE id = $1 AND revoked_at IS NULL
         `, [tokenId]);
         return res.rowCount === 1;
+    }
+
+    /**
+     * @param {string} userId
+     * @param {{query: Function}} [client]
+     * @returns {Promise<number>} number of tokens revoked
+     */
+    revokeAllForUser = async (userId, client = db) => {
+        const res = await client.query(`
+            UPDATE refresh_tokens
+            SET revoked_at = NOW()
+            WHERE user_id = $1 AND revoked_at IS NULL
+        `, [userId]);
+        return res.rowCount;
     }
 
     /**

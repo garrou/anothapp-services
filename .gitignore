@@ -3,3 +3,4 @@ pgdata/
 .env
 .DS_Store
 .idea
+clean.sh

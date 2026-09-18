@@ -2,8 +2,13 @@ import db from "../config/db.js";
 import User from "../models/user.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
+import RefreshTokenRepository from "./refreshTokenRepository.js";
 
 export default class UserRepository {
+
+    constructor() {
+        this._refreshTokenRepository = new RefreshTokenRepository();
+    }
 
     /**
      * @param {string} email
@@ -110,27 +115,29 @@ export default class UserRepository {
      * @param {string} email
      * @param {string} password
      * @param {string} username
-     * @returns {Promise<boolean>}
+     * @returns {Promise<string|null>} the created user's id, or null on failure
      */
     createUser = async (email, password, username) => {
         const res = await db.query(`
             INSERT INTO users (email, password, username)
             VALUES ($1, $2, $3)
+            RETURNING id
         `, [email, password, username]);
-        return res.rowCount === 1;
+        return res.rowCount === 1 ? res.rows[0]["id"] : null;
     }
 
     /**
      * @param {string} id
      * @param {string} field
      * @param {string} value
+     * @param {{query: Function}} [client]
      * @returns {Promise<boolean>}
      */
-    updateField = async (id, field, value) => {
+    updateField = async (id, field, value, client = db) => {
         if (!User.isValidField(field)) {
             throw new ServiceError(400, `Champ incorrect : ${field}`);
         }
-        const res = await db.query(`
+        const res = await client.query(`
             UPDATE users
             SET ${field} = $1
             WHERE id = $2
@@ -166,11 +173,7 @@ export default class UserRepository {
             if (res.rowCount !== 1) {
                 return false;
             }
-            await client.query(`
-                UPDATE refresh_tokens
-                SET revoked_at = NOW()
-                WHERE user_id = $1 AND revoked_at IS NULL
-            `, [id]);
+            await this._refreshTokenRepository.revokeAllForUser(id, client);
             return true;
         });
     }

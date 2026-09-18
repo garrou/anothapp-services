@@ -197,7 +197,7 @@ export default class UserShowRepository {
     /**
      * @param {string} userId
      * @param {number} showId
-     * @return Promise<boolean>
+     * @returns {Promise<boolean>}
      */
     updateFavoriteByUserIdByShowId = async (userId, showId) => {
         const res = await db.query(`
@@ -408,7 +408,7 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
-     * @return Promise<UserShow[]>
+     * @returns {Promise<UserShow[]>}
      */
     getFavoritesByUserId = async (userId) => {
         const res = await db.query(`
@@ -424,7 +424,7 @@ export default class UserShowRepository {
 
     /**
      * @param {string} userId
-     * @return Promise<UserShow[]>
+     * @returns {Promise<UserShow[]>}
      */
     getShowsWithNextEpisode = async (userId) => {
         const res = await db.query(`

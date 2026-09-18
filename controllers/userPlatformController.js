@@ -5,6 +5,9 @@ export default class PlatformController {
         this._userPlatformService = new UserPlatformService();
     }
     
+    /**
+     * @returns {Promise<void>}
+     */
     getUserPlatforms = async (req, res, next) => {
         try {
             const {friendId} = req.query;
@@ -15,6 +18,9 @@ export default class PlatformController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     addUserPlatforms = async (req, res, next) => {
         try {
             await this._userPlatformService.addUserPlatforms(req.userId, req.body.platformId);
@@ -24,6 +30,9 @@ export default class PlatformController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     deleteUserPlatform = async (req, res, next) => {
         try {
             await this._userPlatformService.deleteUserPlatform(req.userId, req.params.id);

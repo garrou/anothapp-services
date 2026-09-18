@@ -7,19 +7,38 @@ import { ERROR_BAD_PASSWORD } from "../../../constants/errors.js";
 const userRepoMocks = vi.hoisted(() => ({
     updateField: vi.fn(),
     getUserById: vi.fn(),
+    getUserByEmail: vi.fn(),
     getUsersByUsername: vi.fn(),
     requestDeletion: vi.fn(),
 }));
 const episodeServiceMocks = vi.hoisted(() => ({
     backfillForUser: vi.fn(),
 }));
+const authServiceMocks = vi.hoisted(() => ({
+    issueEmailVerification: vi.fn().mockResolvedValue(undefined),
+}));
+const refreshTokenRepoMocks = vi.hoisted(() => ({
+    revokeAllForUser: vi.fn(),
+}));
+const dbMocks = vi.hoisted(() => ({
+    // runs the callback with a stand-in client - the mocked repositories below don't care what
+    // they receive as their `client` argument, they just record it
+    transaction: vi.fn((callback) => callback({ query: vi.fn() })),
+}));
 
 vi.mock("../../../repositories/userRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
 }));
+vi.mock("../../../repositories/refreshTokenRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return refreshTokenRepoMocks; }),
+}));
 vi.mock("../../../services/episodeService.js", () => ({
     default: vi.fn().mockImplementation(function () { return episodeServiceMocks; }),
 }));
+vi.mock("../../../services/authService.js", () => ({
+    default: vi.fn().mockImplementation(function () { return authServiceMocks; }),
+}));
+vi.mock("../../../config/db.js", () => ({ default: dbMocks }));
 
 describe("UserService.updateUser - episode tracking", () => {
     let userService;
@@ -67,6 +86,79 @@ describe("UserService.updateUser - episode tracking", () => {
         expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "episode_tracking_enabled", true);
         expect(episodeServiceMocks.backfillForUser).not.toHaveBeenCalled();
         expect(message).toBe("Suivi des épisodes activé");
+    });
+});
+
+describe("UserService.updateUser - email change", () => {
+    let userService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        userService = new UserService();
+    });
+
+    it("changes the email, clears the verification flag, revokes sessions, and sends a new verification email", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
+        userRepoMocks.getUserByEmail.mockResolvedValue(null);
+        userRepoMocks.updateField.mockResolvedValue(true);
+
+        const message = await userService.updateUser(
+            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "GoodPassword1" })
+        );
+
+        expect(message).toBe("Email modifié");
+        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email", "new@test.fr", expect.anything());
+        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email_verified", false, expect.anything());
+        expect(refreshTokenRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1", expect.anything());
+        expect(authServiceMocks.issueEmailVerification).toHaveBeenCalledWith("user-1", "new@test.fr");
+        expect(dbMocks.transaction).toHaveBeenCalled();
+    });
+
+    it("rejects a missing or wrong current password, without touching anything", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr" })
+        )).rejects.toMatchObject({ status: 400, message: ERROR_BAD_PASSWORD });
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "WrongPassword" })
+        )).rejects.toMatchObject({ status: 400, message: ERROR_BAD_PASSWORD });
+
+        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+        expect(refreshTokenRepoMocks.revokeAllForUser).not.toHaveBeenCalled();
+        expect(authServiceMocks.issueEmailVerification).not.toHaveBeenCalled();
+    });
+
+    it("rejects when the new email is already taken, without touching the verification flag", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
+        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "user-2" });
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "taken@test.fr", currentPassword: "GoodPassword1" })
+        )).rejects.toMatchObject({ status: 409 });
+        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+        expect(authServiceMocks.issueEmailVerification).not.toHaveBeenCalled();
+    });
+
+    it("does not fail the email change just because the verification email couldn't be sent", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
+        userRepoMocks.getUserByEmail.mockResolvedValue(null);
+        userRepoMocks.updateField.mockResolvedValue(true);
+        authServiceMocks.issueEmailVerification.mockRejectedValueOnce(new Error("SMTP down"));
+        const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+        const message = await userService.updateUser(
+            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "GoodPassword1" })
+        );
+
+        expect(message).toBe("Email modifié");
+        expect(consoleSpy).toHaveBeenCalled();
+        consoleSpy.mockRestore();
     });
 });
 

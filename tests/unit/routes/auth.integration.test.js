@@ -4,7 +4,9 @@ import SecurityHelper from "../../../helpers/security.js";
 
 const userRepoMocks = vi.hoisted(() => ({
     getUserByIdentifier: vi.fn(),
+    getUserByEmail: vi.fn(),
     createUser: vi.fn(),
+    updateField: vi.fn(),
     cancelDeletion: vi.fn(),
     getUserById: vi.fn(),
 }));
@@ -12,6 +14,11 @@ const refreshRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
     find: vi.fn(),
     revoke: vi.fn(),
+    revokeAllForUser: vi.fn(),
+}));
+const mailerServiceMocks = vi.hoisted(() => ({
+    sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
+    sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../../repositories/userRepository.js", () => ({
@@ -19,6 +26,9 @@ vi.mock("../../../repositories/userRepository.js", () => ({
 }));
 vi.mock("../../../repositories/refreshTokenRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return refreshRepoMocks; }),
+}));
+vi.mock("../../../services/mailerService.js", () => ({
+    default: vi.fn().mockImplementation(function () { return mailerServiceMocks; }),
 }));
 
 let app;
@@ -43,6 +53,7 @@ describe("POST /auth/login", () => {
             email: "adrien@test.fr",
             username: "adrien",
             password: hash,
+            emailVerified: true,
         });
         refreshRepoMocks.create.mockResolvedValue(true);
 
@@ -66,6 +77,7 @@ describe("POST /auth/login - pending deletion", () => {
             email: "adrien@test.fr",
             username: "adrien",
             password: hash,
+            emailVerified: true,
             deletedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
         });
 
@@ -102,6 +114,76 @@ describe("POST /auth/cancel-deletion", () => {
 
         expect(res.status).toBe(200);
         expect(res.headers["set-cookie"].some((c) => c.startsWith("access_token="))).toBe(true);
+    });
+});
+
+describe("POST /auth/verify-email", () => {
+    it("is reachable without an access cookie/token", async () => {
+        const token = SecurityHelper.signJwt("1", SecurityHelper.emailVerificationSecret());
+        userRepoMocks.updateField.mockResolvedValue(true);
+
+        const res = await request(app).post("/auth/verify-email").send({ token });
+
+        expect(res.status).toBe(200);
+    });
+
+    it("returns 401 for an invalid token", async () => {
+        const res = await request(app).post("/auth/verify-email").send({ token: "garbage" });
+
+        expect(res.status).toBe(401);
+    });
+});
+
+describe("POST /auth/resend-verification", () => {
+    it("is reachable without an access cookie/token", async () => {
+        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", emailVerified: false });
+
+        const res = await request(app).post("/auth/resend-verification").send({ email: "adrien@test.fr" });
+
+        expect(res.status).toBe(200);
+        expect(mailerServiceMocks.sendVerificationEmail).toHaveBeenCalled();
+    });
+});
+
+describe("POST /auth/forgot-password", () => {
+    it("is reachable without an access cookie/token", async () => {
+        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", password: "hash" });
+
+        const res = await request(app).post("/auth/forgot-password").send({ email: "adrien@test.fr" });
+
+        expect(res.status).toBe(200);
+        expect(mailerServiceMocks.sendPasswordResetEmail).toHaveBeenCalled();
+    });
+
+    it("returns the same generic 200 when no account matches (no enumeration)", async () => {
+        userRepoMocks.getUserByEmail.mockResolvedValue(null);
+
+        const res = await request(app).post("/auth/forgot-password").send({ email: "unknown@test.fr" });
+
+        expect(res.status).toBe(200);
+    });
+});
+
+describe("POST /auth/reset-password", () => {
+    it("is reachable without an access cookie/token, and revokes existing sessions", async () => {
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", password: "old-hash" });
+        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret("old-hash"));
+        userRepoMocks.updateField.mockResolvedValue(true);
+
+        const res = await request(app)
+            .post("/auth/reset-password")
+            .send({ token, password: "NewPassword1", confirm: "NewPassword1" });
+
+        expect(res.status).toBe(200);
+        expect(refreshRepoMocks.revokeAllForUser).toHaveBeenCalledWith("1");
+    });
+
+    it("returns 401 for an invalid token", async () => {
+        const res = await request(app)
+            .post("/auth/reset-password")
+            .send({ token: "garbage", password: "NewPassword1", confirm: "NewPassword1" });
+
+        expect(res.status).toBe(401);
     });
 });
 

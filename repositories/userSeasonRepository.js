@@ -290,7 +290,7 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
-     * @return Promise<number>
+     * @returns {Promise<number>}
      */
     getTotalSeasonsByUserId = async (userId) => {
         const res = await db.query(`

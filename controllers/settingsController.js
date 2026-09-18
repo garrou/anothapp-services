@@ -6,6 +6,9 @@ export default class SettingsController {
         this._settingService = new SettingService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     exportData = async (req, res, next) => {
         try {
             const [filename, data] = await this._settingService.exportData(req.userId);
@@ -17,6 +20,9 @@ export default class SettingsController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     importData = async (req, res, next) => {
         try {
             const summary = await this._settingService.importData(req.userId, req.body);

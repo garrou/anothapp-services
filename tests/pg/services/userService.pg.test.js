@@ -82,22 +82,40 @@ describe("UserService (real Postgres)", () => {
     });
 
     describe("updateUser - email change", () => {
-        it("changes the email", async () => {
-            const userId = await insertUser({ email: "old@test.fr" });
+        it("changes the email, clears the verification flag, and revokes existing sessions", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            const userId = await insertUser({ email: "old@test.fr", password: hash, emailVerified: true });
+            await db.query(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, 'h', NOW() + INTERVAL '1 day')`, [userId]);
 
-            const message = await service.updateUser(userId, new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr" }));
+            const message = await service.updateUser(userId, new UserUpdate({
+                email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "GoodPassword1",
+            }));
 
             expect(message).toBe("Email modifié");
             const user = await service.getUser(userId);
             expect(user.email).toBe("new@test.fr");
+            expect(user.emailVerified).toBe(false);
+            const tokens = await db.query(`SELECT revoked_at FROM refresh_tokens WHERE user_id = $1`, [userId]);
+            expect(tokens.rows[0]["revoked_at"]).not.toBeNull();
+        });
+
+        it("rejects a wrong current password", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            const userId = await insertUser({ email: "old@test.fr", password: hash });
+
+            await expect(service.updateUser(userId, new UserUpdate({
+                email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "WrongPassword",
+            }))).rejects.toMatchObject({ status: 400 });
         });
 
         it("rejects when the new email is already taken", async () => {
-            const userId = await insertUser({ email: "mine@test.fr" });
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            const userId = await insertUser({ email: "mine@test.fr", password: hash });
             await insertUser({ email: "taken@test.fr" });
 
-            await expect(service.updateUser(userId, new UserUpdate({ email: "mine@test.fr", newEmail: "taken@test.fr" })))
-                .rejects.toMatchObject({ status: 409 });
+            await expect(service.updateUser(userId, new UserUpdate({
+                email: "mine@test.fr", newEmail: "taken@test.fr", currentPassword: "GoodPassword1",
+            }))).rejects.toMatchObject({ status: 409 });
         });
     });
 

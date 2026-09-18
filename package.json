@@ -27,6 +27,7 @@
     "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.0",
     "node-cache": "^5.1.2",
+    "nodemailer": "^10.0.10",
     "pg": "^8.9.0"
   },
   "devDependencies": {

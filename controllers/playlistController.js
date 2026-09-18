@@ -5,6 +5,9 @@ export default class PlaylistController {
         this._playlistService = new PlaylistService();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getPlaylists = async (req, res, next) => {
         try {
             const {friendId, status} = req.query;
@@ -15,6 +18,9 @@ export default class PlaylistController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getPlaylistById = async (req, res, next) => {
         try {
             const playlist = await this._playlistService.getPlaylistById(req.userId, req.params.id);
@@ -24,6 +30,9 @@ export default class PlaylistController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     createPlaylist = async (req, res, next) => {
         try {
             const {name, visible} = req.body;
@@ -34,6 +43,9 @@ export default class PlaylistController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     updatePlaylist = async (req, res, next) => {
         try {
             const {name, visible} = req.body;
@@ -44,6 +56,9 @@ export default class PlaylistController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     deletePlaylist = async (req, res, next) => {
         try {
             await this._playlistService.deletePlaylist(req.userId, req.params.id);
@@ -53,6 +68,9 @@ export default class PlaylistController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     addShowToPlaylist = async (req, res, next) => {
         try {
             const {showId} = req.body;
@@ -63,6 +81,9 @@ export default class PlaylistController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     removeShowFromPlaylist = async (req, res, next) => {
         try {
             await this._playlistService.removeShowFromPlaylist(req.userId, req.params.id, Number(req.params.showId));
@@ -72,6 +93,9 @@ export default class PlaylistController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     inviteCollaborator = async (req, res, next) => {
         try {
             const {userId} = req.body;
@@ -82,6 +106,9 @@ export default class PlaylistController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     getCollaborators = async (req, res, next) => {
         try {
             const collaborators = await this._playlistService.getCollaborators(req.userId, req.params.id);
@@ -91,6 +118,9 @@ export default class PlaylistController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     acceptCollaboratorInvite = async (req, res, next) => {
         try {
             await this._playlistService.acceptCollaboratorInvite(req.userId, req.params.id);
@@ -100,6 +130,9 @@ export default class PlaylistController {
         }
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     removeCollaborator = async (req, res, next) => {
         try {
             await this._playlistService.removeCollaborator(req.userId, req.params.id, req.params.userId);
