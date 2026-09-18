@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import crypto from "crypto";
 import request from "supertest";
 import db from "../../../config/db.js";
 import SecurityHelper from "../../../helpers/security.js";
-import MailerService from "../../../services/mailerService.js";
 import { loginLimiter, confirmLoginLimiter, registerLimiter } from "../../../middlewares/rateLimit.js";
 import { resetDb } from "../resetDb.js";
 
@@ -15,15 +15,15 @@ const signReset = async (userId) => {
     const { rows } = await db.query(`SELECT password FROM users WHERE id = $1`, [userId]);
     return SecurityHelper.signJwt(userId, SecurityHelper.passwordResetSecret(rows[0].password), "1h");
 };
-// unlike the verification/reset links, the login code is random and only known by whatever
-// receives the email - so instead of re-deriving it, this spies on the mailer to capture the
-// code the server actually generated and would have sent.
+// login() generates a random code (see SecurityHelper.generateLoginCode) and only sends it by
+// email - fixing crypto.randomInt lets these tests know that code upfront instead of having to
+// intercept the mailer (which is unmockable here: sendLoginCodeEmail is a class field, so it only
+// exists on the instance, never on MailerService.prototype).
+const LOGIN_CODE = "123456";
+
 const login = async (requester, identifier, password) => {
-    const spy = vi.spyOn(MailerService.prototype, "sendLoginCodeEmail");
     const res = await requester.post("/auth/login").send({ identifier, password });
-    const code = spy.mock.calls.at(-1)?.[1];
-    spy.mockRestore();
-    return { res, code };
+    return { res, code: LOGIN_CODE };
 };
 // full round trip: login, then confirm the captured code - only valid when login actually
 // issued a pendingApproval (a wrong password or a pending-deletion account won't).
@@ -48,6 +48,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
 
     beforeAll(async () => {
         process.env.JWT_SECRET = "test-secret";
+        vi.spyOn(crypto, "randomInt").mockReturnValue(Number(LOGIN_CODE));
         const module = await import("../../../config/app.js");
         app = module.default.app;
     });
