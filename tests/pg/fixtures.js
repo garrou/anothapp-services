@@ -15,13 +15,14 @@ export const insertUser = async (overrides = {}) => {
         password = "hash",
         picture = null,
         episodeTrackingEnabled = true,
+        emailVerified = true,
         deletedAt = null,
     } = overrides;
     const res = await db.query(`
-        INSERT INTO users (username, email, password, picture, episode_tracking_enabled, deleted_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO users (username, email, password, picture, episode_tracking_enabled, email_verified, deleted_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id
-    `, [username, email, password, picture, episodeTrackingEnabled, deletedAt]);
+    `, [username, email, password, picture, episodeTrackingEnabled, emailVerified, deletedAt]);
     return res.rows[0].id;
 };
 

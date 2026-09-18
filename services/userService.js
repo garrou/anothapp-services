@@ -1,6 +1,7 @@
 import UserProfile from "../models/userProfile.js";
 import UserRepository from "../repositories/userRepository.js";
 import EpisodeService from "./episodeService.js";
+import AuthService from "./authService.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
@@ -10,6 +11,7 @@ export default class UserService {
     constructor() {
         this._userRepository = new UserRepository();
         this._episodeService = new EpisodeService();
+        this._authService = new AuthService();
     }
 
     /**
@@ -217,6 +219,15 @@ export default class UserService {
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier l'email");
+        }
+        // the new address hasn't been proven yet - clear the flag inherited from the old one and
+        // let the user (re)confirm it, exactly like a fresh registration would
+        await this._userRepository.updateField(currentUserId, "email_verified", false);
+
+        try {
+            await this._authService.issueEmailVerification(currentUserId, newEmail);
+        } catch (err) {
+            console.error("Échec de l'envoi de l'email de confirmation", err);
         }
     }
 }

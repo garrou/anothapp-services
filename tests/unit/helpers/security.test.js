@@ -61,6 +61,18 @@ describe("SecurityHelper.signJwt / verifyJwt", () => {
         const token = SecurityHelper.signJwt("user-1", SECRET);
         expect(() => SecurityHelper.verifyJwt(token, "wrong-secret")).toThrow("Session invalide");
     });
+
+    it("defaults to a 15 minute expiry", () => {
+        const token = SecurityHelper.signJwt("user-1", SECRET);
+        const decoded = jwt.decode(token);
+        expect(decoded.exp - decoded.iat).toBe(15 * 60);
+    });
+
+    it("accepts a custom expiry, e.g. for a longer-lived email link", () => {
+        const token = SecurityHelper.signJwt("user-1", SECRET, "1d");
+        const decoded = jwt.decode(token);
+        expect(decoded.exp - decoded.iat).toBe(24 * 60 * 60);
+    });
 });
 
 describe("SecurityHelper.deletionCancellationSecret", () => {
@@ -79,6 +91,24 @@ describe("SecurityHelper.deletionCancellationSecret", () => {
         const second = SecurityHelper.deletionCancellationSecret();
         process.env.JWT_SECRET = SECRET;
         expect(first).not.toBe(second);
+    });
+});
+
+describe("SecurityHelper.emailVerificationSecret / passwordResetSecret", () => {
+    it("are deterministic, distinct from each other and from deletionCancellationSecret", () => {
+        expect(SecurityHelper.emailVerificationSecret()).toBe(SecurityHelper.emailVerificationSecret());
+        expect(SecurityHelper.passwordResetSecret()).toBe(SecurityHelper.passwordResetSecret());
+        expect(SecurityHelper.emailVerificationSecret()).not.toBe(SecurityHelper.passwordResetSecret());
+        expect(SecurityHelper.emailVerificationSecret()).not.toBe(SecurityHelper.deletionCancellationSecret());
+    });
+
+    it("neither can verify a token meant for the real JWT_SECRET or for each other", () => {
+        const verificationToken = SecurityHelper.signJwt("user-1", SecurityHelper.emailVerificationSecret());
+        const resetToken = SecurityHelper.signJwt("user-1", SecurityHelper.passwordResetSecret());
+
+        expect(() => SecurityHelper.verifyJwt(verificationToken, SECRET)).toThrow("Session invalide");
+        expect(() => SecurityHelper.verifyJwt(verificationToken, SecurityHelper.passwordResetSecret())).toThrow("Session invalide");
+        expect(() => SecurityHelper.verifyJwt(resetToken, SecurityHelper.emailVerificationSecret())).toThrow("Session invalide");
     });
 });
 

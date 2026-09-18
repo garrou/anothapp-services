@@ -3,10 +3,14 @@ import UserProfile from "../models/userProfile.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
-import { DUPLICATE_ERROR_CODE, ERROR_LOGIN_PASSWORD, ERROR_REFRESH_TOKEN_INVALID } from "../constants/errors.js";
+import {
+    DUPLICATE_ERROR_CODE, ERROR_EMAIL_NOT_VERIFIED, ERROR_INVALID_REQUEST, ERROR_LOGIN_PASSWORD,
+    ERROR_REFRESH_TOKEN_INVALID
+} from "../constants/errors.js";
 import { DUMMY_HASH } from "../constants/security.js";
 import { DELETION_GRACE_DAYS } from "../constants/deletion.js";
 import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
+import MailerService from "./mailerService.js";
 
 const GRACE_PERIOD_MS = DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000;
 
@@ -14,6 +18,7 @@ export default class AuthService {
     constructor() {
         this._userRepository = new UserRepository();
         this._refreshTokenRepository = new RefreshTokenRepository();
+        this._mailerService = new MailerService();
     }
 
     /**
@@ -32,6 +37,9 @@ export default class AuthService {
 
         if (!found || !same) {
             throw new ServiceError(400, ERROR_LOGIN_PASSWORD);
+        }
+        if (!found.emailVerified) {
+            throw new ServiceError(403, ERROR_EMAIL_NOT_VERIFIED);
         }
         if (found.deletedAt) {
             const gracePeriodElapsed = Date.now() - new Date(found.deletedAt).getTime() >= GRACE_PERIOD_MS;
@@ -149,15 +157,117 @@ export default class AuthService {
             if (!result.status) throw new ServiceError(400, result.message);
         }
         const hash = await SecurityHelper.createHash(password);
+        let userId;
 
         try {
-            const created = await this._userRepository.createUser(email, hash, username);
-            if (!created) throw new ServiceError(500, "Impossible de créer le compte");
+            userId = await this._userRepository.createUser(email, hash, username);
+            if (!userId) throw new ServiceError(500, "Impossible de créer le compte");
         } catch (err) {
             if (err.code === DUPLICATE_ERROR_CODE) {
                 throw new ServiceError(409, "Un compte est déjà associé à ces informations");
             }
             throw err;
         }
+
+        try {
+            await this.issueEmailVerification(userId, email);
+        } catch (err) {
+            // the account already exists at this point - a mail hiccup must not make registration
+            // look like it failed; the user can always ask for a new link via resendVerification
+            console.error("Échec de l'envoi de l'email de confirmation", err);
+        }
+    }
+
+    /**
+     * @param {string} token
+     * @returns {Promise<void>}
+     */
+    verifyEmail = async (token) => {
+        const { sub: userId } = SecurityHelper.verifyJwt(token, SecurityHelper.emailVerificationSecret());
+        const updated = await this._userRepository.updateField(userId, "email_verified", true);
+
+        if (!updated) {
+            throw new ServiceError(400, "Impossible de confirmer cet email");
+        }
+    }
+
+    /**
+     * @param {string?} email
+     * @returns {Promise<void>}
+     */
+    resendVerification = async (email) => {
+        if (!Validator.isString(email)) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const user = await this._userRepository.getUserByEmail(email);
+
+        if (!user) {
+            throw new ServiceError(400, "Aucun compte associé à cet email");
+        }
+        if (user.emailVerified) {
+            throw new ServiceError(400, "Cet email est déjà confirmé");
+        }
+
+        try {
+            await this.issueEmailVerification(user.id, email);
+        } catch (err) {
+            throw new ServiceError(500, "Impossible d'envoyer l'email de confirmation");
+        }
+    }
+
+    /**
+     * @param {string?} email
+     * @returns {Promise<void>}
+     */
+    forgotPassword = async (email) => {
+        if (!Validator.isString(email)) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const user = await this._userRepository.getUserByEmail(email);
+
+        if (!user) {
+            throw new ServiceError(400, "Aucun compte associé à cet email");
+        }
+        const token = SecurityHelper.signJwt(user.id, SecurityHelper.passwordResetSecret(), "1h");
+        const url = `${process.env.ORIGIN}/reset-password/${token}`;
+
+        try {
+            await this._mailerService.sendPasswordResetEmail(email, url);
+        } catch (err) {
+            throw new ServiceError(500, "Impossible d'envoyer l'email de réinitialisation");
+        }
+    }
+
+    /**
+     * @param {string} token
+     * @param {string?} password
+     * @param {string?} confirm
+     * @returns {Promise<void>}
+     */
+    resetPassword = async (token, password, confirm) => {
+        const { sub: userId } = SecurityHelper.verifyJwt(token, SecurityHelper.passwordResetSecret());
+        const validation = Validator.isValidPassword(password, confirm);
+
+        if (!validation.status) {
+            throw new ServiceError(400, validation.message);
+        }
+        const hash = await SecurityHelper.createHash(password);
+        const updated = await this._userRepository.updateField(userId, "password", hash);
+
+        if (!updated) {
+            throw new ServiceError(500, "Impossible de réinitialiser le mot de passe");
+        }
+        await this._refreshTokenRepository.revokeAllForUser(userId);
+    }
+
+    /**
+     * @param {string} userId
+     * @param {string} email
+     * @returns {Promise<void>}
+     */
+    issueEmailVerification = async (userId, email) => {
+        const token = SecurityHelper.signJwt(userId, SecurityHelper.emailVerificationSecret(), "1d");
+        const url = `${process.env.ORIGIN}/verify-email/${token}`;
+        await this._mailerService.sendVerificationEmail(email, url);
     }
 }

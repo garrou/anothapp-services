@@ -25,9 +25,10 @@ export default class SecurityHelper {
     /**
      * @param {string} userId
      * @param {string} secret
+     * @param {string} [expiresIn]
      * @returns {string}
      */
-    static signJwt = (userId, secret) => jwt.sign({ sub: userId }, secret, { expiresIn: "15m" });
+    static signJwt = (userId, secret, expiresIn = "15m") => jwt.sign({ sub: userId }, secret, { expiresIn });
 
     /**
      * A secret distinct from JWT_SECRET, derived from it - a token signed with this one can never
@@ -37,6 +38,22 @@ export default class SecurityHelper {
     static deletionCancellationSecret = () => crypto
         .createHash("sha256")
         .update(`${process.env.JWT_SECRET}:deletion-cancellation`)
+        .digest("hex");
+
+    /**
+     * @returns {string}
+     */
+    static emailVerificationSecret = () => crypto
+        .createHash("sha256")
+        .update(`${process.env.JWT_SECRET}:email-verification`)
+        .digest("hex");
+
+    /**
+     * @returns {string}
+     */
+    static passwordResetSecret = () => crypto
+        .createHash("sha256")
+        .update(`${process.env.JWT_SECRET}:password-reset`)
         .digest("hex");
 
     /**

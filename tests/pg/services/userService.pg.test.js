@@ -82,14 +82,15 @@ describe("UserService (real Postgres)", () => {
     });
 
     describe("updateUser - email change", () => {
-        it("changes the email", async () => {
-            const userId = await insertUser({ email: "old@test.fr" });
+        it("changes the email and clears the verification flag on the new address", async () => {
+            const userId = await insertUser({ email: "old@test.fr", emailVerified: true });
 
             const message = await service.updateUser(userId, new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr" }));
 
             expect(message).toBe("Email modifié");
             const user = await service.getUser(userId);
             expect(user.email).toBe("new@test.fr");
+            expect(user.emailVerified).toBe(false);
         });
 
         it("rejects when the new email is already taken", async () => {

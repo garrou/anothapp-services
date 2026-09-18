@@ -110,14 +110,15 @@ export default class UserRepository {
      * @param {string} email
      * @param {string} password
      * @param {string} username
-     * @returns {Promise<boolean>}
+     * @returns {Promise<string|null>} the created user's id, or null on failure
      */
     createUser = async (email, password, username) => {
         const res = await db.query(`
             INSERT INTO users (email, password, username)
             VALUES ($1, $2, $3)
+            RETURNING id
         `, [email, password, username]);
-        return res.rowCount === 1;
+        return res.rowCount === 1 ? res.rows[0]["id"] : null;
     }
 
     /**

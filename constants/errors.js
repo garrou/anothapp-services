@@ -35,3 +35,5 @@ export const ERROR_COLLABORATOR_INVITE_NOT_FOUND = "Invitation introuvable";
 export const ERROR_SHOW_ALREADY_IN_PLAYLIST = "Cette série est déjà dans cette playlist";
 
 export const ERROR_INVALID_SIGNATURE = "Signature du fichier invalide";
+
+export const ERROR_EMAIL_NOT_VERIFIED = "Veuillez confirmer votre adresse email avant de vous connecter";

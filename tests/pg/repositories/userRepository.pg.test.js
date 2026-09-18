@@ -18,9 +18,10 @@ describe("UserRepository (real Postgres)", () => {
         it("creates a user and finds it by email, case-insensitively", async () => {
             const result = await repo.createUser("Someone@Example.com", "hash", "Someone");
 
-            expect(result).toBe(true);
+            expect(result).toEqual(expect.any(String));
             const found = await repo.getUserByEmail("someone@EXAMPLE.com");
             expect(found.username).toBe("Someone");
+            expect(found.id).toBe(result);
         });
 
         it("returns null when the email does not match", async () => {

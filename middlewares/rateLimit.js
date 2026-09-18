@@ -90,6 +90,50 @@ export const importLimiter = rateLimit({
     },
 });
 
+export const verifyEmailLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    ipv6Subnet: 56,
+    handler: (req, res) => {
+        res.status(429).json({ message: "Too many attempts, please try again later." });
+    },
+});
+
+export const resendVerificationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 3,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    ipv6Subnet: 56,
+    handler: (req, res) => {
+        res.status(429).json({ message: "Too many attempts, please try again later." });
+    },
+});
+
+export const forgotPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 3,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    ipv6Subnet: 56,
+    handler: (req, res) => {
+        res.status(429).json({ message: "Too many attempts, please try again later." });
+    },
+});
+
+export const resetPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    ipv6Subnet: 56,
+    handler: (req, res) => {
+        res.status(429).json({ message: "Too many attempts, please try again later." });
+    },
+});
+
 export const requestDeletionLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 5,

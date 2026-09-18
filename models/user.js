@@ -10,6 +10,7 @@ export default class User {
         this.password = user.password;
         this.lastExport = user["last_export"];
         this.episodeTrackingEnabled = user["episode_tracking_enabled"];
+        this.emailVerified = user["email_verified"];
         this.createdAt = user["created_at"];
         this.deletedAt = user["deleted_at"];
     }
@@ -19,6 +20,8 @@ export default class User {
      * @return boolean
      */
     static isValidField = (field) => {
-        return ["email", "password", "picture", "last_export", "episode_tracking_enabled"].includes(field);
+        return [
+            "email", "password", "picture", "last_export", "episode_tracking_enabled", "email_verified"
+        ].includes(field);
     }
 }

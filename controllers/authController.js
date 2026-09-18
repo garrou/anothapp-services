@@ -91,6 +91,46 @@ export default class AuthController {
         }
     }
 
+    verifyEmail = async (req, res, next) => {
+        try {
+            const { token } = req.body;
+            await this._authService.verifyEmail(token);
+            res.status(200).json({ "message": "Email confirmé" });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    resendVerification = async (req, res, next) => {
+        try {
+            const { email } = req.body;
+            await this._authService.resendVerification(email);
+            res.status(200).json({ "message": "Email de confirmation envoyé" });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    forgotPassword = async (req, res, next) => {
+        try {
+            const { email } = req.body;
+            await this._authService.forgotPassword(email);
+            res.status(200).json({ "message": "Email de réinitialisation envoyé" });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    resetPassword = async (req, res, next) => {
+        try {
+            const { token, password, confirm } = req.body;
+            await this._authService.resetPassword(token, password, confirm);
+            res.status(200).json({ "message": "Mot de passe réinitialisé" });
+        } catch (e) {
+            next(e);
+        }
+    }
+
     #setAuthCookies = (res, accessToken, refreshToken) => {
         const sameSite = isProdMode() ? "none" : "lax";
 

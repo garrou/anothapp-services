@@ -212,13 +212,21 @@ describe("UserRepository.createUser", () => {
         repo = new UserRepository();
     });
 
-    it("returns true when the user was inserted", async () => {
-        db.query.mockResolvedValue({rowCount: 1});
+    it("returns the created user's id when the user was inserted", async () => {
+        db.query.mockResolvedValue({rowCount: 1, rows: [{id: "user-1"}]});
 
         const result = await repo.createUser("a@b.com", "hash", "bob");
 
         expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users"), ["a@b.com", "hash", "bob"]);
-        expect(result).toBe(true);
+        expect(result).toBe("user-1");
+    });
+
+    it("returns null when nothing was inserted", async () => {
+        db.query.mockResolvedValue({rowCount: 0, rows: []});
+
+        const result = await repo.createUser("a@b.com", "hash", "bob");
+
+        expect(result).toBeNull();
     });
 });
 

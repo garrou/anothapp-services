@@ -7,11 +7,15 @@ import { ERROR_BAD_PASSWORD } from "../../../constants/errors.js";
 const userRepoMocks = vi.hoisted(() => ({
     updateField: vi.fn(),
     getUserById: vi.fn(),
+    getUserByEmail: vi.fn(),
     getUsersByUsername: vi.fn(),
     requestDeletion: vi.fn(),
 }));
 const episodeServiceMocks = vi.hoisted(() => ({
     backfillForUser: vi.fn(),
+}));
+const authServiceMocks = vi.hoisted(() => ({
+    issueEmailVerification: vi.fn(),
 }));
 
 vi.mock("../../../repositories/userRepository.js", () => ({
@@ -19,6 +23,9 @@ vi.mock("../../../repositories/userRepository.js", () => ({
 }));
 vi.mock("../../../services/episodeService.js", () => ({
     default: vi.fn().mockImplementation(function () { return episodeServiceMocks; }),
+}));
+vi.mock("../../../services/authService.js", () => ({
+    default: vi.fn().mockImplementation(function () { return authServiceMocks; }),
 }));
 
 describe("UserService.updateUser - episode tracking", () => {
@@ -67,6 +74,57 @@ describe("UserService.updateUser - episode tracking", () => {
         expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "episode_tracking_enabled", true);
         expect(episodeServiceMocks.backfillForUser).not.toHaveBeenCalled();
         expect(message).toBe("Suivi des épisodes activé");
+    });
+});
+
+describe("UserService.updateUser - email change", () => {
+    let userService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        userService = new UserService();
+    });
+
+    it("changes the email, clears the verification flag, and sends a new verification email", async () => {
+        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr" });
+        userRepoMocks.getUserByEmail.mockResolvedValue(null);
+        userRepoMocks.updateField.mockResolvedValue(true);
+
+        const message = await userService.updateUser(
+            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr" })
+        );
+
+        expect(message).toBe("Email modifié");
+        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email", "new@test.fr");
+        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email_verified", false);
+        expect(authServiceMocks.issueEmailVerification).toHaveBeenCalledWith("user-1", "new@test.fr");
+    });
+
+    it("rejects when the new email is already taken, without touching the verification flag", async () => {
+        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr" });
+        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "user-2" });
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "taken@test.fr" })
+        )).rejects.toMatchObject({ status: 409 });
+        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+        expect(authServiceMocks.issueEmailVerification).not.toHaveBeenCalled();
+    });
+
+    it("does not fail the email change just because the verification email couldn't be sent", async () => {
+        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr" });
+        userRepoMocks.getUserByEmail.mockResolvedValue(null);
+        userRepoMocks.updateField.mockResolvedValue(true);
+        authServiceMocks.issueEmailVerification.mockRejectedValueOnce(new Error("SMTP down"));
+        const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+        const message = await userService.updateUser(
+            "user-1", new UserUpdate({ email: "old@test.fr", newEmail: "new@test.fr" })
+        );
+
+        expect(message).toBe("Email modifié");
+        expect(consoleSpy).toHaveBeenCalled();
+        consoleSpy.mockRestore();
     });
 });
 
