@@ -97,7 +97,7 @@ describe("UserService.updateUser - email change", () => {
         userService = new UserService();
     });
 
-    it("changes the email, clears the verification flag, revokes sessions, and sends a new verification email", async () => {
+    it("sets a pending email, revokes sessions, and sends a confirmation to the new address - without touching the current (already verified) email", async () => {
         const hash = await SecurityHelper.createHash("GoodPassword1");
         userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
         userRepoMocks.getUserByEmail.mockResolvedValue(null);
@@ -108,8 +108,9 @@ describe("UserService.updateUser - email change", () => {
         );
 
         expect(message).toBe("Email modifié");
-        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email", "new@test.fr", expect.anything());
-        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email_verified", false, expect.anything());
+        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "pending_email", "new@test.fr", expect.anything());
+        expect(userRepoMocks.updateField).not.toHaveBeenCalledWith("user-1", "email", expect.anything(), expect.anything());
+        expect(userRepoMocks.updateField).not.toHaveBeenCalledWith("user-1", "email_verified", expect.anything(), expect.anything());
         expect(refreshTokenRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1", expect.anything());
         expect(authServiceMocks.issueEmailVerification).toHaveBeenCalledWith("user-1", "new@test.fr");
         expect(dbMocks.transaction).toHaveBeenCalled();

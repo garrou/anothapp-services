@@ -10,6 +10,7 @@ const userRepoMocks = vi.hoisted(() => ({
     updateField: vi.fn(),
     cancelDeletion: vi.fn(),
     getUserById: vi.fn().mockResolvedValue(null),
+    confirmPendingEmail: vi.fn(),
 }));
 const refreshRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -295,6 +296,33 @@ describe("AuthService.verifyEmail", () => {
         userRepoMocks.updateField.mockResolvedValue(false);
 
         await expect(authService.verifyEmail(token)).rejects.toThrow("Impossible de confirmer cet email");
+    });
+
+    it("confirms a pending email change instead of touching email_verified, when the account has one", async () => {
+        const token = SecurityHelper.signJwt("1", SecurityHelper.emailVerificationSecret());
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", pendingEmail: "new@test.fr" });
+        userRepoMocks.confirmPendingEmail.mockResolvedValue(true);
+
+        await authService.verifyEmail(token);
+
+        expect(userRepoMocks.confirmPendingEmail).toHaveBeenCalledWith("1");
+        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+    });
+
+    it("throws when confirming a pending email fails in the database", async () => {
+        const token = SecurityHelper.signJwt("1", SecurityHelper.emailVerificationSecret());
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", pendingEmail: "new@test.fr" });
+        userRepoMocks.confirmPendingEmail.mockResolvedValue(false);
+
+        await expect(authService.verifyEmail(token)).rejects.toThrow("Impossible de confirmer cet email");
+    });
+
+    it("surfaces a 409 when the pending email was taken by someone else in the meantime", async () => {
+        const token = SecurityHelper.signJwt("1", SecurityHelper.emailVerificationSecret());
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", pendingEmail: "new@test.fr" });
+        userRepoMocks.confirmPendingEmail.mockRejectedValue({ code: DUPLICATE_ERROR_CODE });
+
+        await expect(authService.verifyEmail(token)).rejects.toMatchObject({ status: 409 });
     });
 });
 

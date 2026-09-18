@@ -15,6 +15,7 @@ export default class UserProfile {
         if (current) {
             this.email = user.email;
             this.emailVerified = user.emailVerified;
+            this.pendingEmail = user.pendingEmail;
         }
     }
 }

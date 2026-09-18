@@ -253,6 +253,32 @@ describe("UserRepository.updateField", () => {
     });
 });
 
+describe("UserRepository.confirmPendingEmail", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserRepository();
+    });
+
+    it("returns true when a pending email was moved into email", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        const result = await repo.confirmPendingEmail("user-1");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("SET email = pending_email"), ["user-1"]);
+        expect(result).toBe(true);
+    });
+
+    it("returns false when the user has no pending email", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        const result = await repo.confirmPendingEmail("user-1");
+
+        expect(result).toBe(false);
+    });
+});
+
 describe("UserRepository.markExported", () => {
     let repo;
 

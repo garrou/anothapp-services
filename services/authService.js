@@ -183,6 +183,24 @@ export default class AuthService {
      */
     verifyEmail = async (token) => {
         const { sub: userId } = SecurityHelper.verifyJwt(token, SecurityHelper.emailVerificationSecret());
+        const user = await this._userRepository.getUserById(userId);
+
+        if (user?.pendingEmail) {
+            let updated;
+
+            try {
+                updated = await this._userRepository.confirmPendingEmail(userId);
+            } catch (err) {
+                if (err.code === DUPLICATE_ERROR_CODE) {
+                    throw new ServiceError(409, "Cet email est déjà associé à un compte");
+                }
+                throw err;
+            }
+            if (!updated) {
+                throw new ServiceError(400, "Impossible de confirmer cet email");
+            }
+            return;
+        }
         const updated = await this._userRepository.updateField(userId, "email_verified", true);
 
         if (!updated) {
