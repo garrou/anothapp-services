@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, beforeAll } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
 import db from "../../../config/db.js";
 import eventBus from "../../../helpers/eventBus.js";
 import NotificationListener from "../../../services/notificationListener.js";
@@ -16,8 +16,6 @@ describe("NotificationListener (real Postgres)", () => {
         await resetDb();
     });
 
-    const flush = () => new Promise((resolve) => setTimeout(resolve, 100));
-
     it("#notifyFriends notifies every accepted friend of the actor", async () => {
         const actorId = await insertUser();
         const friendA = await insertUser();
@@ -28,10 +26,12 @@ describe("NotificationListener (real Postgres)", () => {
         const showId = await insertShow();
 
         eventBus.emit("show.started", { actorUserId: actorId, showId });
-        await flush();
 
+        await vi.waitFor(async () => {
+            const res = await db.query(`SELECT recipient_user_id FROM notifications WHERE type = 'show_started'`);
+            expect(res.rows.map((r) => r["recipient_user_id"]).sort()).toEqual([friendA, friendB].sort());
+        });
         const res = await db.query(`SELECT recipient_user_id FROM notifications WHERE type = 'show_started'`);
-        expect(res.rows.map((r) => r["recipient_user_id"]).sort()).toEqual([friendA, friendB].sort());
         expect(res.rows.map((r) => r["recipient_user_id"])).not.toContain(strangerId);
     });
 
@@ -40,10 +40,11 @@ describe("NotificationListener (real Postgres)", () => {
         const recipientId = await insertUser();
 
         eventBus.emit("friend.request", { recipientUserId: recipientId, actorUserId: actorId });
-        await flush();
 
-        const res = await db.query(`SELECT recipient_user_id FROM notifications WHERE type = 'friend_request'`);
-        expect(res.rows.map((r) => r["recipient_user_id"])).toEqual([recipientId]);
+        await vi.waitFor(async () => {
+            const res = await db.query(`SELECT recipient_user_id FROM notifications WHERE type = 'friend_request'`);
+            expect(res.rows.map((r) => r["recipient_user_id"])).toEqual([recipientId]);
+        });
     });
 
     it("#notifyList fans out to every explicit recipient", async () => {
@@ -55,10 +56,11 @@ describe("NotificationListener (real Postgres)", () => {
         eventBus.emit("season.watched_with", {
             actorUserId: actorId, recipientIds: [friendA, friendB], showId, metadata: { seasonNumber: 1 },
         });
-        await flush();
 
-        const res = await db.query(`SELECT recipient_user_id FROM notifications WHERE type = 'season_watched_with'`);
-        expect(res.rows.map((r) => r["recipient_user_id"]).sort()).toEqual([friendA, friendB].sort());
+        await vi.waitFor(async () => {
+            const res = await db.query(`SELECT recipient_user_id FROM notifications WHERE type = 'season_watched_with'`);
+            expect(res.rows.map((r) => r["recipient_user_id"]).sort()).toEqual([friendA, friendB].sort());
+        });
     });
 
     it("carries playlist metadata through to the notification row", async () => {
@@ -70,9 +72,10 @@ describe("NotificationListener (real Postgres)", () => {
             recipientUserId: collaboratorId, actorUserId: ownerId,
             metadata: { playlistId, playlistName: "Shared List" },
         });
-        await flush();
 
-        const res = await db.query(`SELECT metadata FROM notifications WHERE type = 'playlist_collaborator_invited'`);
-        expect(res.rows[0].metadata).toEqual({ playlistId, playlistName: "Shared List" });
+        await vi.waitFor(async () => {
+            const res = await db.query(`SELECT metadata FROM notifications WHERE type = 'playlist_collaborator_invited'`);
+            expect(res.rows[0]?.metadata).toEqual({ playlistId, playlistName: "Shared List" });
+        });
     });
 });

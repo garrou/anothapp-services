@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import request from "supertest";
 import SecurityHelper from "../../../helpers/security.js";
 import { resetDb } from "../resetDb.js";
@@ -8,7 +8,8 @@ import { insertUser, insertShow } from "../fixtures.js";
 // routes/index.js, which already constructs the real NotificationListener/AchievementListener once
 // per file (module-level side effect) - so notifications from friend/playlist events are the real
 // eventBus pipeline, not a mock. Those listeners fire asynchronously (fire-and-forget, see
-// helpers/eventBus.js), so tests that check for a resulting notification give it a moment to land.
+// helpers/eventBus.js), so tests that check for a resulting notification poll for it with
+// vi.waitFor instead of guessing a fixed delay.
 describe("Social and playlists journey (real Postgres, real HTTP)", () => {
     /** @type {import("express").Express} */
     let app;
@@ -20,7 +21,6 @@ describe("Social and playlists journey (real Postgres, real HTTP)", () => {
     });
 
     const sessionFor = (userId) => `access_token=${SecurityHelper.signJwt(userId, "test-secret")}`;
-    const flush = () => new Promise((resolve) => setTimeout(resolve, 100));
 
     it("friend request -> accept -> playlist -> invite collaborator -> accept -> shared show -> notifications", async () => {
         await resetDb();
@@ -38,9 +38,10 @@ describe("Social and playlists journey (real Postgres, real HTTP)", () => {
 
         const acceptRes = await request(app).patch(`/friends/${ownerId}`).set("Cookie", collaboratorCookie).send({ userId: ownerId });
         expect(acceptRes.status).toBe(200);
-        await flush();
-        const friendRequestNotif = await request(app).get("/notifications").set("Cookie", ownerCookie);
-        expect(friendRequestNotif.body.notifications.some((n) => n.type === "friend_accepted")).toBe(true);
+        await vi.waitFor(async () => {
+            const notif = await request(app).get("/notifications").set("Cookie", ownerCookie);
+            expect(notif.body.notifications.some((n) => n.type === "friend_accepted")).toBe(true);
+        });
 
         const createPlaylistRes = await request(app).post("/playlists").set("Cookie", ownerCookie).send({ name: "Shared List", visible: false });
         expect(createPlaylistRes.status).toBe(201);
@@ -48,24 +49,26 @@ describe("Social and playlists journey (real Postgres, real HTTP)", () => {
 
         const inviteRes = await request(app).post(`/playlists/${playlistId}/collaborators`).set("Cookie", ownerCookie).send({ userId: collaboratorId });
         expect(inviteRes.status).toBe(201);
-        await flush();
-        const inviteNotif = await request(app).get("/notifications").set("Cookie", collaboratorCookie);
-        expect(inviteNotif.body.notifications.some((n) => n.type === "playlist_collaborator_invited")).toBe(true);
+        await vi.waitFor(async () => {
+            const notif = await request(app).get("/notifications").set("Cookie", collaboratorCookie);
+            expect(notif.body.notifications.some((n) => n.type === "playlist_collaborator_invited")).toBe(true);
+        });
 
         const acceptInviteRes = await request(app).patch(`/playlists/${playlistId}/collaborators/accept`).set("Cookie", collaboratorCookie);
         expect(acceptInviteRes.status).toBe(200);
 
         const addShowRes = await request(app).post(`/playlists/${playlistId}/shows`).set("Cookie", collaboratorCookie).send({ showId });
         expect(addShowRes.status).toBe(201);
-        await flush();
 
         const getPlaylistRes = await request(app).get(`/playlists/${playlistId}`).set("Cookie", ownerCookie);
         expect(getPlaylistRes.status).toBe(200);
         expect(getPlaylistRes.body.shows.map((s) => s.title)).toEqual(["Shared Show"]);
         expect(getPlaylistRes.body.playlist.role).toBe("owner");
 
-        const showAddedNotif = await request(app).get("/notifications").set("Cookie", ownerCookie);
-        expect(showAddedNotif.body.notifications.some((n) => n.type === "playlist_show_added")).toBe(true);
+        await vi.waitFor(async () => {
+            const notif = await request(app).get("/notifications").set("Cookie", ownerCookie);
+            expect(notif.body.notifications.some((n) => n.type === "playlist_show_added")).toBe(true);
+        });
 
         const collaboratorViewRes = await request(app).get(`/playlists/${playlistId}`).set("Cookie", collaboratorCookie);
         expect(collaboratorViewRes.body.playlist.role).toBe("collaborator");
