@@ -96,11 +96,15 @@ export default class Validator {
     /**
      * @param {string|undefined} oldEmail
      * @param {string|undefined} newEmail
+     * @param {string|undefined} confirmEmail
      * @returns {ValidatorStatus}
      */
-    static isValidChangeEmail = (oldEmail, newEmail) => {
+    static isValidChangeEmail = (oldEmail, newEmail, confirmEmail) => {
         if (oldEmail === newEmail) {
             return new ValidatorStatus(false, "Le nouvel email doit être différent");
+        }
+        if (newEmail !== confirmEmail) {
+            return new ValidatorStatus(false, "Emails différents");
         }
         return this.isValidEmail(newEmail);
     }

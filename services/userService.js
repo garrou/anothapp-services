@@ -76,8 +76,8 @@ export default class UserService {
             await this.#changePassword(currentUserId, userUpdate.currentPassword, userUpdate.newPassword, userUpdate.confirmPassword);
             return "Mot de passe modifié";
         } else if (userUpdate.isEmailUpdate()) {
-            await this.#changeEmail(currentUserId, userUpdate.email, userUpdate.newEmail, userUpdate.currentPassword);
-            return "Email modifié";
+            await this.#changeEmail(currentUserId, userUpdate.newEmail, userUpdate.confirmEmail, userUpdate.currentPassword);
+            return "Vérifiez votre nouvelle adresse email pour confirmer le changement";
         } else if (userUpdate.image) {
             await this.#changeImage(currentUserId, userUpdate.image);
             return "Image de profil définie";
@@ -193,17 +193,12 @@ export default class UserService {
 
     /**
      * @param {string} currentUserId
-     * @param {string} email
      * @param {string} newEmail
-     * @param {string} currentPassword 
+     * @param {string} confirmEmail
+     * @param {string} currentPassword
      * @returns {Promise<void>}
      */
-    #changeEmail = async (currentUserId, email, newEmail, currentPassword) => {
-        const changeValid = Validator.isValidChangeEmail(email, newEmail);
-
-        if (!changeValid.status) {
-            throw new ServiceError(400, changeValid.message);
-        }
+    #changeEmail = async (currentUserId, newEmail, confirmEmail, currentPassword) => {
         if (!Validator.isString(currentPassword)) {
             throw new ServiceError(400, ERROR_BAD_PASSWORD);
         }
@@ -212,11 +207,10 @@ export default class UserService {
         if (!user) {
             throw new ServiceError(404, ERROR_UNKNOWN_USER);
         }
-        if (user.email !== email) {
-            throw new ServiceError(400, "Email incorrect");
-        }
-        if (email === newEmail) {
-            throw new ServiceError(400, "Le nouvel email doit être différent de l'ancien");
+        const changeValid = Validator.isValidChangeEmail(user.email, newEmail, confirmEmail);
+
+        if (!changeValid.status) {
+            throw new ServiceError(400, changeValid.message);
         }
         const same = await SecurityHelper.comparePassword(currentPassword, user.password);
 

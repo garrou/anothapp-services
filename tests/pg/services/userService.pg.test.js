@@ -89,10 +89,10 @@ describe("UserService (real Postgres)", () => {
             await db.query(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, 'h', NOW() + INTERVAL '1 day')`, [userId]);
 
             const message = await service.updateUser(userId, new UserUpdate({
-                email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "GoodPassword1",
+                newEmail: "new@test.fr", confirmEmail: "new@test.fr", currentPassword: "GoodPassword1",
             }));
 
-            expect(message).toBe("Email modifié");
+            expect(message).toBe("Vérifiez votre nouvelle adresse email pour confirmer le changement");
             const user = await service.getUser(userId);
             expect(user.email).toBe("old@test.fr");
             expect(user.emailVerified).toBe(true);
@@ -106,7 +106,7 @@ describe("UserService (real Postgres)", () => {
             const userId = await insertUser({ email: "old@test.fr", password: hash, emailVerified: true });
 
             await service.updateUser(userId, new UserUpdate({
-                email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "GoodPassword1",
+                newEmail: "new@test.fr", confirmEmail: "new@test.fr", currentPassword: "GoodPassword1",
             }));
             const token = SecurityHelper.signJwt(userId, SecurityHelper.emailVerificationSecret(), "1d");
             await new AuthService().verifyEmail(token);
@@ -117,12 +117,21 @@ describe("UserService (real Postgres)", () => {
             expect(user.pendingEmail).toBeNull();
         });
 
+        it("rejects mismatched email confirmation", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            const userId = await insertUser({ email: "old@test.fr", password: hash });
+
+            await expect(service.updateUser(userId, new UserUpdate({
+                newEmail: "new@test.fr", confirmEmail: "different@test.fr", currentPassword: "GoodPassword1",
+            }))).rejects.toMatchObject({ status: 400 });
+        });
+
         it("rejects a wrong current password", async () => {
             const hash = await SecurityHelper.createHash("GoodPassword1");
             const userId = await insertUser({ email: "old@test.fr", password: hash });
 
             await expect(service.updateUser(userId, new UserUpdate({
-                email: "old@test.fr", newEmail: "new@test.fr", currentPassword: "WrongPassword",
+                newEmail: "new@test.fr", confirmEmail: "new@test.fr", currentPassword: "WrongPassword",
             }))).rejects.toMatchObject({ status: 400 });
         });
 
@@ -132,7 +141,7 @@ describe("UserService (real Postgres)", () => {
             await insertUser({ email: "taken@test.fr" });
 
             await expect(service.updateUser(userId, new UserUpdate({
-                email: "mine@test.fr", newEmail: "taken@test.fr", currentPassword: "GoodPassword1",
+                newEmail: "taken@test.fr", confirmEmail: "taken@test.fr", currentPassword: "GoodPassword1",
             }))).rejects.toMatchObject({ status: 409 });
         });
     });
