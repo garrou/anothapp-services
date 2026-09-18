@@ -8,7 +8,12 @@ import { resetDb } from "../resetDb.js";
 // verification/reset link - these tests sign the same token the server would have emailed,
 // using the same secret derivation, and feed it back into the real verify/reset endpoint.
 const signVerification = (userId) => SecurityHelper.signJwt(userId, SecurityHelper.emailVerificationSecret(), "1d");
-const signReset = (userId) => SecurityHelper.signJwt(userId, SecurityHelper.passwordResetSecret(), "1h");
+// the reset secret is derived from the account's *current* password hash (see
+// SecurityHelper.passwordResetSecret), so it has to be looked up right before signing
+const signReset = async (userId) => {
+    const { rows } = await db.query(`SELECT password FROM users WHERE id = $1`, [userId]);
+    return SecurityHelper.signJwt(userId, SecurityHelper.passwordResetSecret(rows[0].password), "1h");
+};
 
 // True end-to-end: the real Express app (config/app.js), real controllers/services/repositories,
 // real Postgres - nothing mocked. MODE=dev is required for the auth cookies to be usable outside
@@ -164,8 +169,10 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             expect(res.status).toBe(201);
             const { id: userId } = (await db.query(`SELECT id FROM users WHERE email = 'unverified@test.fr'`)).rows[0];
 
+            // same status/message as a wrong password - no oracle revealing "unverified but
+            // correct password" vs "wrong password" (see AuthService.login)
             const blockedRes = await request(app).post("/auth/login").send({ identifier: "Unverified", password: "GoodPassword1" });
-            expect(blockedRes.status).toBe(403);
+            expect(blockedRes.status).toBe(400);
 
             const verifyRes = await request(app).post("/auth/verify-email").send({ token: signVerification(userId) });
             expect(verifyRes.status).toBe(200);
@@ -207,7 +214,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             expect(forgotRes.status).toBe(200);
 
             const resetRes = await request(app).post("/auth/reset-password").send({
-                token: signReset(userId), password: "NewPassword1", confirm: "NewPassword1",
+                token: await signReset(userId), password: "NewPassword1", confirm: "NewPassword1",
             });
             expect(resetRes.status).toBe(200);
 
@@ -224,12 +231,12 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             expect(loginWithNew.status).toBe(200);
         });
 
-        it("rejects forgot-password for an unknown email", async () => {
+        it("returns the same generic success response for an unknown email (no enumeration)", async () => {
             await resetDb();
 
             const res = await request(app).post("/auth/forgot-password").send({ email: "nobody@test.fr" });
 
-            expect(res.status).toBe(400);
+            expect(res.status).toBe(200);
         });
     });
 });

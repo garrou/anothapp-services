@@ -49,12 +49,32 @@ export default class SecurityHelper {
         .digest("hex");
 
     /**
+     * Derived from the target account's current password hash, in addition to JWT_SECRET - so
+     * changing the password invalidates every reset token issued before
+     * that change, without needing to store or track anything. This is what makes a reset link
+     * effectively single-use: replaying it after a successful reset fails signature verification.
+     * @param {string} passwordHash
      * @returns {string}
      */
-    static passwordResetSecret = () => crypto
+    static passwordResetSecret = (passwordHash) => crypto
         .createHash("sha256")
-        .update(`${process.env.JWT_SECRET}:password-reset`)
+        .update(`${process.env.JWT_SECRET}:password-reset:${passwordHash}`)
         .digest("hex");
+
+    /**
+     * Reads a JWT's payload without verifying its signature - only safe to use to decide which
+     * secret to verify the token against next (e.g. a per-user derived secret), never to trust
+     * the payload on its own.
+     * @param {string} token
+     * @returns {any|null}
+     */
+    static decodeJwt = (token) => {
+        try {
+            return jwt.decode(token);
+        } catch {
+            return null;
+        }
+    };
 
     /**
      * @returns {string}

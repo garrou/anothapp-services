@@ -7,6 +7,8 @@ import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
 import { ERROR_BAD_PASSWORD, ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER } from "../constants/errors.js";
+import { sanitizeErrorForLog } from "../helpers/utils.js";
+import db from "../config/db.js";
 
 export default class UserService {
     constructor() {
@@ -226,22 +228,30 @@ export default class UserService {
         if (user) {
             throw new ServiceError(409, "Cet email est déjà associé à un compte");
         }
-        const updated = await this._userRepository.updateField(currentUserId, "email", newEmail);
+        // all three writes must land together - a failure partway through must never leave the new,
+        // unproven address marked verified, or a stolen session still valid
+        const updated = await db.transaction(async (client) => {
+            const changed = await this._userRepository.updateField(currentUserId, "email", newEmail, client);
+
+            if (!changed) {
+                return false;
+            }
+            // the new address hasn't been proven yet - clear the flag inherited from the old one
+            // and let the user (re)confirm it, exactly like a fresh registration would
+            await this._userRepository.updateField(currentUserId, "email_verified", false, client);
+            // a stolen session (not the password, which was just re-checked above) must not be
+            // enough to silently redirect password-reset emails to an attacker's inbox and keep
+            // going unnoticed
+            await this._refreshTokenRepository.revokeAllForUser(currentUserId, client);
+            return true;
+        });
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier l'email");
         }
-        // the new address hasn't been proven yet - clear the flag inherited from the old one and
-        // let the user (re)confirm it, exactly like a fresh registration would
-        await this._userRepository.updateField(currentUserId, "email_verified", false);
-        // a stolen session (not the password, which was just re-checked above) must not be enough
-        // to silently redirect password-reset emails to an attacker's inbox and keep going unnoticed
-        await this._refreshTokenRepository.revokeAllForUser(currentUserId);
-
-        try {
-            await this._authService.issueEmailVerification(currentUserId, newEmail);
-        } catch (err) {
-            console.error("Échec de l'envoi de l'email de confirmation", err);
-        }
+        // fire-and-forget: see AuthService.register for why this isn't awaited
+        this._authService.issueEmailVerification(currentUserId, newEmail).catch((err) => {
+            console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
+        });
     }
 }

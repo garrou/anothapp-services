@@ -130,13 +130,14 @@ export default class UserRepository {
      * @param {string} id
      * @param {string} field
      * @param {string} value
+     * @param {{query: Function}} [client]
      * @returns {Promise<boolean>}
      */
-    updateField = async (id, field, value) => {
+    updateField = async (id, field, value, client = db) => {
         if (!User.isValidField(field)) {
             throw new ServiceError(400, `Champ incorrect : ${field}`);
         }
-        const res = await db.query(`
+        const res = await client.query(`
             UPDATE users
             SET ${field} = $1
             WHERE id = $2

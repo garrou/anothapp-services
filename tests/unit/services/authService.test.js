@@ -9,7 +9,7 @@ const userRepoMocks = vi.hoisted(() => ({
     createUser: vi.fn(),
     updateField: vi.fn(),
     cancelDeletion: vi.fn(),
-    getUserById: vi.fn(),
+    getUserById: vi.fn().mockResolvedValue(null),
 }));
 const refreshRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -18,8 +18,8 @@ const refreshRepoMocks = vi.hoisted(() => ({
     revokeAllForUser: vi.fn(),
 }));
 const mailerServiceMocks = vi.hoisted(() => ({
-    sendVerificationEmail: vi.fn(),
-    sendPasswordResetEmail: vi.fn(),
+    sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
+    sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../../repositories/userRepository.js", () => ({
@@ -87,7 +87,7 @@ describe("AuthService.login", () => {
         expect(result.user).toBeDefined();
     });
 
-    it("rejects login when the email hasn't been verified yet", async () => {
+    it("rejects an unverified account with the exact same status/message as a wrong password, so login can't be used to confirm a correct password (no oracle)", async () => {
         const hash = await SecurityHelper.createHash("goodpassword");
         userRepoMocks.getUserByIdentifier.mockResolvedValue({
             id: "1",
@@ -97,8 +97,8 @@ describe("AuthService.login", () => {
         });
 
         await expect(authService.login("adrien@test.fr", "goodpassword")).rejects.toMatchObject({
-            status: 403,
-            message: "Veuillez confirmer votre adresse email avant de vous connecter",
+            status: 400,
+            message: "Identifiant ou mot de passe incorrect",
         });
         expect(refreshRepoMocks.create).not.toHaveBeenCalled();
     });
@@ -236,15 +236,17 @@ describe("AuthService.register", () => {
         );
     });
 
-    it("does not fail registration just because the verification email couldn't be sent", async () => {
+    it("does not wait on or fail registration because the verification email couldn't be sent (fire-and-forget)", async () => {
         userRepoMocks.createUser.mockResolvedValue("1");
-        mailerServiceMocks.sendVerificationEmail.mockRejectedValueOnce(new Error("SMTP down"));
+        mailerServiceMocks.sendVerificationEmail.mockRejectedValueOnce(new Error("Rejected recipient: adrien@test.fr"));
         const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
         await expect(
             authService.register("adrien@test.fr", "adrien", "Azerty123", "Azerty123")
         ).resolves.toBeUndefined();
-        expect(consoleSpy).toHaveBeenCalled();
+        await vi.waitFor(() => expect(consoleSpy).toHaveBeenCalled());
+        // the recipient's address must never land in production logs verbatim
+        expect(consoleSpy.mock.calls[0][1]).not.toContain("adrien@test.fr");
         consoleSpy.mockRestore();
     });
 });
@@ -289,21 +291,18 @@ describe("AuthService.resendVerification", () => {
         authService = new AuthService();
     });
 
-    it("rejects when no account matches the email", async () => {
+    it("resolves without sending anything when no account matches the email (no enumeration)", async () => {
         userRepoMocks.getUserByEmail.mockResolvedValue(null);
 
-        await expect(authService.resendVerification("unknown@test.fr")).rejects.toThrow(
-            "Aucun compte associé à cet email"
-        );
+        await expect(authService.resendVerification("unknown@test.fr")).resolves.toBeUndefined();
         expect(mailerServiceMocks.sendVerificationEmail).not.toHaveBeenCalled();
     });
 
-    it("rejects when the email is already verified", async () => {
+    it("resolves without sending anything when the email is already verified (no enumeration)", async () => {
         userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", emailVerified: true });
 
-        await expect(authService.resendVerification("adrien@test.fr")).rejects.toThrow(
-            "Cet email est déjà confirmé"
-        );
+        await expect(authService.resendVerification("adrien@test.fr")).resolves.toBeUndefined();
+        expect(mailerServiceMocks.sendVerificationEmail).not.toHaveBeenCalled();
     });
 
     it("sends a new verification email otherwise", async () => {
@@ -315,6 +314,16 @@ describe("AuthService.resendVerification", () => {
             "adrien@test.fr", expect.stringContaining("/verify-email/")
         );
     });
+
+    it("does not wait on or fail because the email couldn't be sent (fire-and-forget)", async () => {
+        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", emailVerified: false });
+        mailerServiceMocks.sendVerificationEmail.mockRejectedValueOnce(new Error("SMTP down"));
+        const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+        await expect(authService.resendVerification("adrien@test.fr")).resolves.toBeUndefined();
+        await vi.waitFor(() => expect(consoleSpy).toHaveBeenCalled());
+        consoleSpy.mockRestore();
+    });
 });
 
 describe("AuthService.forgotPassword", () => {
@@ -325,17 +334,15 @@ describe("AuthService.forgotPassword", () => {
         authService = new AuthService();
     });
 
-    it("rejects when no account matches the email", async () => {
+    it("resolves without sending anything when no account matches the email (no enumeration)", async () => {
         userRepoMocks.getUserByEmail.mockResolvedValue(null);
 
-        await expect(authService.forgotPassword("unknown@test.fr")).rejects.toThrow(
-            "Aucun compte associé à cet email"
-        );
+        await expect(authService.forgotPassword("unknown@test.fr")).resolves.toBeUndefined();
         expect(mailerServiceMocks.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
     it("sends a password-reset email otherwise", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1" });
+        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", password: "hash" });
 
         await authService.forgotPassword("adrien@test.fr");
 
@@ -344,23 +351,28 @@ describe("AuthService.forgotPassword", () => {
         );
     });
 
-    it("surfaces a 500 when the email fails to send", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1" });
+    it("does not wait on or fail because the email couldn't be sent (fire-and-forget)", async () => {
+        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", password: "hash" });
         mailerServiceMocks.sendPasswordResetEmail.mockRejectedValueOnce(new Error("SMTP down"));
+        const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-        await expect(authService.forgotPassword("adrien@test.fr")).rejects.toMatchObject({ status: 500 });
+        await expect(authService.forgotPassword("adrien@test.fr")).resolves.toBeUndefined();
+        await vi.waitFor(() => expect(consoleSpy).toHaveBeenCalled());
+        consoleSpy.mockRestore();
     });
 });
 
 describe("AuthService.resetPassword", () => {
     let authService;
+    const OLD_HASH = "old-password-hash";
 
     beforeEach(() => {
         vi.clearAllMocks();
         authService = new AuthService();
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", password: OLD_HASH });
     });
 
-    it("rejects a token that wasn't signed with the password-reset secret", async () => {
+    it("rejects a token that wasn't signed with a secret derived from the account's current password hash", async () => {
         const token = SecurityHelper.signJwt("1", "wrong-secret");
 
         await expect(authService.resetPassword(token, "Azerty123", "Azerty123")).rejects.toThrow(
@@ -368,15 +380,24 @@ describe("AuthService.resetPassword", () => {
         );
     });
 
+    it("rejects a token whose account no longer exists", async () => {
+        userRepoMocks.getUserById.mockResolvedValue(null);
+        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret(OLD_HASH));
+
+        await expect(authService.resetPassword(token, "Azerty123", "Azerty123")).rejects.toThrow(
+            "Session invalide"
+        );
+    });
+
     it("rejects mismatched passwords", async () => {
-        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret());
+        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret(OLD_HASH));
 
         await expect(authService.resetPassword(token, "Azerty123", "Azerty124")).rejects.toThrow();
         expect(userRepoMocks.updateField).not.toHaveBeenCalled();
     });
 
     it("updates the password and revokes every existing session", async () => {
-        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret());
+        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret(OLD_HASH));
         userRepoMocks.updateField.mockResolvedValue(true);
 
         await authService.resetPassword(token, "Azerty123", "Azerty123");
@@ -386,13 +407,24 @@ describe("AuthService.resetPassword", () => {
     });
 
     it("throws when the update fails in the database", async () => {
-        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret());
+        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret(OLD_HASH));
         userRepoMocks.updateField.mockResolvedValue(false);
 
         await expect(authService.resetPassword(token, "Azerty123", "Azerty123")).rejects.toThrow(
             "Impossible de réinitialiser le mot de passe"
         );
         expect(refreshRepoMocks.revokeAllForUser).not.toHaveBeenCalled();
+    });
+
+    it("rejects a reused token once the password has already been changed (single-use via the password-bound secret)", async () => {
+        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret(OLD_HASH));
+        // the account's password hash has since changed (e.g. the token was already used once) -
+        // getUserById now returns the new hash, so the token's signature no longer matches
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", password: "new-password-hash" });
+
+        await expect(authService.resetPassword(token, "Azerty123", "Azerty123")).rejects.toThrow(
+            "Session invalide"
+        );
     });
 });
 

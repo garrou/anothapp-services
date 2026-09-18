@@ -95,20 +95,41 @@ describe("SecurityHelper.deletionCancellationSecret", () => {
 });
 
 describe("SecurityHelper.emailVerificationSecret / passwordResetSecret", () => {
+    const PASSWORD_HASH = "some-bcrypt-hash";
+
     it("are deterministic, distinct from each other and from deletionCancellationSecret", () => {
         expect(SecurityHelper.emailVerificationSecret()).toBe(SecurityHelper.emailVerificationSecret());
-        expect(SecurityHelper.passwordResetSecret()).toBe(SecurityHelper.passwordResetSecret());
-        expect(SecurityHelper.emailVerificationSecret()).not.toBe(SecurityHelper.passwordResetSecret());
+        expect(SecurityHelper.passwordResetSecret(PASSWORD_HASH)).toBe(SecurityHelper.passwordResetSecret(PASSWORD_HASH));
+        expect(SecurityHelper.emailVerificationSecret()).not.toBe(SecurityHelper.passwordResetSecret(PASSWORD_HASH));
         expect(SecurityHelper.emailVerificationSecret()).not.toBe(SecurityHelper.deletionCancellationSecret());
     });
 
     it("neither can verify a token meant for the real JWT_SECRET or for each other", () => {
         const verificationToken = SecurityHelper.signJwt("user-1", SecurityHelper.emailVerificationSecret());
-        const resetToken = SecurityHelper.signJwt("user-1", SecurityHelper.passwordResetSecret());
+        const resetToken = SecurityHelper.signJwt("user-1", SecurityHelper.passwordResetSecret(PASSWORD_HASH));
 
         expect(() => SecurityHelper.verifyJwt(verificationToken, SECRET)).toThrow("Session invalide");
-        expect(() => SecurityHelper.verifyJwt(verificationToken, SecurityHelper.passwordResetSecret())).toThrow("Session invalide");
+        expect(() => SecurityHelper.verifyJwt(verificationToken, SecurityHelper.passwordResetSecret(PASSWORD_HASH))).toThrow("Session invalide");
         expect(() => SecurityHelper.verifyJwt(resetToken, SecurityHelper.emailVerificationSecret())).toThrow("Session invalide");
+    });
+});
+
+describe("SecurityHelper.passwordResetSecret", () => {
+    it("changes when the password hash changes, so a reset token can't be replayed after the password was already changed", () => {
+        const first = SecurityHelper.passwordResetSecret("hash-a");
+        const second = SecurityHelper.passwordResetSecret("hash-b");
+        expect(first).not.toBe(second);
+    });
+});
+
+describe("SecurityHelper.decodeJwt", () => {
+    it("reads the payload without checking the signature", () => {
+        const token = SecurityHelper.signJwt("user-1", "any-secret-at-all");
+        expect(SecurityHelper.decodeJwt(token).sub).toBe("user-1");
+    });
+
+    it("returns null for a malformed token instead of throwing", () => {
+        expect(SecurityHelper.decodeJwt("not-a-valid-jwt")).toBeNull();
     });
 });
 

@@ -17,8 +17,8 @@ const refreshRepoMocks = vi.hoisted(() => ({
     revokeAllForUser: vi.fn(),
 }));
 const mailerServiceMocks = vi.hoisted(() => ({
-    sendVerificationEmail: vi.fn(),
-    sendPasswordResetEmail: vi.fn(),
+    sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
+    sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../../repositories/userRepository.js", () => ({
@@ -147,7 +147,7 @@ describe("POST /auth/resend-verification", () => {
 
 describe("POST /auth/forgot-password", () => {
     it("is reachable without an access cookie/token", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1" });
+        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", password: "hash" });
 
         const res = await request(app).post("/auth/forgot-password").send({ email: "adrien@test.fr" });
 
@@ -155,18 +155,19 @@ describe("POST /auth/forgot-password", () => {
         expect(mailerServiceMocks.sendPasswordResetEmail).toHaveBeenCalled();
     });
 
-    it("returns 400 when no account matches", async () => {
+    it("returns the same generic 200 when no account matches (no enumeration)", async () => {
         userRepoMocks.getUserByEmail.mockResolvedValue(null);
 
         const res = await request(app).post("/auth/forgot-password").send({ email: "unknown@test.fr" });
 
-        expect(res.status).toBe(400);
+        expect(res.status).toBe(200);
     });
 });
 
 describe("POST /auth/reset-password", () => {
     it("is reachable without an access cookie/token, and revokes existing sessions", async () => {
-        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret());
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", password: "old-hash" });
+        const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret("old-hash"));
         userRepoMocks.updateField.mockResolvedValue(true);
 
         const res = await request(app)

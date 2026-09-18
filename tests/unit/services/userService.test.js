@@ -15,10 +15,15 @@ const episodeServiceMocks = vi.hoisted(() => ({
     backfillForUser: vi.fn(),
 }));
 const authServiceMocks = vi.hoisted(() => ({
-    issueEmailVerification: vi.fn(),
+    issueEmailVerification: vi.fn().mockResolvedValue(undefined),
 }));
 const refreshTokenRepoMocks = vi.hoisted(() => ({
     revokeAllForUser: vi.fn(),
+}));
+const dbMocks = vi.hoisted(() => ({
+    // runs the callback with a stand-in client - the mocked repositories below don't care what
+    // they receive as their `client` argument, they just record it
+    transaction: vi.fn((callback) => callback({ query: vi.fn() })),
 }));
 
 vi.mock("../../../repositories/userRepository.js", () => ({
@@ -33,6 +38,7 @@ vi.mock("../../../services/episodeService.js", () => ({
 vi.mock("../../../services/authService.js", () => ({
     default: vi.fn().mockImplementation(function () { return authServiceMocks; }),
 }));
+vi.mock("../../../config/db.js", () => ({ default: dbMocks }));
 
 describe("UserService.updateUser - episode tracking", () => {
     let userService;
@@ -102,10 +108,11 @@ describe("UserService.updateUser - email change", () => {
         );
 
         expect(message).toBe("Email modifié");
-        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email", "new@test.fr");
-        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email_verified", false);
-        expect(refreshTokenRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1");
+        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email", "new@test.fr", expect.anything());
+        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "email_verified", false, expect.anything());
+        expect(refreshTokenRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1", expect.anything());
         expect(authServiceMocks.issueEmailVerification).toHaveBeenCalledWith("user-1", "new@test.fr");
+        expect(dbMocks.transaction).toHaveBeenCalled();
     });
 
     it("rejects a missing or wrong current password, without touching anything", async () => {
