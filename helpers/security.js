@@ -49,22 +49,35 @@ export default class SecurityHelper {
         .digest("hex");
 
     /**
-     * Derived from the code itself, in addition to JWT_SECRET - so the approval token carries no
-     * secret of its own and verifying it just means re-deriving this secret from whatever code the
-     * client submits and checking the JWT signature against it. A wrong code fails verification,
-     * there's nothing else to store or compare.
-     * @param {string} code
+     * A secret distinct from JWT_SECRET, derived from it - the approval token only carries the
+     * account's id, the actual code is checked separately against its stored hash (see
+     * UserRepository.setLoginChallenge / SecurityHelper.verifyLoginCode), which is what makes the
+     * code single-use and rate-limitable per challenge.
      * @returns {string}
      */
-    static loginApprovalSecret = (code) => crypto
+    static loginApprovalSecret = () => crypto
         .createHash("sha256")
-        .update(`${process.env.JWT_SECRET}:login-approval:${code}`)
+        .update(`${process.env.JWT_SECRET}:login-approval`)
         .digest("hex");
 
     /**
      * @returns {string} a zero-padded 6-digit code
      */
     static generateLoginCode = () => crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+
+    /**
+     * Constant-time comparison of a submitted login code against its stored hash - same
+     * reasoning as verifyExportSignature (both are hex digests, so a length/byte mismatch must be
+     * checked before timingSafeEqual, which throws on differing lengths).
+     * @param {string} code
+     * @param {string} hash
+     * @returns {boolean}
+     */
+    static verifyLoginCode = (code, hash) => {
+        const expected = Buffer.from(SecurityHelper.hashToken(code), "hex");
+        const provided = Buffer.from(hash, "hex");
+        return expected.length === provided.length && crypto.timingSafeEqual(expected, provided);
+    };
 
     /**
      * Derived from the target account's current password hash, in addition to JWT_SECRET - so

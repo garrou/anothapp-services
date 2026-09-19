@@ -114,6 +114,34 @@ describe("SecurityHelper.emailVerificationSecret / passwordResetSecret", () => {
     });
 });
 
+describe("SecurityHelper.loginApprovalSecret", () => {
+    it("is deterministic, and distinct from the other derived secrets", () => {
+        expect(SecurityHelper.loginApprovalSecret()).toBe(SecurityHelper.loginApprovalSecret());
+        expect(SecurityHelper.loginApprovalSecret()).not.toBe(SecurityHelper.deletionCancellationSecret());
+        expect(SecurityHelper.loginApprovalSecret()).not.toBe(SecurityHelper.emailVerificationSecret());
+    });
+});
+
+describe("SecurityHelper.generateLoginCode", () => {
+    it("returns a zero-padded 6-digit string", () => {
+        for (let i = 0; i < 20; i++) {
+            expect(SecurityHelper.generateLoginCode()).toMatch(/^\d{6}$/);
+        }
+    });
+});
+
+describe("SecurityHelper.verifyLoginCode", () => {
+    it("returns true when the code matches its stored hash", () => {
+        const hash = SecurityHelper.hashToken("123456");
+        expect(SecurityHelper.verifyLoginCode("123456", hash)).toBe(true);
+    });
+
+    it("returns false for a wrong code", () => {
+        const hash = SecurityHelper.hashToken("123456");
+        expect(SecurityHelper.verifyLoginCode("000000", hash)).toBe(false);
+    });
+});
+
 describe("SecurityHelper.passwordResetSecret", () => {
     it("changes when the password hash changes, so a reset token can't be replayed after the password was already changed", () => {
         const first = SecurityHelper.passwordResetSecret("hash-a");
