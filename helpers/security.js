@@ -26,9 +26,11 @@ export default class SecurityHelper {
      * @param {string} userId
      * @param {string} secret
      * @param {string} [expiresIn]
+     * @param {Object} [extraClaims] e.g. { jti } to tie the token to a specific server-side challenge
      * @returns {string}
      */
-    static signJwt = (userId, secret, expiresIn = "15m") => jwt.sign({ sub: userId }, secret, { expiresIn });
+    static signJwt = (userId, secret, expiresIn = "15m", extraClaims = {}) =>
+        jwt.sign({ sub: userId, ...extraClaims }, secret, { expiresIn });
 
     /**
      * A secret distinct from JWT_SECRET, derived from it - a token signed with this one can never
@@ -50,9 +52,8 @@ export default class SecurityHelper {
 
     /**
      * A secret distinct from JWT_SECRET, derived from it - the approval token only carries the
-     * account's id, the actual code is checked separately against its stored hash (see
-     * UserRepository.setLoginChallenge / SecurityHelper.verifyLoginCode), which is what makes the
-     * code single-use and rate-limitable per challenge.
+     * account's id and the challenge's id (its jti claim), the actual code is checked separately
+     * against its stored hash, atomically, by UserRepository.confirmLoginChallenge.
      * @returns {string}
      */
     static loginApprovalSecret = () => crypto
@@ -66,18 +67,12 @@ export default class SecurityHelper {
     static generateLoginCode = () => crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
 
     /**
-     * Constant-time comparison of a submitted login code against its stored hash - same
-     * reasoning as verifyExportSignature (both are hex digests, so a length/byte mismatch must be
-     * checked before timingSafeEqual, which throws on differing lengths).
-     * @param {string} code
-     * @param {string} hash
-     * @returns {boolean}
+     * Identifies one specific login challenge, independently of the code itself - stored
+     * server-side and carried as the approval token's jti claim, so a token from a login() call
+     * that's since been superseded by another one can't be paired with the newer challenge's code.
+     * @returns {string}
      */
-    static verifyLoginCode = (code, hash) => {
-        const expected = Buffer.from(SecurityHelper.hashToken(code), "hex");
-        const provided = Buffer.from(hash, "hex");
-        return expected.length === provided.length && crypto.timingSafeEqual(expected, provided);
-    };
+    static generateChallengeId = () => crypto.randomUUID();
 
     /**
      * Derived from the target account's current password hash, in addition to JWT_SECRET - so

@@ -7,7 +7,7 @@ import {
     DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST, ERROR_LOGIN_CODE_EXPIRED, ERROR_LOGIN_CODE_INVALID,
     ERROR_LOGIN_PASSWORD, ERROR_REFRESH_TOKEN_INVALID, ERROR_TOKEN_INVALID
 } from "../constants/errors.js";
-import { DUMMY_HASH } from "../constants/security.js";
+import { DUMMY_HASH, MAX_LOGIN_CODE_ATTEMPTS } from "../constants/security.js";
 import { DELETION_GRACE_DAYS } from "../constants/deletion.js";
 import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
 import MailerService from "./mailerService.js";
@@ -16,7 +16,6 @@ import { sanitizeErrorForLog } from "../helpers/utils.js";
 const GRACE_PERIOD_MS = DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000;
 // keep in sync with the "10m" JWT expiry passed to signJwt in login()
 const LOGIN_CODE_EXPIRY_MS = 10 * 60 * 1000;
-const MAX_LOGIN_CODE_ATTEMPTS = 5;
 
 export default class AuthService {
     constructor() {
@@ -57,10 +56,13 @@ export default class AuthService {
         }
         const code = SecurityHelper.generateLoginCode();
         const codeHash = SecurityHelper.hashToken(code);
+        const challengeId = SecurityHelper.generateChallengeId();
         const expiresAt = new Date(Date.now() + LOGIN_CODE_EXPIRY_MS);
 
-        await this._userRepository.setLoginChallenge(found.id, codeHash, expiresAt);
-        const approvalToken = SecurityHelper.signJwt(found.id, SecurityHelper.loginApprovalSecret(), "10m");
+        await this._userRepository.setLoginChallenge(found.id, challengeId, codeHash, expiresAt);
+        // jti ties this token to this specific challenge, so a token from a login() call that's
+        // since been superseded by another one can't be paired with the newer challenge's code
+        const approvalToken = SecurityHelper.signJwt(found.id, SecurityHelper.loginApprovalSecret(), "10m", { jti: challengeId });
 
         await this._mailerService.sendLoginCodeEmail(found.email, code);
         return { pendingApproval: true, approvalToken };
@@ -71,11 +73,13 @@ export default class AuthService {
      * verified if it wasn't already, since receiving and typing back this code already proves
      * ownership of the address.
      *
-     * The code itself is checked against its stored hash rather than baked into the approval
-     * token's secret, which is what makes it single-use (cleared the moment it's confirmed - see
-     * UserRepository.clearLoginChallenge) and rate-limitable per challenge, on top of the
-     * IP-based confirmLoginLimiter: a wrong guess only costs one of MAX_LOGIN_CODE_ATTEMPTS
-     * regardless of which IP it comes from.
+     * The code is checked against its stored hash and consumed in the same atomic UPDATE
+     * (UserRepository.confirmLoginChallenge), so two concurrent calls with the same valid
+     * (approvalToken, code) can't both succeed - only whichever runs first still finds a matching
+     * row. A wrong guess is likewise recorded with a bounded, atomic increment
+     * (incrementLoginCodeAttempts), so the attempt count can't be raced past
+     * MAX_LOGIN_CODE_ATTEMPTS either. This is on top of the IP-based confirmLoginLimiter: a wrong
+     * guess only costs one of MAX_LOGIN_CODE_ATTEMPTS regardless of which IP it comes from.
      * @param {string?} approvalToken
      * @param {string?} code
      * @returns {Promise<Object>}
@@ -84,24 +88,30 @@ export default class AuthService {
         if (!Validator.isString(approvalToken) || !Validator.isString(code)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const { sub: userId } = SecurityHelper.verifyJwt(approvalToken, SecurityHelper.loginApprovalSecret());
+        const { sub: userId, jti: challengeId } = SecurityHelper.verifyJwt(approvalToken, SecurityHelper.loginApprovalSecret());
         const user = await this._userRepository.getUserById(userId);
 
         if (!user) {
             throw new ServiceError(401, ERROR_TOKEN_INVALID);
         }
-        const noActiveChallenge = !user.loginCodeHash
+        // advisory only (a stale read, not the security boundary) - lets a token from an already
+        // superseded/expired/maxed-out challenge fail fast with a clearer error, without writing
+        // a failed attempt against whatever challenge (if any) is actually active right now
+        const noActiveChallenge = user.loginChallengeId !== challengeId
+            || !user.loginCodeHash
             || new Date(user.loginCodeExpiresAt) < new Date()
             || user.loginCodeAttempts >= MAX_LOGIN_CODE_ATTEMPTS;
 
         if (noActiveChallenge) {
             throw new ServiceError(401, ERROR_LOGIN_CODE_EXPIRED);
         }
-        if (!SecurityHelper.verifyLoginCode(code, user.loginCodeHash)) {
-            await this._userRepository.incrementLoginCodeAttempts(userId);
+        const codeHash = SecurityHelper.hashToken(code);
+        const confirmed = await this._userRepository.confirmLoginChallenge(userId, challengeId, codeHash);
+
+        if (!confirmed) {
+            await this._userRepository.incrementLoginCodeAttempts(userId, challengeId);
             throw new ServiceError(401, ERROR_LOGIN_CODE_INVALID);
         }
-        await this._userRepository.clearLoginChallenge(userId);
 
         if (!user.emailVerified) {
             const updated = await this._userRepository.updateField(userId, "email_verified", true);

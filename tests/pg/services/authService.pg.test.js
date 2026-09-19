@@ -145,6 +145,40 @@ describe("AuthService (real Postgres)", () => {
 
             await expect(service.confirmLogin(approvalToken, LOGIN_CODE)).rejects.toMatchObject({ status: 401 });
         });
+
+        it("lets only one of two concurrent confirmations (same token and code) actually open a session", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            await insertUser({ username: "ConcurrentUser", password: hash });
+            const { approvalToken } = await service.login("ConcurrentUser", "GoodPassword1");
+
+            const [a, b] = await Promise.allSettled([
+                service.confirmLogin(approvalToken, LOGIN_CODE),
+                service.confirmLogin(approvalToken, LOGIN_CODE),
+            ]);
+
+            const fulfilled = [a, b].filter((r) => r.status === "fulfilled");
+            const rejected = [a, b].filter((r) => r.status === "rejected");
+            expect(fulfilled).toHaveLength(1);
+            expect(rejected).toHaveLength(1);
+            expect(rejected[0].reason).toMatchObject({ status: 401 });
+        });
+
+        it("rejects an earlier login()'s token no matter which code it's paired with, once a second login() has superseded it", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            await insertUser({ username: "SupersededUser", password: hash });
+            const { approvalToken: tokenA } = await service.login("SupersededUser", "GoodPassword1");
+            const { approvalToken: tokenB } = await service.login("SupersededUser", "GoodPassword1");
+
+            // tokenA + its own (now stale) code
+            await expect(service.confirmLogin(tokenA, LOGIN_CODE)).rejects.toMatchObject({ status: 401 });
+            // tokenA + the current challenge's actual code - still rejected: tokenA's own
+            // challenge id no longer matches the account's active one
+            await expect(service.confirmLogin(tokenA, LOGIN_CODE)).rejects.toMatchObject({ status: 401 });
+
+            // only tokenB, issued for the still-active challenge, can confirm it
+            const result = await service.confirmLogin(tokenB, LOGIN_CODE);
+            expect(result.token).toBeDefined();
+        });
     });
 
     describe("cancelDeletion", () => {

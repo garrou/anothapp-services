@@ -73,6 +73,12 @@ describe("SecurityHelper.signJwt / verifyJwt", () => {
         const decoded = jwt.decode(token);
         expect(decoded.exp - decoded.iat).toBe(24 * 60 * 60);
     });
+
+    it("carries extra claims, e.g. a jti tying the token to a specific server-side challenge", () => {
+        const token = SecurityHelper.signJwt("user-1", SECRET, "15m", { jti: "challenge-1" });
+        const payload = SecurityHelper.verifyJwt(token, SECRET);
+        expect(payload.jti).toBe("challenge-1");
+    });
 });
 
 describe("SecurityHelper.deletionCancellationSecret", () => {
@@ -130,15 +136,9 @@ describe("SecurityHelper.generateLoginCode", () => {
     });
 });
 
-describe("SecurityHelper.verifyLoginCode", () => {
-    it("returns true when the code matches its stored hash", () => {
-        const hash = SecurityHelper.hashToken("123456");
-        expect(SecurityHelper.verifyLoginCode("123456", hash)).toBe(true);
-    });
-
-    it("returns false for a wrong code", () => {
-        const hash = SecurityHelper.hashToken("123456");
-        expect(SecurityHelper.verifyLoginCode("000000", hash)).toBe(false);
+describe("SecurityHelper.generateChallengeId", () => {
+    it("returns a different id on every call", () => {
+        expect(SecurityHelper.generateChallengeId()).not.toBe(SecurityHelper.generateChallengeId());
     });
 });
 

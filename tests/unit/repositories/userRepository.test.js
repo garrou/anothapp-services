@@ -291,11 +291,13 @@ describe("UserRepository.setLoginChallenge", () => {
         db.query.mockResolvedValue({rowCount: 1});
         const expiresAt = new Date();
 
-        const result = await repo.setLoginChallenge("user-1", "hash", expiresAt);
+        const result = await repo.setLoginChallenge("user-1", "challenge-1", "hash", expiresAt);
 
         expect(db.query).toHaveBeenCalledWith(
-            expect.stringContaining("SET login_code_hash = $1, login_code_expires_at = $2, login_code_attempts = 0"),
-            ["hash", expiresAt, "user-1"]
+            expect.stringContaining(
+                "SET login_challenge_id = $1, login_code_hash = $2, login_code_expires_at = $3, login_code_attempts = 0"
+            ),
+            ["challenge-1", "hash", expiresAt, "user-1"]
         );
         expect(result).toBe(true);
     });
@@ -303,7 +305,7 @@ describe("UserRepository.setLoginChallenge", () => {
     it("returns false when no matching user was found", async () => {
         db.query.mockResolvedValue({rowCount: 0});
 
-        const result = await repo.setLoginChallenge("user-1", "hash", new Date());
+        const result = await repo.setLoginChallenge("user-1", "challenge-1", "hash", new Date());
 
         expect(result).toBe(false);
     });
@@ -320,16 +322,25 @@ describe("UserRepository.incrementLoginCodeAttempts", () => {
     it("returns true when the attempt count was incremented", async () => {
         db.query.mockResolvedValue({rowCount: 1});
 
-        const result = await repo.incrementLoginCodeAttempts("user-1");
+        const result = await repo.incrementLoginCodeAttempts("user-1", "challenge-1");
 
         expect(db.query).toHaveBeenCalledWith(
-            expect.stringContaining("SET login_code_attempts = login_code_attempts + 1"), ["user-1"]
+            expect.stringContaining("SET login_code_attempts = login_code_attempts + 1"),
+            ["user-1", "challenge-1", 5]
         );
         expect(result).toBe(true);
     });
+
+    it("returns false when the challenge is already maxed out or gone (bounded by the WHERE clause, not a separate read)", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        const result = await repo.incrementLoginCodeAttempts("user-1", "challenge-1");
+
+        expect(result).toBe(false);
+    });
 });
 
-describe("UserRepository.clearLoginChallenge", () => {
+describe("UserRepository.confirmLoginChallenge", () => {
     let repo;
 
     beforeEach(() => {
@@ -337,16 +348,26 @@ describe("UserRepository.clearLoginChallenge", () => {
         repo = new UserRepository();
     });
 
-    it("clears the challenge's hash, expiry and attempt count", async () => {
+    it("clears the challenge and returns true when the code, challenge id, expiry and attempt count all match", async () => {
         db.query.mockResolvedValue({rowCount: 1});
 
-        const result = await repo.clearLoginChallenge("user-1");
+        const result = await repo.confirmLoginChallenge("user-1", "challenge-1", "hash");
 
         expect(db.query).toHaveBeenCalledWith(
-            expect.stringContaining("SET login_code_hash = NULL, login_code_expires_at = NULL, login_code_attempts = 0"),
-            ["user-1"]
+            expect.stringContaining(
+                "SET login_challenge_id = NULL, login_code_hash = NULL, login_code_expires_at = NULL, login_code_attempts = 0"
+            ),
+            ["user-1", "challenge-1", "hash", 5]
         );
         expect(result).toBe(true);
+    });
+
+    it("returns false without clearing anything when the code doesn't match - the check and the clear are the same atomic statement", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        const result = await repo.confirmLoginChallenge("user-1", "challenge-1", "wrong-hash");
+
+        expect(result).toBe(false);
     });
 });
 

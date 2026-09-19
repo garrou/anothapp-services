@@ -12,6 +12,7 @@ export default class User {
         this.episodeTrackingEnabled = user["episode_tracking_enabled"];
         this.emailVerified = user["email_verified"];
         this.pendingEmail = user["pending_email"];
+        this.loginChallengeId = user["login_challenge_id"];
         this.loginCodeHash = user["login_code_hash"];
         this.loginCodeExpiresAt = user["login_code_expires_at"];
         this.loginCodeAttempts = user["login_code_attempts"];

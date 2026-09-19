@@ -277,6 +277,44 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             });
             expect(finalRes.status).toBe(401);
         });
+
+        it("lets only one of two concurrent confirm-login requests (same token and code) actually open a session", async () => {
+            await resetDb();
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            await db.query(`
+                INSERT INTO users (username, email, password, email_verified) VALUES ('Concurrent', 'concurrent@test.fr', $1, TRUE)
+            `, [hash]);
+
+            const { res: loginRes } = await login(request(app), "Concurrent", "GoodPassword1");
+            const confirm = () => request(app).post("/auth/confirm-login").send({
+                approvalToken: loginRes.body.approvalToken, code: LOGIN_CODE,
+            });
+
+            const [a, b] = await Promise.all([confirm(), confirm()]);
+            const statuses = [a.status, b.status].sort();
+            expect(statuses).toEqual([200, 401]);
+        });
+
+        it("rejects an earlier login()'s token no matter which code it's paired with, once a second login() has superseded it", async () => {
+            await resetDb();
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            await db.query(`
+                INSERT INTO users (username, email, password, email_verified) VALUES ('Superseded', 'superseded@test.fr', $1, TRUE)
+            `, [hash]);
+
+            const { res: firstLoginRes } = await login(request(app), "Superseded", "GoodPassword1");
+            const { res: secondLoginRes } = await login(request(app), "Superseded", "GoodPassword1");
+
+            const staleRes = await request(app).post("/auth/confirm-login").send({
+                approvalToken: firstLoginRes.body.approvalToken, code: LOGIN_CODE,
+            });
+            expect(staleRes.status).toBe(401);
+
+            const currentRes = await request(app).post("/auth/confirm-login").send({
+                approvalToken: secondLoginRes.body.approvalToken, code: LOGIN_CODE,
+            });
+            expect(currentRes.status).toBe(200);
+        });
     });
 
     describe("forgot / reset password", () => {
