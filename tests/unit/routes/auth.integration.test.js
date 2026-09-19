@@ -9,6 +9,9 @@ const userRepoMocks = vi.hoisted(() => ({
     updateField: vi.fn(),
     cancelDeletion: vi.fn(),
     getUserById: vi.fn(),
+    setLoginChallenge: vi.fn().mockResolvedValue(true),
+    incrementLoginCodeAttempts: vi.fn().mockResolvedValue(true),
+    clearLoginChallenge: vi.fn().mockResolvedValue(true),
 }));
 const refreshRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -70,9 +73,12 @@ describe("POST /auth/login", () => {
 
 describe("POST /auth/confirm-login", () => {
     it("returns 200 and sets httpOnly cookies when the code matches the approval token", async () => {
-        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
+        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret());
         userRepoMocks.getUserById.mockResolvedValue({
             id: "1", email: "adrien@test.fr", username: "adrien", emailVerified: true,
+            loginCodeHash: SecurityHelper.hashToken("123456"),
+            loginCodeExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+            loginCodeAttempts: 0,
         });
         refreshRepoMocks.create.mockResolvedValue(true);
 
@@ -87,7 +93,13 @@ describe("POST /auth/confirm-login", () => {
     });
 
     it("returns 401 without setting auth cookies for a code that doesn't match", async () => {
-        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
+        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret());
+        userRepoMocks.getUserById.mockResolvedValue({
+            id: "1", email: "adrien@test.fr", emailVerified: true,
+            loginCodeHash: SecurityHelper.hashToken("123456"),
+            loginCodeExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+            loginCodeAttempts: 0,
+        });
 
         const res = await request(app)
             .post("/auth/confirm-login")

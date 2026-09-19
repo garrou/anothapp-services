@@ -122,6 +122,29 @@ describe("AuthService (real Postgres)", () => {
 
             await expect(service.confirmLogin(approvalToken, "000000")).rejects.toMatchObject({ status: 401 });
         });
+
+        it("rejects replaying the same code after it was already confirmed once", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            await insertUser({ username: "ReplayUser", password: hash });
+            const { approvalToken } = await service.login("ReplayUser", "GoodPassword1");
+
+            await service.confirmLogin(approvalToken, LOGIN_CODE);
+
+            await expect(service.confirmLogin(approvalToken, LOGIN_CODE)).rejects.toMatchObject({ status: 401 });
+        });
+
+        it("rejects the code once it's been guessed wrong too many times, even if the next guess is correct", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            await insertUser({ username: "BruteForceUser", password: hash });
+            const { approvalToken } = await service.login("BruteForceUser", "GoodPassword1");
+
+            // MAX_LOGIN_CODE_ATTEMPTS in authService.js
+            for (let i = 0; i < 5; i++) {
+                await expect(service.confirmLogin(approvalToken, "000000")).rejects.toMatchObject({ status: 401 });
+            }
+
+            await expect(service.confirmLogin(approvalToken, LOGIN_CODE)).rejects.toMatchObject({ status: 401 });
+        });
     });
 
     describe("cancelDeletion", () => {

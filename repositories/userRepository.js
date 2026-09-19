@@ -162,6 +162,51 @@ export default class UserRepository {
     }
 
     /**
+     * Starts a new login challenge, replacing any previous one for this account - so only the
+     * most recently sent code is ever valid (see AuthService.login).
+     * @param {string} id
+     * @param {string} codeHash
+     * @param {Date} expiresAt
+     * @returns {Promise<boolean>}
+     */
+    setLoginChallenge = async (id, codeHash, expiresAt) => {
+        const res = await db.query(`
+            UPDATE users
+            SET login_code_hash = $1, login_code_expires_at = $2, login_code_attempts = 0
+            WHERE id = $3
+        `, [codeHash, expiresAt, id]);
+        return res.rowCount === 1;
+    }
+
+    /**
+     * @param {string} id
+     * @returns {Promise<boolean>}
+     */
+    incrementLoginCodeAttempts = async (id) => {
+        const res = await db.query(`
+            UPDATE users
+            SET login_code_attempts = login_code_attempts + 1
+            WHERE id = $1
+        `, [id]);
+        return res.rowCount === 1;
+    }
+
+    /**
+     * Consumes the current login challenge - called once its code is confirmed, so the same
+     * (approvalToken, code) pair can never be replayed to open a second session.
+     * @param {string} id
+     * @returns {Promise<boolean>}
+     */
+    clearLoginChallenge = async (id) => {
+        const res = await db.query(`
+            UPDATE users
+            SET login_code_hash = NULL, login_code_expires_at = NULL, login_code_attempts = 0
+            WHERE id = $1
+        `, [id]);
+        return res.rowCount === 1;
+    }
+
+    /**
      * @param {string} id
      * @returns {Promise<boolean>}
      */

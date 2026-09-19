@@ -4,8 +4,8 @@ import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
 import {
-    DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST, ERROR_LOGIN_PASSWORD,
-    ERROR_REFRESH_TOKEN_INVALID, ERROR_TOKEN_INVALID
+    DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST, ERROR_LOGIN_CODE_EXPIRED, ERROR_LOGIN_CODE_INVALID,
+    ERROR_LOGIN_PASSWORD, ERROR_REFRESH_TOKEN_INVALID, ERROR_TOKEN_INVALID
 } from "../constants/errors.js";
 import { DUMMY_HASH } from "../constants/security.js";
 import { DELETION_GRACE_DAYS } from "../constants/deletion.js";
@@ -14,6 +14,9 @@ import MailerService from "./mailerService.js";
 import { sanitizeErrorForLog } from "../helpers/utils.js";
 
 const GRACE_PERIOD_MS = DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000;
+// keep in sync with the "10m" JWT expiry passed to signJwt in login()
+const LOGIN_CODE_EXPIRY_MS = 10 * 60 * 1000;
+const MAX_LOGIN_CODE_ATTEMPTS = 5;
 
 export default class AuthService {
     constructor() {
@@ -53,7 +56,11 @@ export default class AuthService {
             return { pendingDeletion: true, cancellationToken };
         }
         const code = SecurityHelper.generateLoginCode();
-        const approvalToken = SecurityHelper.signJwt(found.id, SecurityHelper.loginApprovalSecret(code), "10m");
+        const codeHash = SecurityHelper.hashToken(code);
+        const expiresAt = new Date(Date.now() + LOGIN_CODE_EXPIRY_MS);
+
+        await this._userRepository.setLoginChallenge(found.id, codeHash, expiresAt);
+        const approvalToken = SecurityHelper.signJwt(found.id, SecurityHelper.loginApprovalSecret(), "10m");
 
         await this._mailerService.sendLoginCodeEmail(found.email, code);
         return { pendingApproval: true, approvalToken };
@@ -63,6 +70,12 @@ export default class AuthService {
      * Confirms the code sent by login and opens the session - also marks the account's email as
      * verified if it wasn't already, since receiving and typing back this code already proves
      * ownership of the address.
+     *
+     * The code itself is checked against its stored hash rather than baked into the approval
+     * token's secret, which is what makes it single-use (cleared the moment it's confirmed - see
+     * UserRepository.clearLoginChallenge) and rate-limitable per challenge, on top of the
+     * IP-based confirmLoginLimiter: a wrong guess only costs one of MAX_LOGIN_CODE_ATTEMPTS
+     * regardless of which IP it comes from.
      * @param {string?} approvalToken
      * @param {string?} code
      * @returns {Promise<Object>}
@@ -71,12 +84,25 @@ export default class AuthService {
         if (!Validator.isString(approvalToken) || !Validator.isString(code)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const { sub: userId } = SecurityHelper.verifyJwt(approvalToken, SecurityHelper.loginApprovalSecret(code));
+        const { sub: userId } = SecurityHelper.verifyJwt(approvalToken, SecurityHelper.loginApprovalSecret());
         const user = await this._userRepository.getUserById(userId);
 
         if (!user) {
             throw new ServiceError(401, ERROR_TOKEN_INVALID);
         }
+        const noActiveChallenge = !user.loginCodeHash
+            || new Date(user.loginCodeExpiresAt) < new Date()
+            || user.loginCodeAttempts >= MAX_LOGIN_CODE_ATTEMPTS;
+
+        if (noActiveChallenge) {
+            throw new ServiceError(401, ERROR_LOGIN_CODE_EXPIRED);
+        }
+        if (!SecurityHelper.verifyLoginCode(code, user.loginCodeHash)) {
+            await this._userRepository.incrementLoginCodeAttempts(userId);
+            throw new ServiceError(401, ERROR_LOGIN_CODE_INVALID);
+        }
+        await this._userRepository.clearLoginChallenge(userId);
+
         if (!user.emailVerified) {
             const updated = await this._userRepository.updateField(userId, "email_verified", true);
 
