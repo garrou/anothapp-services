@@ -84,20 +84,30 @@ INSERT INTO kinds (id, name) VALUES
 CREATE TABLE users (
     id UUID DEFAULT gen_random_uuid(),
     username VARCHAR(25) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
     picture VARCHAR(255),
     last_export TIMESTAMPTZ,
     episode_tracking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    pending_email VARCHAR(255),
-    login_challenge_id UUID,
-    login_code_hash VARCHAR(64),
-    login_code_expires_at TIMESTAMPTZ,
-    login_code_attempts SMALLINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
-    PRIMARY KEY(id)
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE users_auth (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    pending_email VARCHAR(255)
+);
+
+CREATE TABLE login_challenges (
+    id UUID DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code_hash VARCHAR(64) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    attempts SMALLINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE refresh_tokens (
