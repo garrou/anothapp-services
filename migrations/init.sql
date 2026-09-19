@@ -91,6 +91,10 @@ CREATE TABLE users (
     episode_tracking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     pending_email VARCHAR(255),
+    login_challenge_id UUID,
+    login_code_hash VARCHAR(64),
+    login_code_expires_at TIMESTAMPTZ,
+    login_code_attempts SMALLINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     PRIMARY KEY(id)

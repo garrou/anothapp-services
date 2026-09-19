@@ -11,6 +11,9 @@ const userRepoMocks = vi.hoisted(() => ({
     cancelDeletion: vi.fn(),
     getUserById: vi.fn().mockResolvedValue(null),
     confirmPendingEmail: vi.fn(),
+    setLoginChallenge: vi.fn().mockResolvedValue(true),
+    incrementLoginCodeAttempts: vi.fn().mockResolvedValue(true),
+    confirmLoginChallenge: vi.fn().mockResolvedValue(true),
 }));
 const refreshRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -88,6 +91,10 @@ describe("AuthService.login", () => {
         expect(mailerServiceMocks.sendLoginCodeEmail).toHaveBeenCalledWith(
             "adrien@test.fr", expect.stringMatching(/^\d{6}$/)
         );
+        // the code is checked against a stored hash, never baked into the approval token itself
+        expect(userRepoMocks.setLoginChallenge).toHaveBeenCalledWith(
+            "1", expect.any(String), expect.any(String), expect.any(Date)
+        );
         expect(refreshRepoMocks.create).not.toHaveBeenCalled();
     });
 
@@ -123,6 +130,7 @@ describe("AuthService.login", () => {
             message: "Identifiant ou mot de passe incorrect",
         });
         expect(mailerServiceMocks.sendLoginCodeEmail).not.toHaveBeenCalled();
+        expect(userRepoMocks.setLoginChallenge).not.toHaveBeenCalled();
     });
 
     it("returns a pending-deletion response instead of a login code when the account is scheduled for deletion, still within its grace period", async () => {
@@ -141,6 +149,7 @@ describe("AuthService.login", () => {
         expect(result.cancellationToken).toBeDefined();
         expect(result.pendingApproval).toBeUndefined();
         expect(mailerServiceMocks.sendLoginCodeEmail).not.toHaveBeenCalled();
+        expect(userRepoMocks.setLoginChallenge).not.toHaveBeenCalled();
     });
 
     it("rejects the login without issuing a cancellation token once the grace period has elapsed", async () => {
@@ -161,22 +170,38 @@ describe("AuthService.login", () => {
 
 describe("AuthService.confirmLogin", () => {
     let authService;
+    const FUTURE = new Date(Date.now() + 10 * 60 * 1000);
+    const PAST = new Date(Date.now() - 60 * 1000);
+    const CHALLENGE_ID = "challenge-1";
+
+    const activeUser = (overrides = {}) => ({
+        id: "1",
+        email: "adrien@test.fr",
+        emailVerified: true,
+        loginChallengeId: CHALLENGE_ID,
+        loginCodeHash: SecurityHelper.hashToken("123456"),
+        loginCodeExpiresAt: FUTURE,
+        loginCodeAttempts: 0,
+        ...overrides,
+    });
+    const approvalTokenFor = (challengeId = CHALLENGE_ID) =>
+        SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret(), "10m", { jti: challengeId });
 
     beforeEach(() => {
         vi.clearAllMocks();
         authService = new AuthService();
     });
 
-    it("rejects a code that doesn't match the one the approval token was signed with", async () => {
-        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
+    it("rejects a token that wasn't signed with the login-approval secret", async () => {
+        const approvalToken = SecurityHelper.signJwt("1", "wrong-secret");
 
-        await expect(authService.confirmLogin(approvalToken, "654321")).rejects.toThrow("Session invalide");
+        await expect(authService.confirmLogin(approvalToken, "123456")).rejects.toThrow("Session invalide");
         expect(userRepoMocks.getUserById).not.toHaveBeenCalled();
     });
 
-    it("opens a session when the code matches", async () => {
-        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
-        userRepoMocks.getUserById.mockResolvedValue({ id: "1", email: "adrien@test.fr", emailVerified: true });
+    it("opens a session when the code matches an active challenge, and consumes it atomically so it can't be replayed", async () => {
+        const approvalToken = approvalTokenFor();
+        userRepoMocks.getUserById.mockResolvedValue(activeUser());
         refreshRepoMocks.create.mockResolvedValue(true);
 
         const result = await authService.confirmLogin(approvalToken, "123456");
@@ -184,12 +209,15 @@ describe("AuthService.confirmLogin", () => {
         expect(result.token).toBeDefined();
         expect(result.refreshToken).toBeDefined();
         expect(result.user).toBeDefined();
+        expect(userRepoMocks.confirmLoginChallenge).toHaveBeenCalledWith(
+            "1", CHALLENGE_ID, SecurityHelper.hashToken("123456")
+        );
         expect(userRepoMocks.updateField).not.toHaveBeenCalled();
     });
 
     it("marks the email as verified when it wasn't already, since typing back the code proves ownership of the address", async () => {
-        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
-        userRepoMocks.getUserById.mockResolvedValue({ id: "1", email: "adrien@test.fr", emailVerified: false });
+        const approvalToken = approvalTokenFor();
+        userRepoMocks.getUserById.mockResolvedValue(activeUser({ emailVerified: false }));
         userRepoMocks.updateField.mockResolvedValue(true);
         refreshRepoMocks.create.mockResolvedValue(true);
 
@@ -199,8 +227,8 @@ describe("AuthService.confirmLogin", () => {
     });
 
     it("throws when marking the email as verified fails in the database", async () => {
-        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
-        userRepoMocks.getUserById.mockResolvedValue({ id: "1", email: "adrien@test.fr", emailVerified: false });
+        const approvalToken = approvalTokenFor();
+        userRepoMocks.getUserById.mockResolvedValue(activeUser({ emailVerified: false }));
         userRepoMocks.updateField.mockResolvedValue(false);
 
         await expect(authService.confirmLogin(approvalToken, "123456")).rejects.toThrow(
@@ -209,20 +237,118 @@ describe("AuthService.confirmLogin", () => {
     });
 
     it("rejects when the account behind the token no longer exists", async () => {
-        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
+        const approvalToken = approvalTokenFor();
         userRepoMocks.getUserById.mockResolvedValue(null);
 
         await expect(authService.confirmLogin(approvalToken, "123456")).rejects.toMatchObject({ status: 401 });
     });
 
     it("throws a 500 error when creating the refresh token fails in the database", async () => {
-        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
-        userRepoMocks.getUserById.mockResolvedValue({ id: "1", email: "adrien@test.fr", emailVerified: true });
+        const approvalToken = approvalTokenFor();
+        userRepoMocks.getUserById.mockResolvedValue(activeUser());
         refreshRepoMocks.create.mockResolvedValue(false);
 
         await expect(authService.confirmLogin(approvalToken, "123456")).rejects.toThrow(
             "Erreur durant l'authentification"
         );
+    });
+
+    it("rejects a wrong code and counts it as a failed attempt, without consuming the challenge", async () => {
+        const approvalToken = approvalTokenFor();
+        userRepoMocks.getUserById.mockResolvedValue(activeUser());
+        userRepoMocks.confirmLoginChallenge.mockResolvedValue(false);
+
+        await expect(authService.confirmLogin(approvalToken, "000000")).rejects.toMatchObject({
+            status: 401, message: "Code invalide",
+        });
+        expect(userRepoMocks.incrementLoginCodeAttempts).toHaveBeenCalledWith("1", CHALLENGE_ID);
+        expect(refreshRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects once the challenge has expired, even with the correct code, without writing a failed attempt", async () => {
+        const approvalToken = approvalTokenFor();
+        userRepoMocks.getUserById.mockResolvedValue(activeUser({ loginCodeExpiresAt: PAST }));
+
+        await expect(authService.confirmLogin(approvalToken, "123456")).rejects.toMatchObject({
+            status: 401, message: "Code expiré, veuillez vous reconnecter",
+        });
+        expect(userRepoMocks.confirmLoginChallenge).not.toHaveBeenCalled();
+        expect(userRepoMocks.incrementLoginCodeAttempts).not.toHaveBeenCalled();
+    });
+
+    it("rejects when there is no active challenge (already confirmed, or never issued)", async () => {
+        const approvalToken = approvalTokenFor();
+        userRepoMocks.getUserById.mockResolvedValue(
+            activeUser({ loginChallengeId: null, loginCodeHash: null, loginCodeExpiresAt: null })
+        );
+
+        await expect(authService.confirmLogin(approvalToken, "123456")).rejects.toMatchObject({ status: 401 });
+    });
+
+    it("rejects once the max attempts have been used up, even with the correct code - the account must log in again for a new one", async () => {
+        const approvalToken = approvalTokenFor();
+        userRepoMocks.getUserById.mockResolvedValue(activeUser({ loginCodeAttempts: 5 }));
+
+        await expect(authService.confirmLogin(approvalToken, "123456")).rejects.toMatchObject({
+            status: 401, message: "Code expiré, veuillez vous reconnecter",
+        });
+        expect(refreshRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects an approval token whose challenge no longer matches the account's active one, e.g. from a login() call that's since been superseded", async () => {
+        const staleToken = approvalTokenFor("old-challenge");
+        userRepoMocks.getUserById.mockResolvedValue(activeUser({ loginChallengeId: "new-challenge" }));
+
+        await expect(authService.confirmLogin(staleToken, "123456")).rejects.toMatchObject({
+            status: 401, message: "Code expiré, veuillez vous reconnecter",
+        });
+        expect(userRepoMocks.confirmLoginChallenge).not.toHaveBeenCalled();
+        expect(userRepoMocks.incrementLoginCodeAttempts).not.toHaveBeenCalled();
+    });
+
+    it("rejects login #1's token no matter which code it's paired with, once login #2 has superseded it", async () => {
+        // login #1: challenge A / code 111111 - then the same account calls login() again before
+        // confirming, which overwrites the active challenge with B / code 222222
+        const tokenA = approvalTokenFor("challenge-A");
+        const currentChallenge = activeUser({
+            loginChallengeId: "challenge-B", loginCodeHash: SecurityHelper.hashToken("222222"),
+        });
+        userRepoMocks.getUserById.mockResolvedValue(currentChallenge);
+
+        // token A + its own (now stale) code
+        await expect(authService.confirmLogin(tokenA, "111111")).rejects.toMatchObject({ status: 401 });
+        // token A + challenge B's actual current code - still rejected: the token's jti is what's
+        // checked, not just whether the submitted code happens to be right
+        await expect(authService.confirmLogin(tokenA, "222222")).rejects.toMatchObject({ status: 401 });
+        expect(userRepoMocks.confirmLoginChallenge).not.toHaveBeenCalled();
+
+        // only token B (the one actually issued for the active challenge) can confirm it
+        const tokenB = approvalTokenFor("challenge-B");
+        userRepoMocks.confirmLoginChallenge.mockResolvedValueOnce(true);
+        refreshRepoMocks.create.mockResolvedValue(true);
+        await expect(authService.confirmLogin(tokenB, "222222")).resolves.toBeDefined();
+    });
+
+    it("only lets one of two concurrent confirmLogin calls (same token and code) actually open a session", async () => {
+        const approvalToken = approvalTokenFor();
+        userRepoMocks.getUserById.mockResolvedValue(activeUser());
+        refreshRepoMocks.create.mockResolvedValue(true);
+        // simulates the atomic UPDATE in UserRepository.confirmLoginChallenge: only the request
+        // that reaches the database first still finds a matching row to clear
+        userRepoMocks.confirmLoginChallenge
+            .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(false);
+
+        const [a, b] = await Promise.allSettled([
+            authService.confirmLogin(approvalToken, "123456"),
+            authService.confirmLogin(approvalToken, "123456"),
+        ]);
+
+        const fulfilled = [a, b].filter((r) => r.status === "fulfilled");
+        const rejected = [a, b].filter((r) => r.status === "rejected");
+        expect(fulfilled).toHaveLength(1);
+        expect(rejected).toHaveLength(1);
+        expect(rejected[0].reason).toMatchObject({ status: 401, message: "Code invalide" });
     });
 });
 

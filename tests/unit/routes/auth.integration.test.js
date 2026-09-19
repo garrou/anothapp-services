@@ -9,6 +9,9 @@ const userRepoMocks = vi.hoisted(() => ({
     updateField: vi.fn(),
     cancelDeletion: vi.fn(),
     getUserById: vi.fn(),
+    setLoginChallenge: vi.fn().mockResolvedValue(true),
+    incrementLoginCodeAttempts: vi.fn().mockResolvedValue(true),
+    confirmLoginChallenge: vi.fn().mockResolvedValue(true),
 }));
 const refreshRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -70,10 +73,15 @@ describe("POST /auth/login", () => {
 
 describe("POST /auth/confirm-login", () => {
     it("returns 200 and sets httpOnly cookies when the code matches the approval token", async () => {
-        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
+        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret(), "10m", { jti: "challenge-1" });
         userRepoMocks.getUserById.mockResolvedValue({
             id: "1", email: "adrien@test.fr", username: "adrien", emailVerified: true,
+            loginChallengeId: "challenge-1",
+            loginCodeHash: SecurityHelper.hashToken("123456"),
+            loginCodeExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+            loginCodeAttempts: 0,
         });
+        userRepoMocks.confirmLoginChallenge.mockResolvedValue(true);
         refreshRepoMocks.create.mockResolvedValue(true);
 
         const res = await request(app)
@@ -87,7 +95,15 @@ describe("POST /auth/confirm-login", () => {
     });
 
     it("returns 401 without setting auth cookies for a code that doesn't match", async () => {
-        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret("123456"));
+        const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret(), "10m", { jti: "challenge-1" });
+        userRepoMocks.getUserById.mockResolvedValue({
+            id: "1", email: "adrien@test.fr", emailVerified: true,
+            loginChallengeId: "challenge-1",
+            loginCodeHash: SecurityHelper.hashToken("123456"),
+            loginCodeExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+            loginCodeAttempts: 0,
+        });
+        userRepoMocks.confirmLoginChallenge.mockResolvedValue(false);
 
         const res = await request(app)
             .post("/auth/confirm-login")

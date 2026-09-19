@@ -3,6 +3,7 @@ import User from "../models/user.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import RefreshTokenRepository from "./refreshTokenRepository.js";
+import { MAX_LOGIN_CODE_ATTEMPTS } from "../constants/security.js";
 
 export default class UserRepository {
 
@@ -158,6 +159,66 @@ export default class UserRepository {
             SET email = pending_email, pending_email = NULL
             WHERE id = $1 AND pending_email IS NOT NULL
         `, [id]);
+        return res.rowCount === 1;
+    }
+
+    /**
+     * Starts a new login challenge, replacing any previous one for this account - so only the
+     * most recently sent code (and the approval token it was issued alongside) is ever valid
+     * (see AuthService.login).
+     * @param {string} id
+     * @param {string} challengeId
+     * @param {string} codeHash
+     * @param {Date} expiresAt
+     * @returns {Promise<boolean>}
+     */
+    setLoginChallenge = async (id, challengeId, codeHash, expiresAt) => {
+        const res = await db.query(`
+            UPDATE users
+            SET login_challenge_id = $1, login_code_hash = $2, login_code_expires_at = $3, login_code_attempts = 0
+            WHERE id = $4
+        `, [challengeId, codeHash, expiresAt, id]);
+        return res.rowCount === 1;
+    }
+
+    /**
+     * Bounded, atomic increment - the WHERE clause (not a separate read) is what guarantees the
+     * count never exceeds MAX_LOGIN_CODE_ATTEMPTS even under concurrent wrong guesses for the
+     * same challenge (see AuthService.confirmLogin).
+     * @param {string} id
+     * @param {string} challengeId
+     * @returns {Promise<boolean>}
+     */
+    incrementLoginCodeAttempts = async (id, challengeId) => {
+        const res = await db.query(`
+            UPDATE users
+            SET login_code_attempts = login_code_attempts + 1
+            WHERE id = $1 AND login_challenge_id = $2 AND login_code_attempts < $3
+        `, [id, challengeId, MAX_LOGIN_CODE_ATTEMPTS]);
+        return res.rowCount === 1;
+    }
+
+    /**
+     * Atomically checks the code against the active challenge and consumes it in the same
+     * statement - the code, challenge id, expiry and attempt count are all part of the WHERE
+     * clause, so two concurrent calls with the same valid (approvalToken, code) can never both
+     * succeed: only the one that runs first still finds a matching row to update (see
+     * AuthService.confirmLogin).
+     * @param {string} id
+     * @param {string} challengeId
+     * @param {string} codeHash
+     * @returns {Promise<boolean>}
+     */
+    confirmLoginChallenge = async (id, challengeId, codeHash) => {
+        const res = await db.query(`
+            UPDATE users
+            SET login_challenge_id = NULL, login_code_hash = NULL, login_code_expires_at = NULL, login_code_attempts = 0
+            WHERE id = $1
+              AND login_challenge_id = $2
+              AND login_code_hash = $3
+              AND login_code_expires_at > NOW()
+              AND login_code_attempts < $4
+        `, [id, challengeId, codeHash, MAX_LOGIN_CODE_ATTEMPTS]);
         return res.rowCount === 1;
     }
 

@@ -73,6 +73,12 @@ describe("SecurityHelper.signJwt / verifyJwt", () => {
         const decoded = jwt.decode(token);
         expect(decoded.exp - decoded.iat).toBe(24 * 60 * 60);
     });
+
+    it("carries extra claims, e.g. a jti tying the token to a specific server-side challenge", () => {
+        const token = SecurityHelper.signJwt("user-1", SECRET, "15m", { jti: "challenge-1" });
+        const payload = SecurityHelper.verifyJwt(token, SECRET);
+        expect(payload.jti).toBe("challenge-1");
+    });
 });
 
 describe("SecurityHelper.deletionCancellationSecret", () => {
@@ -111,6 +117,28 @@ describe("SecurityHelper.emailVerificationSecret / passwordResetSecret", () => {
         expect(() => SecurityHelper.verifyJwt(verificationToken, SECRET)).toThrow("Session invalide");
         expect(() => SecurityHelper.verifyJwt(verificationToken, SecurityHelper.passwordResetSecret(PASSWORD_HASH))).toThrow("Session invalide");
         expect(() => SecurityHelper.verifyJwt(resetToken, SecurityHelper.emailVerificationSecret())).toThrow("Session invalide");
+    });
+});
+
+describe("SecurityHelper.loginApprovalSecret", () => {
+    it("is deterministic, and distinct from the other derived secrets", () => {
+        expect(SecurityHelper.loginApprovalSecret()).toBe(SecurityHelper.loginApprovalSecret());
+        expect(SecurityHelper.loginApprovalSecret()).not.toBe(SecurityHelper.deletionCancellationSecret());
+        expect(SecurityHelper.loginApprovalSecret()).not.toBe(SecurityHelper.emailVerificationSecret());
+    });
+});
+
+describe("SecurityHelper.generateLoginCode", () => {
+    it("returns a zero-padded 6-digit string", () => {
+        for (let i = 0; i < 20; i++) {
+            expect(SecurityHelper.generateLoginCode()).toMatch(/^\d{6}$/);
+        }
+    });
+});
+
+describe("SecurityHelper.generateChallengeId", () => {
+    it("returns a different id on every call", () => {
+        expect(SecurityHelper.generateChallengeId()).not.toBe(SecurityHelper.generateChallengeId());
     });
 });
 

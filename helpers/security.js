@@ -26,9 +26,11 @@ export default class SecurityHelper {
      * @param {string} userId
      * @param {string} secret
      * @param {string} [expiresIn]
+     * @param {Object} [extraClaims] e.g. { jti } to tie the token to a specific server-side challenge
      * @returns {string}
      */
-    static signJwt = (userId, secret, expiresIn = "15m") => jwt.sign({ sub: userId }, secret, { expiresIn });
+    static signJwt = (userId, secret, expiresIn = "15m", extraClaims = {}) =>
+        jwt.sign({ sub: userId, ...extraClaims }, secret, { expiresIn });
 
     /**
      * A secret distinct from JWT_SECRET, derived from it - a token signed with this one can never
@@ -49,22 +51,28 @@ export default class SecurityHelper {
         .digest("hex");
 
     /**
-     * Derived from the code itself, in addition to JWT_SECRET - so the approval token carries no
-     * secret of its own and verifying it just means re-deriving this secret from whatever code the
-     * client submits and checking the JWT signature against it. A wrong code fails verification,
-     * there's nothing else to store or compare.
-     * @param {string} code
+     * A secret distinct from JWT_SECRET, derived from it - the approval token only carries the
+     * account's id and the challenge's id (its jti claim), the actual code is checked separately
+     * against its stored hash, atomically, by UserRepository.confirmLoginChallenge.
      * @returns {string}
      */
-    static loginApprovalSecret = (code) => crypto
+    static loginApprovalSecret = () => crypto
         .createHash("sha256")
-        .update(`${process.env.JWT_SECRET}:login-approval:${code}`)
+        .update(`${process.env.JWT_SECRET}:login-approval`)
         .digest("hex");
 
     /**
      * @returns {string} a zero-padded 6-digit code
      */
     static generateLoginCode = () => crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+
+    /**
+     * Identifies one specific login challenge, independently of the code itself - stored
+     * server-side and carried as the approval token's jti claim, so a token from a login() call
+     * that's since been superseded by another one can't be paired with the newer challenge's code.
+     * @returns {string}
+     */
+    static generateChallengeId = () => crypto.randomUUID();
 
     /**
      * Derived from the target account's current password hash, in addition to JWT_SECRET - so
