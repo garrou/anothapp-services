@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import UserService from "../../../services/userService.js";
 import UserUpdate from "../../../models/userUpdate.js";
 import SecurityHelper from "../../../helpers/security.js";
-import { ERROR_BAD_PASSWORD } from "../../../constants/errors.js";
+import { DUPLICATE_ERROR_CODE, ERROR_BAD_PASSWORD } from "../../../constants/errors.js";
 
 const userRepoMocks = vi.hoisted(() => ({
     updateField: vi.fn(),
@@ -185,7 +185,6 @@ describe("UserService.updateUser - username change", () => {
     it("changes the username immediately, without a transaction or session revocation", async () => {
         const hash = await SecurityHelper.createHash("GoodPassword1");
         userRepoMocks.getUserWithAuthById.mockResolvedValue({ username: "oldname", password: hash });
-        userRepoMocks.getUsersByUsername.mockResolvedValue([]);
         userRepoMocks.updateField.mockResolvedValue(true);
 
         const message = await userService.updateUser(
@@ -243,22 +242,29 @@ describe("UserService.updateUser - username change", () => {
         )).rejects.toThrow("Utilisateur inconnu");
     });
 
-    it("rejects when the new username is already taken", async () => {
+    it("rejects when the new username is already taken, translating the DB unique-violation error", async () => {
         const hash = await SecurityHelper.createHash("GoodPassword1");
         userRepoMocks.getUserWithAuthById.mockResolvedValue({ username: "oldname", password: hash });
-        userRepoMocks.getUsersByUsername.mockResolvedValue([{ id: "user-2" }]);
+        userRepoMocks.updateField.mockRejectedValue({ code: DUPLICATE_ERROR_CODE });
 
         await expect(userService.updateUser(
             "user-1", new UserUpdate({ newUsername: "taken", confirmUsername: "taken", currentPassword: "GoodPassword1" })
         )).rejects.toMatchObject({ status: 409 });
+    });
 
-        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+    it("rethrows an unrelated database error unchanged", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({ username: "oldname", password: hash });
+        userRepoMocks.updateField.mockRejectedValue(new Error("connection lost"));
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ newUsername: "newname", confirmUsername: "newname", currentPassword: "GoodPassword1" })
+        )).rejects.toThrow("connection lost");
     });
 
     it("throws a 500 when the database update fails", async () => {
         const hash = await SecurityHelper.createHash("GoodPassword1");
         userRepoMocks.getUserWithAuthById.mockResolvedValue({ username: "oldname", password: hash });
-        userRepoMocks.getUsersByUsername.mockResolvedValue([]);
         userRepoMocks.updateField.mockResolvedValue(false);
 
         await expect(userService.updateUser(

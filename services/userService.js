@@ -6,7 +6,7 @@ import AuthService from "./authService.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
-import { ERROR_BAD_PASSWORD, ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER } from "../constants/errors.js";
+import { DUPLICATE_ERROR_CODE, ERROR_BAD_PASSWORD, ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER } from "../constants/errors.js";
 import { sanitizeErrorForLog } from "../helpers/utils.js";
 import db from "../config/db.js";
 
@@ -251,13 +251,16 @@ export default class UserService {
         if (!same) {
             throw new ServiceError(400, ERROR_BAD_PASSWORD);
         }
-        const existing = await this._userRepository.getUsersByUsername(newUsername, true);
+        let updated;
 
-        if (existing.length) {
-            throw new ServiceError(409, "Ce nom d'utilisateur est déjà pris");
+        try {
+            updated = await this._userRepository.updateField(currentUserId, "username", newUsername);
+        } catch (err) {
+            if (err.code === DUPLICATE_ERROR_CODE) {
+                throw new ServiceError(409, "Ce nom d'utilisateur est déjà pris");
+            }
+            throw err;
         }
-        const updated = await this._userRepository.updateField(currentUserId, "username", newUsername);
-
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier le nom d'utilisateur");
         }
