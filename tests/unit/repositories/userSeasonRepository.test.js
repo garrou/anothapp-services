@@ -159,16 +159,6 @@ describe("UserSeasonRepository", () => {
         });
     });
 
-    describe("getTimeEpisodesByUserIdByShowId", () => {
-        it("returns [time, episodes] parsed as integers", async () => {
-            db.query.mockResolvedValue({rows: [{time: "500", episodes: "10"}]});
-
-            const result = await repo.getTimeEpisodesByUserIdByShowId("user-1", 10);
-
-            expect(result).toEqual([500, 10]);
-        });
-    });
-
     describe("getViewingTimeByUserIdByShowIdByNumber", () => {
         it("returns the parsed time", async () => {
             db.query.mockResolvedValue({rows: [{time: "50"}]});
@@ -176,24 +166,6 @@ describe("UserSeasonRepository", () => {
             const result = await repo.getViewingTimeByUserIdByShowIdByNumber("user-1", 10, 1);
 
             expect(result).toBe(50);
-        });
-    });
-
-    describe("getTotalTimeByUserId", () => {
-        it("returns the parsed total time", async () => {
-            db.query.mockResolvedValue({rows: [{time: "1000"}]});
-
-            const result = await repo.getTotalTimeByUserId("user-1");
-
-            expect(result).toBe(1000);
-        });
-
-        it("returns 0 when there is no data", async () => {
-            db.query.mockResolvedValue({rows: [{time: null}]});
-
-            const result = await repo.getTotalTimeByUserId("user-1");
-
-            expect(result).toBe(0);
         });
     });
 
@@ -207,63 +179,6 @@ describe("UserSeasonRepository", () => {
         });
     });
 
-    describe("getTimeHourByUserIdGroupByYear", () => {
-        it("maps rows to Stat instances", async () => {
-            db.query.mockResolvedValue({rows: [{label: "2024", value: "20"}]});
-
-            const result = await repo.getTimeHourByUserIdGroupByYear("user-1");
-
-            expect(result).toEqual([{id: 0, label: "2024", value: 20}]);
-        });
-    });
-
-    describe("getTimeCurrentMonthByUserId", () => {
-        it("returns the parsed time", async () => {
-            db.query.mockResolvedValue({rows: [{time: "60"}]});
-
-            const result = await repo.getTimeCurrentMonthByUserId("user-1");
-
-            expect(result).toBe(60);
-        });
-
-        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
-            db.query.mockResolvedValue({rows: [{time: "60"}]});
-
-            await repo.getTimeCurrentMonthByUserId("user-1");
-
-            expect(db.query).toHaveBeenCalledWith(
-                expect.stringContaining("seasons.episodes * shows.duration <= 43200"), ["user-1"]
-            );
-        });
-    });
-
-    describe("getTimeCurrentMonthByUserIds", () => {
-        it("returns an empty Map without querying when userIds is empty", async () => {
-            const result = await repo.getTimeCurrentMonthByUserIds([]);
-
-            expect(db.query).not.toHaveBeenCalled();
-            expect(result.size).toBe(0);
-        });
-
-        it("returns a Map keyed by user id", async () => {
-            db.query.mockResolvedValue({rows: [{user_id: "user-1", time: "90"}]});
-
-            const result = await repo.getTimeCurrentMonthByUserIds(["user-1"]);
-
-            expect(result.get("user-1")).toBe(90);
-        });
-
-        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
-            db.query.mockResolvedValue({rows: []});
-
-            await repo.getTimeCurrentMonthByUserIds(["user-1"]);
-
-            expect(db.query).toHaveBeenCalledWith(
-                expect.stringContaining("seasons.episodes * shows.duration <= 43200"), [["user-1"]]
-            );
-        });
-    });
-
     describe("getNbSeasonsByUserIdGroupByMonth", () => {
         it("maps rows to Stat instances with french month labels", async () => {
             db.query.mockResolvedValue({rows: [{num: "2", value: "3"}]});
@@ -271,26 +186,6 @@ describe("UserSeasonRepository", () => {
             const result = await repo.getNbSeasonsByUserIdGroupByMonth("user-1");
 
             expect(result).toEqual([{id: 0, label: "Février", value: 3}]);
-        });
-    });
-
-    describe("getNbEpisodesByUserIdGroupByYear", () => {
-        it("maps rows to Stat instances", async () => {
-            db.query.mockResolvedValue({rows: [{label: "2024", value: "12"}]});
-
-            const result = await repo.getNbEpisodesByUserIdGroupByYear("user-1");
-
-            expect(result).toEqual([{id: 0, label: "2024", value: 12}]);
-        });
-    });
-
-    describe("getTotalEpisodesByUserId", () => {
-        it("returns the parsed total", async () => {
-            db.query.mockResolvedValue({rows: [{total: "40"}]});
-
-            const result = await repo.getTotalEpisodesByUserId("user-1");
-
-            expect(result).toBe(40);
         });
     });
 
@@ -304,92 +199,6 @@ describe("UserSeasonRepository", () => {
         });
     });
 
-    describe("getViewedByMonthAgo", () => {
-        it("maps rows to SeasonTimeline instances", async () => {
-            db.query.mockResolvedValue({rows: [{id: 10, title: "Show", poster: "poster.png", image: "img.png", episodes: 8, number: 1, added_at: "2024-01-01", platform_id: 2}]});
-
-            const result = await repo.getViewedByMonthAgo("user-1", 3);
-
-            expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 3]);
-            expect(result).toEqual([{showId: 10, showTitle: "Show", addedAt: "2024-01-01", platformId: 2, season: {number: 1, episodes: 8, image: "img.png", interval: ""}}]);
-        });
-    });
-
-    describe("getRankingViewingTimeByShows", () => {
-        it("maps rows to Stat instances", async () => {
-            db.query.mockResolvedValue({rows: [{label: "Show", value: "30"}]});
-
-            const result = await repo.getRankingViewingTimeByShows("user-1");
-
-            expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 10]);
-            expect(result).toEqual([{id: 0, label: "Show", value: 30}]);
-        });
-    });
-
-    describe("getRecordViewingTimeMonth", () => {
-        it("reverses the rows and maps to Stat instances", async () => {
-            db.query.mockResolvedValue({rows: [{label: "02/2024", value: "20"}, {label: "01/2024", value: "40"}]});
-
-            const result = await repo.getRecordViewingTimeMonth("user-1");
-
-            expect(result).toEqual([{id: 0, label: "01/2024", value: 40}, {id: 0, label: "02/2024", value: 20}]);
-        });
-
-        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
-            db.query.mockResolvedValue({rows: []});
-
-            await repo.getRecordViewingTimeMonth("user-1");
-
-            expect(db.query).toHaveBeenCalledWith(
-                expect.stringContaining("seasons.episodes * shows.duration <= 43200"), ["user-1", 10]
-            );
-        });
-    });
-
-    describe("getRecordViewingTimeDay", () => {
-        it("reverses the rows and maps to Stat instances", async () => {
-            db.query.mockResolvedValue({
-                rows: [{label: "02/02/2024", value: "20"}, {label: "01/02/2024", value: "40"}],
-            });
-
-            const result = await repo.getRecordViewingTimeDay("user-1");
-
-            expect(result).toEqual([
-                {id: 0, label: "01/02/2024", value: 40}, {id: 0, label: "02/02/2024", value: 20},
-            ]);
-        });
-
-        it("excludes seasons whose own runtime alone exceeds a calendar day", async () => {
-            db.query.mockResolvedValue({rows: []});
-
-            await repo.getRecordViewingTimeDay("user-1");
-
-            expect(db.query).toHaveBeenCalledWith(
-                expect.stringContaining("seasons.episodes * shows.duration <= 1440"), ["user-1", 10]
-            );
-        });
-
-        it("excludes days whose combined total still exceeds 1440 minutes", async () => {
-            db.query.mockResolvedValue({rows: []});
-
-            await repo.getRecordViewingTimeDay("user-1");
-
-            expect(db.query).toHaveBeenCalledWith(
-                expect.stringContaining("HAVING SUM(shows.duration * seasons.episodes) <= 1440"), ["user-1", 10]
-            );
-        });
-    });
-
-    describe("getSeasonsByAddedYear", () => {
-        it("maps rows to Season instances", async () => {
-            db.query.mockResolvedValue({rows: [{show_id: 10, number: 1, episodes: 8, image: "img.png"}]});
-
-            const result = await repo.getSeasonsByAddedYear("user-1", 2024);
-
-            expect(result).toEqual([{number: 1, episodes: 8, image: "img.png", interval: ""}]);
-        });
-    });
-
     describe("getNbSeasonsByUserIdGroupByMonthByCurrentYear", () => {
         it("maps rows to Stat instances with french month labels", async () => {
             db.query.mockResolvedValue({rows: [{num: "4", value: "2"}]});
@@ -397,119 +206,6 @@ describe("UserSeasonRepository", () => {
             const result = await repo.getNbSeasonsByUserIdGroupByMonthByCurrentYear("user-1");
 
             expect(result).toEqual([{id: 0, label: "Avril", value: 2}]);
-        });
-    });
-
-    describe("getNbEpisodesByUserIdGroupByMonthByCurrentYear", () => {
-        it("maps rows to Stat instances with french month labels", async () => {
-            db.query.mockResolvedValue({rows: [{num: "5", value: "9"}]});
-
-            const result = await repo.getNbEpisodesByUserIdGroupByMonthByCurrentYear("user-1");
-
-            expect(result).toEqual([{id: 0, label: "Mai", value: 9}]);
-        });
-    });
-
-    describe("getTotalTimeByUserIdByYear", () => {
-        it("returns the parsed time", async () => {
-            db.query.mockResolvedValue({rows: [{time: "300"}]});
-
-            const result = await repo.getTotalTimeByUserIdByYear("user-1", 2024);
-
-            expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 2024]);
-            expect(result).toBe(300);
-        });
-    });
-
-    describe("getTotalEpisodesByUserIdByYear", () => {
-        it("returns the parsed total", async () => {
-            db.query.mockResolvedValue({rows: [{total: "15"}]});
-
-            const result = await repo.getTotalEpisodesByUserIdByYear("user-1", 2024);
-
-            expect(result).toBe(15);
-        });
-    });
-
-    describe("getTopShowByUserIdByYear", () => {
-        it("returns a Stat when found", async () => {
-            db.query.mockResolvedValue({rowCount: 1, rows: [{label: "Show", value: "600"}]});
-
-            const result = await repo.getTopShowByUserIdByYear("user-1", 2024);
-
-            expect(result).toEqual({id: 0, label: "Show", value: 600});
-        });
-
-        it("returns null when nothing matched", async () => {
-            db.query.mockResolvedValue({rowCount: 0, rows: []});
-
-            const result = await repo.getTopShowByUserIdByYear("user-1", 2024);
-
-            expect(result).toBeNull();
-        });
-    });
-
-    describe("getKindsTimeByUserIdByYear", () => {
-        it("returns a Stat when found", async () => {
-            db.query.mockResolvedValue({rowCount: 1, rows: [{label: "Drame", value: "400"}]});
-
-            const result = await repo.getKindsTimeByUserIdByYear("user-1", 2024);
-
-            expect(result).toEqual({id: 0, label: "Drame", value: 400});
-        });
-
-        it("returns null when nothing matched", async () => {
-            db.query.mockResolvedValue({rowCount: 0, rows: []});
-
-            const result = await repo.getKindsTimeByUserIdByYear("user-1", 2024);
-
-            expect(result).toBeNull();
-        });
-    });
-
-    describe("getTopPlatformByUserIdByYear", () => {
-        it("returns a Stat when found", async () => {
-            db.query.mockResolvedValue({rowCount: 1, rows: [{label: "Netflix", value: "8"}]});
-
-            const result = await repo.getTopPlatformByUserIdByYear("user-1", 2024);
-
-            expect(result).toEqual({id: 0, label: "Netflix", value: 8});
-        });
-
-        it("returns null when nothing matched", async () => {
-            db.query.mockResolvedValue({rowCount: 0, rows: []});
-
-            const result = await repo.getTopPlatformByUserIdByYear("user-1", 2024);
-
-            expect(result).toBeNull();
-        });
-    });
-
-    describe("getBestMonthByUserIdByYear", () => {
-        it("returns a Stat with the french month label when found", async () => {
-            db.query.mockResolvedValue({rowCount: 1, rows: [{num: "6", value: "250"}]});
-
-            const result = await repo.getBestMonthByUserIdByYear("user-1", 2024);
-
-            expect(result).toEqual({id: 0, label: "Juin", value: 250});
-        });
-
-        it("excludes seasons whose own runtime alone exceeds a calendar month", async () => {
-            db.query.mockResolvedValue({rowCount: 1, rows: [{num: "6", value: "250"}]});
-
-            await repo.getBestMonthByUserIdByYear("user-1", 2024);
-
-            expect(db.query).toHaveBeenCalledWith(
-                expect.stringContaining("shows.duration * seasons.episodes <= 43200"), ["user-1", 2024]
-            );
-        });
-
-        it("returns null when nothing matched", async () => {
-            db.query.mockResolvedValue({rowCount: 0, rows: []});
-
-            const result = await repo.getBestMonthByUserIdByYear("user-1", 2024);
-
-            expect(result).toBeNull();
         });
     });
 
@@ -572,27 +268,6 @@ describe("UserSeasonRepository", () => {
             const result = await repo.getMostRewatchedByUserId("user-1");
 
             expect(result).toBeNull();
-        });
-    });
-
-    describe("getWatchedDatesByUserId", () => {
-        it("returns the list of dates", async () => {
-            db.query.mockResolvedValue({rows: [{date: "2024-01-01"}]});
-
-            const result = await repo.getWatchedDatesByUserId("user-1");
-
-            expect(result).toEqual(["2024-01-01"]);
-        });
-    });
-
-    describe("getWatchedDatesByUserIdByYear", () => {
-        it("returns the list of dates", async () => {
-            db.query.mockResolvedValue({rows: [{date: "2024-01-01"}]});
-
-            const result = await repo.getWatchedDatesByUserIdByYear("user-1", 2024);
-
-            expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 2024]);
-            expect(result).toEqual(["2024-01-01"]);
         });
     });
 });

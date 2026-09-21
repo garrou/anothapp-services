@@ -30,15 +30,14 @@ export default class StatService {
             throw new ServiceError(400, ERROR_NOT_FRIEND);
         }
         const userId = friendId ?? currentUserId;
-        const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
-        const repo = episodeTrackingEnabled ? this._userEpisodeStatRepository : this._userSeasonRepository;
+        const repo = this._userEpisodeStatRepository;
 
         const [
             monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes, bestMonthRows, bestDayRows,
             seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
             episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
             seasonsPlatforms, seriesCountries, seriesNotes, watchedDates, topWatchedWithFriends,
-            mostRewatched
+            mostRewatched, episodesHeatmap
         ] = await Promise.all([
             repo.getTimeCurrentMonthByUserId(userId),
             repo.getTotalTimeByUserId(userId),
@@ -62,22 +61,19 @@ export default class StatService {
             repo.getWatchedDatesByUserId(userId),
             this._userSeasonFriendRepository.getTopFriendsByUserId(userId, 5),
             this._userSeasonRepository.getMostRewatchedByUserId(userId),
+            repo.getWatchedByDay(userId),
         ]);
         const {current: currentStreak, longest: longestStreak} = computeStreak(watchedDates);
 
-        const stats = {
+        return {
             monthTime, totalTime, nbSeries, nbSeasons, nbEpisodes,
             "bestMonth": bestMonthRows[0],
             "bestDay": bestDayRows[0],
             seasonsMonthCurrentYear, episodesMonthCurrentYear, timeYears, seasonsYears,
             episodesYears, seasonsMonths, bestMonths, seriesRankingTime, seriesKinds,
             seasonsPlatforms, seriesCountries, seriesNotes, currentStreak, longestStreak,
-            topWatchedWithFriends, mostRewatched
+            topWatchedWithFriends, mostRewatched, episodesHeatmap
         };
-        if (episodeTrackingEnabled) {
-            stats.episodesHeatmap = await this._userEpisodeStatRepository.getWatchedByDay(userId);
-        }
-        return stats;
     }
 
     /**
@@ -91,8 +87,7 @@ export default class StatService {
         if (!numYear || numYear < 2000 || numYear > new Date().getFullYear()) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
-        const repo = episodeTrackingEnabled ? this._userEpisodeStatRepository : this._userSeasonRepository;
+        const repo = this._userEpisodeStatRepository;
 
         const [
             totalTime, totalEpisodes, nbNewShows, topShow, topKind, topPlatform, bestMonth,
@@ -127,16 +122,7 @@ export default class StatService {
         ]);
         const participants = [me, ...friends];
         const ids = participants.map((p) => p.id);
-        const trackingByUserId = await this._userRepository.getEpisodeTrackingByIds(ids);
-
-        const seasonIds = ids.filter((id) => !trackingByUserId.get(id));
-        const episodeIds = ids.filter((id) => trackingByUserId.get(id));
-
-        const [seasonTimes, episodeTimes] = await Promise.all([
-            this._userSeasonRepository.getTimeCurrentMonthByUserIds(seasonIds),
-            this._userEpisodeStatRepository.getTimeCurrentMonthByUserIds(episodeIds),
-        ]);
-        const timeByUserId = new Map([...seasonTimes, ...episodeTimes]);
+        const timeByUserId = await this._userEpisodeStatRepository.getTimeCurrentMonthByUserIds(ids);
 
         return participants
             .map((p) => ({

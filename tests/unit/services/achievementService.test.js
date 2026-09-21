@@ -8,7 +8,6 @@ const achievementRepoMocks = vi.hoisted(() => ({
     upsertUserAchievement: vi.fn(),
 }));
 const userRepoMocks = vi.hoisted(() => ({
-    hasEpisodeTrackingEnabled: vi.fn(),
     getUserById: vi.fn(),
 }));
 const userShowRepoMocks = vi.hoisted(() => ({
@@ -20,11 +19,8 @@ const userShowRepoMocks = vi.hoisted(() => ({
     getFavoritesCountByUserId: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
-    getWatchedDatesByUserId: vi.fn(),
-    getTotalTimeByUserId: vi.fn(),
     getPlatformsCountByUserId: vi.fn(),
     getMaxRewatchCountByUserId: vi.fn(),
-    getRecordViewingTimeDay: vi.fn(),
 }));
 const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getWatchedDatesByUserId: vi.fn(),
@@ -94,13 +90,12 @@ const streakTiers = () => [
 ];
 
 const mockDefaults = () => {
-    userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
     userRepoMocks.getUserById.mockResolvedValue({ createdAt: new Date().toISOString() });
-    userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue([]);
-    userSeasonRepoMocks.getTotalTimeByUserId.mockResolvedValue(0);
+    userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue([]);
+    userEpisodeStatRepoMocks.getTotalTimeByUserId.mockResolvedValue(0);
+    userEpisodeStatRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
     userSeasonRepoMocks.getPlatformsCountByUserId.mockResolvedValue(0);
     userSeasonRepoMocks.getMaxRewatchCountByUserId.mockResolvedValue(0);
-    userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
     userShowRepoMocks.getTotalShowsByUserId.mockResolvedValue(0);
     userShowRepoMocks.getTotalCompletedShowsByUserId.mockResolvedValue(0);
     userShowRepoMocks.getCountriesCountByUserId.mockResolvedValue(0);
@@ -131,7 +126,7 @@ describe("AchievementService.evaluate", () => {
 
     it("unlocks and notifies when the user newly crosses a tier", async () => {
         achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
 
         await achievementService.evaluate("user-1");
 
@@ -144,7 +139,7 @@ describe("AchievementService.evaluate", () => {
 
     it("does not notify when the DB write is rejected by the concurrent-write guard", async () => {
         achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
         achievementRepoMocks.upsertUserAchievement.mockResolvedValue(false);
 
         await achievementService.evaluate("user-1");
@@ -155,7 +150,7 @@ describe("AchievementService.evaluate", () => {
 
     it("does nothing when no tier is reached yet", async () => {
         achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue([]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue([]);
 
         await achievementService.evaluate("user-1");
 
@@ -168,7 +163,7 @@ describe("AchievementService.evaluate", () => {
         achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map([
             ["streak", { league: 1, subTier: 2 }],
         ]));
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
 
         await achievementService.evaluate("user-1");
 
@@ -180,7 +175,7 @@ describe("AchievementService.evaluate", () => {
         achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map([
             ["streak", { league: 1, subTier: 2 }],
         ]));
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(
             Array.from({ length: 10 }, (_, i) => `2024-01-${String(i + 1).padStart(2, "0")}`)
         );
 
@@ -191,7 +186,7 @@ describe("AchievementService.evaluate", () => {
 
     it("emits achievement.league_unlocked when a league is reached for the first time", async () => {
         achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
         const emitSpy = vi.spyOn(eventBus, "emit");
 
         await achievementService.evaluate("user-1");
@@ -207,7 +202,7 @@ describe("AchievementService.evaluate", () => {
         achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map([
             ["streak", { league: 1, subTier: 2 }],
         ]));
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(
             Array.from({ length: 10 }, (_, i) => `2024-01-${String(i + 1).padStart(2, "0")}`)
         );
         const emitSpy = vi.spyOn(eventBus, "emit");
@@ -225,7 +220,7 @@ describe("AchievementService.evaluate", () => {
         achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map([
             ["streak", { league: 1, subTier: 3 }],
         ]));
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
         const emitSpy = vi.spyOn(eventBus, "emit");
 
         await achievementService.evaluate("user-1");
@@ -236,25 +231,13 @@ describe("AchievementService.evaluate", () => {
 
     it("does not emit achievement.league_unlocked when the DB write is rejected by the concurrent-write guard", async () => {
         achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01", "2024-01-02", "2024-01-03"]);
         achievementRepoMocks.upsertUserAchievement.mockResolvedValue(false);
         const emitSpy = vi.spyOn(eventBus, "emit");
 
         await achievementService.evaluate("user-1");
 
         expect(emitSpy).not.toHaveBeenCalledWith("achievement.league_unlocked", expect.anything());
-    });
-
-    it("reads episode watch dates for episode-tracking users instead of season dates", async () => {
-        achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
-        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
-        userEpisodeStatRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
-
-        await achievementService.evaluate("user-1");
-
-        expect(userEpisodeStatRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-1");
-        expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalled();
     });
 
     it("only queries what a narrowed code list actually needs", async () => {
@@ -268,9 +251,8 @@ describe("AchievementService.evaluate", () => {
         await achievementService.evaluate("user-1", ["account_age"]);
 
         expect(userRepoMocks.getUserById).toHaveBeenCalledWith("user-1");
-        expect(userRepoMocks.hasEpisodeTrackingEnabled).not.toHaveBeenCalled();
-        expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalled();
-        expect(userSeasonRepoMocks.getTotalTimeByUserId).not.toHaveBeenCalled();
+        expect(userEpisodeStatRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalled();
+        expect(userEpisodeStatRepoMocks.getTotalTimeByUserId).not.toHaveBeenCalled();
         expect(userShowRepoMocks.getTotalShowsByUserId).not.toHaveBeenCalled();
         expect(userShowRepoMocks.getCountriesCountByUserId).not.toHaveBeenCalled();
         expect(userShowRepoMocks.getKindsCountByUserId).not.toHaveBeenCalled();
@@ -284,7 +266,7 @@ describe("AchievementService.evaluate", () => {
         expect(userFavoriteActorRepoMocks.getCountByUserId).not.toHaveBeenCalled();
         expect(playlistCollaboratorRepoMocks.getCountByUserId).not.toHaveBeenCalled();
         expect(userSeasonRepoMocks.getMaxRewatchCountByUserId).not.toHaveBeenCalled();
-        expect(userSeasonRepoMocks.getRecordViewingTimeDay).not.toHaveBeenCalled();
+        expect(userEpisodeStatRepoMocks.getRecordViewingTimeDay).not.toHaveBeenCalled();
     });
 
     it("unlocks favorites_count, playlists_count and duo from their own repositories", async () => {
@@ -335,30 +317,15 @@ describe("AchievementService.evaluate", () => {
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "rewatch", 1, 3);
     });
 
-    it("unlocks binge from the best single day of viewing time (season data, in hours)", async () => {
+    it("unlocks binge from the best single day of episode viewing time (in hours)", async () => {
         achievementRepoMocks.getTiers.mockResolvedValue([
             { code: "binge", league: 1, subTier: 3, threshold: 4 },
         ]);
-        userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([{ label: "12/03/2024", value: 600 }]);
-
-        await achievementService.evaluate("user-1", ["binge"]);
-
-        expect(userSeasonRepoMocks.getRecordViewingTimeDay).toHaveBeenCalledWith("user-1", 1);
-        expect(userEpisodeStatRepoMocks.getRecordViewingTimeDay).not.toHaveBeenCalled();
-        expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "binge", 1, 3);
-    });
-
-    it("unlocks binge from episode watch time for episode-tracking users instead of season data", async () => {
-        achievementRepoMocks.getTiers.mockResolvedValue([
-            { code: "binge", league: 1, subTier: 3, threshold: 4 },
-        ]);
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
         userEpisodeStatRepoMocks.getRecordViewingTimeDay.mockResolvedValue([{ label: "12/03/2024", value: 600 }]);
 
         await achievementService.evaluate("user-1", ["binge"]);
 
         expect(userEpisodeStatRepoMocks.getRecordViewingTimeDay).toHaveBeenCalledWith("user-1", 1);
-        expect(userSeasonRepoMocks.getRecordViewingTimeDay).not.toHaveBeenCalled();
         expect(achievementRepoMocks.upsertUserAchievement).toHaveBeenCalledWith("user-1", "binge", 1, 3);
     });
 
@@ -366,7 +333,7 @@ describe("AchievementService.evaluate", () => {
         achievementRepoMocks.getTiers.mockResolvedValue([
             { code: "binge", league: 1, subTier: 3, threshold: 3 },
         ]);
-        userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
+        userEpisodeStatRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
 
         await achievementService.evaluate("user-1", ["binge"]);
 
@@ -386,11 +353,11 @@ describe("AchievementService.evaluate", () => {
 
     it("only queries watch-dates/time (not the unrelated codes) for a streak-only evaluation", async () => {
         achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
 
         await achievementService.evaluate("user-1", ["streak"]);
 
-        expect(userSeasonRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-1");
+        expect(userEpisodeStatRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-1");
         expect(userRepoMocks.getUserById).not.toHaveBeenCalled();
         expect(friendRepoMocks.getFriends).not.toHaveBeenCalled();
         expect(userShowRepoMocks.getNotedShowsCountByUserId).not.toHaveBeenCalled();
@@ -406,7 +373,7 @@ describe("AchievementService.getAchievements", () => {
 
     it("reports progress toward the next tier when none has been reached", async () => {
         achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
 
         const achievements = await achievementService.getAchievements("user-1");
         const streak = achievements.find((a) => a.code === "streak");
@@ -423,7 +390,7 @@ describe("AchievementService.getAchievements", () => {
         achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map([
             ["streak", { league: 1, subTier: 3, unlockedAt: "2024-01-01T00:00:00.000Z" }],
         ]));
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(
             Array.from({ length: 2 }, (_, i) => `2024-01-0${i + 1}`)
         );
 
@@ -443,7 +410,7 @@ describe("AchievementService.getAchievements", () => {
         achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map([
             ["streak", { league: 1, subTier: 3, unlockedAt: "2024-01-01T00:00:00.000Z" }],
         ]));
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
 
         const achievements = await achievementService.getAchievements("user-1");
         const streak = achievements.find((a) => a.code === "streak");
@@ -465,7 +432,7 @@ describe("AchievementService.getAchievements", () => {
         achievementRepoMocks.getUserAchievements.mockResolvedValue(new Map([
             ["streak", { league: 1, subTier: 3, unlockedAt: "2024-01-01T00:00:00.000Z" }],
         ]));
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(["2024-01-01"]);
 
         const achievements = await achievementService.getAchievements("user-1", "user-2");
 
@@ -476,12 +443,12 @@ describe("AchievementService.getAchievements", () => {
     it("computes the friend's own values, not the requester's", async () => {
         achievementRepoMocks.getTiers.mockResolvedValue(streakTiers());
         friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
-        userSeasonRepoMocks.getWatchedDatesByUserId.mockResolvedValue([]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue([]);
 
         await achievementService.getAchievements("user-1", "user-2");
 
-        expect(userSeasonRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-2");
-        expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalledWith("user-1");
+        expect(userEpisodeStatRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-2");
+        expect(userEpisodeStatRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalledWith("user-1");
     });
 });
 

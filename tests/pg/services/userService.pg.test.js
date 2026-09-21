@@ -163,26 +163,6 @@ describe("UserService (real Postgres)", () => {
         });
     });
 
-    describe("updateUser - episode tracking", () => {
-        it("disables episode tracking without needing any external lookup", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
-
-            const message = await service.updateUser(userId, new UserUpdate({ episodeTrackingEnabled: false }));
-
-            expect(message).toBe("Suivi des épisodes désactivé");
-            const res = await db.query(`SELECT episode_tracking_enabled FROM users WHERE id = $1`, [userId]);
-            expect(res.rows[0]["episode_tracking_enabled"]).toBe(false);
-        });
-
-        it("enables episode tracking and backfills (no-op when the user has no watched seasons)", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: false });
-
-            const message = await service.updateUser(userId, new UserUpdate({ episodeTrackingEnabled: true }));
-
-            expect(message).toBe("Suivi des épisodes activé");
-        });
-    });
-
     describe("requestDeletion", () => {
         it("marks the account as pending deletion when the password matches", async () => {
             const hash = await SecurityHelper.createHash("MyPassword1");

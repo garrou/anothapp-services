@@ -272,8 +272,8 @@ describe("UserShowRepository (real Postgres)", () => {
         });
     });
 
-    describe("getShowsToResumeByUserId / getShowsToResumeByUserIdEpisodes", () => {
-        it("returns shows marked as not-continuing with unwatched seasons", async () => {
+    describe("getShowsToResumeByUserId", () => {
+        it("returns shows marked as not-continuing with unwatched seasons or episodes", async () => {
             const userId = await insertUser();
             const showId = await insertShow({ seasons: 2, title: "To Resume" });
             await insertSeason(showId, 1);
@@ -281,11 +281,9 @@ describe("UserShowRepository (real Postgres)", () => {
             await insertUserShow(userId, showId, { continueWatching: false });
             await insertUserSeason(userId, showId, 1);
 
-            const bySeasons = await repo.getShowsToResumeByUserId(userId);
-            const byEpisodes = await repo.getShowsToResumeByUserIdEpisodes(userId);
+            const result = await repo.getShowsToResumeByUserId(userId);
 
-            expect(bySeasons.map((s) => s.title)).toEqual(["To Resume"]);
-            expect(byEpisodes.map((s) => s.title)).toEqual(["To Resume"]);
+            expect(result.map((s) => s.title)).toEqual(["To Resume"]);
         });
 
         it("excludes a fully-watched show", async () => {
@@ -298,11 +296,10 @@ describe("UserShowRepository (real Postgres)", () => {
             await insertUserEpisode(userId, userSeasonId, episodeId);
 
             expect(await repo.getShowsToResumeByUserId(userId)).toEqual([]);
-            expect(await repo.getShowsToResumeByUserIdEpisodes(userId)).toEqual([]);
         });
     });
 
-    describe("getShowsFinishedByUserId / getShowsFinishedByUserIdEpisodes", () => {
+    describe("getShowsFinishedByUserId", () => {
         it("returns finished shows the user has fully watched", async () => {
             const userId = await insertUser();
             const showId = await insertShow({ seasons: 1, finished: true, title: "Finished" });
@@ -312,11 +309,9 @@ describe("UserShowRepository (real Postgres)", () => {
             const episodeId = await insertEpisode(showId, 1);
             await insertUserEpisode(userId, userSeasonId, episodeId);
 
-            const bySeasons = await repo.getShowsFinishedByUserId(userId);
-            const byEpisodes = await repo.getShowsFinishedByUserIdEpisodes(userId);
+            const result = await repo.getShowsFinishedByUserId(userId);
 
-            expect(bySeasons.map((s) => s.title)).toEqual(["Finished"]);
-            expect(byEpisodes.map((s) => s.title)).toEqual(["Finished"]);
+            expect(result.map((s) => s.title)).toEqual(["Finished"]);
         });
 
         it("excludes an unfinished show", async () => {
@@ -394,8 +389,8 @@ describe("UserShowRepository (real Postgres)", () => {
         });
     });
 
-    describe("getShowsToContinueByUserId / getShowsToContinueByUserIdEpisodes", () => {
-        it("returns shows being continued with missing seasons", async () => {
+    describe("getShowsToContinueByUserId", () => {
+        it("returns shows being continued with missing seasons or episodes", async () => {
             const userId = await insertUser();
             const showId = await insertShow({ seasons: 2, title: "Continuing" });
             await insertSeason(showId, 1);
@@ -403,11 +398,9 @@ describe("UserShowRepository (real Postgres)", () => {
             await insertUserShow(userId, showId, { continueWatching: true });
             await insertUserSeason(userId, showId, 1);
 
-            const bySeasons = await repo.getShowsToContinueByUserId(userId);
-            const byEpisodes = await repo.getShowsToContinueByUserIdEpisodes(userId);
+            const result = await repo.getShowsToContinueByUserId(userId);
 
-            expect(bySeasons.map((s) => s.title)).toEqual(["Continuing"]);
-            expect(byEpisodes.map((s) => s.title)).toEqual(["Continuing"]);
+            expect(result.map((s) => s.title)).toEqual(["Continuing"]);
         });
     });
 

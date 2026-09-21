@@ -15,9 +15,6 @@ const userAuthRepoMocks = vi.hoisted(() => ({
     getByEmail: vi.fn(),
     updateField: vi.fn(),
 }));
-const episodeServiceMocks = vi.hoisted(() => ({
-    backfillForUser: vi.fn(),
-}));
 const authServiceMocks = vi.hoisted(() => ({
     issueEmailVerification: vi.fn().mockResolvedValue(undefined),
 }));
@@ -39,62 +36,10 @@ vi.mock("../../../repositories/userAuthRepository.js", () => ({
 vi.mock("../../../repositories/refreshTokenRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return refreshTokenRepoMocks; }),
 }));
-vi.mock("../../../services/episodeService.js", () => ({
-    default: vi.fn().mockImplementation(function () { return episodeServiceMocks; }),
-}));
 vi.mock("../../../services/authService.js", () => ({
     default: vi.fn().mockImplementation(function () { return authServiceMocks; }),
 }));
 vi.mock("../../../config/db.js", () => ({ default: dbMocks }));
-
-describe("UserService.updateUser - episode tracking", () => {
-    let userService;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        userService = new UserService();
-    });
-
-    it("enables the flag and triggers a backfill of the existing history", async () => {
-        userRepoMocks.updateField.mockResolvedValue(true);
-
-        const message = await userService.updateUser("user-1", new UserUpdate({ episodeTrackingEnabled: true }));
-
-        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "episode_tracking_enabled", true);
-        expect(episodeServiceMocks.backfillForUser).toHaveBeenCalledWith("user-1");
-        expect(message).toBe("Suivi des épisodes activé");
-    });
-
-    it("disables the flag without triggering a backfill", async () => {
-        userRepoMocks.updateField.mockResolvedValue(true);
-
-        const message = await userService.updateUser("user-1", new UserUpdate({ episodeTrackingEnabled: false }));
-
-        expect(episodeServiceMocks.backfillForUser).not.toHaveBeenCalled();
-        expect(message).toBe("Suivi des épisodes désactivé");
-    });
-
-    it("throws a 500 when the update fails in the database", async () => {
-        userRepoMocks.updateField.mockResolvedValue(false);
-
-        await expect(
-            userService.updateUser("user-1", new UserUpdate({ episodeTrackingEnabled: true }))
-        ).rejects.toThrow("Impossible de modifier le suivi des épisodes");
-        expect(episodeServiceMocks.backfillForUser).not.toHaveBeenCalled();
-    });
-
-    it("enables the flag without a backfill when the caller passes skipBackfill, e.g. a data import", async () => {
-        userRepoMocks.updateField.mockResolvedValue(true);
-
-        const message = await userService.updateUser(
-            "user-1", new UserUpdate({ episodeTrackingEnabled: true }), { skipBackfill: true }
-        );
-
-        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "episode_tracking_enabled", true);
-        expect(episodeServiceMocks.backfillForUser).not.toHaveBeenCalled();
-        expect(message).toBe("Suivi des épisodes activé");
-    });
-});
 
 describe("UserService.updateUser - password change", () => {
     let userService;
@@ -236,7 +181,7 @@ describe("UserService.getProfile", () => {
         vi.clearAllMocks();
         userService = new UserService();
         userRepoMocks.getUserWithAuthById.mockResolvedValue({
-            id: "user-2", username: "user2", picture: null, episodeTrackingEnabled: false,
+            id: "user-2", username: "user2", picture: null,
             email: "user2@test.fr",
         });
     });
@@ -257,7 +202,7 @@ describe("UserService.getProfile", () => {
     it("includes createdAt for the profile owner", async () => {
         userRepoMocks.getUserWithAuthById.mockResolvedValue({
             id: "user-2", username: "user2", picture: null,
-            episodeTrackingEnabled: false, createdAt: "2020-05-01T00:00:00.000Z",
+            createdAt: "2020-05-01T00:00:00.000Z",
         });
 
         const profile = await userService.getProfile("user-2", true);
@@ -268,7 +213,7 @@ describe("UserService.getProfile", () => {
     it("never includes createdAt when viewing another user's profile (GET /users/:id has no friendship check)", async () => {
         userRepoMocks.getUserWithAuthById.mockResolvedValue({
             id: "user-2", username: "user2", picture: null,
-            episodeTrackingEnabled: false, createdAt: "2020-05-01T00:00:00.000Z",
+            createdAt: "2020-05-01T00:00:00.000Z",
         });
 
         const profile = await userService.getProfile("user-2", false);

@@ -5,7 +5,7 @@ import FriendRepository from "../repositories/friendRepository.js";
 import EpisodeService from "./episodeService.js";
 import ServiceError from "../helpers/serviceError.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
-import {MAX_WATCHED_WITH, MONTHS_SHORTCUTS} from "../constants/validation.js";
+import {MAX_WATCHED_WITH} from "../constants/validation.js";
 import eventBus from "../helpers/eventBus.js";
 
 export default class SeasonService {
@@ -60,21 +60,6 @@ export default class SeasonService {
      */
     addAllEpisodesViewing = async (currentUserId, id) => {
         return this._episodeService.addAllViewings(currentUserId, id);
-    }
-
-    /**
-     * @param currentUserId
-     * @param year
-     * @param month
-     * @returns {Promise<SeasonTimeline[] | Season[]>}
-     */
-    getSeasons = async (currentUserId, year, month) => {
-        if (MONTHS_SHORTCUTS.includes(month)) {
-            return await this._userSeasonRepository.getViewedByMonthAgo(currentUserId, month);
-        } else if (year) {
-            return await this._userSeasonRepository.getSeasonsByAddedYear(currentUserId, year);
-        }
-        throw new ServiceError(400, ERROR_INVALID_REQUEST);
     }
 
     /**

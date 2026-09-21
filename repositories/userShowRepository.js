@@ -245,26 +245,6 @@ export default class UserShowRepository {
      */
     getShowsToResumeByUserId = async (userId) => {
         const res = await db.query(`
-            SELECT s.*, us.*,
-                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
-            FROM shows s
-            JOIN users_shows us ON us.show_id = s.id
-            WHERE us.user_id = $1 AND us.continue = FALSE AND s.seasons - (
-                SELECT COUNT(DISTINCT users_seasons.number)
-                FROM users_seasons
-                WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
-            ) > 0
-            ORDER BY s.title
-        `, [userId]);
-        return res.rows.map((row) => new UserShow(row));
-    }
-
-    /**
-     * @param {string} userId
-     * @returns Promise<UserShow[]>
-     */
-    getShowsToResumeByUserIdEpisodes = async (userId) => {
-        const res = await db.query(`
             SELECT * FROM (
                 SELECT s.*, us.*,
                     (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names,
@@ -295,26 +275,6 @@ export default class UserShowRepository {
      * @returns Promise<UserShow[]>
      */
     getShowsFinishedByUserId = async (userId) => {
-        const res = await db.query(`
-            SELECT s.*, us.*,
-                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
-            FROM shows s
-            JOIN users_shows us ON us.show_id = s.id
-            WHERE us.user_id = $1 AND s.finished = TRUE AND s.seasons - (
-                SELECT COUNT(DISTINCT users_seasons.number)
-                FROM users_seasons
-                WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
-            ) = 0
-            ORDER BY s.title
-        `, [userId]);
-        return res.rows.map((row) => new UserShow(row));
-    }
-
-    /**
-     * @param {string} userId
-     * @returns Promise<UserShow[]>
-     */
-    getShowsFinishedByUserIdEpisodes = async (userId) => {
         const res = await db.query(`
             SELECT * FROM (
                 SELECT s.*, us.*,
@@ -443,31 +403,6 @@ export default class UserShowRepository {
      * @returns Promise<UserShow[]>
      */
     getShowsToContinueByUserId = async (userId) => {
-        const res = await db.query(`
-            SELECT *
-            FROM (
-                SELECT s.*, us.added_at, us.continue, us.favorite,
-                    (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names,
-                    s.seasons - (
-                    SELECT COUNT(DISTINCT users_seasons.number)
-                    FROM users_seasons
-                    WHERE users_seasons.user_id = $1 AND users_seasons.show_id = s.id
-                ) AS missing
-                FROM shows s
-                JOIN users_shows us ON s.id = us.show_id
-                WHERE us.user_id = $1 AND us.continue = TRUE
-            ) sub
-            WHERE missing > 0
-            ORDER BY title
-        `, [userId]);
-        return res.rows.map((row) => new UserShow(row));
-    }
-
-    /**
-     * @param {string} userId
-     * @returns Promise<UserShow[]>
-     */
-    getShowsToContinueByUserIdEpisodes = async (userId) => {
         const res = await db.query(`
             SELECT *
             FROM (

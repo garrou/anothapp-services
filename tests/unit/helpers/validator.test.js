@@ -103,17 +103,13 @@ describe("Validator.isValidImportFile", () => {
 
     it("accepts a real export - user/email live under user, not at the top level", () => {
         expect(Validator.isValidImportFile({
-            user: { id: "u1", username: "test2", email: "test2@gmail.com", episodeTrackingEnabled: false },
+            user: { id: "u1", username: "test2", email: "test2@gmail.com" },
             shows: [], playlists: [], favoriteActors: [], platforms: [],
         })).toBe(true);
     });
 
     it("accepts a payload with no user block at all", () => {
         expect(Validator.isValidImportFile({ shows: [], playlists: [{ name: "P" }] })).toBe(true);
-    });
-
-    it("rejects a non-boolean episodeTrackingEnabled", () => {
-        expect(Validator.isValidImportFile({ shows: [], user: { episodeTrackingEnabled: "yes" } })).toBe(false);
     });
 
     it("rejects playlists/favoriteActors/platforms that aren't arrays when present", () => {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import db from "../../../config/db.js";
 import AchievementService from "../../../services/achievementService.js";
 import { resetDb } from "../resetDb.js";
-import { insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason } from "../fixtures.js";
+import { insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason, insertEpisode, insertUserEpisode } from "../fixtures.js";
 
 describe("AchievementService (real Postgres)", () => {
     /** @type {AchievementService} */
@@ -15,11 +15,13 @@ describe("AchievementService (real Postgres)", () => {
 
     describe("evaluate", () => {
         it("unlocks the first streak tier and records a notification", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: false });
+            const userId = await insertUser();
             const showId = await insertShow();
             await insertSeason(showId, 1);
             await insertUserShow(userId, showId);
-            await insertUserSeason(userId, showId, 1, { addedAt: new Date().toISOString() });
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            const episodeId = await insertEpisode(showId, 1);
+            await insertUserEpisode(userId, userSeasonId, episodeId);
 
             await service.evaluate(userId, ["streak"]);
 
@@ -32,11 +34,13 @@ describe("AchievementService (real Postgres)", () => {
         });
 
         it("does not downgrade or duplicate-notify when re-evaluated at the same level", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: false });
+            const userId = await insertUser();
             const showId = await insertShow();
             await insertSeason(showId, 1);
             await insertUserShow(userId, showId);
-            await insertUserSeason(userId, showId, 1, { addedAt: new Date().toISOString() });
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            const episodeId = await insertEpisode(showId, 1);
+            await insertUserEpisode(userId, userSeasonId, episodeId);
             await service.evaluate(userId, ["streak"]);
 
             await service.evaluate(userId, ["streak"]);

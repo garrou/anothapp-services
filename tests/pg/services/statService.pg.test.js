@@ -16,22 +16,8 @@ describe("StatService (real Postgres)", () => {
     });
 
     describe("getStats", () => {
-        it("aggregates season-level stats for a non-tracking user", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: false });
-            const showId = await insertShow({ duration: 45 });
-            await insertSeason(showId, 1, { episodes: 10 });
-            await insertUserShow(userId, showId);
-            await insertUserSeason(userId, showId, 1);
-
-            const result = await service.getStats(userId);
-
-            expect(result.nbSeries).toBe(1);
-            expect(result.nbSeasons).toBe(1);
-            expect(result.episodesHeatmap).toBeUndefined();
-        });
-
-        it("aggregates episode-level stats, including the heatmap, for a tracking user", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+        it("aggregates episode-level stats, including the heatmap", async () => {
+            const userId = await insertUser();
             const showId = await insertShow({ duration: 30 });
             await insertSeason(showId, 1);
             await insertUserShow(userId, showId);
@@ -55,11 +41,13 @@ describe("StatService (real Postgres)", () => {
 
     describe("getWrapped", () => {
         it("returns the wrapped summary for a given year", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: false });
+            const userId = await insertUser();
             const showId = await insertShow({ duration: 60, title: "Wrapped Show" });
             await insertSeason(showId, 1);
             await insertUserShow(userId, showId);
-            await insertUserSeason(userId, showId, 1, { addedAt: "2025-05-01" });
+            const userSeasonId = await insertUserSeason(userId, showId, 1, { addedAt: "2025-05-01" });
+            const episodeId = await insertEpisode(showId, 1);
+            await insertUserEpisode(userId, userSeasonId, episodeId, { watchedAt: "2025-05-01" });
 
             const result = await service.getWrapped(userId, "2025");
 
@@ -76,13 +64,15 @@ describe("StatService (real Postgres)", () => {
 
     describe("getLeaderboard", () => {
         it("ranks the user and their friends by this month's watch time", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: false });
-            const friendId = await insertUser({ episodeTrackingEnabled: false });
+            const userId = await insertUser();
+            const friendId = await insertUser();
             await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
             const showId = await insertShow({ duration: 120 });
             await insertSeason(showId, 1);
             await insertUserShow(friendId, showId);
-            await insertUserSeason(friendId, showId, 1);
+            const userSeasonId = await insertUserSeason(friendId, showId, 1);
+            const episodeId = await insertEpisode(showId, 1);
+            await insertUserEpisode(friendId, userSeasonId, episodeId);
 
             const result = await service.getLeaderboard(userId);
 

@@ -2,7 +2,6 @@ import eventBus from "../helpers/eventBus.js";
 import AchievementService from "./achievementService.js";
 
 const EPISODE_CODES = ["streak", "watch_time", "shows_completed", "rewatch", "binge"];
-const SEASON_WATCHED_CODES = ["streak", "watch_time", "shows_started", "shows_completed", "countries", "kinds", "platforms", "rewatch", "binge"];
 const SHOW_STARTED_CODES = ["shows_started", "countries", "kinds"];
 const SHOW_RATED_CODES = ["notes_count"];
 const FRIEND_ACCEPTED_CODES = ["friends_count"];
@@ -20,7 +19,6 @@ export default class AchievementListener {
     }
 
     #register = () => {
-        eventBus.on("season.watched", this.#evaluate(SEASON_WATCHED_CODES, (p) => [p.actorUserId]));
         eventBus.on("season.watched_with", this.#evaluate(WATCHED_WITH_CODES, (p) => [p.actorUserId, ...p.recipientIds]));
         eventBus.on("episode.watched", this.#evaluate(EPISODE_CODES, (p) => [p.actorUserId]));
         eventBus.on("episode.bulk_watched", this.#evaluate(EPISODE_CODES, (p) => [p.actorUserId]));

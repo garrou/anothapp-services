@@ -39,16 +39,6 @@ describe("AchievementListener", () => {
         );
     });
 
-    it("evaluates the broader season-level codes for a season watched", async () => {
-        eventBus.emit("season.watched", { actorUserId: "user-1", showId: 42 });
-        await flush();
-
-        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith(
-            "user-1",
-            ["streak", "watch_time", "shows_started", "shows_completed", "countries", "kinds", "platforms", "rewatch", "binge"]
-        );
-    });
-
     it("evaluates only shows_started/countries/kinds for a show started", async () => {
         eventBus.emit("show.started", { actorUserId: "user-1", showId: 42 });
         await flush();
@@ -116,7 +106,6 @@ describe("AchievementListener", () => {
 
     it("never includes account_age in any event's code list - it has its own scheduled task", async () => {
         for (const [event, payload] of [
-            ["season.watched", { actorUserId: "u", showId: 1 }],
             ["episode.watched", { actorUserId: "u", showId: 1 }],
             ["show.started", { actorUserId: "u", showId: 1 }],
             ["show.rated", { actorUserId: "u", showId: 1 }],

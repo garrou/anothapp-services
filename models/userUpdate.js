@@ -11,7 +11,6 @@ export default class UserUpdate {
         this.confirmEmail = obj.confirmEmail;
         this.image = obj.image;
         this.lastExport = obj.lastExport;
-        this.episodeTrackingEnabled = obj.episodeTrackingEnabled;
     }
 
     /**
@@ -26,12 +25,5 @@ export default class UserUpdate {
      */
     isEmailUpdate() {
         return !!this.newEmail && !!this.confirmEmail;
-    }
-
-    /**
-     * @returns {boolean}
-     */
-    isEpisodeTrackingUpdate() {
-        return typeof this.episodeTrackingEnabled === "boolean";
     }
 }

@@ -105,26 +105,6 @@ describe("UserRepository (real Postgres)", () => {
         });
     });
 
-    describe("hasEpisodeTrackingEnabled / getEpisodeTrackingByIds", () => {
-        it("reflects each user's flag", async () => {
-            const enabledUser = await insertUser({ episodeTrackingEnabled: true });
-            const disabledUser = await insertUser({ episodeTrackingEnabled: false });
-
-            expect(await repo.hasEpisodeTrackingEnabled(enabledUser)).toBe(true);
-            expect(await repo.hasEpisodeTrackingEnabled(disabledUser)).toBe(false);
-
-            const map = await repo.getEpisodeTrackingByIds([enabledUser, disabledUser]);
-            expect(map.get(enabledUser)).toBe(true);
-            expect(map.get(disabledUser)).toBe(false);
-        });
-
-        it("getEpisodeTrackingByIds returns an empty map for an empty list", async () => {
-            const result = await repo.getEpisodeTrackingByIds([]);
-
-            expect(result.size).toBe(0);
-        });
-    });
-
     describe("updateField", () => {
         it("updates an allowed field", async () => {
             const userId = await insertUser();

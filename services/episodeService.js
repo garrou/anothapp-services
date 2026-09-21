@@ -1,16 +1,12 @@
 import EpisodeRepository from "../repositories/episodeRepository.js";
 import UserEpisodeRepository from "../repositories/userEpisodeRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
-import UserRepository from "../repositories/userRepository.js";
 import SearchService from "./searchService.js";
 import ServiceError from "../helpers/serviceError.js";
 import Validator from "../helpers/validator.js";
 import {ERROR_INVALID_REQUEST, ERROR_VIEWING_NOT_IN_COLLECTION} from "../constants/errors.js";
 import {MONTHS_SHORTCUTS} from "../constants/validation.js";
-import mapWithConcurrency from "../schedule/lib/concurrency.js";
 import eventBus from "../helpers/eventBus.js";
-
-const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
 
 export default class EpisodeService {
 
@@ -18,20 +14,7 @@ export default class EpisodeService {
         this._episodeRepository = new EpisodeRepository();
         this._userEpisodeRepository = new UserEpisodeRepository();
         this._userSeasonRepository = new UserSeasonRepository();
-        this._userRepository = new UserRepository();
         this._searchService = new SearchService();
-    }
-
-    /**
-     * @param {string} userId
-     * @returns {Promise<void>}
-     */
-    #ensureTrackingEnabled = async (userId) => {
-        const enabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
-
-        if (!enabled) {
-            throw new ServiceError(400, "Le suivi des épisodes n'est pas activé");
-        }
     }
 
     /**
@@ -43,7 +26,6 @@ export default class EpisodeService {
         if (!MONTHS_SHORTCUTS.includes(month)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        await this.#ensureTrackingEnabled(userId);
         return this._userEpisodeRepository.getViewedByMonthAgo(userId, month);
     }
 
@@ -96,23 +78,6 @@ export default class EpisodeService {
 
     /**
      * @param {string} userId
-     * @returns {Promise<void>}
-     */
-    backfillForUser = async (userId) => {
-        const seasons = await this._userSeasonRepository.getUserSeasonsByUserId(userId);
-
-        await mapWithConcurrency(seasons, CONCURRENCY, async (season) => {
-            const episodes = await this.#ensureEpisodesExist(season.showId, season.number);
-            const aired = episodes.filter((e) => e.date && !Validator.isInFuture(e.date));
-
-            await Promise.all(aired.map((episode) =>
-                this._userEpisodeRepository.createIfMissing(userId, season.id, episode.id, season.addedAt, season.platformId)
-            ));
-        });
-    }
-
-    /**
-     * @param {string} userId
      * @param {number?} userSeasonId
      * @returns {Promise<UserEpisode[]>}
      */
@@ -120,7 +85,6 @@ export default class EpisodeService {
         if (!userSeasonId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        await this.#ensureTrackingEnabled(userId);
         const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
 
         if (!season) {
@@ -140,7 +104,6 @@ export default class EpisodeService {
         if (!userSeasonId || !episodeId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        await this.#ensureTrackingEnabled(userId);
         const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
 
         if (!season) {
@@ -182,7 +145,6 @@ export default class EpisodeService {
         if (!userSeasonId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        await this.#ensureTrackingEnabled(userId);
         const season = await this._userSeasonRepository.getOwnedSeasonViewing(userId, userSeasonId);
 
         if (!season) {
@@ -233,11 +195,6 @@ export default class EpisodeService {
      * @returns {Promise<void>}
      */
     updatePlatformForSeason = async (userId, userSeasonId, platformId) => {
-        const enabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
-
-        if (!enabled) {
-            return;
-        }
         await this._userEpisodeRepository.updatePlatformByUserSeasonId(userSeasonId, platformId);
     }
 

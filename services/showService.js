@@ -5,7 +5,6 @@ import EpisodeService from "./episodeService.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import SeasonRepository from "../repositories/seasonRepository.js";
-import UserRepository from "../repositories/userRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import UserListRepository from "../repositories/userListRepository.js";
 import Validator from "../helpers/validator.js";
@@ -24,7 +23,6 @@ export default class ShowService {
         this._episodeService = new EpisodeService();
         this._friendRepository = new FriendRepository();
         this._seasonRepository = new SeasonRepository();
-        this._userRepository = new UserRepository();
     }
 
     /**
@@ -35,26 +33,14 @@ export default class ShowService {
      */
     #getShowsByStatus = async (userId, status, friendId) => {
         switch (status) {
-            case "stopped": {
-                const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
-                return episodeTrackingEnabled
-                    ? this._userShowRepository.getShowsToResumeByUserIdEpisodes(userId)
-                    : this._userShowRepository.getShowsToResumeByUserId(userId);
-            }
+            case "stopped":
+                return this._userShowRepository.getShowsToResumeByUserId(userId);
             case "watchlist":
                 return this._userListRepository.getListShowsByUserId(userId);
-            case "finished": {
-                const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
-                return episodeTrackingEnabled
-                    ? this._userShowRepository.getShowsFinishedByUserIdEpisodes(userId)
-                    : this._userShowRepository.getShowsFinishedByUserId(userId);
-            }
-            case "continue": {
-                const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(userId);
-                return episodeTrackingEnabled
-                    ? this._userShowRepository.getShowsToContinueByUserIdEpisodes(userId)
-                    : this._userShowRepository.getShowsToContinueByUserId(userId);
-            }
+            case "finished":
+                return this._userShowRepository.getShowsFinishedByUserId(userId);
+            case "continue":
+                return this._userShowRepository.getShowsToContinueByUserId(userId);
             case "favorite":
                 return this._userShowRepository.getFavoritesByUserId(friendId ?? userId);
             case "next":
@@ -174,24 +160,15 @@ export default class ShowService {
             throw new ServiceError(404, "Série introuvable");
         }
         const seasons = await this._userSeasonRepository.getDistinctByUserIdByShowId(currentUserId, id);
-        const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
-        let time, nbEpisodes, distinctEpisodes;
+        const [time, nbEpisodes, distinctEpisodes] = await this._episodeService.getWatchedTimeAndCountByShowId(currentUserId, id);
 
-        if (episodeTrackingEnabled) {
-            [time, nbEpisodes, distinctEpisodes] = await this._episodeService.getWatchedTimeAndCountByShowId(currentUserId, id);
-        } else {
-            [time, nbEpisodes] = await this._userSeasonRepository.getTimeEpisodesByUserIdByShowId(currentUserId, id);
-        }
-        const result = {
+        return {
             "serie": show,
             "seasons": seasons,
             "time": isNaN(time) ? 0 : time,
-            "episodes": isNaN(nbEpisodes) ? 0 : nbEpisodes
+            "episodes": isNaN(nbEpisodes) ? 0 : nbEpisodes,
+            distinctEpisodes,
         };
-        if (episodeTrackingEnabled) {
-            result.distinctEpisodes = distinctEpisodes;
-        }
-        return result;
     }
 
     /**
@@ -253,11 +230,6 @@ export default class ShowService {
         if (!added) {
             throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
         }
-        const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
-
-        if (!episodeTrackingEnabled) {
-            eventBus.emit("season.watched", {actorUserId: currentUserId, showId: id, metadata: {seasonNumber: num}});
-        }
     }
 
     /**
@@ -278,14 +250,9 @@ export default class ShowService {
      * @param {string} currentUserId
      * @param {number?} id
      * @param {number?} num
-     * @returns {Promise<number|null>} null when the user doesn't track episodes - caller should fall back to the season-level estimate
+     * @returns {Promise<number>}
      */
     getSeasonWatchedTime = async (currentUserId, id, num) => {
-        const episodeTrackingEnabled = await this._userRepository.hasEpisodeTrackingEnabled(currentUserId);
-
-        if (!episodeTrackingEnabled) {
-            return null;
-        }
         return this._episodeService.getWatchedTimeByShowIdBySeasonNumber(currentUserId, id, num);
     }
 

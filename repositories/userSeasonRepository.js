@@ -2,10 +2,8 @@ import db from "../config/db.js";
 import {cumulate, frenchMonth} from "../helpers/utils.js";
 import Season from "../models/season.js";
 import {PartialUserSeason, UserSeason} from "../models/userSeason.js";
-import SeasonTimeline from "../models/seasonTimeline.js";
 import Stat from "../models/stat.js";
 import UserSeasonFriendRepository from "./userSeasonFriendRepository.js";
-import {MAX_MINUTES_PER_DAY, MAX_MINUTES_PER_MONTH} from "../constants/viewingTime.js";
 
 export default class UserSeasonRepository {
 
@@ -124,24 +122,6 @@ export default class UserSeasonRepository {
     /**
      * @param {string} userId
      * @param {number} showId
-     * @returns {Promise<number[]>}
-     */
-    getTimeEpisodesByUserIdByShowId = async (userId, showId) => {
-        const res = await db.query(`
-            SELECT SUM(seasons.episodes * shows.duration) AS time, SUM(seasons.episodes) as episodes
-            FROM users_seasons
-            JOIN seasons
-            ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON seasons.show_id = shows.id
-            WHERE user_id = $1 AND users_seasons.show_id = $2
-        `, [userId, showId]);
-        const row = res.rows[0];
-        return [parseInt(row["time"]), parseInt(row["episodes"])];
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} showId
      * @param {number} number
      * @returns {Promise<number>}
      */
@@ -155,21 +135,6 @@ export default class UserSeasonRepository {
             WHERE users_seasons.user_id = $1 AND users_seasons.show_id = $2 AND users_seasons.number = $3
         `, [userId, showId, number]);
         return parseInt(res.rows[0]["time"]);
-    }
-
-    /**
-     * @param {string} userId
-     * @returns {Promise<number>}
-     */
-    getTotalTimeByUserId = async (userId) => {
-        const res = await db.query(`
-            SELECT SUM(seasons.episodes * shows.duration) AS time
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON seasons.show_id = shows.id
-            WHERE user_id = $1
-        `, [userId]);
-        return parseInt(res.rows[0]["time"] ?? 0);
     }
 
     /**
@@ -193,59 +158,6 @@ export default class UserSeasonRepository {
      * @param {string} userId
      * @returns {Promise<Stat[]>}
      */
-    getTimeHourByUserIdGroupByYear = async (userId) => {
-        const res = await db.query(`
-            SELECT EXTRACT(YEAR FROM added_at) AS label, (SUM(shows.duration * seasons.episodes) / 60) AS value
-            FROM users_seasons
-            JOIN shows ON users_seasons.show_id = shows.id
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number AND DATE_PART('year', NOW()) - EXTRACT (YEAR FROM added_at) <= 10
-            WHERE users_seasons.user_id = $1
-            GROUP BY label
-            ORDER BY label
-        `, [userId]);
-        return res.rows.map((row) => new Stat(row));
-    }
-
-    /**
-     * @param {string} userId
-     * @returns {Promise<number>}
-     */
-    getTimeCurrentMonthByUserId = async (userId) => {
-        const res = await db.query(`
-            SELECT SUM(shows.duration * seasons.episodes) AS time
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON seasons.show_id = shows.id
-            WHERE users_seasons.user_id = $1 AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
-              AND seasons.episodes * shows.duration <= ${MAX_MINUTES_PER_MONTH}
-        `, [userId]);
-        return parseInt(res.rows[0]["time"] ?? 0);
-    }
-
-    /**
-     * @param {string[]} userIds
-     * @returns {Promise<Map<string, number>>}
-     */
-    getTimeCurrentMonthByUserIds = async (userIds) => {
-        if (!userIds.length) {
-            return new Map();
-        }
-        const res = await db.query(`
-            SELECT users_seasons.user_id, SUM(shows.duration * seasons.episodes) AS time
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON seasons.show_id = shows.id
-            WHERE users_seasons.user_id = ANY($1::uuid[]) AND added_at >= DATE_TRUNC('month', CURRENT_DATE)
-              AND seasons.episodes * shows.duration <= ${MAX_MINUTES_PER_MONTH}
-            GROUP BY users_seasons.user_id
-        `, [userIds]);
-        return new Map(res.rows.map((row) => [row["user_id"], parseInt(row["time"] ?? 0)]));
-    }
-
-    /**
-     * @param {string} userId
-     * @returns {Promise<Stat[]>}
-     */
     getNbSeasonsByUserIdGroupByMonth = async (userId) => {
         const res = await db.query(`
             SELECT EXTRACT(MONTH FROM added_at) AS num, COUNT(*) AS value
@@ -255,37 +167,6 @@ export default class UserSeasonRepository {
             ORDER BY num
         `, [userId]);
         return res.rows.map((row) => Stat.from(frenchMonth(row["num"]), row["value"]));
-    }
-
-    /**
-     * @param {string} userId
-     * @returns {Promise<Stat[]>}
-     */
-    getNbEpisodesByUserIdGroupByYear = async (userId) => {
-        const res = await db.query(`
-            SELECT EXTRACT(YEAR FROM added_at) AS label, SUM(episodes) AS value
-            FROM users_seasons
-            JOIN seasons
-            ON users_seasons.show_id = seasons.show_id
-            WHERE users_seasons.number = seasons.number AND users_seasons.user_id = $1 AND DATE_PART('year', NOW()) - EXTRACT (YEAR FROM added_at) <= 10
-            GROUP BY label
-            ORDER BY label
-        `, [userId]);
-        return res.rows.map((row) => new Stat(row));
-    }
-
-    /**
-     * @param {string} userId
-     * @returns {Promise<number>}
-     */
-    getTotalEpisodesByUserId = async (userId) => {
-        const res = await db.query(`
-            SELECT SUM(episodes) AS total
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            WHERE user_id = $1
-        `, [userId]);
-        return parseInt(res.rows[0]["total"] ?? 0);
     }
 
     /**
@@ -303,97 +184,6 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
-     * @param {number} month
-     * @returns {Promise<SeasonTimeline[]>}
-     */
-    getViewedByMonthAgo = async (userId, month) => {
-        const res = await db.query(`
-            SELECT s.id, s.title, s.poster, se.image, se.episodes, us.number, us.added_at, us.platform_id
-            FROM users_seasons us
-            JOIN seasons se ON se.show_id = us.show_id
-            JOIN shows s ON s.id = se.show_id AND se.number = us.number AND added_at >= DATE_TRUNC('month', CURRENT_DATE) - $2 * INTERVAL '1 month'
-            WHERE us.user_id = $1
-            ORDER BY added_at DESC
-        `, [userId, month]);
-        return res.rows.map((row) => new SeasonTimeline(row));
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} limit
-     * @returns Promise<Stat[]>
-     */
-    getRankingViewingTimeByShows = async (userId, limit = 10) => {
-        const res = await db.query(`
-            SELECT shows.title AS label, SUM(seasons.episodes * shows.duration) / 60 AS value
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON shows.id = seasons.show_id
-            WHERE user_id = $1
-            GROUP BY label
-            ORDER BY value DESC
-            LIMIT $2
-        `, [userId, limit]);
-        return res.rows.map((row) => new Stat(row));
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} limit
-     * @returns Promise<Stat[]>
-     */
-    getRecordViewingTimeMonth = async (userId, limit = 10) => {
-        const res = await db.query(`
-            SELECT TO_CHAR(added_at, 'MM/YYYY') as label, SUM(shows.duration * seasons.episodes) AS value
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON seasons.show_id = shows.id
-            WHERE users_seasons.user_id = $1 AND seasons.episodes * shows.duration <= ${MAX_MINUTES_PER_MONTH}
-            GROUP BY label
-            ORDER BY value DESC
-            LIMIT $2
-        `, [userId, limit]);
-        return res.rows.reverse().map((row) => new Stat(row));
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} limit
-     * @returns Promise<Stat[]> - seasons whose own runtime alone exceeds a calendar day (1440 minutes) are excluded
-     */
-    getRecordViewingTimeDay = async (userId, limit = 10) => {
-        const res = await db.query(`
-            SELECT TO_CHAR(added_at, 'DD/MM/YYYY') as label, SUM(shows.duration * seasons.episodes) AS value
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON seasons.show_id = shows.id
-            WHERE users_seasons.user_id = $1 AND seasons.episodes * shows.duration <= ${MAX_MINUTES_PER_DAY}
-            GROUP BY label
-            HAVING SUM(shows.duration * seasons.episodes) <= ${MAX_MINUTES_PER_DAY}
-            ORDER BY value DESC
-            LIMIT $2
-        `, [userId, limit]);
-        return res.rows.reverse().map((row) => new Stat(row));
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} year
-     * @returns Promise<Season[]>
-     */
-    getSeasonsByAddedYear = async (userId, year) => {
-        const res = await db.query(`
-            SELECT seasons.show_id, users_seasons.number, seasons.episodes, seasons.image
-            FROM users_seasons
-            JOIN seasons ON seasons.show_id = users_seasons.show_id AND seasons.number = users_seasons.number
-            WHERE users_seasons.user_id = $1 AND EXTRACT(year FROM added_at) = $2
-            ORDER BY added_at, number
-        `, [userId, year]);
-        return res.rows.map((row) => new Season(row));
-    }
-
-    /**
-     * @param {string} userId
      * @returns Promise<Stat[]>
      */
     getNbSeasonsByUserIdGroupByMonthByCurrentYear = async (userId)  => {
@@ -405,136 +195,6 @@ export default class UserSeasonRepository {
             ORDER BY num
         `, [userId]);
         return res.rows.map((row) => Stat.from(frenchMonth(row["num"]), row["value"]));
-    }
-
-    /**
-     * @param {string} userId
-     * @returns {Promise<Stat[]>}
-     */
-    getNbEpisodesByUserIdGroupByMonthByCurrentYear = async (userId)  => {
-        const res = await db.query(`
-            SELECT EXTRACT(MONTH FROM added_at) AS num, SUM(episodes) AS value
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id
-            WHERE users_seasons.number = seasons.number AND EXTRACT (YEAR FROM added_at) = EXTRACT (YEAR FROM current_date) AND users_seasons.user_id = $1
-            GROUP BY num
-            ORDER BY num
-        `, [userId]);
-        return res.rows.map((row) => Stat.from(frenchMonth(row["num"]), row["value"]));
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} year
-     * @returns {Promise<number>}
-     */
-    getTotalTimeByUserIdByYear = async (userId, year) => {
-        const res = await db.query(`
-            SELECT SUM(seasons.episodes * shows.duration) AS time
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON seasons.show_id = shows.id
-            WHERE user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
-        `, [userId, year]);
-        return parseInt(res.rows[0]["time"] ?? 0);
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} year
-     * @returns {Promise<number>}
-     */
-    getTotalEpisodesByUserIdByYear = async (userId, year) => {
-        const res = await db.query(`
-            SELECT SUM(episodes) AS total
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            WHERE user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
-        `, [userId, year]);
-        return parseInt(res.rows[0]["total"] ?? 0);
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} year
-     * @returns {Promise<Stat|null>} the show watched the most (by minutes) that year
-     */
-    getTopShowByUserIdByYear = async (userId, year) => {
-        const res = await db.query(`
-            SELECT shows.title AS label, SUM(seasons.episodes * shows.duration) AS value
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON shows.id = seasons.show_id
-            WHERE user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
-            GROUP BY label
-            ORDER BY value DESC
-            LIMIT 1
-        `, [userId, year]);
-        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} year
-     * @returns {Promise<Stat|null>} the kind with the most watch time that year
-     */
-    getKindsTimeByUserIdByYear = async (userId, year) => {
-        const res = await db.query(`
-            WITH show_time AS (
-                SELECT seasons.show_id AS show_id, SUM(seasons.episodes * shows.duration) AS value
-                FROM users_seasons
-                JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-                JOIN shows ON shows.id = seasons.show_id
-                WHERE user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
-                GROUP BY seasons.show_id
-            )
-            SELECT k.name AS label, SUM(show_time.value) AS value
-            FROM show_time
-            JOIN shows_kinds sk ON sk.show_id = show_time.show_id
-            JOIN kinds k ON k.id = sk.kind_id
-            GROUP BY k.name
-            ORDER BY value DESC
-            LIMIT 1
-        `, [userId, year]);
-        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} year
-     * @returns {Promise<Stat|null>} the platform used the most that year
-     */
-    getTopPlatformByUserIdByYear = async (userId, year) => {
-        const res = await db.query(`
-            SELECT p.name AS label, COUNT(*) AS value
-            FROM users_seasons us
-            JOIN platforms p ON p.id = us.platform_id
-            WHERE us.user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
-            GROUP BY label
-            ORDER BY value DESC
-            LIMIT 1
-        `, [userId, year]);
-        return res.rowCount === 1 ? new Stat(res.rows[0]) : null;
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} year
-     * @returns {Promise<Stat|null>} the month watched the most (by minutes) within that year
-     */
-    getBestMonthByUserIdByYear = async (userId, year) => {
-        const res = await db.query(`
-            SELECT EXTRACT(MONTH FROM added_at) AS num, SUM(shows.duration * seasons.episodes) AS value
-            FROM users_seasons
-            JOIN seasons ON users_seasons.show_id = seasons.show_id AND users_seasons.number = seasons.number
-            JOIN shows ON seasons.show_id = shows.id
-            WHERE users_seasons.user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
-              AND shows.duration * seasons.episodes <= ${MAX_MINUTES_PER_MONTH}
-            GROUP BY num
-            ORDER BY value DESC
-            LIMIT 1
-        `, [userId, year]);
-        return res.rowCount === 1 ? Stat.from(frenchMonth(res.rows[0]["num"]), res.rows[0]["value"]) : null;
     }
 
     /**
@@ -607,30 +267,4 @@ export default class UserSeasonRepository {
         } : null;
     }
 
-    /**
-     * @param {string} userId
-     * @returns {Promise<string[]>} distinct days ('YYYY-MM-DD') the user logged a watched season
-     */
-    getWatchedDatesByUserId = async (userId) => {
-        const res = await db.query(`
-            SELECT DISTINCT TO_CHAR(added_at, 'YYYY-MM-DD') AS date
-            FROM users_seasons
-            WHERE user_id = $1
-        `, [userId]);
-        return res.rows.map((row) => row["date"]);
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} year
-     * @returns {Promise<string[]>} distinct days ('YYYY-MM-DD') the user logged a watched season that year
-     */
-    getWatchedDatesByUserIdByYear = async (userId, year) => {
-        const res = await db.query(`
-            SELECT DISTINCT TO_CHAR(added_at, 'YYYY-MM-DD') AS date
-            FROM users_seasons
-            WHERE user_id = $1 AND EXTRACT(YEAR FROM added_at) = $2
-        `, [userId, year]);
-        return res.rows.map((row) => row["date"]);
-    }
 }
