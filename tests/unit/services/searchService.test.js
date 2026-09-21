@@ -69,7 +69,7 @@ describe("SearchService", () => {
 
             const result = await service.getByShowId(10);
 
-            expect(HttpClient.get).toHaveBeenCalledWith(expect.stringContaining("/shows/display?id=10"), expect.any(Object));
+            expect(HttpClient.get).toHaveBeenCalledWith(expect.stringContaining("/shows/display?id=10"), expect.any(Object), undefined);
             expect(result.id).toBe(10);
             expect(result.duration).toBe(42);
         });
@@ -125,7 +125,7 @@ describe("SearchService", () => {
 
             const result = await service.getEpisodesByShowIdBySeason(10, 1);
 
-            expect(HttpClient.get).toHaveBeenCalledWith(expect.stringContaining("/shows/episodes?id=10&season=1"), expect.any(Object));
+            expect(HttpClient.get).toHaveBeenCalledWith(expect.stringContaining("/shows/episodes?id=10&season=1"), expect.any(Object), undefined);
             expect(result[0].id).toBe(1);
             expect(result[0].number).toBe(1);
         });

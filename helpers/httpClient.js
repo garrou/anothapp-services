@@ -5,10 +5,11 @@ export default class HttpClient {
     /**
      * @param {string} url
      * @param {Object} headers
+     * @param {number} [timeoutMs]
      * @returns {Promise<any>} the parsed response body
      */
-    static get = async (url, headers = {}) => {
-        const {data} = await axios.get(url, {headers});
+    static get = async (url, headers = {}, timeoutMs) => {
+        const {data} = await axios.get(url, {headers, timeout: timeoutMs});
         return data;
     }
 

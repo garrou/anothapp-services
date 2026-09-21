@@ -122,6 +122,15 @@ CREATE TABLE refresh_tokens (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE admin_actions (
+    id UUID DEFAULT gen_random_uuid(),
+    admin_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action VARCHAR(50) NOT NULL,
+    target_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (id)
+);
+
 CREATE TABLE shows (
     id INTEGER,
     title VARCHAR(255) UNIQUE NOT NULL,
@@ -701,4 +710,5 @@ CREATE INDEX idx_login_challenges_user_id_created_at ON login_challenges(user_id
 CREATE INDEX idx_seasons_show_id ON seasons(show_id);
 CREATE INDEX idx_playlists_collaborators_user_id ON playlists_collaborators(user_id);
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+CREATE INDEX idx_admin_actions_created_at ON admin_actions(created_at DESC);
 CREATE UNIQUE INDEX idx_friends_unordered_pair ON friends (LEAST(fst_user_id, sec_user_id), GREATEST(fst_user_id, sec_user_id));
