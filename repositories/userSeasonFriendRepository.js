@@ -175,6 +175,32 @@ export default class UserSeasonFriendRepository {
     }
 
     /**
+     * @param {string} userId
+     * @returns {Promise<{userSeasonId: number, showId: number, showTitle: string, showPoster: string,
+     *   seasonNumber: number, actor: {id: string, username: string, picture: string}}[]>}
+     */
+    getActiveForUser = async (userId) => {
+        const res = await db.query(`
+            SELECT us.id AS users_season_id, us.show_id, us.number, s.title, s.poster,
+                   owner.id AS owner_id, owner.username AS owner_username, owner.picture AS owner_picture
+            FROM users_seasons_friends usf
+            JOIN users_seasons us ON us.id = usf.users_season_id
+            JOIN shows s ON s.id = us.show_id
+            JOIN users owner ON owner.id = us.user_id
+            WHERE usf.friend_user_id = $1 AND usf.status_id = 'accepted'
+            ORDER BY us.added_at DESC
+        `, [userId]);
+        return res.rows.map((row) => ({
+            userSeasonId: row["users_season_id"],
+            showId: row["show_id"],
+            showTitle: row.title,
+            showPoster: row.poster,
+            seasonNumber: row.number,
+            actor: {id: row["owner_id"], username: row["owner_username"], picture: row["owner_picture"]},
+        }));
+    }
+
+    /**
      * @param {number} userSeasonId
      * @returns {Promise<{id: number, userId: string}[]>}
      */

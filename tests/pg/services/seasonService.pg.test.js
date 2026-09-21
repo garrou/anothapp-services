@@ -217,4 +217,43 @@ describe("SeasonService (real Postgres)", () => {
             expect(pending[0].userSeasonId).toBe(userSeasonId);
         });
     });
+
+    describe("getActiveWatchedWith", () => {
+        it("lists the current user's active (accepted) watch-together links", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+            await service.respondToWatchedWith(friendId, userSeasonId, true);
+
+            const active = await service.getActiveWatchedWith(friendId);
+
+            expect(active).toHaveLength(1);
+            expect(active[0].userSeasonId).toBe(userSeasonId);
+            expect(await service.getPendingWatchedWith(friendId)).toEqual([]);
+        });
+
+        it("no longer lists a link once the friend leaves after accepting", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+            await service.respondToWatchedWith(friendId, userSeasonId, true);
+
+            await service.respondToWatchedWith(friendId, userSeasonId, false);
+
+            expect(await service.getActiveWatchedWith(friendId)).toEqual([]);
+            const link = await db.query(`SELECT status_id, friend_users_season_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
+            expect(link.rows[0]["status_id"]).toBe("declined");
+            expect(link.rows[0]["friend_users_season_id"]).toBeNull();
+        });
+    });
 });

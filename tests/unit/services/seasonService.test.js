@@ -16,6 +16,7 @@ const userSeasonFriendRepoMocks = vi.hoisted(() => ({
     decline: vi.fn(),
     hasConflictingLink: vi.fn(),
     getPendingForUser: vi.fn(),
+    getActiveForUser: vi.fn(),
 }));
 const friendRepoMocks = vi.hoisted(() => ({
     getFriends: vi.fn(),
@@ -260,6 +261,24 @@ describe("SeasonService.getPendingWatchedWith", () => {
 
         expect(result).toEqual(["invite-1"]);
         expect(userSeasonFriendRepoMocks.getPendingForUser).toHaveBeenCalledWith("user-1");
+    });
+});
+
+describe("SeasonService.getActiveWatchedWith", () => {
+    let seasonService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        seasonService = new SeasonService();
+    });
+
+    it("delegates to the repository", async () => {
+        userSeasonFriendRepoMocks.getActiveForUser.mockResolvedValue(["active-1"]);
+
+        const result = await seasonService.getActiveWatchedWith("user-1");
+
+        expect(result).toEqual(["active-1"]);
+        expect(userSeasonFriendRepoMocks.getActiveForUser).toHaveBeenCalledWith("user-1");
     });
 });
 

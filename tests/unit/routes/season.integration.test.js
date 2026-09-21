@@ -11,6 +11,7 @@ const seasonServiceMocks = vi.hoisted(() => ({
     updateBySeasonId: vi.fn(),
     updateWatchedWith: vi.fn(),
     getPendingWatchedWith: vi.fn(),
+    getActiveWatchedWith: vi.fn(),
     respondToWatchedWith: vi.fn(),
 }));
 
@@ -118,6 +119,18 @@ describe("GET /seasons/watched-with/pending", () => {
         const res = await request(app).get("/seasons/watched-with/pending").set("Cookie", cookie);
 
         expect(seasonServiceMocks.getPendingWatchedWith).toHaveBeenCalledWith("user-1");
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual([{userSeasonId: 5}]);
+    });
+});
+
+describe("GET /seasons/watched-with/active", () => {
+    it("returns the current user's active watch-together links", async () => {
+        seasonServiceMocks.getActiveWatchedWith.mockResolvedValue([{userSeasonId: 5}]);
+
+        const res = await request(app).get("/seasons/watched-with/active").set("Cookie", cookie);
+
+        expect(seasonServiceMocks.getActiveWatchedWith).toHaveBeenCalledWith("user-1");
         expect(res.status).toBe(200);
         expect(res.body).toEqual([{userSeasonId: 5}]);
     });

@@ -228,6 +228,31 @@ describe("UserSeasonFriendRepository.getPendingForUser", () => {
     });
 });
 
+describe("UserSeasonFriendRepository.getActiveForUser", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserSeasonFriendRepository();
+    });
+
+    it("maps active (accepted) watch-together links", async () => {
+        db.query.mockResolvedValue({
+            rows: [{
+                users_season_id: 1, show_id: 10, title: "Dexter", poster: "poster.jpg", number: 2,
+                owner_id: "user-2", owner_username: "bob", owner_picture: null,
+            }],
+        });
+
+        const result = await repo.getActiveForUser("user-1");
+
+        expect(result).toEqual([{
+            userSeasonId: 1, showId: 10, showTitle: "Dexter", showPoster: "poster.jpg", seasonNumber: 2,
+            actor: {id: "user-2", username: "bob", picture: null},
+        }]);
+    });
+});
+
 describe("UserSeasonFriendRepository.getLinkedViewings", () => {
     let repo;
 

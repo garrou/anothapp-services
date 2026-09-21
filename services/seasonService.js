@@ -134,6 +134,14 @@ export default class SeasonService {
 
     /**
      * @param {string} currentUserId
+     * @returns {Promise<Object[]>}
+     */
+    getActiveWatchedWith = async (currentUserId) => {
+        return this._userSeasonFriendRepository.getActiveForUser(currentUserId);
+    }
+
+    /**
+     * @param {string} currentUserId
      * @param {number?} userSeasonId
      * @param {boolean} accepted
      * @returns {Promise<void>}

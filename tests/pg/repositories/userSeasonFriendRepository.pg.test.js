@@ -225,6 +225,44 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
         });
     });
 
+    describe("getActiveForUser", () => {
+        it("lists only accepted watch-together links for a user", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            const showId = await insertShow({ title: "Dexter" });
+            await insertSeason(showId, 2);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 2);
+            await insertUserShow(friendId, showId);
+            const friendSeasonId = await insertUserSeason(friendId, showId, 2);
+            await repo.setForUserSeasonId(userSeasonId, [friendId]);
+            await repo.accept(userSeasonId, friendId, friendSeasonId);
+
+            const active = await repo.getActiveForUser(friendId);
+
+            expect(active).toEqual([{
+                userSeasonId, showId, showTitle: "Dexter", showPoster: null, seasonNumber: 2,
+                actor: { id: userId, username: expect.any(String), picture: null },
+            }]);
+        });
+
+        it("excludes a pending or declined link", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await repo.setForUserSeasonId(userSeasonId, [friendId]);
+
+            expect(await repo.getActiveForUser(friendId)).toEqual([]);
+
+            await repo.decline(userSeasonId, friendId);
+
+            expect(await repo.getActiveForUser(friendId)).toEqual([]);
+        });
+    });
+
     describe("getLinkedViewings", () => {
         it("returns the other members of the group when queried from the root viewing", async () => {
             const userId = await insertUser();

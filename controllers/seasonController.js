@@ -101,6 +101,18 @@ export default class SeasonController {
     /**
      * @returns {Promise<void>}
      */
+    getActiveWatchedWith = async (req, res, next) => {
+        try {
+            const active = await this._seasonService.getActiveWatchedWith(req.userId);
+            res.status(200).json(active);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
     respondToWatchedWith = async (req, res, next) => {
         try {
             const {id} = req.params;
