@@ -246,7 +246,7 @@ describe("SeasonService.updateWatchedWith", () => {
     });
 });
 
-describe("SeasonService.getPendingWatchedWith", () => {
+describe("SeasonService.getWatchedWith", () => {
     let seasonService;
 
     beforeEach(() => {
@@ -254,31 +254,29 @@ describe("SeasonService.getPendingWatchedWith", () => {
         seasonService = new SeasonService();
     });
 
-    it("delegates to the repository", async () => {
+    it("delegates to getPendingForUser for status=pending", async () => {
         userSeasonFriendRepoMocks.getPendingForUser.mockResolvedValue(["invite-1"]);
 
-        const result = await seasonService.getPendingWatchedWith("user-1");
+        const result = await seasonService.getWatchedWith("user-1", "pending");
 
         expect(result).toEqual(["invite-1"]);
         expect(userSeasonFriendRepoMocks.getPendingForUser).toHaveBeenCalledWith("user-1");
     });
-});
 
-describe("SeasonService.getActiveWatchedWith", () => {
-    let seasonService;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        seasonService = new SeasonService();
-    });
-
-    it("delegates to the repository", async () => {
+    it("delegates to getActiveForUser for status=active", async () => {
         userSeasonFriendRepoMocks.getActiveForUser.mockResolvedValue(["active-1"]);
 
-        const result = await seasonService.getActiveWatchedWith("user-1");
+        const result = await seasonService.getWatchedWith("user-1", "active");
 
         expect(result).toEqual(["active-1"]);
         expect(userSeasonFriendRepoMocks.getActiveForUser).toHaveBeenCalledWith("user-1");
+    });
+
+    it("rejects with a 400 for a missing or unknown status", async () => {
+        await expect(seasonService.getWatchedWith("user-1", undefined)).rejects.toThrow("Requête invalide");
+        await expect(seasonService.getWatchedWith("user-1", "unknown")).rejects.toThrow("Requête invalide");
+        expect(userSeasonFriendRepoMocks.getPendingForUser).not.toHaveBeenCalled();
+        expect(userSeasonFriendRepoMocks.getActiveForUser).not.toHaveBeenCalled();
     });
 });
 

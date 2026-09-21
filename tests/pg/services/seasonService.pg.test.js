@@ -200,8 +200,8 @@ describe("SeasonService (real Postgres)", () => {
         });
     });
 
-    describe("getPendingWatchedWith", () => {
-        it("lists the current user's pending invitations", async () => {
+    describe("getWatchedWith", () => {
+        it("status=pending lists the current user's pending invitations", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();
             await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
@@ -211,15 +211,13 @@ describe("SeasonService (real Postgres)", () => {
             const userSeasonId = await insertUserSeason(userId, showId, 1);
             await service.updateWatchedWith(userId, userSeasonId, [friendId]);
 
-            const pending = await service.getPendingWatchedWith(friendId);
+            const pending = await service.getWatchedWith(friendId, "pending");
 
             expect(pending).toHaveLength(1);
             expect(pending[0].userSeasonId).toBe(userSeasonId);
         });
-    });
 
-    describe("getActiveWatchedWith", () => {
-        it("lists the current user's active (accepted) watch-together links", async () => {
+        it("status=active lists the current user's active (accepted) watch-together links", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();
             await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
@@ -230,14 +228,14 @@ describe("SeasonService (real Postgres)", () => {
             await service.updateWatchedWith(userId, userSeasonId, [friendId]);
             await service.respondToWatchedWith(friendId, userSeasonId, true);
 
-            const active = await service.getActiveWatchedWith(friendId);
+            const active = await service.getWatchedWith(friendId, "active");
 
             expect(active).toHaveLength(1);
             expect(active[0].userSeasonId).toBe(userSeasonId);
-            expect(await service.getPendingWatchedWith(friendId)).toEqual([]);
+            expect(await service.getWatchedWith(friendId, "pending")).toEqual([]);
         });
 
-        it("no longer lists a link once the friend leaves after accepting", async () => {
+        it("no longer lists a link as active once the friend leaves after accepting", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();
             await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
@@ -250,10 +248,17 @@ describe("SeasonService (real Postgres)", () => {
 
             await service.respondToWatchedWith(friendId, userSeasonId, false);
 
-            expect(await service.getActiveWatchedWith(friendId)).toEqual([]);
+            expect(await service.getWatchedWith(friendId, "active")).toEqual([]);
             const link = await db.query(`SELECT status_id, friend_users_season_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
             expect(link.rows[0]["status_id"]).toBe("declined");
             expect(link.rows[0]["friend_users_season_id"]).toBeNull();
+        });
+
+        it("rejects with a 400 for a missing or unknown status", async () => {
+            const userId = await insertUser();
+
+            await expect(service.getWatchedWith(userId, undefined)).rejects.toMatchObject({ status: 400 });
+            await expect(service.getWatchedWith(userId, "unknown")).rejects.toMatchObject({ status: 400 });
         });
     });
 });

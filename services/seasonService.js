@@ -126,18 +126,18 @@ export default class SeasonService {
 
     /**
      * @param {string} currentUserId
+     * @param {string} status "pending" or "active"
      * @returns {Promise<Object[]>}
      */
-    getPendingWatchedWith = async (currentUserId) => {
-        return this._userSeasonFriendRepository.getPendingForUser(currentUserId);
-    }
-
-    /**
-     * @param {string} currentUserId
-     * @returns {Promise<Object[]>}
-     */
-    getActiveWatchedWith = async (currentUserId) => {
-        return this._userSeasonFriendRepository.getActiveForUser(currentUserId);
+    getWatchedWith = async (currentUserId, status) => {
+        switch (status) {
+            case "pending":
+                return this._userSeasonFriendRepository.getPendingForUser(currentUserId);
+            case "active":
+                return this._userSeasonFriendRepository.getActiveForUser(currentUserId);
+            default:
+                throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
     }
 
     /**

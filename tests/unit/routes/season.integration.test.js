@@ -10,8 +10,7 @@ const seasonServiceMocks = vi.hoisted(() => ({
     addAllEpisodesViewing: vi.fn(),
     updateBySeasonId: vi.fn(),
     updateWatchedWith: vi.fn(),
-    getPendingWatchedWith: vi.fn(),
-    getActiveWatchedWith: vi.fn(),
+    getWatchedWith: vi.fn(),
     respondToWatchedWith: vi.fn(),
 }));
 
@@ -112,27 +111,33 @@ describe("PATCH /seasons/:id/watched-with", () => {
     });
 });
 
-describe("GET /seasons/watched-with/pending", () => {
-    it("returns the current user's pending invitations", async () => {
-        seasonServiceMocks.getPendingWatchedWith.mockResolvedValue([{userSeasonId: 5}]);
+describe("GET /seasons/watched-with", () => {
+    it("returns the current user's pending invitations for status=pending", async () => {
+        seasonServiceMocks.getWatchedWith.mockResolvedValue([{userSeasonId: 5}]);
 
-        const res = await request(app).get("/seasons/watched-with/pending").set("Cookie", cookie);
+        const res = await request(app).get("/seasons/watched-with?status=pending").set("Cookie", cookie);
 
-        expect(seasonServiceMocks.getPendingWatchedWith).toHaveBeenCalledWith("user-1");
+        expect(seasonServiceMocks.getWatchedWith).toHaveBeenCalledWith("user-1", "pending");
         expect(res.status).toBe(200);
         expect(res.body).toEqual([{userSeasonId: 5}]);
     });
-});
 
-describe("GET /seasons/watched-with/active", () => {
-    it("returns the current user's active watch-together links", async () => {
-        seasonServiceMocks.getActiveWatchedWith.mockResolvedValue([{userSeasonId: 5}]);
+    it("returns the current user's active watch-together links for status=active", async () => {
+        seasonServiceMocks.getWatchedWith.mockResolvedValue([{userSeasonId: 5}]);
 
-        const res = await request(app).get("/seasons/watched-with/active").set("Cookie", cookie);
+        const res = await request(app).get("/seasons/watched-with?status=active").set("Cookie", cookie);
 
-        expect(seasonServiceMocks.getActiveWatchedWith).toHaveBeenCalledWith("user-1");
+        expect(seasonServiceMocks.getWatchedWith).toHaveBeenCalledWith("user-1", "active");
         expect(res.status).toBe(200);
         expect(res.body).toEqual([{userSeasonId: 5}]);
+    });
+
+    it("returns 400 for a missing or unknown status", async () => {
+        seasonServiceMocks.getWatchedWith.mockRejectedValue(new ServiceError(400, "Requête invalide"));
+
+        const res = await request(app).get("/seasons/watched-with").set("Cookie", cookie);
+
+        expect(res.status).toBe(400);
     });
 });
 
