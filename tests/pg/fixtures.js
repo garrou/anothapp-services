@@ -14,16 +14,15 @@ export const insertUser = async (overrides = {}) => {
         email = `user_${suffix}@test.fr`,
         password = "hash",
         picture = null,
-        episodeTrackingEnabled = true,
         emailVerified = true,
         deletedAt = null,
     } = overrides;
     return db.transaction(async (client) => {
         const res = await client.query(`
-            INSERT INTO users (username, picture, episode_tracking_enabled, deleted_at)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO users (username, picture, deleted_at)
+            VALUES ($1, $2, $3)
             RETURNING id
-        `, [username, picture, episodeTrackingEnabled, deletedAt]);
+        `, [username, picture, deletedAt]);
         const userId = res.rows[0].id;
 
         await client.query(`

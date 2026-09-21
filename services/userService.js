@@ -2,7 +2,6 @@ import UserProfile from "../models/userProfile.js";
 import UserRepository from "../repositories/userRepository.js";
 import UserAuthRepository from "../repositories/userAuthRepository.js";
 import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
-import EpisodeService from "./episodeService.js";
 import AuthService from "./authService.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
@@ -15,7 +14,6 @@ export default class UserService {
     constructor() {
         this._userRepository = new UserRepository();
         this._userAuthRepository = new UserAuthRepository();
-        this._episodeService = new EpisodeService();
         this._authService = new AuthService();
         this._refreshTokenRepository = new RefreshTokenRepository();
     }
@@ -70,10 +68,9 @@ export default class UserService {
     /**
      * @param {string} currentUserId
      * @param {UserUpdate} userUpdate
-     * @param {{skipBackfill?: boolean}} options
      * @returns {Promise<string>}
      */
-    updateUser = async (currentUserId, userUpdate, options = {}) => {
+    updateUser = async (currentUserId, userUpdate) => {
         if (userUpdate.isPasswordUpdate()) {
             await this.#changePassword(currentUserId, userUpdate.currentPassword, userUpdate.newPassword, userUpdate.confirmPassword);
             return "Mot de passe modifié";
@@ -86,9 +83,6 @@ export default class UserService {
         } else if (userUpdate.lastExport) {
             await this.#changeLastExport(currentUserId, userUpdate.lastExport);
             return "Date de dernier export modifiée";
-        } else if (userUpdate.isEpisodeTrackingUpdate()) {
-            await this.#changeEpisodeTracking(currentUserId, userUpdate.episodeTrackingEnabled, options.skipBackfill);
-            return userUpdate.episodeTrackingEnabled ? "Suivi des épisodes activé" : "Suivi des épisodes désactivé";
         }
         throw new ServiceError(400, ERROR_INVALID_REQUEST);
     }
@@ -116,23 +110,6 @@ export default class UserService {
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de supprimer le compte");
-        }
-    }
-
-    /**
-     * @param {string} currentUserId
-     * @param {boolean} enabled
-     * @param {boolean} [skipBackfill]
-     * @returns {Promise<void>}
-     */
-    #changeEpisodeTracking = async (currentUserId, enabled, skipBackfill = false) => {
-        const updated = await this._userRepository.updateField(currentUserId, "episode_tracking_enabled", enabled);
-
-        if (!updated) {
-            throw new ServiceError(500, "Impossible de modifier le suivi des épisodes");
-        }
-        if (enabled && !skipBackfill) {
-            await this._episodeService.backfillForUser(currentUserId);
         }
     }
 

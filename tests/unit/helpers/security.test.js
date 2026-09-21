@@ -263,7 +263,7 @@ describe("SecurityHelper.signExportData / verifyExportSignature", () => {
     });
 
     it("survives a pretty-printed JSON round-trip (reordered whitespace, same content)", () => {
-        const data = { shows: [{ id: 1, title: "Show" }], user: { episodeTrackingEnabled: true } };
+        const data = { shows: [{ id: 1, title: "Show" }], user: { username: "bob" } };
         const signature = SecurityHelper.signExportData(data);
         const file = JSON.stringify({ ...data, signature }, null, 4);
         const reparsed = JSON.parse(file);

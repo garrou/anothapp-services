@@ -98,8 +98,8 @@ describe("ShowService (real Postgres)", () => {
     });
 
     describe("getShowById", () => {
-        it("returns watch time and distinct episode count for an episode-tracking user", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+        it("returns watch time and distinct episode count", async () => {
+            const userId = await insertUser();
             const showId = await insertShow();
             await insertUserShow(userId, showId);
 
@@ -108,16 +108,6 @@ describe("ShowService (real Postgres)", () => {
             expect(result.serie.id).toBe(showId);
             expect(result.time).toBe(0);
             expect(result.distinctEpisodes).toBe(0);
-        });
-
-        it("falls back to season-level estimates for a non-tracking user", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: false });
-            const showId = await insertShow();
-            await insertUserShow(userId, showId);
-
-            const result = await service.getShowById(userId, showId);
-
-            expect(result.distinctEpisodes).toBeUndefined();
         });
 
         it("throws 404 when the show is not in the user's collection", async () => {

@@ -215,31 +215,11 @@ describe("UserShowRepository", () => {
         });
     });
 
-    describe("getShowsToResumeByUserIdEpisodes", () => {
-        it("maps rows to UserShow instances", async () => {
-            db.query.mockResolvedValue({rows: [showRow]});
-
-            const result = await repo.getShowsToResumeByUserIdEpisodes("user-1");
-
-            expect(result).toEqual([expect.objectContaining({id: 10})]);
-        });
-    });
-
     describe("getShowsFinishedByUserId", () => {
         it("maps rows to UserShow instances", async () => {
             db.query.mockResolvedValue({rows: [showRow]});
 
             const result = await repo.getShowsFinishedByUserId("user-1");
-
-            expect(result).toEqual([expect.objectContaining({id: 10})]);
-        });
-    });
-
-    describe("getShowsFinishedByUserIdEpisodes", () => {
-        it("maps rows to UserShow instances", async () => {
-            db.query.mockResolvedValue({rows: [showRow]});
-
-            const result = await repo.getShowsFinishedByUserIdEpisodes("user-1");
 
             expect(result).toEqual([expect.objectContaining({id: 10})]);
         });
@@ -312,16 +292,6 @@ describe("UserShowRepository", () => {
             db.query.mockResolvedValue({rows: [showRow]});
 
             const result = await repo.getShowsToContinueByUserId("user-1");
-
-            expect(result).toEqual([expect.objectContaining({id: 10})]);
-        });
-    });
-
-    describe("getShowsToContinueByUserIdEpisodes", () => {
-        it("maps rows to UserShow instances", async () => {
-            db.query.mockResolvedValue({rows: [showRow]});
-
-            const result = await repo.getShowsToContinueByUserIdEpisodes("user-1");
 
             expect(result).toEqual([expect.objectContaining({id: 10})]);
         });

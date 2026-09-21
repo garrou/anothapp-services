@@ -145,7 +145,6 @@ export default class Validator {
         return Validator.isPlainObject(payload)
             && Array.isArray(payload.shows)
             && (payload.user === undefined || Validator.isPlainObject(payload.user))
-            && (payload.user?.episodeTrackingEnabled === undefined || Validator.isBoolean(payload.user.episodeTrackingEnabled))
             && (payload.playlists === undefined || Array.isArray(payload.playlists))
             && (payload.favoriteActors === undefined || Array.isArray(payload.favoriteActors))
             && (payload.platforms === undefined || Array.isArray(payload.platforms));

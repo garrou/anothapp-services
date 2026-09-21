@@ -9,7 +9,6 @@ export default class UserProfile {
         this.picture = user.picture;
         this.username = user.username;
         this.current = current;
-        this.episodeTrackingEnabled = user.episodeTrackingEnabled;
         this.createdAt = user.createdAt;
 
         if (current) {

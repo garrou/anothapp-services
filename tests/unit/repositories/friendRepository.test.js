@@ -94,7 +94,7 @@ describe("FriendRepository.getFriends", () => {
 
         const result = await repo.getFriends("user-1");
 
-        expect(result).toEqual([{id: "user-2", picture: null, username: "bob", current: false, episodeTrackingEnabled: undefined, createdAt: "2024-01-01"}]);
+        expect(result).toEqual([{id: "user-2", picture: null, username: "bob", current: false, createdAt: "2024-01-01"}]);
     });
 });
 
@@ -111,7 +111,7 @@ describe("FriendRepository.getFriendsRequestsSend", () => {
 
         const result = await repo.getFriendsRequestsSend("user-1");
 
-        expect(result).toEqual([{id: "user-2", picture: null, username: "bob", current: false, episodeTrackingEnabled: undefined, createdAt: undefined}]);
+        expect(result).toEqual([{id: "user-2", picture: null, username: "bob", current: false, createdAt: undefined}]);
     });
 });
 
@@ -129,7 +129,7 @@ describe("FriendRepository.getFriendsWhoWatchSerie", () => {
         const result = await repo.getFriendsWhoWatchSerie("user-1", 10);
 
         expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 10]);
-        expect(result).toEqual([{id: "user-2", picture: null, username: "bob", current: false, episodeTrackingEnabled: undefined, createdAt: undefined}]);
+        expect(result).toEqual([{id: "user-2", picture: null, username: "bob", current: false, createdAt: undefined}]);
     });
 });
 
@@ -146,7 +146,7 @@ describe("FriendRepository.getFriendsRequestsReceive", () => {
 
         const result = await repo.getFriendsRequestsReceive("user-1");
 
-        expect(result).toEqual([{id: "user-2", picture: null, username: "bob", current: false, episodeTrackingEnabled: undefined, createdAt: undefined}]);
+        expect(result).toEqual([{id: "user-2", picture: null, username: "bob", current: false, createdAt: undefined}]);
     });
 });
 

@@ -48,10 +48,7 @@ export default class AchievementService {
      */
     #computeValues = async (userId, codes) => {
         const need = (code) => codes.includes(code);
-        const needsRepo = need("streak") || need("watch_time") || need("binge");
-
-        const episodeTrackingEnabled = needsRepo ? await this._userRepository.hasEpisodeTrackingEnabled(userId) : false;
-        const repo = episodeTrackingEnabled ? this._userEpisodeStatRepository : this._userSeasonRepository;
+        const repo = this._userEpisodeStatRepository;
 
         const [
             user, dates, minutes, showsStarted, showsCompleted, countries,

@@ -10,11 +10,8 @@ const userShowRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
     deleteByUserIdShowId: vi.fn(),
     getShowsToResumeByUserId: vi.fn(),
-    getShowsToResumeByUserIdEpisodes: vi.fn(),
     getShowsToContinueByUserId: vi.fn(),
-    getShowsToContinueByUserIdEpisodes: vi.fn(),
     getShowsFinishedByUserId: vi.fn(),
-    getShowsFinishedByUserIdEpisodes: vi.fn(),
     getFavoritesByUserId: vi.fn(),
     getShowsWithNextEpisode: vi.fn(),
     getSharedShowsWithFriend: vi.fn(),
@@ -42,15 +39,11 @@ const friendRepoMocks = vi.hoisted(() => ({
 const userSeasonRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
     getDistinctByUserIdByShowId: vi.fn(),
-    getTimeEpisodesByUserIdByShowId: vi.fn(),
     getInfosByUserIdByShowId: vi.fn(),
 }));
 const seasonRepoMocks = vi.hoisted(() => ({
     getSeasonByShowIdByNumber: vi.fn(),
     createSeason: vi.fn(),
-}));
-const userRepoMocks = vi.hoisted(() => ({
-    hasEpisodeTrackingEnabled: vi.fn(),
 }));
 const episodeServiceMocks = vi.hoisted(() => ({
     getWatchedTimeByShowIdBySeasonNumber: vi.fn(),
@@ -61,9 +54,6 @@ const eventBusMocks = vi.hoisted(() => ({
 }));
 vi.mock("../../../helpers/eventBus.js", () => ({
     default: eventBusMocks,
-}));
-vi.mock("../../../repositories/userRepository.js", () => ({
-    default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
 }));
 vi.mock("../../../services/episodeService.js", () => ({
     default: vi.fn().mockImplementation(function () { return episodeServiceMocks; }),
@@ -249,64 +239,31 @@ describe("ShowService.getShows", () => {
         ).rejects.toThrow("Vous n'êtes pas en relation avec cette personne");
     });
 
-    it("delegates to the season-based lookup for 'stopped' when episode tracking is disabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+    it("delegates to the repository for 'stopped'", async () => {
         userShowRepoMocks.getShowsToResumeByUserId.mockResolvedValue(["stopped-show"]);
 
         const result = await showService.getShows("user-1", { status: "stopped" });
 
         expect(result).toEqual(["stopped-show"]);
-        expect(userShowRepoMocks.getShowsToResumeByUserIdEpisodes).not.toHaveBeenCalled();
+        expect(userShowRepoMocks.getShowsToResumeByUserId).toHaveBeenCalledWith("user-1");
     });
 
-    it("delegates to the episode-based lookup for 'stopped' when episode tracking is enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
-        userShowRepoMocks.getShowsToResumeByUserIdEpisodes.mockResolvedValue(["stopped-show-episodes"]);
-
-        const result = await showService.getShows("user-1", { status: "stopped" });
-
-        expect(result).toEqual(["stopped-show-episodes"]);
-        expect(userShowRepoMocks.getShowsToResumeByUserId).not.toHaveBeenCalled();
-    });
-
-    it("delegates to the season-based lookup for 'finished' when episode tracking is disabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+    it("delegates to the repository for 'finished'", async () => {
         userShowRepoMocks.getShowsFinishedByUserId.mockResolvedValue(["finished-show"]);
 
         const result = await showService.getShows("user-1", { status: "finished" });
 
         expect(result).toEqual(["finished-show"]);
-        expect(userShowRepoMocks.getShowsFinishedByUserIdEpisodes).not.toHaveBeenCalled();
+        expect(userShowRepoMocks.getShowsFinishedByUserId).toHaveBeenCalledWith("user-1");
     });
 
-    it("delegates to the episode-based lookup for 'finished' when episode tracking is enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
-        userShowRepoMocks.getShowsFinishedByUserIdEpisodes.mockResolvedValue(["finished-show-episodes"]);
-
-        const result = await showService.getShows("user-1", { status: "finished" });
-
-        expect(result).toEqual(["finished-show-episodes"]);
-        expect(userShowRepoMocks.getShowsFinishedByUserId).not.toHaveBeenCalled();
-    });
-
-    it("delegates to the season-based lookup for 'continue' when episode tracking is disabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
+    it("delegates to the repository for 'continue'", async () => {
         userShowRepoMocks.getShowsToContinueByUserId.mockResolvedValue(["continue-show"]);
 
         const result = await showService.getShows("user-1", { status: "continue" });
 
         expect(result).toEqual(["continue-show"]);
-        expect(userShowRepoMocks.getShowsToContinueByUserIdEpisodes).not.toHaveBeenCalled();
-    });
-
-    it("delegates to the episode-based lookup for 'continue' when episode tracking is enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
-        userShowRepoMocks.getShowsToContinueByUserIdEpisodes.mockResolvedValue(["continue-show-episodes"]);
-
-        const result = await showService.getShows("user-1", { status: "continue" });
-
-        expect(result).toEqual(["continue-show-episodes"]);
-        expect(userShowRepoMocks.getShowsToContinueByUserId).not.toHaveBeenCalled();
+        expect(userShowRepoMocks.getShowsToContinueByUserId).toHaveBeenCalledWith("user-1");
     });
 
     it("rejects with a 400 for an unknown status", async () => {
@@ -377,28 +334,13 @@ describe("ShowService.addSeason", () => {
         );
     });
 
-    it("attaches the season directly when it already exists locally, and notifies friends when tracking is off", async () => {
+    it("attaches the season directly when it already exists locally", async () => {
         userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
         seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
         userSeasonRepoMocks.create.mockResolvedValue(true);
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
 
         await expect(showService.addSeason("user-1", 42, 1)).resolves.toBeUndefined();
         expect(searchServiceMocks.getSeasonByShowIdByNumber).not.toHaveBeenCalled();
-        expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched", {
-            actorUserId: "user-1", showId: 42, metadata: {seasonNumber: 1},
-        });
-    });
-
-    it("stays silent when episode tracking is enabled - episode events cover it instead", async () => {
-        userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue({ id: 42, poster: "poster.jpg" });
-        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
-        userSeasonRepoMocks.create.mockResolvedValue(true);
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
-
-        await showService.addSeason("user-1", 42, 1);
-
-        expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });
 
     it("fetches, creates and attaches the season when it doesn't exist locally yet", async () => {
@@ -510,17 +452,7 @@ describe("ShowService.getSeasonWatchedTime", () => {
         showService = new ShowService();
     });
 
-    it("returns null without querying episode time when episode tracking is disabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-
-        const result = await showService.getSeasonWatchedTime("user-1", 42, 1);
-
-        expect(result).toBeNull();
-        expect(episodeServiceMocks.getWatchedTimeByShowIdBySeasonNumber).not.toHaveBeenCalled();
-    });
-
-    it("returns the watched time from episodes when episode tracking is enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+    it("returns the watched time from episodes", async () => {
         episodeServiceMocks.getWatchedTimeByShowIdBySeasonNumber.mockResolvedValue(90);
 
         const result = await showService.getSeasonWatchedTime("user-1", 42, 1);
@@ -553,25 +485,13 @@ describe("ShowService.getShowById", () => {
         expect(userSeasonRepoMocks.getDistinctByUserIdByShowId).not.toHaveBeenCalled();
     });
 
-    it("uses the season-level estimate when episode tracking is disabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-        userSeasonRepoMocks.getTimeEpisodesByUserIdByShowId.mockResolvedValue([600, 10]);
-
-        const result = await showService.getShowById("user-1", 42);
-
-        expect(result).toEqual({serie: storedShow, seasons: ["season"], time: 600, episodes: 10});
-        expect(episodeServiceMocks.getWatchedTimeAndCountByShowId).not.toHaveBeenCalled();
-    });
-
-    it("uses the actual watched episodes when episode tracking is enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+    it("uses the actual watched episodes", async () => {
         episodeServiceMocks.getWatchedTimeAndCountByShowId.mockResolvedValue([135, 3, 2]);
 
         const result = await showService.getShowById("user-1", 42);
 
         expect(result).toEqual({serie: storedShow, seasons: ["season"], time: 135, episodes: 3, distinctEpisodes: 2});
         expect(episodeServiceMocks.getWatchedTimeAndCountByShowId).toHaveBeenCalledWith("user-1", 42);
-        expect(userSeasonRepoMocks.getTimeEpisodesByUserIdByShowId).not.toHaveBeenCalled();
     });
 });
 

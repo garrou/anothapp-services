@@ -4,7 +4,7 @@ import SettingService from "../../../services/settingService.js";
 const securityMocks = vi.hoisted(() => ({
     signExportData: vi.fn(() => "mock-signature"), verifyExportSignature: vi.fn(() => true),
 }));
-const userServiceMocks = vi.hoisted(() => ({markExported: vi.fn(), getUser: vi.fn(), updateUser: vi.fn()}));
+const userServiceMocks = vi.hoisted(() => ({markExported: vi.fn(), getUser: vi.fn()}));
 const statServiceMocks = vi.hoisted(() => ({getStats: vi.fn()}));
 const playlistServiceMocks = vi.hoisted(() => ({getPlaylists: vi.fn()}));
 const achievementServiceMocks = vi.hoisted(() => ({getAchievements: vi.fn(), evaluate: vi.fn()}));
@@ -88,7 +88,7 @@ describe("SettingService.exportData", () => {
 
     it("builds the export with shows, their seasons and episodes nested", async () => {
         userServiceMocks.markExported.mockResolvedValue(true);
-        userServiceMocks.getUser.mockResolvedValue({id: "user-1", email: "a@b.com", username: "bob", picture: null, episodeTrackingEnabled: true, createdAt: "2023-01-01"});
+        userServiceMocks.getUser.mockResolvedValue({id: "user-1", email: "a@b.com", username: "bob", picture: null, createdAt: "2023-01-01"});
         userShowRepoMocks.getShowsByUserId.mockResolvedValue([
             {id: 10, title: "Show", kinds: ["Drame"], country: "FR", seasons: 1, favorite: false, watch: true, duration: 42, note: 3, addedAt: "2024-01-01"},
         ]);
@@ -105,7 +105,7 @@ describe("SettingService.exportData", () => {
         expect(filename).toMatch(/^user-data-user-1-\d{4}-\d{2}-\d{2}\.json$/);
         expect(exportedData.user).toEqual({
             id: "user-1", username: "bob", email: "a@b.com", picture: null, current: true,
-            episodeTrackingEnabled: true, createdAt: "2023-01-01", isAdmin: false,
+            createdAt: "2023-01-01", isAdmin: false,
         });
         expect(exportedData.stats).toEqual({total: 1});
         expect(exportedData.shows).toHaveLength(1);
@@ -192,7 +192,6 @@ describe("SettingService.importData", () => {
         playlistRepoMocks.getByUserIdAndName.mockResolvedValue(null);
         userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
         userPlatformRepoMocks.addUserPlatforms.mockResolvedValue(true);
-        userServiceMocks.updateUser.mockResolvedValue("Suivi des épisodes activé");
         achievementServiceMocks.evaluate.mockResolvedValue([]);
     });
 
@@ -346,37 +345,6 @@ describe("SettingService.importData", () => {
         const summary = await service.importData("user-1", {shows: [], platforms: [1, 2]});
 
         expect(summary.platforms).toEqual({imported: 1, errors: 0});
-    });
-
-    it("restores the exported episode-tracking preference without backfilling episodes", async () => {
-        await service.importData("user-1", {shows: [], user: {episodeTrackingEnabled: true}});
-
-        expect(userServiceMocks.updateUser).toHaveBeenCalledWith(
-            "user-1", expect.objectContaining({episodeTrackingEnabled: true}), {skipBackfill: true}
-        );
-    });
-
-    it("can restore a disabled episode-tracking preference too", async () => {
-        await service.importData("user-1", {shows: [], user: {episodeTrackingEnabled: false}});
-
-        expect(userServiceMocks.updateUser).toHaveBeenCalledWith(
-            "user-1", expect.objectContaining({episodeTrackingEnabled: false}), {skipBackfill: true}
-        );
-    });
-
-    it("does not touch episode tracking when the export carries no such preference", async () => {
-        await service.importData("user-1", {shows: []});
-
-        expect(userServiceMocks.updateUser).not.toHaveBeenCalled();
-    });
-
-    it("keeps going and reports an error if restoring episode tracking fails", async () => {
-        userServiceMocks.updateUser.mockRejectedValue(new Error("boom"));
-
-        const summary = await service.importData("user-1", {shows: [], user: {episodeTrackingEnabled: true}});
-
-        expect(summary.errors.some((e) => e.includes("Suivi des épisodes"))).toBe(true);
-        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith("user-1");
     });
 
     it("rejects a payload whose playlists/favoriteActors/platforms aren't arrays", async () => {

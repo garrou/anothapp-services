@@ -6,7 +6,6 @@ import UserFavoriteActorRepository from "../repositories/userFavoriteActorReposi
 import UserPlatformRepository from "../repositories/userPlatformRepository.js";
 import PlaylistRepository from "../repositories/playlistRepository.js";
 import { ExportData, ExportShow } from "../models/exportData.js";
-import UserUpdate from "../models/userUpdate.js";
 import Validator from "../helpers/validator.js";
 import SecurityHelper from "../helpers/security.js";
 import StatService from "./statService.js";
@@ -109,7 +108,6 @@ export default class SettingService {
         const playlists = payload.playlists ?? [];
         const favoriteActors = payload.favoriteActors ?? [];
         const platforms = payload.platforms ?? [];
-        const episodeTrackingEnabled = payload.user?.episodeTrackingEnabled;
 
         const summary = {
             shows: { imported: 0, errors: 0 },
@@ -168,12 +166,6 @@ export default class SettingService {
                 }
             }
         });
-
-        try {
-            await this.#importEpisodeTrackingPreference(userId, episodeTrackingEnabled);
-        } catch (err) {
-            summary.errors.push(`Suivi des épisodes : ${err.message}`);
-        }
 
         await this._achievementService.evaluate(userId);
 
@@ -283,17 +275,5 @@ export default class SettingService {
         if (!alreadyFavorite) {
             await this._userFavoriteActorRepository.create(userId, actor.id);
         }
-    }
-
-    /**
-     * @param {string} userId
-     * @param {boolean?} episodeTrackingEnabled
-     * @returns {Promise<void>}
-     */
-    #importEpisodeTrackingPreference = async (userId, episodeTrackingEnabled) => {
-        if (!Validator.isBoolean(episodeTrackingEnabled)) {
-            return;
-        }
-        await this._userService.updateUser(userId, new UserUpdate({ episodeTrackingEnabled }), { skipBackfill: true });
     }
 }

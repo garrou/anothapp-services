@@ -76,35 +76,6 @@ export default class UserRepository {
     }
 
     /**
-     * @param {string} id
-     * @returns {Promise<boolean>}
-     */
-    hasEpisodeTrackingEnabled = async (id) => {
-        const res = await db.query(`
-            SELECT episode_tracking_enabled
-            FROM users
-            WHERE id = $1
-        `, [id]);
-        return res.rows[0]?.["episode_tracking_enabled"] === true;
-    }
-
-    /**
-     * @param {string[]} ids
-     * @returns {Promise<Map<string, boolean>>}
-     */
-    getEpisodeTrackingByIds = async (ids) => {
-        if (!ids.length) {
-            return new Map();
-        }
-        const res = await db.query(`
-            SELECT id, episode_tracking_enabled
-            FROM users
-            WHERE id = ANY($1::uuid[])
-        `, [ids]);
-        return new Map(res.rows.map((row) => [row.id, row["episode_tracking_enabled"] === true]));
-    }
-
-    /**
      * @param {string} email
      * @param {string} passwordHash
      * @param {string} username

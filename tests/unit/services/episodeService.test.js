@@ -19,11 +19,7 @@ const userEpisodeRepoMocks = vi.hoisted(() => ({
     getWatchedTimeAndCountByShowId: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
-    getUserSeasonsByUserId: vi.fn(),
     getOwnedSeasonViewing: vi.fn(),
-}));
-const userRepoMocks = vi.hoisted(() => ({
-    hasEpisodeTrackingEnabled: vi.fn(),
 }));
 const searchServiceMocks = vi.hoisted(() => ({
     getEpisodesByShowIdBySeason: vi.fn(),
@@ -44,9 +40,6 @@ vi.mock("../../../repositories/userEpisodeRepository.js", () => ({
 vi.mock("../../../repositories/userSeasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userSeasonRepoMocks; }),
 }));
-vi.mock("../../../repositories/userRepository.js", () => ({
-    default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
-}));
 vi.mock("../../../services/searchService.js", () => ({
     default: vi.fn().mockImplementation(function () { return searchServiceMocks; }),
 }));
@@ -57,21 +50,11 @@ describe("EpisodeService.getViewedByMonthAgo", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         episodeService = new EpisodeService();
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
     });
 
     it("rejects with a 400 when month isn't one of the accepted values", async () => {
         await expect(episodeService.getViewedByMonthAgo("user-1", "not-a-month")).rejects.toThrow(
             "Requête invalide"
-        );
-        expect(userEpisodeRepoMocks.getViewedByMonthAgo).not.toHaveBeenCalled();
-    });
-
-    it("rejects with a 400 when episode tracking isn't enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-
-        await expect(episodeService.getViewedByMonthAgo("user-1", "1")).rejects.toThrow(
-            "Le suivi des épisodes n'est pas activé"
         );
         expect(userEpisodeRepoMocks.getViewedByMonthAgo).not.toHaveBeenCalled();
     });
@@ -151,20 +134,10 @@ describe("EpisodeService.getByUserSeasonId", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         episodeService = new EpisodeService();
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
     });
 
     it("rejects with a 400 when no userSeasonId is given", async () => {
         await expect(episodeService.getByUserSeasonId("user-1", undefined)).rejects.toThrow("Requête invalide");
-    });
-
-    it("rejects with a 400 when episode tracking isn't enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-
-        await expect(episodeService.getByUserSeasonId("user-1", 7)).rejects.toThrow(
-            "Le suivi des épisodes n'est pas activé"
-        );
-        expect(userSeasonRepoMocks.getOwnedSeasonViewing).not.toHaveBeenCalled();
     });
 
     it("rejects with a 400 when the viewing isn't owned by the user", async () => {
@@ -209,7 +182,6 @@ describe("EpisodeService.addViewing", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         episodeService = new EpisodeService();
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
         userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({ showId: 42, number: 1, platformId: 999 });
         userEpisodeRepoMocks.existsForViewing.mockResolvedValue(false);
         userEpisodeRepoMocks.create.mockResolvedValue(true);
@@ -218,15 +190,6 @@ describe("EpisodeService.addViewing", () => {
     it("rejects with a 400 when userSeasonId or episodeId is missing", async () => {
         await expect(episodeService.addViewing("user-1", undefined, 1)).rejects.toThrow("Requête invalide");
         await expect(episodeService.addViewing("user-1", 7, undefined)).rejects.toThrow("Requête invalide");
-    });
-
-    it("rejects with a 400 when episode tracking isn't enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-
-        await expect(episodeService.addViewing("user-1", 7, 1)).rejects.toThrow(
-            "Le suivi des épisodes n'est pas activé"
-        );
-        expect(userSeasonRepoMocks.getOwnedSeasonViewing).not.toHaveBeenCalled();
     });
 
     it("rejects with a 400 when the viewing isn't owned by the user", async () => {
@@ -296,22 +259,12 @@ describe("EpisodeService.addAllViewings", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         episodeService = new EpisodeService();
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
         userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({ showId: 42, number: 1, platformId: 999 });
         episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([]);
     });
 
     it("rejects with a 400 when no userSeasonId is given", async () => {
         await expect(episodeService.addAllViewings("user-1", undefined)).rejects.toThrow("Requête invalide");
-    });
-
-    it("rejects with a 400 when episode tracking isn't enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-
-        await expect(episodeService.addAllViewings("user-1", 7)).rejects.toThrow(
-            "Le suivi des épisodes n'est pas activé"
-        );
-        expect(userSeasonRepoMocks.getOwnedSeasonViewing).not.toHaveBeenCalled();
     });
 
     it("rejects with a 400 when the viewing isn't owned by the user", async () => {
@@ -400,17 +353,7 @@ describe("EpisodeService.updatePlatformForSeason", () => {
         episodeService = new EpisodeService();
     });
 
-    it("does nothing when episode tracking isn't enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-
-        await episodeService.updatePlatformForSeason("user-1", 7, 999);
-
-        expect(userEpisodeRepoMocks.updatePlatformByUserSeasonId).not.toHaveBeenCalled();
-    });
-
-    it("cascades the platform onto the season's episodes when tracking is enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
-
+    it("cascades the platform onto the season's episodes", async () => {
         await episodeService.updatePlatformForSeason("user-1", 7, 999);
 
         expect(userEpisodeRepoMocks.updatePlatformByUserSeasonId).toHaveBeenCalledWith(7, 999);
@@ -442,73 +385,5 @@ describe("EpisodeService.deleteViewing", () => {
         await expect(episodeService.deleteViewing("user-1", 5)).rejects.toThrow(
             "Impossible de supprimer le visionnage"
         );
-    });
-});
-
-describe("EpisodeService.backfillForUser", () => {
-    let episodeService;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        episodeService = new EpisodeService();
-    });
-
-    it("does nothing when the user has no tracked seasons", async () => {
-        userSeasonRepoMocks.getUserSeasonsByUserId.mockResolvedValue([]);
-
-        await episodeService.backfillForUser("user-1");
-
-        expect(userEpisodeRepoMocks.createIfMissing).not.toHaveBeenCalled();
-    });
-
-    it("backfills every already-aired episode of every tracked viewing", async () => {
-        userSeasonRepoMocks.getUserSeasonsByUserId.mockResolvedValue([
-            { id: 7, showId: 42, number: 1, addedAt: "2023-05-01", platformId: 999 },
-        ]);
-        const past = new Date(Date.now() - 86400000).toISOString();
-        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
-            { id: 1, date: past },
-            { id: 2, date: past },
-        ]);
-
-        await episodeService.backfillForUser("user-1");
-
-        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 1, "2023-05-01", 999);
-        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 2, "2023-05-01", 999);
-    });
-
-    it("skips episodes that haven't aired yet", async () => {
-        userSeasonRepoMocks.getUserSeasonsByUserId.mockResolvedValue([
-            { id: 7, showId: 42, number: 1, addedAt: "2023-05-01", platformId: 999 },
-        ]);
-        const future = new Date(Date.now() + 86400000).toISOString();
-        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
-            { id: 1, date: null },
-            { id: 2, date: future },
-        ]);
-
-        await episodeService.backfillForUser("user-1");
-
-        expect(userEpisodeRepoMocks.createIfMissing).not.toHaveBeenCalled();
-    });
-
-    it("fetches and stores episodes from BetaSeries when none exist locally yet", async () => {
-        userSeasonRepoMocks.getUserSeasonsByUserId.mockResolvedValue([
-            { id: 7, showId: 42, number: 1, addedAt: "2023-05-01", platformId: 999 },
-        ]);
-        const past = new Date(Date.now() - 86400000).toISOString();
-        episodeRepoMocks.getEpisodesByShowIdBySeason
-            .mockResolvedValueOnce([])
-            .mockResolvedValueOnce([{ id: 1, date: past }]);
-        searchServiceMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
-            { id: 1, title: "Pilot", code: "S01E01", global: 1, number: 1, length: 45, date: past },
-        ]);
-
-        await episodeService.backfillForUser("user-1");
-
-        expect(episodeRepoMocks.upsertEpisode).toHaveBeenCalledWith(
-            1, 42, 1, 1, "Pilot", "S01E01", 1, 45, past
-        );
-        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("user-1", 7, 1, "2023-05-01", 999);
     });
 });

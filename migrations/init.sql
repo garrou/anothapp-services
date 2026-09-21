@@ -86,7 +86,6 @@ CREATE TABLE users (
     username VARCHAR(25) NOT NULL,
     picture VARCHAR(255),
     last_export TIMESTAMPTZ,
-    episode_tracking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     PRIMARY KEY (id)

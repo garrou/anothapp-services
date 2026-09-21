@@ -56,7 +56,7 @@ describe("SeasonService (real Postgres)", () => {
 
     describe("updateBySeasonId", () => {
         it("updates the platform and viewing date, and syncs episode platforms", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+            const userId = await insertUser();
             const showId = await insertShow();
             await insertSeason(showId, 1);
             await insertUserShow(userId, showId);

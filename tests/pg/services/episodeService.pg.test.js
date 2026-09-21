@@ -18,15 +18,9 @@ describe("EpisodeService (real Postgres)", () => {
 
     describe("getViewedByMonthAgo", () => {
         it("rejects an invalid month shortcut", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+            const userId = await insertUser();
 
             await expect(service.getViewedByMonthAgo(userId, "999")).rejects.toMatchObject({ status: 400 });
-        });
-
-        it("rejects when episode tracking isn't enabled", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: false });
-
-            await expect(service.getViewedByMonthAgo(userId, "1")).rejects.toMatchObject({ status: 400 });
         });
     });
 
@@ -41,7 +35,7 @@ describe("EpisodeService (real Postgres)", () => {
         };
 
         it("records a viewing for an already-aired episode", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+            const userId = await insertUser();
             const { userSeasonId, episodeId } = await setupAiredEpisode(userId);
 
             await service.addViewing(userId, userSeasonId, episodeId);
@@ -51,7 +45,7 @@ describe("EpisodeService (real Postgres)", () => {
         });
 
         it("rejects a future-dated episode", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+            const userId = await insertUser();
             const showId = await insertShow();
             await insertSeason(showId, 1);
             await insertUserShow(userId, showId);
@@ -62,7 +56,7 @@ describe("EpisodeService (real Postgres)", () => {
         });
 
         it("rejects a duplicate viewing", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+            const userId = await insertUser();
             const { userSeasonId, episodeId } = await setupAiredEpisode(userId);
             await service.addViewing(userId, userSeasonId, episodeId);
 
@@ -70,7 +64,7 @@ describe("EpisodeService (real Postgres)", () => {
         });
 
         it("rejects an episode that doesn't belong to the season", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+            const userId = await insertUser();
             const { userSeasonId } = await setupAiredEpisode(userId);
             const otherShowId = await insertShow();
             await insertSeason(otherShowId, 1);
@@ -80,7 +74,7 @@ describe("EpisodeService (real Postgres)", () => {
         });
 
         it("rejects when the season isn't owned by the user", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+            const userId = await insertUser();
             const otherUserId = await insertUser();
             const showId = await insertShow();
             await insertSeason(showId, 1);
@@ -94,7 +88,7 @@ describe("EpisodeService (real Postgres)", () => {
 
     describe("addAllViewings", () => {
         it("marks every already-aired episode of the season as watched", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+            const userId = await insertUser();
             const showId = await insertShow();
             await insertSeason(showId, 1);
             await insertUserShow(userId, showId);
@@ -111,7 +105,7 @@ describe("EpisodeService (real Postgres)", () => {
 
     describe("updateViewing", () => {
         it("updates the watched date", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+            const userId = await insertUser();
             const showId = await insertShow();
             await insertSeason(showId, 1);
             await insertUserShow(userId, showId);
@@ -134,7 +128,7 @@ describe("EpisodeService (real Postgres)", () => {
 
     describe("deleteViewing", () => {
         it("deletes the viewing", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
+            const userId = await insertUser();
             const showId = await insertShow();
             await insertSeason(showId, 1);
             await insertUserShow(userId, showId);
@@ -153,22 +147,6 @@ describe("EpisodeService (real Postgres)", () => {
             const userId = await insertUser();
 
             await expect(service.deleteViewing(userId, 999999)).rejects.toMatchObject({ status: 500 });
-        });
-    });
-
-    describe("backfillForUser", () => {
-        it("marks every already-aired episode of every watched season as viewed", async () => {
-            const userId = await insertUser({ episodeTrackingEnabled: true });
-            const showId = await insertShow();
-            await insertSeason(showId, 1);
-            await insertUserShow(userId, showId);
-            const userSeasonId = await insertUserSeason(userId, showId, 1);
-            await insertEpisode(showId, 1, { number: 1, date: "2020-01-01" });
-
-            await service.backfillForUser(userId);
-
-            const res = await db.query(`SELECT COUNT(*) AS total FROM users_episodes WHERE users_seasons_id = $1`, [userSeasonId]);
-            expect(parseInt(res.rows[0].total)).toBe(1);
         });
     });
 });

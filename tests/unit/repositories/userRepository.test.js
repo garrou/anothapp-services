@@ -7,7 +7,7 @@ vi.mock("../../../config/db.js", () => ({
     default: {query: vi.fn(), transaction: vi.fn()},
 }));
 
-const validUserRow = {id: "user-1", picture: null, username: "bob", last_export: null, episode_tracking_enabled: false, created_at: "2024-01-01"};
+const validUserRow = {id: "user-1", picture: null, username: "bob", last_export: null, created_at: "2024-01-01"};
 
 describe("UserRepository.getUsersByUsername", () => {
     let repo;
@@ -123,56 +123,6 @@ describe("UserRepository.getAllUserIds", () => {
         const result = await repo.getAllUserIds();
 
         expect(result).toEqual(["user-1", "user-2"]);
-    });
-});
-
-describe("UserRepository.hasEpisodeTrackingEnabled", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserRepository();
-    });
-
-    it("returns true when enabled", async () => {
-        db.query.mockResolvedValue({rows: [{episode_tracking_enabled: true}]});
-
-        const result = await repo.hasEpisodeTrackingEnabled("user-1");
-
-        expect(result).toBe(true);
-    });
-
-    it("returns false when the user does not exist", async () => {
-        db.query.mockResolvedValue({rows: []});
-
-        const result = await repo.hasEpisodeTrackingEnabled("unknown");
-
-        expect(result).toBe(false);
-    });
-});
-
-describe("UserRepository.getEpisodeTrackingByIds", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserRepository();
-    });
-
-    it("returns an empty Map without querying when ids is empty", async () => {
-        const result = await repo.getEpisodeTrackingByIds([]);
-
-        expect(db.query).not.toHaveBeenCalled();
-        expect(result.size).toBe(0);
-    });
-
-    it("returns a Map keyed by id", async () => {
-        db.query.mockResolvedValue({rows: [{id: "user-1", episode_tracking_enabled: true}, {id: "user-2", episode_tracking_enabled: false}]});
-
-        const result = await repo.getEpisodeTrackingByIds(["user-1", "user-2"]);
-
-        expect(result.get("user-1")).toBe(true);
-        expect(result.get("user-2")).toBe(false);
     });
 });
 

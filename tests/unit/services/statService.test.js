@@ -9,30 +9,12 @@ const userShowRepoMocks = vi.hoisted(() => ({
     getNbShowsAddedByUserIdByYear: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
-    getTimeCurrentMonthByUserId: vi.fn(),
-    getTotalTimeByUserId: vi.fn(),
     getTotalSeasonsByUserId: vi.fn(),
-    getTotalEpisodesByUserId: vi.fn(),
-    getRecordViewingTimeMonth: vi.fn(),
-    getRecordViewingTimeDay: vi.fn(),
     getNbSeasonsByUserIdGroupByMonthByCurrentYear: vi.fn(),
-    getNbEpisodesByUserIdGroupByMonthByCurrentYear: vi.fn(),
-    getTimeHourByUserIdGroupByYear: vi.fn(),
     getNbSeasonsByUserIdGroupByYear: vi.fn(),
-    getNbEpisodesByUserIdGroupByYear: vi.fn(),
     getNbSeasonsByUserIdGroupByMonth: vi.fn(),
-    getRankingViewingTimeByShows: vi.fn(),
     getPlatformsByUserId: vi.fn(),
-    getWatchedDatesByUserId: vi.fn(),
     getMostRewatchedByUserId: vi.fn(),
-    getTotalTimeByUserIdByYear: vi.fn(),
-    getTotalEpisodesByUserIdByYear: vi.fn(),
-    getTopShowByUserIdByYear: vi.fn(),
-    getKindsTimeByUserIdByYear: vi.fn(),
-    getTopPlatformByUserIdByYear: vi.fn(),
-    getBestMonthByUserIdByYear: vi.fn(),
-    getWatchedDatesByUserIdByYear: vi.fn(),
-    getTimeCurrentMonthByUserIds: vi.fn(),
 }));
 const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getTimeCurrentMonthByUserId: vi.fn(),
@@ -56,9 +38,7 @@ const userEpisodeStatRepoMocks = vi.hoisted(() => ({
     getWatchedDatesByUserIdByYear: vi.fn(),
 }));
 const userRepoMocks = vi.hoisted(() => ({
-    hasEpisodeTrackingEnabled: vi.fn(),
     getUserById: vi.fn(),
-    getEpisodeTrackingByIds: vi.fn(),
 }));
 const friendRepoMocks = vi.hoisted(() => ({
     checkIfAlreadyFriend: vi.fn(),
@@ -104,39 +84,23 @@ describe("StatService.getStats", () => {
         userSeasonRepoMocks.getNbSeasonsByUserIdGroupByYear.mockResolvedValue([]);
         userSeasonRepoMocks.getNbSeasonsByUserIdGroupByMonth.mockResolvedValue([]);
         userSeasonRepoMocks.getPlatformsByUserId.mockResolvedValue([]);
-        userSeasonRepoMocks.getRecordViewingTimeMonth.mockResolvedValue([]);
-        userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
         userSeasonRepoMocks.getMostRewatchedByUserId.mockResolvedValue(null);
         userSeasonFriendRepoMocks.getTopFriendsByUserId.mockResolvedValue([]);
 
-        for (const repo of [userSeasonRepoMocks, userEpisodeStatRepoMocks]) {
-            repo.getTimeCurrentMonthByUserId.mockResolvedValue(0);
-            repo.getTotalTimeByUserId.mockResolvedValue(0);
-            repo.getTotalEpisodesByUserId.mockResolvedValue(0);
-            repo.getRecordViewingTimeMonth.mockResolvedValue([]);
-            repo.getRecordViewingTimeDay.mockResolvedValue([]);
-            repo.getNbEpisodesByUserIdGroupByMonthByCurrentYear.mockResolvedValue([]);
-            repo.getTimeHourByUserIdGroupByYear.mockResolvedValue([]);
-            repo.getNbEpisodesByUserIdGroupByYear.mockResolvedValue([]);
-            repo.getRankingViewingTimeByShows.mockResolvedValue([]);
-            repo.getWatchedDatesByUserId.mockResolvedValue([]);
-        }
+        userEpisodeStatRepoMocks.getTimeCurrentMonthByUserId.mockResolvedValue(0);
+        userEpisodeStatRepoMocks.getTotalTimeByUserId.mockResolvedValue(0);
+        userEpisodeStatRepoMocks.getTotalEpisodesByUserId.mockResolvedValue(0);
+        userEpisodeStatRepoMocks.getRecordViewingTimeMonth.mockResolvedValue([]);
+        userEpisodeStatRepoMocks.getRecordViewingTimeDay.mockResolvedValue([]);
+        userEpisodeStatRepoMocks.getNbEpisodesByUserIdGroupByMonthByCurrentYear.mockResolvedValue([]);
+        userEpisodeStatRepoMocks.getTimeHourByUserIdGroupByYear.mockResolvedValue([]);
+        userEpisodeStatRepoMocks.getNbEpisodesByUserIdGroupByYear.mockResolvedValue([]);
+        userEpisodeStatRepoMocks.getRankingViewingTimeByShows.mockResolvedValue([]);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue([]);
+        userEpisodeStatRepoMocks.getWatchedByDay.mockResolvedValue([]);
     });
 
-    it("sources time/episode stats from users_seasons when episode tracking is disabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-        userSeasonRepoMocks.getTotalEpisodesByUserId.mockResolvedValue(42);
-
-        const stats = await statService.getStats("user-1");
-
-        expect(stats.nbEpisodes).toBe(42);
-        expect(userSeasonRepoMocks.getTotalEpisodesByUserId).toHaveBeenCalledWith("user-1");
-        expect(userEpisodeStatRepoMocks.getTotalEpisodesByUserId).not.toHaveBeenCalled();
-        expect(stats.episodesHeatmap).toBeUndefined();
-    });
-
-    it("sources time/episode stats from users_episodes when episode tracking is enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+    it("sources time/episode stats from users_episodes", async () => {
         userEpisodeStatRepoMocks.getTotalEpisodesByUserId.mockResolvedValue(99);
         userEpisodeStatRepoMocks.getWatchedByDay.mockResolvedValue([{ date: "2024-01-01", value: 3 }]);
 
@@ -144,13 +108,10 @@ describe("StatService.getStats", () => {
 
         expect(stats.nbEpisodes).toBe(99);
         expect(userEpisodeStatRepoMocks.getTotalEpisodesByUserId).toHaveBeenCalledWith("user-1");
-        expect(userSeasonRepoMocks.getTotalEpisodesByUserId).not.toHaveBeenCalled();
         expect(stats.episodesHeatmap).toEqual([{ date: "2024-01-01", value: 3 }]);
     });
 
-    it("always sources season/show-level stats from the same repositories regardless of the flag", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
-
+    it("always sources season/show-level stats from the same repositories", async () => {
         const stats = await statService.getStats("user-1");
 
         expect(stats.nbSeasons).toBe(20);
@@ -158,10 +119,9 @@ describe("StatService.getStats", () => {
         expect(userSeasonRepoMocks.getTotalSeasonsByUserId).toHaveBeenCalledWith("user-1");
     });
 
-    it("computes the current/longest streak from the watched dates of the active repo", async () => {
+    it("computes the current/longest streak from the watched dates", async () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2026-08-27T12:00:00Z"));
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
         userEpisodeStatRepoMocks.getWatchedDatesByUserId.mockResolvedValue(
             ["2026-08-25", "2026-08-26", "2026-08-27"]
         );
@@ -171,24 +131,20 @@ describe("StatService.getStats", () => {
         expect(stats.currentStreak).toBe(3);
         expect(stats.longestStreak).toBe(3);
         expect(userEpisodeStatRepoMocks.getWatchedDatesByUserId).toHaveBeenCalledWith("user-1");
-        expect(userSeasonRepoMocks.getWatchedDatesByUserId).not.toHaveBeenCalled();
 
         vi.useRealTimers();
     });
 
-    it("exposes the best day from the active repo's viewing-time record", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-        userSeasonRepoMocks.getRecordViewingTimeDay.mockResolvedValue([{ label: "12/03/2024", value: 420 }]);
+    it("exposes the best day from the viewing-time record", async () => {
+        userEpisodeStatRepoMocks.getRecordViewingTimeDay.mockResolvedValue([{ label: "12/03/2024", value: 420 }]);
 
         const stats = await statService.getStats("user-1");
 
         expect(stats.bestDay).toEqual({ label: "12/03/2024", value: 420 });
-        expect(userSeasonRepoMocks.getRecordViewingTimeDay).toHaveBeenCalledWith("user-1", 1);
-        expect(userEpisodeStatRepoMocks.getRecordViewingTimeDay).not.toHaveBeenCalled();
+        expect(userEpisodeStatRepoMocks.getRecordViewingTimeDay).toHaveBeenCalledWith("user-1", 1);
     });
 
-    it("exposes the most rewatched show/season regardless of episode tracking", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+    it("exposes the most rewatched show/season", async () => {
         userSeasonRepoMocks.getMostRewatchedByUserId.mockResolvedValue(
             { showTitle: "Friends", seasonNumber: 3, timesWatched: 5 }
         );
@@ -200,7 +156,6 @@ describe("StatService.getStats", () => {
     });
 
     it("exposes the top watched-with friends ranking", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
         userSeasonFriendRepoMocks.getTopFriendsByUserId.mockResolvedValue([
             {id: "friend-1", label: "Marie", value: 5}
         ]);
@@ -217,12 +172,11 @@ describe("StatService.getStats", () => {
         await expect(
             statService.getStats("user-1", "user-2")
         ).rejects.toThrow("Vous n'êtes pas en relation avec cette personne");
-        expect(userRepoMocks.hasEpisodeTrackingEnabled).not.toHaveBeenCalled();
+        expect(userEpisodeStatRepoMocks.getTotalTimeByUserId).not.toHaveBeenCalled();
     });
 
     it("returns the friend's stats when friendId is an actual friend", async () => {
         friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
 
         await statService.getStats("user-1", "user-2");
 
@@ -231,8 +185,6 @@ describe("StatService.getStats", () => {
     });
 
     it("skips the friendship check when friendId is the caller's own id", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-
         await statService.getStats("user-1", "user-1");
 
         expect(friendRepoMocks.checkIfAlreadyFriend).not.toHaveBeenCalled();
@@ -248,15 +200,13 @@ describe("StatService.getWrapped", () => {
         userShowRepoMocks.getNbShowsAddedByUserIdByYear.mockResolvedValue(0);
         userSeasonFriendRepoMocks.getTopFriendByUserIdByYear.mockResolvedValue(null);
 
-        for (const repo of [userSeasonRepoMocks, userEpisodeStatRepoMocks]) {
-            repo.getTotalTimeByUserIdByYear.mockResolvedValue(0);
-            repo.getTotalEpisodesByUserIdByYear.mockResolvedValue(0);
-            repo.getTopShowByUserIdByYear.mockResolvedValue(null);
-            repo.getKindsTimeByUserIdByYear.mockResolvedValue(null);
-            repo.getTopPlatformByUserIdByYear.mockResolvedValue(null);
-            repo.getBestMonthByUserIdByYear.mockResolvedValue(null);
-            repo.getWatchedDatesByUserIdByYear.mockResolvedValue([]);
-        }
+        userEpisodeStatRepoMocks.getTotalTimeByUserIdByYear.mockResolvedValue(0);
+        userEpisodeStatRepoMocks.getTotalEpisodesByUserIdByYear.mockResolvedValue(0);
+        userEpisodeStatRepoMocks.getTopShowByUserIdByYear.mockResolvedValue(null);
+        userEpisodeStatRepoMocks.getKindsTimeByUserIdByYear.mockResolvedValue(null);
+        userEpisodeStatRepoMocks.getTopPlatformByUserIdByYear.mockResolvedValue(null);
+        userEpisodeStatRepoMocks.getBestMonthByUserIdByYear.mockResolvedValue(null);
+        userEpisodeStatRepoMocks.getWatchedDatesByUserIdByYear.mockResolvedValue([]);
     });
 
     it("rejects a non-numeric year", async () => {
@@ -271,8 +221,7 @@ describe("StatService.getWrapped", () => {
         await expect(statService.getWrapped("user-1", new Date().getFullYear() + 1)).rejects.toThrow("Requête invalide");
     });
 
-    it("sources data from users_episodes when episode tracking is enabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+    it("sources data from users_episodes", async () => {
         userEpisodeStatRepoMocks.getTotalTimeByUserIdByYear.mockResolvedValue(1234);
 
         const wrapped = await statService.getWrapped("user-1", 2024);
@@ -280,11 +229,9 @@ describe("StatService.getWrapped", () => {
         expect(wrapped.year).toBe(2024);
         expect(wrapped.totalTime).toBe(1234);
         expect(userEpisodeStatRepoMocks.getTotalTimeByUserIdByYear).toHaveBeenCalledWith("user-1", 2024);
-        expect(userSeasonRepoMocks.getTotalTimeByUserIdByYear).not.toHaveBeenCalled();
     });
 
-    it("computes the longest streak of the year from the watched dates of the active repo", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
+    it("computes the longest streak of the year from the watched dates", async () => {
         userEpisodeStatRepoMocks.getWatchedDatesByUserIdByYear.mockResolvedValue(
             ["2024-07-01", "2024-07-02", "2024-07-03", "2024-11-20"]
         );
@@ -293,22 +240,9 @@ describe("StatService.getWrapped", () => {
 
         expect(wrapped.bestStreak).toBe(3);
         expect(userEpisodeStatRepoMocks.getWatchedDatesByUserIdByYear).toHaveBeenCalledWith("user-1", 2024);
-        expect(userSeasonRepoMocks.getWatchedDatesByUserIdByYear).not.toHaveBeenCalled();
-    });
-
-    it("sources data from users_seasons when episode tracking is disabled", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-        userSeasonRepoMocks.getTotalTimeByUserIdByYear.mockResolvedValue(5678);
-
-        const wrapped = await statService.getWrapped("user-1", 2024);
-
-        expect(wrapped.totalTime).toBe(5678);
-        expect(userSeasonRepoMocks.getTotalTimeByUserIdByYear).toHaveBeenCalledWith("user-1", 2024);
-        expect(userEpisodeStatRepoMocks.getTotalTimeByUserIdByYear).not.toHaveBeenCalled();
     });
 
     it("exposes the kind with the most accumulated minutes that year", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
         userEpisodeStatRepoMocks.getKindsTimeByUserIdByYear.mockResolvedValue({id: 0, label: "Thriller", value: 180});
 
         const wrapped = await statService.getWrapped("user-1", 2024);
@@ -317,7 +251,6 @@ describe("StatService.getWrapped", () => {
     });
 
     it("returns a null topKind when nothing was watched that year", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(true);
         userEpisodeStatRepoMocks.getKindsTimeByUserIdByYear.mockResolvedValue(null);
 
         const wrapped = await statService.getWrapped("user-1", 2024);
@@ -326,7 +259,6 @@ describe("StatService.getWrapped", () => {
     });
 
     it("exposes the top watched-with friend for that year", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
         userSeasonFriendRepoMocks.getTopFriendByUserIdByYear.mockResolvedValue(
             {id: "friend-1", label: "Marie", value: 4}
         );
@@ -338,8 +270,6 @@ describe("StatService.getWrapped", () => {
     });
 
     it("returns a null topWatchedWithFriend when nobody was tagged that year", async () => {
-        userRepoMocks.hasEpisodeTrackingEnabled.mockResolvedValue(false);
-
         const wrapped = await statService.getWrapped("user-1", 2024);
 
         expect(wrapped.topWatchedWithFriend).toBeNull();
@@ -357,33 +287,19 @@ describe("StatService.getLeaderboard", () => {
             {id: "friend-1", username: "Marie", picture: undefined},
             {id: "friend-2", username: "Paul", picture: undefined},
         ]);
-        userRepoMocks.getEpisodeTrackingByIds.mockResolvedValue(new Map([
-            ["user-1", false],
-            ["friend-1", false],
-            ["friend-2", true],
-        ]));
-        userSeasonRepoMocks.getTimeCurrentMonthByUserIds.mockResolvedValue(new Map());
         userEpisodeStatRepoMocks.getTimeCurrentMonthByUserIds.mockResolvedValue(new Map());
     });
 
-    it("splits participants between the season and episode repos by their tracking mode", async () => {
-        await statService.getLeaderboard("user-1");
-
-        expect(userSeasonRepoMocks.getTimeCurrentMonthByUserIds).toHaveBeenCalledWith(["user-1", "friend-1"]);
-        expect(userEpisodeStatRepoMocks.getTimeCurrentMonthByUserIds).toHaveBeenCalledWith(["friend-2"]);
-    });
-
     it("ranks participants by minutes watched this month, descending", async () => {
-        userSeasonRepoMocks.getTimeCurrentMonthByUserIds.mockResolvedValue(new Map([
+        userEpisodeStatRepoMocks.getTimeCurrentMonthByUserIds.mockResolvedValue(new Map([
             ["user-1", 120],
             ["friend-1", 300],
-        ]));
-        userEpisodeStatRepoMocks.getTimeCurrentMonthByUserIds.mockResolvedValue(new Map([
             ["friend-2", 200],
         ]));
 
         const leaderboard = await statService.getLeaderboard("user-1");
 
+        expect(userEpisodeStatRepoMocks.getTimeCurrentMonthByUserIds).toHaveBeenCalledWith(["user-1", "friend-1", "friend-2"]);
         expect(leaderboard.map((entry) => entry.id)).toEqual(["friend-1", "friend-2", "user-1"]);
         expect(leaderboard.find((entry) => entry.id === "user-1")).toMatchObject({isMe: true, value: 120});
     });
