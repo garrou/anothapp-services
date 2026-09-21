@@ -18,12 +18,20 @@ export const insertUser = async (overrides = {}) => {
         emailVerified = true,
         deletedAt = null,
     } = overrides;
-    const res = await db.query(`
-        INSERT INTO users (username, email, password, picture, episode_tracking_enabled, email_verified, deleted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING id
-    `, [username, email, password, picture, episodeTrackingEnabled, emailVerified, deletedAt]);
-    return res.rows[0].id;
+    return db.transaction(async (client) => {
+        const res = await client.query(`
+            INSERT INTO users (username, picture, episode_tracking_enabled, deleted_at)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id
+        `, [username, picture, episodeTrackingEnabled, deletedAt]);
+        const userId = res.rows[0].id;
+
+        await client.query(`
+            INSERT INTO users_auth (user_id, email, password_hash, email_verified)
+            VALUES ($1, $2, $3, $4)
+        `, [userId, email, password, emailVerified]);
+        return userId;
+    });
 };
 
 let nextShowId = 1;

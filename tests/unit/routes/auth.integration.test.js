@@ -3,15 +3,22 @@ import request from "supertest";
 import SecurityHelper from "../../../helpers/security.js";
 
 const userRepoMocks = vi.hoisted(() => ({
-    getUserByIdentifier: vi.fn(),
-    getUserByEmail: vi.fn(),
     createUser: vi.fn(),
-    updateField: vi.fn(),
     cancelDeletion: vi.fn(),
     getUserById: vi.fn(),
-    setLoginChallenge: vi.fn().mockResolvedValue(true),
-    incrementLoginCodeAttempts: vi.fn().mockResolvedValue(true),
-    confirmLoginChallenge: vi.fn().mockResolvedValue(true),
+}));
+const userAuthRepoMocks = vi.hoisted(() => ({
+    findForLogin: vi.fn(),
+    getByUserId: vi.fn(),
+    getByEmail: vi.fn(),
+    updateField: vi.fn(),
+    confirmPendingEmail: vi.fn(),
+}));
+const loginChallengeRepoMocks = vi.hoisted(() => ({
+    create: vi.fn().mockResolvedValue("challenge-1"),
+    getMostRecentByUserId: vi.fn(),
+    incrementAttempts: vi.fn().mockResolvedValue(true),
+    confirm: vi.fn().mockResolvedValue(true),
 }));
 const refreshRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
@@ -27,6 +34,12 @@ const mailerServiceMocks = vi.hoisted(() => ({
 
 vi.mock("../../../repositories/userRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
+}));
+vi.mock("../../../repositories/userAuthRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return userAuthRepoMocks; }),
+}));
+vi.mock("../../../repositories/loginChallengeRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return loginChallengeRepoMocks; }),
 }));
 vi.mock("../../../repositories/refreshTokenRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return refreshRepoMocks; }),
@@ -52,12 +65,10 @@ describe("POST /auth/login", () => {
     it("returns 200 with a pending-approval response, without setting auth cookies, when credentials are valid", async () => {
         const hash = await SecurityHelper.createHash("goodpassword");
 
-        userRepoMocks.getUserByIdentifier.mockResolvedValue({
+        userAuthRepoMocks.findForLogin.mockResolvedValue({
             id: "1",
             email: "adrien@test.fr",
-            username: "adrien",
             password: hash,
-            emailVerified: true,
         });
 
         const res = await request(app)
@@ -74,14 +85,16 @@ describe("POST /auth/login", () => {
 describe("POST /auth/confirm-login", () => {
     it("returns 200 and sets httpOnly cookies when the code matches the approval token", async () => {
         const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret(), "10m", { jti: "challenge-1" });
-        userRepoMocks.getUserById.mockResolvedValue({
-            id: "1", email: "adrien@test.fr", username: "adrien", emailVerified: true,
-            loginChallengeId: "challenge-1",
-            loginCodeHash: SecurityHelper.hashToken("123456"),
-            loginCodeExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
-            loginCodeAttempts: 0,
+        loginChallengeRepoMocks.getMostRecentByUserId.mockResolvedValue({
+            id: "challenge-1",
+            codeHash: SecurityHelper.hashToken("123456"),
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+            attempts: 0,
+            confirmedAt: null,
         });
-        userRepoMocks.confirmLoginChallenge.mockResolvedValue(true);
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", username: "adrien" });
+        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "adrien@test.fr", emailVerified: true });
+        loginChallengeRepoMocks.confirm.mockResolvedValue(true);
         refreshRepoMocks.create.mockResolvedValue(true);
 
         const res = await request(app)
@@ -96,14 +109,14 @@ describe("POST /auth/confirm-login", () => {
 
     it("returns 401 without setting auth cookies for a code that doesn't match", async () => {
         const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret(), "10m", { jti: "challenge-1" });
-        userRepoMocks.getUserById.mockResolvedValue({
-            id: "1", email: "adrien@test.fr", emailVerified: true,
-            loginChallengeId: "challenge-1",
-            loginCodeHash: SecurityHelper.hashToken("123456"),
-            loginCodeExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
-            loginCodeAttempts: 0,
+        loginChallengeRepoMocks.getMostRecentByUserId.mockResolvedValue({
+            id: "challenge-1",
+            codeHash: SecurityHelper.hashToken("123456"),
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+            attempts: 0,
+            confirmedAt: null,
         });
-        userRepoMocks.confirmLoginChallenge.mockResolvedValue(false);
+        loginChallengeRepoMocks.confirm.mockResolvedValue(false);
 
         const res = await request(app)
             .post("/auth/confirm-login")
@@ -118,12 +131,10 @@ describe("POST /auth/login - pending deletion", () => {
     it("returns 200 with pendingDeletion, without setting auth cookies", async () => {
         const hash = await SecurityHelper.createHash("goodpassword");
 
-        userRepoMocks.getUserByIdentifier.mockResolvedValue({
+        userAuthRepoMocks.findForLogin.mockResolvedValue({
             id: "1",
             email: "adrien@test.fr",
-            username: "adrien",
             password: hash,
-            emailVerified: true,
             deletedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
         });
 
@@ -151,7 +162,8 @@ describe("POST /auth/cancel-deletion", () => {
     it("cancels the deletion and sets auth cookies with a valid token", async () => {
         const cancellationToken = SecurityHelper.signJwt("1", SecurityHelper.deletionCancellationSecret());
         userRepoMocks.cancelDeletion.mockResolvedValue(true);
-        userRepoMocks.getUserById.mockResolvedValue({ id: "1", email: "adrien@test.fr", username: "adrien" });
+        userRepoMocks.getUserById.mockResolvedValue({ id: "1", username: "adrien" });
+        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "adrien@test.fr", emailVerified: true });
         refreshRepoMocks.create.mockResolvedValue(true);
 
         const res = await request(app)
@@ -166,7 +178,8 @@ describe("POST /auth/cancel-deletion", () => {
 describe("POST /auth/verify-email", () => {
     it("is reachable without an access cookie/token", async () => {
         const token = SecurityHelper.signJwt("1", SecurityHelper.emailVerificationSecret());
-        userRepoMocks.updateField.mockResolvedValue(true);
+        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "adrien@test.fr", pendingEmail: null });
+        userAuthRepoMocks.updateField.mockResolvedValue(true);
 
         const res = await request(app).post("/auth/verify-email").send({ token });
 
@@ -182,7 +195,7 @@ describe("POST /auth/verify-email", () => {
 
 describe("POST /auth/forgot-password", () => {
     it("is reachable without an access cookie/token", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "1", password: "hash" });
+        userAuthRepoMocks.getByEmail.mockResolvedValue({ userId: "1", password: "hash" });
 
         const res = await request(app).post("/auth/forgot-password").send({ email: "adrien@test.fr" });
 
@@ -191,7 +204,7 @@ describe("POST /auth/forgot-password", () => {
     });
 
     it("returns the same generic 200 when no account matches (no enumeration)", async () => {
-        userRepoMocks.getUserByEmail.mockResolvedValue(null);
+        userAuthRepoMocks.getByEmail.mockResolvedValue(null);
 
         const res = await request(app).post("/auth/forgot-password").send({ email: "unknown@test.fr" });
 
@@ -201,9 +214,9 @@ describe("POST /auth/forgot-password", () => {
 
 describe("POST /auth/reset-password", () => {
     it("is reachable without an access cookie/token, and revokes existing sessions", async () => {
-        userRepoMocks.getUserById.mockResolvedValue({ id: "1", password: "old-hash" });
+        userAuthRepoMocks.getByUserId.mockResolvedValue({ userId: "1", password: "old-hash" });
         const token = SecurityHelper.signJwt("1", SecurityHelper.passwordResetSecret("old-hash"));
-        userRepoMocks.updateField.mockResolvedValue(true);
+        userAuthRepoMocks.updateField.mockResolvedValue(true);
 
         const res = await request(app)
             .post("/auth/reset-password")

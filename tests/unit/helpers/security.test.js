@@ -136,12 +136,6 @@ describe("SecurityHelper.generateLoginCode", () => {
     });
 });
 
-describe("SecurityHelper.generateChallengeId", () => {
-    it("returns a different id on every call", () => {
-        expect(SecurityHelper.generateChallengeId()).not.toBe(SecurityHelper.generateChallengeId());
-    });
-});
-
 describe("SecurityHelper.passwordResetSecret", () => {
     it("changes when the password hash changes, so a reset token can't be replayed after the password was already changed", () => {
         const first = SecurityHelper.passwordResetSecret("hash-a");

@@ -5,6 +5,7 @@ import db from "../../../config/db.js";
 import SecurityHelper from "../../../helpers/security.js";
 import { loginLimiter, confirmLoginLimiter, registerLimiter } from "../../../middlewares/rateLimit.js";
 import { resetDb } from "../resetDb.js";
+import { insertUser } from "../fixtures.js";
 
 // EMAIL_HOST is unset in this test env, so MailerService logs instead of really sending the
 // reset link - this test signs the same token the server would have emailed, using the same
@@ -12,8 +13,8 @@ import { resetDb } from "../resetDb.js";
 // the reset secret is derived from the account's *current* password hash (see
 // SecurityHelper.passwordResetSecret), so it has to be looked up right before signing
 const signReset = async (userId) => {
-    const { rows } = await db.query(`SELECT password FROM users WHERE id = $1`, [userId]);
-    return SecurityHelper.signJwt(userId, SecurityHelper.passwordResetSecret(rows[0].password), "1h");
+    const { rows } = await db.query(`SELECT password_hash FROM users_auth WHERE user_id = $1`, [userId]);
+    return SecurityHelper.signJwt(userId, SecurityHelper.passwordResetSecret(rows[0]["password_hash"]), "1h");
 };
 // login() generates a random code (see SecurityHelper.generateLoginCode) and only sends it by
 // email - fixing crypto.randomInt lets these tests know that code upfront instead of having to
@@ -68,7 +69,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             });
 
             expect(res.status).toBe(201);
-            const found = await db.query(`SELECT username FROM users WHERE email = 'newuser@test.fr'`);
+            const found = await db.query(`SELECT username FROM users_auth ua JOIN users u ON u.id = ua.user_id WHERE ua.email = 'newuser@test.fr'`);
             expect(found.rows[0].username).toBe("NewUser");
         });
 
@@ -106,9 +107,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         it("logs in and grants access to a protected route via the session cookie, once the code is confirmed", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('LoginUser', 'login@test.fr', $1, TRUE)
-            `, [hash]);
+            await insertUser({ username: "LoginUser", email: "login@test.fr", password: hash, emailVerified: true });
             const agent = request.agent(app);
 
             const { loginRes, confirmRes } = await loginAndConfirm(agent, "LoginUser", "GoodPassword1");
@@ -124,9 +123,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         it("rejects the wrong password", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('WrongPassUser', 'wp@test.fr', $1, TRUE)
-            `, [hash]);
+            await insertUser({ username: "WrongPassUser", email: "wp@test.fr", password: hash, emailVerified: true });
 
             const res = await request(app).post("/auth/login").send({ identifier: "WrongPassUser", password: "Incorrect1" });
 
@@ -138,9 +135,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         it("rotates the session via /auth/refresh, then logout revokes it", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('SessionUser', 'session@test.fr', $1, TRUE)
-            `, [hash]);
+            await insertUser({ username: "SessionUser", email: "session@test.fr", password: hash, emailVerified: true });
             const agent = request.agent(app);
             await loginAndConfirm(agent, "SessionUser", "GoodPassword1");
 
@@ -162,12 +157,10 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         it("lets a pending-deletion user log back in via a cancellation token, restoring normal login", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
-            const userRes = await db.query(
-                `INSERT INTO users (username, email, password, email_verified)
-                 VALUES ('PendingUser', 'pending@test.fr', $1, TRUE) RETURNING id`,
-                [hash]
-            );
-            await db.query(`UPDATE users SET deleted_at = NOW() - INTERVAL '1 day' WHERE id = $1`, [userRes.rows[0].id]);
+            const userId = await insertUser({
+                username: "PendingUser", email: "pending@test.fr", password: hash, emailVerified: true,
+                deletedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            });
 
             const pendingLoginRes = await request(app).post("/auth/login").send({ identifier: "PendingUser", password: "GoodPassword1" });
             expect(pendingLoginRes.status).toBe(200);
@@ -182,6 +175,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             expect(normalLoginRes.status).toBe(200);
             expect(normalLoginRes.body.pendingDeletion).toBeUndefined();
             expect(normalLoginRes.body.pendingApproval).toBe(true);
+            expect(userId).toBeDefined();
         });
     });
 
@@ -189,12 +183,8 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         it("returns the exact same pending-approval response for a verified and an unverified account", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('Verified', 'verified@test.fr', $1, TRUE)
-            `, [hash]);
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('Unverified', 'unverified@test.fr', $1, FALSE)
-            `, [hash]);
+            await insertUser({ username: "Verified", email: "verified@test.fr", password: hash, emailVerified: true });
+            await insertUser({ username: "Unverified", email: "unverified@test.fr", password: hash, emailVerified: false });
 
             const { res: verifiedRes } = await login(request(app), "Verified", "GoodPassword1");
             const { res: unverifiedRes } = await login(request(app), "Unverified", "GoodPassword1");
@@ -211,8 +201,8 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
                 email: "newlogin@test.fr", username: "NewLogin", password: "GoodPassword1", confirm: "GoodPassword1",
             });
             expect(res.status).toBe(201);
-            const { id: userId } = (await db.query(`SELECT id FROM users WHERE email = 'newlogin@test.fr'`)).rows[0];
-            const before = await db.query(`SELECT email_verified FROM users WHERE id = $1`, [userId]);
+            const { user_id: userId } = (await db.query(`SELECT user_id FROM users_auth WHERE email = 'newlogin@test.fr'`)).rows[0];
+            const before = await db.query(`SELECT email_verified FROM users_auth WHERE user_id = $1`, [userId]);
             expect(before.rows[0]["email_verified"]).toBe(false);
 
             const { loginRes, confirmRes } = await loginAndConfirm(request(app), "NewLogin", "GoodPassword1");
@@ -221,16 +211,14 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
             expect(confirmRes.status).toBe(200);
             expect(confirmRes.body.username).toBe("NewLogin");
 
-            const after = await db.query(`SELECT email_verified FROM users WHERE id = $1`, [userId]);
+            const after = await db.query(`SELECT email_verified FROM users_auth WHERE user_id = $1`, [userId]);
             expect(after.rows[0]["email_verified"]).toBe(true);
         });
 
         it("rejects a code that doesn't match the approval token", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('BadCode', 'badcode@test.fr', $1, TRUE)
-            `, [hash]);
+            await insertUser({ username: "BadCode", email: "badcode@test.fr", password: hash, emailVerified: true });
 
             const { res: loginRes } = await login(request(app), "BadCode", "GoodPassword1");
             const confirmRes = await request(app).post("/auth/confirm-login").send({
@@ -243,9 +231,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         it("rejects replaying the same code and approval token after it was already confirmed", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('Replay', 'replay@test.fr', $1, TRUE)
-            `, [hash]);
+            await insertUser({ username: "Replay", email: "replay@test.fr", password: hash, emailVerified: true });
 
             const { loginRes } = await loginAndConfirm(request(app), "Replay", "GoodPassword1");
 
@@ -258,9 +244,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         it("locks the challenge out after too many wrong guesses, even against the correct code", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('Locked', 'locked@test.fr', $1, TRUE)
-            `, [hash]);
+            await insertUser({ username: "Locked", email: "locked@test.fr", password: hash, emailVerified: true });
 
             const { res: loginRes } = await login(request(app), "Locked", "GoodPassword1");
 
@@ -281,9 +265,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         it("lets only one of two concurrent confirm-login requests (same token and code) actually open a session", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('Concurrent', 'concurrent@test.fr', $1, TRUE)
-            `, [hash]);
+            await insertUser({ username: "Concurrent", email: "concurrent@test.fr", password: hash, emailVerified: true });
 
             const { res: loginRes } = await login(request(app), "Concurrent", "GoodPassword1");
             const confirm = () => request(app).post("/auth/confirm-login").send({
@@ -298,9 +280,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         it("rejects an earlier login()'s token no matter which code it's paired with, once a second login() has superseded it", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("GoodPassword1");
-            await db.query(`
-                INSERT INTO users (username, email, password, email_verified) VALUES ('Superseded', 'superseded@test.fr', $1, TRUE)
-            `, [hash]);
+            await insertUser({ username: "Superseded", email: "superseded@test.fr", password: hash, emailVerified: true });
 
             const { res: firstLoginRes } = await login(request(app), "Superseded", "GoodPassword1");
             const { res: secondLoginRes } = await login(request(app), "Superseded", "GoodPassword1");
@@ -321,11 +301,7 @@ describe("Auth journey (real Postgres, real HTTP)", () => {
         it("resets the password via a valid token and revokes existing sessions", async () => {
             await resetDb();
             const hash = await SecurityHelper.createHash("OldPassword1");
-            const userRes = await db.query(`
-                INSERT INTO users (username, email, password, email_verified)
-                VALUES ('ResetUser', 'reset@test.fr', $1, TRUE) RETURNING id
-            `, [hash]);
-            const userId = userRes.rows[0].id;
+            const userId = await insertUser({ username: "ResetUser", email: "reset@test.fr", password: hash, emailVerified: true });
             const agent = request.agent(app);
             await loginAndConfirm(agent, "ResetUser", "OldPassword1");
 

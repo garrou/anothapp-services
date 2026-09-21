@@ -106,6 +106,7 @@ CREATE TABLE login_challenges (
     code_hash VARCHAR(64) NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     attempts SMALLINT NOT NULL DEFAULT 0,
+    confirmed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (id)
 );
@@ -695,7 +696,8 @@ CREATE INDEX idx_playlists_user_id ON playlists(user_id);
 CREATE INDEX idx_notifications_recipient_unread ON notifications(recipient_user_id, read_at);
 CREATE INDEX idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);
 CREATE UNIQUE INDEX idx_users_username_ci ON users(UPPER(username));
-CREATE UNIQUE INDEX idx_users_email_ci ON users(UPPER(email));
+CREATE UNIQUE INDEX idx_users_auth_email_ci ON users_auth(UPPER(email));
+CREATE INDEX idx_login_challenges_user_id_created_at ON login_challenges(user_id, created_at DESC);
 CREATE INDEX idx_seasons_show_id ON seasons(show_id);
 CREATE INDEX idx_playlists_collaborators_user_id ON playlists_collaborators(user_id);
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);

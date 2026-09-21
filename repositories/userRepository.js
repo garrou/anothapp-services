@@ -3,26 +3,13 @@ import User from "../models/user.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import RefreshTokenRepository from "./refreshTokenRepository.js";
-import { MAX_LOGIN_CODE_ATTEMPTS } from "../constants/security.js";
+import UserAuthRepository from "./userAuthRepository.js";
 
 export default class UserRepository {
 
     constructor() {
         this._refreshTokenRepository = new RefreshTokenRepository();
-    }
-
-    /**
-     * @param {string} email
-     * @returns {Promise<User|null>}
-     */
-    getUserByEmail = async (email) => {
-        const res = await db.query(`
-            SELECT *
-            FROM users
-            WHERE UPPER(email) = UPPER($1) 
-            LIMIT 1
-        `, [email]);
-        return res.rowCount === 1 ? new User(res.rows[0]) : null;
+        this._userAuthRepository = new UserAuthRepository();
     }
 
     /**
@@ -35,23 +22,9 @@ export default class UserRepository {
         ? `SELECT * FROM users WHERE UPPER(username) = UPPER($1) LIMIT 1`
         : `SELECT * FROM users WHERE UPPER(username) LIKE UPPER($1) LIMIT $2`;
 
-    const params = strict ? [username] : [`%${username}%`, 10];
-    const res = await db.query(query, params);
-    return res.rows.map((row) => new User(row));
-    }
-
-    /**
-     * @param {string} identifier
-     * @returns {Promise<User|null>}
-     */
-    getUserByIdentifier = async (identifier) => {
-        const res = await db.query(`
-            SELECT *
-            FROM users
-            WHERE UPPER(username) = UPPER($1) OR UPPER(email) = UPPER($1)
-            LIMIT 1
-        `, [identifier]);
-        return res.rowCount === 1 ? new User(res.rows[0]) : null;
+        const params = strict ? [username] : [`%${username}%`, 10];
+        const res = await db.query(query, params);
+        return res.rows.map((row) => new User(row));
     }
 
     /**
@@ -114,17 +87,25 @@ export default class UserRepository {
 
     /**
      * @param {string} email
-     * @param {string} password
+     * @param {string} passwordHash
      * @param {string} username
      * @returns {Promise<string|null>} the created user's id, or null on failure
      */
-    createUser = async (email, password, username) => {
-        const res = await db.query(`
-            INSERT INTO users (email, password, username)
-            VALUES ($1, $2, $3)
-            RETURNING id
-        `, [email, password, username]);
-        return res.rowCount === 1 ? res.rows[0]["id"] : null;
+    createUser = async (email, passwordHash, username) => {
+        return db.transaction(async (client) => {
+            const res = await client.query(`
+                INSERT INTO users (username)
+                VALUES ($1)
+                RETURNING id
+            `, [username]);
+
+            if (res.rowCount !== 1) {
+                return null;
+            }
+            const userId = res.rows[0]["id"];
+            const created = await this._userAuthRepository.create(userId, email, passwordHash, client);
+            return created ? userId : null;
+        });
     }
 
     /**
@@ -143,82 +124,6 @@ export default class UserRepository {
             SET ${field} = $1
             WHERE id = $2
         `, [value, id]);
-        return res.rowCount === 1;
-    }
-
-    /**
-     * Moves `pending_email` into `email` and clears it - only touched once the link sent to the
-     * new address is actually confirmed, so a typo'd pending address never overwrites the one
-     * that's already proven to work (see AuthService.verifyEmail).
-     * @param {string} id
-     * @returns {Promise<boolean>}
-     */
-    confirmPendingEmail = async (id) => {
-        const res = await db.query(`
-            UPDATE users
-            SET email = pending_email, pending_email = NULL
-            WHERE id = $1 AND pending_email IS NOT NULL
-        `, [id]);
-        return res.rowCount === 1;
-    }
-
-    /**
-     * Starts a new login challenge, replacing any previous one for this account - so only the
-     * most recently sent code (and the approval token it was issued alongside) is ever valid
-     * (see AuthService.login).
-     * @param {string} id
-     * @param {string} challengeId
-     * @param {string} codeHash
-     * @param {Date} expiresAt
-     * @returns {Promise<boolean>}
-     */
-    setLoginChallenge = async (id, challengeId, codeHash, expiresAt) => {
-        const res = await db.query(`
-            UPDATE users
-            SET login_challenge_id = $1, login_code_hash = $2, login_code_expires_at = $3, login_code_attempts = 0
-            WHERE id = $4
-        `, [challengeId, codeHash, expiresAt, id]);
-        return res.rowCount === 1;
-    }
-
-    /**
-     * Bounded, atomic increment - the WHERE clause (not a separate read) is what guarantees the
-     * count never exceeds MAX_LOGIN_CODE_ATTEMPTS even under concurrent wrong guesses for the
-     * same challenge (see AuthService.confirmLogin).
-     * @param {string} id
-     * @param {string} challengeId
-     * @returns {Promise<boolean>}
-     */
-    incrementLoginCodeAttempts = async (id, challengeId) => {
-        const res = await db.query(`
-            UPDATE users
-            SET login_code_attempts = login_code_attempts + 1
-            WHERE id = $1 AND login_challenge_id = $2 AND login_code_attempts < $3
-        `, [id, challengeId, MAX_LOGIN_CODE_ATTEMPTS]);
-        return res.rowCount === 1;
-    }
-
-    /**
-     * Atomically checks the code against the active challenge and consumes it in the same
-     * statement - the code, challenge id, expiry and attempt count are all part of the WHERE
-     * clause, so two concurrent calls with the same valid (approvalToken, code) can never both
-     * succeed: only the one that runs first still finds a matching row to update (see
-     * AuthService.confirmLogin).
-     * @param {string} id
-     * @param {string} challengeId
-     * @param {string} codeHash
-     * @returns {Promise<boolean>}
-     */
-    confirmLoginChallenge = async (id, challengeId, codeHash) => {
-        const res = await db.query(`
-            UPDATE users
-            SET login_challenge_id = NULL, login_code_hash = NULL, login_code_expires_at = NULL, login_code_attempts = 0
-            WHERE id = $1
-              AND login_challenge_id = $2
-              AND login_code_hash = $3
-              AND login_code_expires_at > NOW()
-              AND login_code_attempts < $4
-        `, [id, challengeId, codeHash, MAX_LOGIN_CODE_ATTEMPTS]);
         return res.rowCount === 1;
     }
 
@@ -256,14 +161,19 @@ export default class UserRepository {
     }
 
     /**
+     * The "already anonymized" guard checks `users_auth.email` (still the anonymization job's
+     * marker, see anonymizeEligibleAccounts) rather than username, since a real user is free to
+     * pick a username starting with "deleted-" - the `@anothapp.invalid` domain isn't a real
+     * address anyone could register with instead.
      * @param {string} id
      * @returns {Promise<boolean>}
      */
     cancelDeletion = async (id) => {
         const res = await db.query(`
-            UPDATE users
+            UPDATE users u
             SET deleted_at = NULL
-            WHERE id = $1 AND email NOT LIKE 'deleted-%@anothapp.invalid'
+            FROM users_auth ua
+            WHERE u.id = $1 AND ua.user_id = u.id AND u.deleted_at IS NOT NULL AND ua.email NOT LIKE '%@anothapp.invalid'
         `, [id]);
         return res.rowCount === 1;
     }
@@ -274,16 +184,36 @@ export default class UserRepository {
      */
     anonymizeEligibleAccounts = async (graceDays) => {
         const unusablePasswordHash = await SecurityHelper.createDummyPassword();
-        const res = await db.query(`
-            UPDATE users
-            SET username = 'deleted-' || substr(md5(random()::text || id::text), 1, 16),
-                email = 'deleted-' || id::text || '@anothapp.invalid',
-                picture = NULL,
-                password = $2
-            WHERE deleted_at IS NOT NULL
-              AND deleted_at <= NOW() - ($1 * INTERVAL '1 day')
-              AND email NOT LIKE 'deleted-%@anothapp.invalid'
-        `, [graceDays, unusablePasswordHash]);
-        return res.rowCount;
+
+        return db.transaction(async (client) => {
+            const eligible = await client.query(`
+                SELECT u.id
+                FROM users u
+                JOIN users_auth ua ON ua.user_id = u.id
+                WHERE u.deleted_at IS NOT NULL
+                  AND u.deleted_at <= NOW() - ($1 * INTERVAL '1 day')
+                  AND ua.email NOT LIKE '%@anothapp.invalid'
+                FOR UPDATE OF u
+            `, [graceDays]);
+
+            if (!eligible.rowCount) {
+                return 0;
+            }
+            const ids = eligible.rows.map((row) => row.id);
+
+            await client.query(`
+                UPDATE users
+                SET username = 'deleted-' || substr(md5(random()::text || id::text), 1, 16),
+                    picture = NULL
+                WHERE id = ANY($1::uuid[])
+            `, [ids]);
+            await client.query(`
+                UPDATE users_auth
+                SET email = 'deleted-' || user_id::text || '@anothapp.invalid',
+                    password_hash = $2
+                WHERE user_id = ANY($1::uuid[])
+            `, [ids, unusablePasswordHash]);
+            return eligible.rowCount;
+        });
     }
 }

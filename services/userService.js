@@ -1,5 +1,6 @@
 import UserProfile from "../models/userProfile.js";
 import UserRepository from "../repositories/userRepository.js";
+import UserAuthRepository from "../repositories/userAuthRepository.js";
 import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
 import EpisodeService from "./episodeService.js";
 import AuthService from "./authService.js";
@@ -13,6 +14,7 @@ import db from "../config/db.js";
 export default class UserService {
     constructor() {
         this._userRepository = new UserRepository();
+        this._userAuthRepository = new UserAuthRepository();
         this._episodeService = new EpisodeService();
         this._authService = new AuthService();
         this._refreshTokenRepository = new RefreshTokenRepository();
@@ -20,9 +22,9 @@ export default class UserService {
 
     /**
      * {string} userId
-     * @returns {Promise<User>}
+     * @returns {Promise<Object>}
      */
-    getUser = async (userId) => this._userRepository.getUserById(userId);
+    getUser = async (userId) => this.#getFullUser(userId);
 
     /**
      * @param {string} userId
@@ -53,7 +55,7 @@ export default class UserService {
      * @returns {Promise<UserProfile>}
      */
     getProfile = async (userId, isCurrentUser) => {
-        const user = await this._userRepository.getUserById(userId);
+        const user = await this.#getFullUser(userId);
 
         if (user) {
             const profile = new UserProfile(user, isCurrentUser);
@@ -66,9 +68,26 @@ export default class UserService {
     }
 
     /**
+     * Combines the account's business row (`users`) and auth row (`users_auth`) into the single
+     * shape UserProfile (and export data, etc.) expect - see AuthService.#getFullUser for the
+     * same reasoning.
+     * @param {string} userId
+     * @returns {Promise<Object|null>}
+     */
+    #getFullUser = async (userId) => {
+        const user = await this._userRepository.getUserById(userId);
+
+        if (!user) {
+            return null;
+        }
+        const auth = await this._userAuthRepository.getByUserId(userId);
+        return { ...user, ...auth };
+    }
+
+    /**
      * @param {string} currentUserId
      * @param {UserUpdate} userUpdate
-     * @param {{skipBackfill?: boolean}} options 
+     * @param {{skipBackfill?: boolean}} options
      * @returns {Promise<string>}
      */
     updateUser = async (currentUserId, userUpdate, options = {}) => {
@@ -97,12 +116,12 @@ export default class UserService {
      * @returns {Promise<void>}
      */
     requestDeletion = async (userId, password) => {
-        const user = await this._userRepository.getUserById(userId);
+        const auth = await this._userAuthRepository.getByUserId(userId);
 
-        if (!user) {
+        if (!auth) {
             throw new ServiceError(404, ERROR_UNKNOWN_USER);
         }
-        const same = await SecurityHelper.comparePassword(password, user.password);
+        const same = await SecurityHelper.comparePassword(password, auth.password);
 
         if (!same) {
             throw new ServiceError(400, ERROR_BAD_PASSWORD);
@@ -117,7 +136,7 @@ export default class UserService {
     /**
      * @param {string} currentUserId
      * @param {boolean} enabled
-     * @param {boolean} [skipBackfill] 
+     * @param {boolean} [skipBackfill]
      * @returns {Promise<void>}
      */
     #changeEpisodeTracking = async (currentUserId, enabled, skipBackfill = false) => {
@@ -173,18 +192,18 @@ export default class UserService {
         if (!changeValid.status) {
             throw new Error(changeValid.message);
         }
-        const user = await this._userRepository.getUserById(userId);
+        const auth = await this._userAuthRepository.getByUserId(userId);
 
-        if (!user) {
+        if (!auth) {
             throw new ServiceError(404, ERROR_UNKNOWN_USER);
         }
-        const same = await SecurityHelper.comparePassword(currentPass, user.password);
+        const same = await SecurityHelper.comparePassword(currentPass, auth.password);
 
         if (!same) {
             throw new ServiceError(400, ERROR_BAD_PASSWORD);
         }
         const hash = await SecurityHelper.createHash(newPass);
-        const updated = await this._userRepository.updateField(userId, "password", hash);
+        const updated = await this._userAuthRepository.updateField(userId, "password_hash", hash);
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier le mot de passe");
@@ -202,31 +221,31 @@ export default class UserService {
         if (!Validator.isString(currentPassword)) {
             throw new ServiceError(400, ERROR_BAD_PASSWORD);
         }
-        let user = await this._userRepository.getUserById(currentUserId);
+        const auth = await this._userAuthRepository.getByUserId(currentUserId);
 
-        if (!user) {
+        if (!auth) {
             throw new ServiceError(404, ERROR_UNKNOWN_USER);
         }
-        const changeValid = Validator.isValidChangeEmail(user.email, newEmail, confirmEmail);
+        const changeValid = Validator.isValidChangeEmail(auth.email, newEmail, confirmEmail);
 
         if (!changeValid.status) {
             throw new ServiceError(400, changeValid.message);
         }
-        const same = await SecurityHelper.comparePassword(currentPassword, user.password);
+        const same = await SecurityHelper.comparePassword(currentPassword, auth.password);
 
         if (!same) {
             throw new ServiceError(400, ERROR_BAD_PASSWORD);
         }
-        user = await this._userRepository.getUserByEmail(newEmail);
+        const existing = await this._userAuthRepository.getByEmail(newEmail);
 
-        if (user) {
+        if (existing) {
             throw new ServiceError(409, "Cet email est déjà associé à un compte");
         }
         // the account keeps working with the old, already-proven address until the new one is
         // confirmed (see AuthService.verifyEmail) - so a typo'd new address never locks the user
         // out the way overwriting `email` directly used to
         const updated = await db.transaction(async (client) => {
-            const changed = await this._userRepository.updateField(currentUserId, "pending_email", newEmail, client);
+            const changed = await this._userAuthRepository.updateField(currentUserId, "pending_email", newEmail, client);
 
             if (!changed) {
                 return false;

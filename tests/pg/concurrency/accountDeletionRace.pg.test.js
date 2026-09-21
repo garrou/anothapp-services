@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import db from "../../../config/db.js";
 import UserRepository from "../../../repositories/userRepository.js";
+import UserAuthRepository from "../../../repositories/userAuthRepository.js";
 import { resetDb } from "../resetDb.js";
 import { insertUser } from "../fixtures.js";
 
@@ -12,10 +13,13 @@ import { insertUser } from "../fixtures.js";
 describe("Account deletion cancellation vs. scheduled anonymization (real Postgres)", () => {
     /** @type {UserRepository} */
     let repo;
+    /** @type {UserAuthRepository} */
+    let authRepo;
 
     beforeEach(async () => {
         await resetDb();
         repo = new UserRepository();
+        authRepo = new UserAuthRepository();
     });
 
     it("never leaves the account both cancelled and anonymized when racing past the grace period", async () => {
@@ -31,8 +35,9 @@ describe("Account deletion cancellation vs. scheduled anonymization (real Postgr
             ]);
 
             const user = await repo.getUserById(userId);
+            const auth = await authRepo.getByUserId(userId);
             const wasCancelled = user.deletedAt === null;
-            const wasAnonymized = user.email.startsWith("deleted-");
+            const wasAnonymized = auth.email.startsWith("deleted-");
             expect(wasCancelled && wasAnonymized).toBe(false);
             expect(wasCancelled || wasAnonymized).toBe(true);
         }

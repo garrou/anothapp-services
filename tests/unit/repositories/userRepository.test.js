@@ -7,32 +7,7 @@ vi.mock("../../../config/db.js", () => ({
     default: {query: vi.fn(), transaction: vi.fn()},
 }));
 
-const validUserRow = {id: "user-1", email: "a@b.com", picture: null, username: "bob", password: "hash", last_export: null, episode_tracking_enabled: false, created_at: "2024-01-01"};
-
-describe("UserRepository.getUserByEmail", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserRepository();
-    });
-
-    it("returns a User when found", async () => {
-        db.query.mockResolvedValue({rowCount: 1, rows: [validUserRow]});
-
-        const result = await repo.getUserByEmail("a@b.com");
-
-        expect(result.id).toBe("user-1");
-    });
-
-    it("returns null when not found", async () => {
-        db.query.mockResolvedValue({rowCount: 0, rows: []});
-
-        const result = await repo.getUserByEmail("unknown@b.com");
-
-        expect(result).toBeNull();
-    });
-});
+const validUserRow = {id: "user-1", picture: null, username: "bob", last_export: null, episode_tracking_enabled: false, created_at: "2024-01-01"};
 
 describe("UserRepository.getUsersByUsername", () => {
     let repo;
@@ -57,41 +32,6 @@ describe("UserRepository.getUsersByUsername", () => {
         await repo.getUsersByUsername("bo");
 
         expect(db.query).toHaveBeenCalledWith(expect.stringContaining("LIKE"), ["%bo%", 10]);
-    });
-});
-
-describe("UserRepository.getUserByIdentifier", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserRepository();
-    });
-
-    it("returns a User when found", async () => {
-        db.query.mockResolvedValue({rowCount: 1, rows: [validUserRow]});
-
-        const result = await repo.getUserByIdentifier("bob");
-
-        expect(result.username).toBe("bob");
-    });
-
-    it("matches both username and email case-insensitively", async () => {
-        db.query.mockResolvedValue({rowCount: 1, rows: [validUserRow]});
-
-        await repo.getUserByIdentifier("bob");
-
-        const [query] = db.query.mock.calls[0];
-        expect(query).toContain("UPPER(username) = UPPER($1)");
-        expect(query).toContain("UPPER(email) = UPPER($1)");
-    });
-
-    it("returns null when not found", async () => {
-        db.query.mockResolvedValue({rowCount: 0, rows: []});
-
-        const result = await repo.getUserByIdentifier("unknown");
-
-        expect(result).toBeNull();
     });
 });
 
@@ -206,23 +146,40 @@ describe("UserRepository.getEpisodeTrackingByIds", () => {
 
 describe("UserRepository.createUser", () => {
     let repo;
+    let client;
 
     beforeEach(() => {
         vi.clearAllMocks();
         repo = new UserRepository();
+        client = {query: vi.fn()};
+        db.transaction.mockImplementation(async (callback) => callback(client));
     });
 
-    it("returns the created user's id when the user was inserted", async () => {
-        db.query.mockResolvedValue({rowCount: 1, rows: [{id: "user-1"}]});
+    it("inserts the business row and the auth row in the same transaction, and returns the new id", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 1, rows: [{id: "user-1"}]}); // INSERT INTO users
+        client.query.mockResolvedValueOnce({rowCount: 1}); // INSERT INTO users_auth
 
         const result = await repo.createUser("a@b.com", "hash", "bob");
 
-        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users"), ["a@b.com", "hash", "bob"]);
+        expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining("INSERT INTO users"), ["bob"]);
+        expect(client.query).toHaveBeenNthCalledWith(
+            2, expect.stringContaining("INSERT INTO users_auth"), ["user-1", "a@b.com", "hash"]
+        );
         expect(result).toBe("user-1");
     });
 
-    it("returns null when nothing was inserted", async () => {
-        db.query.mockResolvedValue({rowCount: 0, rows: []});
+    it("returns null and never touches users_auth when the business row wasn't inserted", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 0, rows: []});
+
+        const result = await repo.createUser("a@b.com", "hash", "bob");
+
+        expect(client.query).toHaveBeenCalledTimes(1);
+        expect(result).toBeNull();
+    });
+
+    it("returns null when the auth row insert fails, rolling back the business row via the shared transaction", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 1, rows: [{id: "user-1"}]});
+        client.query.mockResolvedValueOnce({rowCount: 0});
 
         const result = await repo.createUser("a@b.com", "hash", "bob");
 
@@ -251,123 +208,10 @@ describe("UserRepository.updateField", () => {
         await expect(repo.updateField("user-1", "is_admin", "true")).rejects.toBeInstanceOf(ServiceError);
         expect(db.query).not.toHaveBeenCalled();
     });
-});
 
-describe("UserRepository.confirmPendingEmail", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserRepository();
-    });
-
-    it("returns true when a pending email was moved into email", async () => {
-        db.query.mockResolvedValue({rowCount: 1});
-
-        const result = await repo.confirmPendingEmail("user-1");
-
-        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("SET email = pending_email"), ["user-1"]);
-        expect(result).toBe(true);
-    });
-
-    it("returns false when the user has no pending email", async () => {
-        db.query.mockResolvedValue({rowCount: 0});
-
-        const result = await repo.confirmPendingEmail("user-1");
-
-        expect(result).toBe(false);
-    });
-});
-
-describe("UserRepository.setLoginChallenge", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserRepository();
-    });
-
-    it("returns true when the challenge was stored", async () => {
-        db.query.mockResolvedValue({rowCount: 1});
-        const expiresAt = new Date();
-
-        const result = await repo.setLoginChallenge("user-1", "challenge-1", "hash", expiresAt);
-
-        expect(db.query).toHaveBeenCalledWith(
-            expect.stringContaining(
-                "SET login_challenge_id = $1, login_code_hash = $2, login_code_expires_at = $3, login_code_attempts = 0"
-            ),
-            ["challenge-1", "hash", expiresAt, "user-1"]
-        );
-        expect(result).toBe(true);
-    });
-
-    it("returns false when no matching user was found", async () => {
-        db.query.mockResolvedValue({rowCount: 0});
-
-        const result = await repo.setLoginChallenge("user-1", "challenge-1", "hash", new Date());
-
-        expect(result).toBe(false);
-    });
-});
-
-describe("UserRepository.incrementLoginCodeAttempts", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserRepository();
-    });
-
-    it("returns true when the attempt count was incremented", async () => {
-        db.query.mockResolvedValue({rowCount: 1});
-
-        const result = await repo.incrementLoginCodeAttempts("user-1", "challenge-1");
-
-        expect(db.query).toHaveBeenCalledWith(
-            expect.stringContaining("SET login_code_attempts = login_code_attempts + 1"),
-            ["user-1", "challenge-1", 5]
-        );
-        expect(result).toBe(true);
-    });
-
-    it("returns false when the challenge is already maxed out or gone (bounded by the WHERE clause, not a separate read)", async () => {
-        db.query.mockResolvedValue({rowCount: 0});
-
-        const result = await repo.incrementLoginCodeAttempts("user-1", "challenge-1");
-
-        expect(result).toBe(false);
-    });
-});
-
-describe("UserRepository.confirmLoginChallenge", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserRepository();
-    });
-
-    it("clears the challenge and returns true when the code, challenge id, expiry and attempt count all match", async () => {
-        db.query.mockResolvedValue({rowCount: 1});
-
-        const result = await repo.confirmLoginChallenge("user-1", "challenge-1", "hash");
-
-        expect(db.query).toHaveBeenCalledWith(
-            expect.stringContaining(
-                "SET login_challenge_id = NULL, login_code_hash = NULL, login_code_expires_at = NULL, login_code_attempts = 0"
-            ),
-            ["user-1", "challenge-1", "hash", 5]
-        );
-        expect(result).toBe(true);
-    });
-
-    it("returns false without clearing anything when the code doesn't match - the check and the clear are the same atomic statement", async () => {
-        db.query.mockResolvedValue({rowCount: 0});
-
-        const result = await repo.confirmLoginChallenge("user-1", "challenge-1", "wrong-hash");
-
-        expect(result).toBe(false);
+    it("rejects auth fields - those belong to UserAuthRepository.updateField now", async () => {
+        await expect(repo.updateField("user-1", "email_verified", true)).rejects.toBeInstanceOf(ServiceError);
+        await expect(repo.updateField("user-1", "password_hash", "hash")).rejects.toBeInstanceOf(ServiceError);
     });
 });
 
@@ -443,7 +287,8 @@ describe("UserRepository.cancelDeletion", () => {
         const result = await repo.cancelDeletion("user-1");
 
         expect(db.query).toHaveBeenCalledWith(expect.stringContaining("deleted_at = NULL"), ["user-1"]);
-        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("email NOT LIKE 'deleted-%@anothapp.invalid'"), ["user-1"]);
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("FROM users_auth"), ["user-1"]);
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("email NOT LIKE '%@anothapp.invalid'"), ["user-1"]);
         expect(result).toBe(true);
     });
 
@@ -458,40 +303,51 @@ describe("UserRepository.cancelDeletion", () => {
 
 describe("UserRepository.anonymizeEligibleAccounts", () => {
     let repo;
+    let client;
 
     beforeEach(() => {
         vi.clearAllMocks();
         repo = new UserRepository();
+        client = {query: vi.fn()};
+        db.transaction.mockImplementation(async (callback) => callback(client));
     });
 
-    it("returns the number of accounts anonymized, passing the grace period in days and an unusable password hash", async () => {
-        db.query.mockResolvedValue({rowCount: 3});
+    it("anonymizes both the business and auth rows for every eligible account, in one transaction", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 2, rows: [{id: "user-1"}, {id: "user-2"}]}); // SELECT eligible
+        client.query.mockResolvedValueOnce({rowCount: 2}); // UPDATE users
+        client.query.mockResolvedValueOnce({rowCount: 2}); // UPDATE users_auth
 
         const result = await repo.anonymizeEligibleAccounts(30);
 
-        expect(db.query).toHaveBeenCalledWith(
-            expect.stringContaining("UPDATE users"), [30, expect.any(String)]
+        expect(client.query).toHaveBeenNthCalledWith(
+            1, expect.stringContaining("email NOT LIKE '%@anothapp.invalid'"), [30]
         );
-        expect(result).toBe(3);
+        expect(client.query).toHaveBeenNthCalledWith(
+            2, expect.stringContaining("UPDATE users"), [["user-1", "user-2"]]
+        );
+        expect(client.query).toHaveBeenNthCalledWith(
+            3, expect.stringContaining("UPDATE users_auth"), [["user-1", "user-2"], expect.any(String)]
+        );
+        expect(result).toBe(2);
     });
 
-    it("skips accounts already anonymized", async () => {
-        db.query.mockResolvedValue({rowCount: 0});
+    it("skips the update statements entirely when no account is eligible", async () => {
+        client.query.mockResolvedValueOnce({rowCount: 0, rows: []});
 
-        await repo.anonymizeEligibleAccounts(30);
+        const result = await repo.anonymizeEligibleAccounts(30);
 
-        expect(db.query).toHaveBeenCalledWith(
-            expect.stringContaining("email NOT LIKE 'deleted-%@anothapp.invalid'"), [30, expect.any(String)]
-        );
+        expect(client.query).toHaveBeenCalledTimes(1);
+        expect(result).toBe(0);
     });
 
     it("generates a password hash unrelated to any real password, different on every run", async () => {
-        db.query.mockResolvedValue({rowCount: 1});
+        client.query.mockResolvedValue({rowCount: 1, rows: [{id: "user-1"}]});
 
         await repo.anonymizeEligibleAccounts(30);
-        const [, firstHash] = db.query.mock.calls[0][1];
+        const firstHash = client.query.mock.calls[2][1][1];
+
         await repo.anonymizeEligibleAccounts(30);
-        const [, secondHash] = db.query.mock.calls[1][1];
+        const secondHash = client.query.mock.calls[5][1][1];
 
         expect(firstHash).not.toBe(secondHash);
     });

@@ -51,7 +51,7 @@ export default class FriendRepository {
      */
     getFriends = async (userId) => {
         const res = await db.query(`
-            SELECT u.id, u.email, u.picture, u.username, u.created_at AS "createdAt"
+            SELECT u.id, u.picture, u.username, u.created_at AS "createdAt"
             FROM friends
             JOIN users u ON id = fst_user_id OR id = sec_user_id
             WHERE (fst_user_id = $1 OR sec_user_id = $1) AND accepted = TRUE AND id <> $1
@@ -65,7 +65,7 @@ export default class FriendRepository {
      */
     getFriendsRequestsSend = async (userId) => {
         const res = await db.query(`
-            SELECT u.id, u.email, u.picture, u.username
+            SELECT u.id, u.picture, u.username
             FROM friends
             JOIN users u ON id = sec_user_id
             WHERE fst_user_id = $1 AND accepted = FALSE
@@ -80,7 +80,7 @@ export default class FriendRepository {
      */
     getFriendsWhoWatchSerie = async (userId, showId) => {
         const res = await db.query(`
-            SELECT u.id, u.email, u.picture, u.username
+            SELECT u.id, u.picture, u.username
             FROM users u
             JOIN users_shows us ON us.show_id = $2 AND u.id = us.user_id
             JOIN friends f ON u.id = f.fst_user_id OR u.id = f.sec_user_id
@@ -95,7 +95,7 @@ export default class FriendRepository {
      */
     getFriendsRequestsReceive = async (userId) => {
         const res = await db.query(`
-            SELECT u.id, u.email, u.picture, u.username
+            SELECT u.id, u.picture, u.username
             FROM friends
             JOIN users u ON id = fst_user_id
             WHERE sec_user_id = $1 AND accepted = FALSE
