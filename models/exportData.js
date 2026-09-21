@@ -1,4 +1,4 @@
-import UserProfile from "./userProfile.js";
+import UserExport from "./userExport.js";
 
 class ExportData {
 
@@ -7,7 +7,7 @@ class ExportData {
      * @param {Object} stats
      */
     constructor(user, stats) {
-        this.user = new UserProfile(user, true);
+        this.user = new UserExport(user);
         this.stats = stats;
         this.shows = [];
         this.friends = [];
