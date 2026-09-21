@@ -110,6 +110,22 @@ export default class Validator {
     }
 
     /**
+     * @param {string|undefined} oldUsername
+     * @param {string|undefined} newUsername
+     * @param {string|undefined} confirmUsername
+     * @returns {ValidatorStatus}
+     */
+    static isValidChangeUsername = (oldUsername, newUsername, confirmUsername) => {
+        if (oldUsername === newUsername) {
+            return new ValidatorStatus(false, "Le nouveau nom d'utilisateur doit être différent");
+        }
+        if (newUsername !== confirmUsername) {
+            return new ValidatorStatus(false, "Noms d'utilisateur différents");
+        }
+        return this.isValidUsername(newUsername);
+    }
+
+    /**
      * @param {string?} image
      * @returns {boolean}
      */

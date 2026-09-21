@@ -9,6 +9,8 @@ export default class UserUpdate {
         this.confirmPassword = obj.confirmPassword;
         this.newEmail = obj.newEmail;
         this.confirmEmail = obj.confirmEmail;
+        this.newUsername = obj.newUsername;
+        this.confirmUsername = obj.confirmUsername;
         this.image = obj.image;
         this.lastExport = obj.lastExport;
     }
@@ -25,5 +27,12 @@ export default class UserUpdate {
      */
     isEmailUpdate() {
         return !!this.newEmail && !!this.confirmEmail;
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    isUsernameUpdate() {
+        return !!this.newUsername && !!this.confirmUsername;
     }
 }
