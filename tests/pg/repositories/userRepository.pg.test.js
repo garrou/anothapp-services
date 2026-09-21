@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import db from "../../../config/db.js";
 import UserRepository from "../../../repositories/userRepository.js";
+import UserAuthRepository from "../../../repositories/userAuthRepository.js";
 import ServiceError from "../../../helpers/serviceError.js";
 import { resetDb } from "../resetDb.js";
 import { insertUser } from "../fixtures.js";
@@ -8,26 +9,33 @@ import { insertUser } from "../fixtures.js";
 describe("UserRepository (real Postgres)", () => {
     /** @type {UserRepository} */
     let repo;
+    /** @type {UserAuthRepository} */
+    let authRepo;
 
     beforeEach(async () => {
         await resetDb();
         repo = new UserRepository();
+        authRepo = new UserAuthRepository();
     });
 
-    describe("createUser / getUserByEmail", () => {
-        it("creates a user and finds it by email, case-insensitively", async () => {
+    describe("createUser", () => {
+        it("creates the business row and the auth row together, findable by email", async () => {
             const result = await repo.createUser("Someone@Example.com", "hash", "Someone");
 
             expect(result).toEqual(expect.any(String));
-            const found = await repo.getUserByEmail("someone@EXAMPLE.com");
-            expect(found.username).toBe("Someone");
-            expect(found.id).toBe(result);
+            const user = await repo.getUserById(result);
+            expect(user.username).toBe("Someone");
+            const auth = await authRepo.getByEmail("someone@EXAMPLE.com");
+            expect(auth.userId).toBe(result);
         });
 
-        it("returns null when the email does not match", async () => {
-            const result = await repo.getUserByEmail("nobody@example.com");
+        it("rolls back the business row when the auth insert fails on a duplicate email, leaving the username free again", async () => {
+            await repo.createUser("taken@example.com", "hash", "First");
 
-            expect(result).toBeNull();
+            await expect(repo.createUser("taken@example.com", "hash", "Second")).rejects.toBeTruthy();
+
+            const retry = await repo.createUser("taken2@example.com", "hash", "Second");
+            expect(retry).toEqual(expect.any(String));
         });
     });
 
@@ -52,30 +60,6 @@ describe("UserRepository (real Postgres)", () => {
         });
     });
 
-    describe("getUserByIdentifier", () => {
-        it("matches by username", async () => {
-            const userId = await insertUser({ username: "IdentifierUser", email: "idu@test.fr" });
-
-            const result = await repo.getUserByIdentifier("IdentifierUser");
-
-            expect(result.id).toBe(userId);
-        });
-
-        it("matches by email", async () => {
-            const userId = await insertUser({ username: "IdentifierUser2", email: "idu2@test.fr" });
-
-            const result = await repo.getUserByIdentifier("idu2@test.fr");
-
-            expect(result.id).toBe(userId);
-        });
-
-        it("returns null when nothing matches", async () => {
-            const result = await repo.getUserByIdentifier("nobody");
-
-            expect(result).toBeNull();
-        });
-    });
-
     describe("getUserById", () => {
         it("returns the user", async () => {
             const userId = await insertUser();
@@ -87,6 +71,25 @@ describe("UserRepository (real Postgres)", () => {
 
         it("returns null for an unknown id", async () => {
             const result = await repo.getUserById("00000000-0000-0000-0000-000000000000");
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe("getUserWithAuthById", () => {
+        it("returns the business and auth fields merged from a single joined query", async () => {
+            const userId = await insertUser({ username: "Joined", email: "joined@test.fr" });
+
+            const result = await repo.getUserWithAuthById(userId);
+
+            expect(result.id).toBe(userId);
+            expect(result.username).toBe("Joined");
+            expect(result.email).toBe("joined@test.fr");
+            expect(result.emailVerified).toBe(true);
+        });
+
+        it("returns null for an unknown id", async () => {
+            const result = await repo.getUserWithAuthById("00000000-0000-0000-0000-000000000000");
 
             expect(result).toBeNull();
         });
@@ -199,10 +202,10 @@ describe("UserRepository (real Postgres)", () => {
         it("refuses to cancel once the account has already been anonymized", async () => {
             const userId = await insertUser();
             await repo.requestDeletion(userId);
+            await db.query(`UPDATE users SET deleted_at = NOW() - INTERVAL '31 days' WHERE id = $1`, [userId]);
             await db.query(`
-                UPDATE users SET deleted_at = NOW() - INTERVAL '31 days',
-                    email = 'deleted-' || id::text || '@anothapp.invalid'
-                WHERE id = $1
+                UPDATE users_auth SET email = 'deleted-' || user_id::text || '@anothapp.invalid'
+                WHERE user_id = $1
             `, [userId]);
 
             const result = await repo.cancelDeletion(userId);
@@ -212,7 +215,7 @@ describe("UserRepository (real Postgres)", () => {
     });
 
     describe("anonymizeEligibleAccounts", () => {
-        it("anonymizes accounts whose grace period has elapsed", async () => {
+        it("anonymizes both the business and auth rows once the grace period has elapsed", async () => {
             const userId = await insertUser({ email: "old@test.fr", username: "OldUser" });
             await repo.requestDeletion(userId);
             await db.query(`UPDATE users SET deleted_at = NOW() - INTERVAL '31 days' WHERE id = $1`, [userId]);
@@ -221,8 +224,10 @@ describe("UserRepository (real Postgres)", () => {
 
             expect(result).toBe(1);
             const user = await repo.getUserById(userId);
-            expect(user.email).toBe(`deleted-${userId}@anothapp.invalid`);
+            expect(user.username).not.toBe("OldUser");
             expect(user.picture).toBeNull();
+            const auth = await authRepo.getByUserId(userId);
+            expect(auth.email).toBe(`deleted-${userId}@anothapp.invalid`);
         });
 
         it("does not touch accounts still within the grace period", async () => {
@@ -232,8 +237,8 @@ describe("UserRepository (real Postgres)", () => {
             const result = await repo.anonymizeEligibleAccounts(30);
 
             expect(result).toBe(0);
-            const user = await repo.getUserById(userId);
-            expect(user.email).toBe("recent@test.fr");
+            const auth = await authRepo.getByUserId(userId);
+            expect(auth.email).toBe("recent@test.fr");
         });
 
         it("does not touch accounts that were never deleted", async () => {

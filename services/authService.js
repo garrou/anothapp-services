@@ -1,4 +1,6 @@
 import UserRepository from "../repositories/userRepository.js";
+import UserAuthRepository from "../repositories/userAuthRepository.js";
+import LoginChallengeRepository from "../repositories/loginChallengeRepository.js";
 import UserProfile from "../models/userProfile.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
@@ -14,21 +16,18 @@ import MailerService from "./mailerService.js";
 import { sanitizeErrorForLog } from "../helpers/utils.js";
 
 const GRACE_PERIOD_MS = DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000;
-// keep in sync with the "10m" JWT expiry passed to signJwt in login()
 const LOGIN_CODE_EXPIRY_MS = 10 * 60 * 1000;
 
 export default class AuthService {
     constructor() {
         this._userRepository = new UserRepository();
+        this._userAuthRepository = new UserAuthRepository();
+        this._loginChallengeRepository = new LoginChallengeRepository();
         this._refreshTokenRepository = new RefreshTokenRepository();
         this._mailerService = new MailerService();
     }
 
     /**
-     * A correct password never opens a session on its own: every login (a brand-new unverified
-     * account's first one included) needs its code confirmed through confirmLogin. This also
-     * closes the old email-verified/not-verified oracle, since both cases now get the exact same
-     * {pendingApproval} response.
      * @param {string?} identifier
      * @param {string?} password
      * @returns {Promise<Object>} {pendingApproval: true, approvalToken}, or {pendingDeletion: true,
@@ -38,7 +37,7 @@ export default class AuthService {
         if (!Validator.isString(identifier) || !Validator.isString(password)) {
             throw new ServiceError(400, "Identifiant ou mot de passe incorrect");
         }
-        const found = await this._userRepository.getUserByIdentifier(identifier);
+        const found = await this._userAuthRepository.findForLogin(identifier);
         const hashToCompare = found?.password ?? DUMMY_HASH;
         const same = await SecurityHelper.comparePassword(password, hashToCompare);
 
@@ -55,11 +54,10 @@ export default class AuthService {
             return { pendingDeletion: true, cancellationToken };
         }
         const code = SecurityHelper.generateLoginCode();
-        const codeHash = SecurityHelper.hashToken(code);
-        const challengeId = SecurityHelper.generateChallengeId();
+        const codeHash = SecurityHelper.hashLoginCode(code);
         const expiresAt = new Date(Date.now() + LOGIN_CODE_EXPIRY_MS);
+        const challengeId = await this._loginChallengeRepository.create(found.id, codeHash, expiresAt);
 
-        await this._userRepository.setLoginChallenge(found.id, challengeId, codeHash, expiresAt);
         // jti ties this token to this specific challenge, so a token from a login() call that's
         // since been superseded by another one can't be paired with the newer challenge's code
         const approvalToken = SecurityHelper.signJwt(found.id, SecurityHelper.loginApprovalSecret(), "10m", { jti: challengeId });
@@ -69,17 +67,6 @@ export default class AuthService {
     }
 
     /**
-     * Confirms the code sent by login and opens the session - also marks the account's email as
-     * verified if it wasn't already, since receiving and typing back this code already proves
-     * ownership of the address.
-     *
-     * The code is checked against its stored hash and consumed in the same atomic UPDATE
-     * (UserRepository.confirmLoginChallenge), so two concurrent calls with the same valid
-     * (approvalToken, code) can't both succeed - only whichever runs first still finds a matching
-     * row. A wrong guess is likewise recorded with a bounded, atomic increment
-     * (incrementLoginCodeAttempts), so the attempt count can't be raced past
-     * MAX_LOGIN_CODE_ATTEMPTS either. This is on top of the IP-based confirmLoginLimiter: a wrong
-     * guess only costs one of MAX_LOGIN_CODE_ATTEMPTS regardless of which IP it comes from.
      * @param {string?} approvalToken
      * @param {string?} code
      * @returns {Promise<Object>}
@@ -89,32 +76,34 @@ export default class AuthService {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         const { sub: userId, jti: challengeId } = SecurityHelper.verifyJwt(approvalToken, SecurityHelper.loginApprovalSecret());
-        const user = await this._userRepository.getUserById(userId);
+        const challenge = await this._loginChallengeRepository.getMostRecentByUserId(userId);
 
-        if (!user) {
-            throw new ServiceError(401, ERROR_TOKEN_INVALID);
-        }
         // advisory only (a stale read, not the security boundary) - lets a token from an already
-        // superseded/expired/maxed-out challenge fail fast with a clearer error, without writing
-        // a failed attempt against whatever challenge (if any) is actually active right now
-        const noActiveChallenge = user.loginChallengeId !== challengeId
-            || !user.loginCodeHash
-            || new Date(user.loginCodeExpiresAt) < new Date()
-            || user.loginCodeAttempts >= MAX_LOGIN_CODE_ATTEMPTS;
+        // superseded/expired/maxed-out/confirmed challenge fail fast with a clearer error,
+        // without writing a failed attempt against whatever challenge (if any) is now active
+        const noActiveChallenge = !challenge
+            || challenge.id !== challengeId
+            || challenge.confirmedAt
+            || new Date(challenge.expiresAt) < new Date()
+            || challenge.attempts >= MAX_LOGIN_CODE_ATTEMPTS;
 
         if (noActiveChallenge) {
             throw new ServiceError(401, ERROR_LOGIN_CODE_EXPIRED);
         }
-        const codeHash = SecurityHelper.hashToken(code);
-        const confirmed = await this._userRepository.confirmLoginChallenge(userId, challengeId, codeHash);
+        const codeHash = SecurityHelper.hashLoginCode(code);
+        const confirmed = await this._loginChallengeRepository.confirm(userId, challengeId, codeHash);
 
         if (!confirmed) {
-            await this._userRepository.incrementLoginCodeAttempts(userId, challengeId);
+            await this._loginChallengeRepository.incrementAttempts(userId, challengeId);
             throw new ServiceError(401, ERROR_LOGIN_CODE_INVALID);
         }
+        const user = await this._userRepository.getUserWithAuthById(userId);
 
+        if (!user) {
+            throw new ServiceError(401, ERROR_TOKEN_INVALID);
+        }
         if (!user.emailVerified) {
-            const updated = await this._userRepository.updateField(userId, "email_verified", true);
+            const updated = await this._userAuthRepository.updateField(userId, "email_verified", true);
 
             if (!updated) {
                 throw new ServiceError(400, "Impossible de confirmer cet email");
@@ -135,12 +124,12 @@ export default class AuthService {
         if (!cancelled) {
             throw new ServiceError(500, "Impossible d'annuler la suppression du compte");
         }
-        const user = await this._userRepository.getUserById(userId);
+        const user = await this._userRepository.getUserWithAuthById(userId);
         return this.#issueSession(user);
     }
 
     /**
-     * @param {User} user
+     * @param {Object} user
      * @returns {Promise<Object>}
      */
     #issueSession = async (user) => {
@@ -248,16 +237,13 @@ export default class AuthService {
      */
     verifyEmail = async (token) => {
         const { sub: userId } = SecurityHelper.verifyJwt(token, SecurityHelper.emailVerificationSecret());
-        const user = await this._userRepository.getUserById(userId);
+        const auth = await this._userAuthRepository.getByUserId(userId);
 
-        // a pending_email means this token confirms an email *change* (see UserService.#changeEmail)
-        // rather than the initial registration - move it into email instead of touching
-        // email_verified, which never left true for the account's already-proven old address
-        if (user?.pendingEmail) {
+        if (auth?.pendingEmail) {
             let updated;
 
             try {
-                updated = await this._userRepository.confirmPendingEmail(userId);
+                updated = await this._userAuthRepository.confirmPendingEmail(userId);
             } catch (err) {
                 if (err.code === DUPLICATE_ERROR_CODE) {
                     throw new ServiceError(409, "Cet email est déjà associé à un compte");
@@ -269,7 +255,7 @@ export default class AuthService {
             }
             return;
         }
-        const updated = await this._userRepository.updateField(userId, "email_verified", true);
+        const updated = await this._userAuthRepository.updateField(userId, "email_verified", true);
 
         if (!updated) {
             throw new ServiceError(400, "Impossible de confirmer cet email");
@@ -277,8 +263,6 @@ export default class AuthService {
     }
 
     /**
-     * Always resolves the same way whether or not the email has an account, so this endpoint
-     * can't be used to enumerate accounts.
      * @param {string?} email
      * @returns {Promise<void>}
      */
@@ -286,10 +270,10 @@ export default class AuthService {
         if (!Validator.isString(email)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const user = await this._userRepository.getUserByEmail(email);
+        const auth = await this._userAuthRepository.getByEmail(email);
 
-        if (user) {
-            const token = SecurityHelper.signJwt(user.id, SecurityHelper.passwordResetSecret(user.password), "1h");
+        if (auth) {
+            const token = SecurityHelper.signJwt(auth.userId, SecurityHelper.passwordResetSecret(auth.password), "1h");
             const url = `${process.env.ORIGIN}/reset-password/${token}`;
 
             this._mailerService.sendPasswordResetEmail(email, url).catch((err) => {
@@ -299,10 +283,6 @@ export default class AuthService {
     }
 
     /**
-     * The token's signature is checked against a secret derived from the target account's
-     * *current* password hash (see SecurityHelper.passwordResetSecret), so its `sub` claim can't
-     * be trusted until that account is looked up - decoding it first (without verifying) is only
-     * used to know which user's hash to derive the secret from.
      * @param {string} token
      * @param {string?} password
      * @param {string?} confirm
@@ -310,25 +290,25 @@ export default class AuthService {
      */
     resetPassword = async (token, password, confirm) => {
         const decoded = SecurityHelper.decodeJwt(token);
-        let user = null;
+        let auth = null;
 
         try {
-            user = decoded?.sub ? await this._userRepository.getUserById(decoded.sub) : null;
+            auth = decoded?.sub ? await this._userAuthRepository.getByUserId(decoded.sub) : null;
         } catch {
             // e.g. a malformed `sub` that isn't even a valid UUID - treat exactly like "no user"
-            user = null;
+            auth = null;
         }
-        if (!user) {
+        if (!auth) {
             throw new ServiceError(401, ERROR_TOKEN_INVALID);
         }
-        const { sub: userId } = SecurityHelper.verifyJwt(token, SecurityHelper.passwordResetSecret(user.password));
+        const { sub: userId } = SecurityHelper.verifyJwt(token, SecurityHelper.passwordResetSecret(auth.password));
         const validation = Validator.isValidPassword(password, confirm);
 
         if (!validation.status) {
             throw new ServiceError(400, validation.message);
         }
         const hash = await SecurityHelper.createHash(password);
-        const updated = await this._userRepository.updateField(userId, "password", hash);
+        const updated = await this._userAuthRepository.updateField(userId, "password_hash", hash);
 
         if (!updated) {
             throw new ServiceError(500, "Impossible de réinitialiser le mot de passe");

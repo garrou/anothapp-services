@@ -6,10 +6,14 @@ import { ERROR_BAD_PASSWORD } from "../../../constants/errors.js";
 
 const userRepoMocks = vi.hoisted(() => ({
     updateField: vi.fn(),
-    getUserById: vi.fn(),
-    getUserByEmail: vi.fn(),
+    getUserWithAuthById: vi.fn(),
     getUsersByUsername: vi.fn(),
     requestDeletion: vi.fn(),
+}));
+const userAuthRepoMocks = vi.hoisted(() => ({
+    getByUserId: vi.fn(),
+    getByEmail: vi.fn(),
+    updateField: vi.fn(),
 }));
 const episodeServiceMocks = vi.hoisted(() => ({
     backfillForUser: vi.fn(),
@@ -28,6 +32,9 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock("../../../repositories/userRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
+}));
+vi.mock("../../../repositories/userAuthRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return userAuthRepoMocks; }),
 }));
 vi.mock("../../../repositories/refreshTokenRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return refreshTokenRepoMocks; }),
@@ -89,6 +96,52 @@ describe("UserService.updateUser - episode tracking", () => {
     });
 });
 
+describe("UserService.updateUser - password change", () => {
+    let userService;
+
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        userService = new UserService();
+        userAuthRepoMocks.getByUserId.mockResolvedValue({
+            password: await SecurityHelper.createHash("goodpassword"),
+        });
+    });
+
+    it("hashes and stores the new password on users_auth", async () => {
+        userAuthRepoMocks.updateField.mockResolvedValue(true);
+
+        const message = await userService.updateUser(
+            "user-1", new UserUpdate({ currentPassword: "goodpassword", newPassword: "NewPassword1", confirmPassword: "NewPassword1" })
+        );
+
+        expect(userAuthRepoMocks.updateField).toHaveBeenCalledWith("user-1", "password_hash", expect.any(String));
+        expect(message).toBe("Mot de passe modifié");
+    });
+
+    it("rejects an incorrect current password", async () => {
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ currentPassword: "wrongpassword", newPassword: "NewPassword1", confirmPassword: "NewPassword1" })
+        )).rejects.toMatchObject({ status: 400, message: ERROR_BAD_PASSWORD });
+        expect(userAuthRepoMocks.updateField).not.toHaveBeenCalled();
+    });
+
+    it("throws a 404 when the account has no auth row", async () => {
+        userAuthRepoMocks.getByUserId.mockResolvedValue(null);
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ currentPassword: "goodpassword", newPassword: "NewPassword1", confirmPassword: "NewPassword1" })
+        )).rejects.toThrow("Utilisateur inconnu");
+    });
+
+    it("throws a 500 when the database update fails", async () => {
+        userAuthRepoMocks.updateField.mockResolvedValue(false);
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ currentPassword: "goodpassword", newPassword: "NewPassword1", confirmPassword: "NewPassword1" })
+        )).rejects.toThrow("Impossible de modifier le mot de passe");
+    });
+});
+
 describe("UserService.updateUser - email change", () => {
     let userService;
 
@@ -99,18 +152,18 @@ describe("UserService.updateUser - email change", () => {
 
     it("sets a pending email, revokes sessions, and sends a confirmation to the new address - without touching the current (already verified) email", async () => {
         const hash = await SecurityHelper.createHash("GoodPassword1");
-        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
-        userRepoMocks.getUserByEmail.mockResolvedValue(null);
-        userRepoMocks.updateField.mockResolvedValue(true);
+        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "old@test.fr", password: hash });
+        userAuthRepoMocks.getByEmail.mockResolvedValue(null);
+        userAuthRepoMocks.updateField.mockResolvedValue(true);
 
         const message = await userService.updateUser(
             "user-1", new UserUpdate({ newEmail: "new@test.fr", confirmEmail: "new@test.fr", currentPassword: "GoodPassword1" })
         );
 
         expect(message).toBe("Vérifiez votre nouvelle adresse email pour confirmer le changement");
-        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "pending_email", "new@test.fr", expect.anything());
-        expect(userRepoMocks.updateField).not.toHaveBeenCalledWith("user-1", "email", expect.anything(), expect.anything());
-        expect(userRepoMocks.updateField).not.toHaveBeenCalledWith("user-1", "email_verified", expect.anything(), expect.anything());
+        expect(userAuthRepoMocks.updateField).toHaveBeenCalledWith("user-1", "pending_email", "new@test.fr", expect.anything());
+        expect(userAuthRepoMocks.updateField).not.toHaveBeenCalledWith("user-1", "email", expect.anything(), expect.anything());
+        expect(userAuthRepoMocks.updateField).not.toHaveBeenCalledWith("user-1", "email_verified", expect.anything(), expect.anything());
         expect(refreshTokenRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1", expect.anything());
         expect(authServiceMocks.issueEmailVerification).toHaveBeenCalledWith("user-1", "new@test.fr");
         expect(dbMocks.transaction).toHaveBeenCalled();
@@ -118,20 +171,20 @@ describe("UserService.updateUser - email change", () => {
 
     it("rejects mismatched email confirmation, without touching anything", async () => {
         const hash = await SecurityHelper.createHash("GoodPassword1");
-        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
+        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "old@test.fr", password: hash });
 
         await expect(userService.updateUser(
             "user-1", new UserUpdate({ newEmail: "new@test.fr", confirmEmail: "different@test.fr", currentPassword: "GoodPassword1" })
         )).rejects.toMatchObject({ status: 400 });
 
-        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+        expect(userAuthRepoMocks.updateField).not.toHaveBeenCalled();
         expect(refreshTokenRepoMocks.revokeAllForUser).not.toHaveBeenCalled();
         expect(authServiceMocks.issueEmailVerification).not.toHaveBeenCalled();
     });
 
     it("rejects a missing or wrong current password, without touching anything", async () => {
         const hash = await SecurityHelper.createHash("GoodPassword1");
-        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
+        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "old@test.fr", password: hash });
 
         await expect(userService.updateUser(
             "user-1", new UserUpdate({ newEmail: "new@test.fr", confirmEmail: "new@test.fr" })
@@ -141,28 +194,28 @@ describe("UserService.updateUser - email change", () => {
             "user-1", new UserUpdate({ newEmail: "new@test.fr", confirmEmail: "new@test.fr", currentPassword: "WrongPassword" })
         )).rejects.toMatchObject({ status: 400, message: ERROR_BAD_PASSWORD });
 
-        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+        expect(userAuthRepoMocks.updateField).not.toHaveBeenCalled();
         expect(refreshTokenRepoMocks.revokeAllForUser).not.toHaveBeenCalled();
         expect(authServiceMocks.issueEmailVerification).not.toHaveBeenCalled();
     });
 
     it("rejects when the new email is already taken, without touching the verification flag", async () => {
         const hash = await SecurityHelper.createHash("GoodPassword1");
-        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
-        userRepoMocks.getUserByEmail.mockResolvedValue({ id: "user-2" });
+        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "old@test.fr", password: hash });
+        userAuthRepoMocks.getByEmail.mockResolvedValue({ userId: "user-2" });
 
         await expect(userService.updateUser(
             "user-1", new UserUpdate({ newEmail: "taken@test.fr", confirmEmail: "taken@test.fr", currentPassword: "GoodPassword1" })
         )).rejects.toMatchObject({ status: 409 });
-        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+        expect(userAuthRepoMocks.updateField).not.toHaveBeenCalled();
         expect(authServiceMocks.issueEmailVerification).not.toHaveBeenCalled();
     });
 
     it("does not fail the email change just because the verification email couldn't be sent", async () => {
         const hash = await SecurityHelper.createHash("GoodPassword1");
-        userRepoMocks.getUserById.mockResolvedValue({ id: "user-1", email: "old@test.fr", password: hash });
-        userRepoMocks.getUserByEmail.mockResolvedValue(null);
-        userRepoMocks.updateField.mockResolvedValue(true);
+        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "old@test.fr", password: hash });
+        userAuthRepoMocks.getByEmail.mockResolvedValue(null);
+        userAuthRepoMocks.updateField.mockResolvedValue(true);
         authServiceMocks.issueEmailVerification.mockRejectedValueOnce(new Error("SMTP down"));
         const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -182,8 +235,9 @@ describe("UserService.getProfile", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         userService = new UserService();
-        userRepoMocks.getUserById.mockResolvedValue({
-            id: "user-2", email: "user2@test.fr", username: "user2", picture: null, episodeTrackingEnabled: false,
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
+            id: "user-2", username: "user2", picture: null, episodeTrackingEnabled: false,
+            email: "user2@test.fr",
         });
     });
 
@@ -201,8 +255,8 @@ describe("UserService.getProfile", () => {
     });
 
     it("includes createdAt for the profile owner", async () => {
-        userRepoMocks.getUserById.mockResolvedValue({
-            id: "user-2", email: "user2@test.fr", username: "user2", picture: null,
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
+            id: "user-2", username: "user2", picture: null,
             episodeTrackingEnabled: false, createdAt: "2020-05-01T00:00:00.000Z",
         });
 
@@ -212,14 +266,20 @@ describe("UserService.getProfile", () => {
     });
 
     it("never includes createdAt when viewing another user's profile (GET /users/:id has no friendship check)", async () => {
-        userRepoMocks.getUserById.mockResolvedValue({
-            id: "user-2", email: "user2@test.fr", username: "user2", picture: null,
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
+            id: "user-2", username: "user2", picture: null,
             episodeTrackingEnabled: false, createdAt: "2020-05-01T00:00:00.000Z",
         });
 
         const profile = await userService.getProfile("user-2", false);
 
         expect(profile.createdAt).toBeUndefined();
+    });
+
+    it("throws a 404 when the account doesn't exist", async () => {
+        userRepoMocks.getUserWithAuthById.mockResolvedValue(null);
+
+        await expect(userService.getProfile("unknown", true)).rejects.toThrow("Profil introuvable");
     });
 });
 
@@ -233,7 +293,7 @@ describe("UserService.getUsers", () => {
 
     it("never includes emails in username search results", async () => {
         userRepoMocks.getUsersByUsername.mockResolvedValue([
-            { id: "user-2", email: "user2@test.fr", username: "user2" },
+            { id: "user-2", username: "user2" },
         ]);
 
         const [profile] = await userService.getUsers("user-1", "user2");
@@ -248,13 +308,13 @@ describe("UserService.requestDeletion", () => {
     beforeEach(async () => {
         vi.clearAllMocks();
         userService = new UserService();
-        userRepoMocks.getUserById.mockResolvedValue({
-            id: "user-1", password: await SecurityHelper.createHash("goodpassword"),
+        userAuthRepoMocks.getByUserId.mockResolvedValue({
+            password: await SecurityHelper.createHash("goodpassword"),
         });
     });
 
-    it("throws a 404 when the user doesn't exist", async () => {
-        userRepoMocks.getUserById.mockResolvedValue(null);
+    it("throws a 404 when the account has no auth row", async () => {
+        userAuthRepoMocks.getByUserId.mockResolvedValue(null);
 
         await expect(userService.requestDeletion("user-1", "goodpassword")).rejects.toThrow("Utilisateur inconnu");
     });

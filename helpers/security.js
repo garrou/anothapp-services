@@ -33,8 +33,6 @@ export default class SecurityHelper {
         jwt.sign({ sub: userId, ...extraClaims }, secret, { expiresIn });
 
     /**
-     * A secret distinct from JWT_SECRET, derived from it - a token signed with this one can never
-     * be mistaken for a real access token by the auth guard, which only ever checks JWT_SECRET.
      * @returns {string}
      */
     static deletionCancellationSecret = () => crypto
@@ -51,9 +49,6 @@ export default class SecurityHelper {
         .digest("hex");
 
     /**
-     * A secret distinct from JWT_SECRET, derived from it - the approval token only carries the
-     * account's id and the challenge's id (its jti claim), the actual code is checked separately
-     * against its stored hash, atomically, by UserRepository.confirmLoginChallenge.
      * @returns {string}
      */
     static loginApprovalSecret = () => crypto
@@ -67,18 +62,23 @@ export default class SecurityHelper {
     static generateLoginCode = () => crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
 
     /**
-     * Identifies one specific login challenge, independently of the code itself - stored
-     * server-side and carried as the approval token's jti claim, so a token from a login() call
-     * that's since been superseded by another one can't be paired with the newer challenge's code.
      * @returns {string}
      */
-    static generateChallengeId = () => crypto.randomUUID();
+    static loginCodePepper = () => crypto
+        .createHash("sha256")
+        .update(`${process.env.JWT_SECRET}:login-code`)
+        .digest("hex");
 
     /**
-     * Derived from the target account's current password hash, in addition to JWT_SECRET - so
-     * changing the password invalidates every reset token issued before
-     * that change, without needing to store or track anything. This is what makes a reset link
-     * effectively single-use: replaying it after a successful reset fails signature verification.
+     * @param {string} code
+     * @returns {string}
+     */
+    static hashLoginCode = (code) => crypto
+        .createHash("sha256")
+        .update(`${SecurityHelper.loginCodePepper()}:${code}`)
+        .digest("hex");
+
+    /**
      * @param {string} passwordHash
      * @returns {string}
      */
@@ -88,9 +88,6 @@ export default class SecurityHelper {
         .digest("hex");
 
     /**
-     * Reads a JWT's payload without verifying its signature - only safe to use to decide which
-     * secret to verify the token against next (e.g. a per-user derived secret), never to trust
-     * the payload on its own.
      * @param {string} token
      * @returns {any|null}
      */
@@ -156,11 +153,6 @@ export default class SecurityHelper {
     static createDummyPassword = async () => await this.createHash(crypto.randomBytes(32).toString("hex"));
 
     /**
-     * Deterministic JSON serialization: object keys are sorted, so the same logical content
-     * always produces the same string no matter the property insertion order - needed for the
-     * export signature to survive a round-trip through a file a text editor may have reformatted.
-     * Mirrors JSON.stringify's own handling of undefined/function values (dropped from objects,
-     * turned into null in arrays) so it only ever needs to run on already-JSON-safe data.
      * @param {*} value
      * @returns {string}
      */
@@ -182,8 +174,6 @@ export default class SecurityHelper {
     }
 
     /**
-     * A secret distinct from JWT_SECRET, derived from it the same way deletionCancellationSecret
-     * is - so an export signature can never be replayed as anything else derived from JWT_SECRET.
      * @returns {string}
      */
     static exportSignatureSecret = () => crypto
@@ -201,9 +191,6 @@ export default class SecurityHelper {
         .digest("hex");
 
     /**
-     * Stateless tamper check: recomputes the HMAC over everything but the `signature` field
-     * and compares it, in constant time, to the one carried in the file. No storage, no
-     * migration - any edit made to the file after export changes the recomputed value.
      * @param {Object} payload a parsed export file, signature field included
      * @returns {boolean}
      */

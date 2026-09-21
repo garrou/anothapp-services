@@ -35,7 +35,9 @@ describe("AuthService (real Postgres)", () => {
         it("creates a new account", async () => {
             await service.register("new@test.fr", "NewUser", "GoodPassword1", "GoodPassword1");
 
-            const res = await db.query(`SELECT username FROM users WHERE email = 'new@test.fr'`);
+            const res = await db.query(`
+                SELECT u.username FROM users u JOIN users_auth ua ON ua.user_id = u.id WHERE ua.email = 'new@test.fr'
+            `);
             expect(res.rows[0].username).toBe("NewUser");
         });
 
@@ -77,7 +79,7 @@ describe("AuthService (real Postgres)", () => {
 
             await loginAndConfirm(service, "FirstLoginUser", "GoodPassword1");
 
-            const res = await db.query(`SELECT email_verified FROM users WHERE id = $1`, [userId]);
+            const res = await db.query(`SELECT email_verified FROM users_auth WHERE user_id = $1`, [userId]);
             expect(res.rows[0]["email_verified"]).toBe(true);
         });
 

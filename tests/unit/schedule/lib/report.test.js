@@ -60,6 +60,11 @@ describe("formatReport", () => {
         expect(report).toContain("[1 - Netflix] boom");
     });
 
+    it("formats loginChallenges results", () => {
+        const report = formatReport({loginChallenges: {deleted: 7}});
+        expect(report).toContain("<b>7</b> challenge(s) de connexion supprimé(s)");
+    });
+
     it("formats kinds results", () => {
         const report = formatReport({
             kinds: {upserted: 4, failed: [{id: 9, name: "Drame", error: "boom"}]},

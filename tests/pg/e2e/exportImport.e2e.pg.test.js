@@ -81,7 +81,9 @@ describe("Export/import journey (real Postgres, real HTTP)", () => {
         expect(playlist.rows[0].name).toBe("My playlist");
 
         // The target account's own identity is never touched by the import.
-        const targetUser = await db.query(`SELECT username, email FROM users WHERE id = $1`, [userB]);
+        const targetUser = await db.query(`
+            SELECT u.username, ua.email FROM users u JOIN users_auth ua ON ua.user_id = u.id WHERE u.id = $1
+        `, [userB]);
         expect(targetUser.rows[0].username).toBe("Importer");
         expect(targetUser.rows[0].email).toBe("importer@test.fr");
 
