@@ -317,11 +317,16 @@ describe("UserService.requestDeletion", () => {
         });
     });
 
-    it("rejects deleting the admin account, without even checking the password", async () => {
+    it("rejects deleting the admin account, without checking the password", async () => {
+        const compareSpy = vi.spyOn(SecurityHelper, "comparePassword");
+
         await expect(userService.requestDeletion("admin-1", "goodpassword")).rejects.toMatchObject({
             status: 403, message: "Impossible de supprimer le compte administrateur",
         });
-        expect(userAuthRepoMocks.getByUserId).not.toHaveBeenCalled();
+        // the 404 (account exists?) check still runs first - the admin guard only kicks in once
+        // we know there's a real account behind that id
+        expect(userAuthRepoMocks.getByUserId).toHaveBeenCalledWith("admin-1");
+        expect(compareSpy).not.toHaveBeenCalled();
         expect(userRepoMocks.requestDeletion).not.toHaveBeenCalled();
     });
 
