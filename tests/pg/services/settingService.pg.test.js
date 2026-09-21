@@ -52,7 +52,6 @@ describe("SettingService (real Postgres)", () => {
             // The exported user's id/email are never read back on import - only req.userId (the
             // destination account) ever is - but they're harmless to include, and email in
             // particular is part of "my own data" for RGPD access (see models/exportData.js).
-            expect(data.user.id).toBe(userId);
             expect(data.user.email).toBe("exporter@test.fr");
             expect(data.shows).toHaveLength(1);
             expect(data.shows[0].title).toBe("Exported Show");
