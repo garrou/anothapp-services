@@ -16,4 +16,8 @@ router.patch("/:id", seasonController.updateBySeasonId);
 
 router.patch("/:id/watched-with", seasonController.updateWatchedWith);
 
+router.get("/watched-with/pending", seasonController.getPendingWatchedWith);
+
+router.patch("/:id/watched-with/response", seasonController.respondToWatchedWith);
+
 export default router;

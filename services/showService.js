@@ -233,6 +233,48 @@ export default class ShowService {
     }
 
     /**
+     * @param {string} userId
+     * @param {number} showId
+     * @param {number} number
+     * @param {number} platformId
+     * @returns {Promise<number>} the id of the existing or newly created viewing
+     */
+    ensureSeasonTracked = async (userId, showId, number, platformId) => {
+        const existing = await this._userSeasonRepository.findAnyByUserIdShowIdNumber(userId, showId, number);
+
+        if (existing) {
+            return existing;
+        }
+        const hasShow = await this._userShowRepository.checkShowExistsByUserIdByShowId(userId, showId);
+
+        if (!hasShow) {
+            await this.ensureShowExists(showId);
+            await this._userShowRepository.create(userId, showId);
+        }
+        let season = await this._seasonRepository.getSeasonByShowIdByNumber(showId, number);
+
+        if (!season) {
+            const apiSeason = await this._searchService.getSeasonByShowIdByNumber(showId, number);
+
+            if (!apiSeason) {
+                throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
+            }
+            const show = await this._showRepository.getShow(showId);
+            const created = await this._seasonRepository.createSeason(apiSeason.episodes, apiSeason.number, apiSeason.image ?? show.poster, showId);
+
+            if (!created) {
+                throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
+            }
+        }
+        const createdId = await this._userSeasonRepository.create(userId, showId, number, platformId);
+
+        if (!createdId) {
+            throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
+        }
+        return createdId;
+    }
+
+    /**
      * @param {string} currentUserId
      * @param {number?} id
      * @param {number?} num

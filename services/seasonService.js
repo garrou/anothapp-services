@@ -3,7 +3,9 @@ import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import EpisodeService from "./episodeService.js";
+import ShowService from "./showService.js";
 import ServiceError from "../helpers/serviceError.js";
+import Validator from "../helpers/validator.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import {MAX_WATCHED_WITH} from "../constants/validation.js";
 import eventBus from "../helpers/eventBus.js";
@@ -16,6 +18,7 @@ export default class SeasonService {
         this._userSeasonFriendRepository = new UserSeasonFriendRepository();
         this._friendRepository = new FriendRepository();
         this._episodeService = new EpisodeService();
+        this._showService = new ShowService();
     }
 
     /**
@@ -109,15 +112,67 @@ export default class SeasonService {
                 throw new ServiceError(400, "Vous ne pouvez taguer que des amis");
             }
         }
-        await this._userSeasonFriendRepository.setForUserSeasonId(seasonId, uniqueFriendIds);
+        const invited = await this._userSeasonFriendRepository.setForUserSeasonId(seasonId, uniqueFriendIds);
 
-        if (uniqueFriendIds.length) {
+        if (invited.length) {
             eventBus.emit("season.watched_with", {
                 actorUserId: currentUserId,
-                recipientIds: uniqueFriendIds,
+                recipientIds: invited,
                 showId: owned.showId,
                 metadata: {seasonNumber: owned.number}
             });
         }
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @returns {Promise<Object[]>}
+     */
+    getPendingWatchedWith = async (currentUserId) => {
+        return this._userSeasonFriendRepository.getPendingForUser(currentUserId);
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {number?} userSeasonId
+     * @param {boolean} accepted
+     * @returns {Promise<void>}
+     */
+    respondToWatchedWith = async (currentUserId, userSeasonId, accepted) => {
+        if (!userSeasonId || !Validator.isBoolean(accepted)) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        const status = await this._userSeasonFriendRepository.getStatus(userSeasonId, currentUserId);
+
+        if (status === undefined) {
+            throw new ServiceError(404, "Invitation introuvable");
+        }
+        const owned = await this._userSeasonRepository.getSeasonViewingById(userSeasonId);
+
+        if (!accepted) {
+            await this._userSeasonFriendRepository.decline(userSeasonId, currentUserId);
+            eventBus.emit("season.watched_with.declined", {
+                recipientUserId: owned.userId, actorUserId: currentUserId,
+                showId: owned.showId, metadata: {seasonNumber: owned.number},
+            });
+            return;
+        }
+        const friendUsersSeasonId = await this._showService.ensureSeasonTracked(
+            currentUserId, owned.showId, owned.number, owned.platformId
+        );
+        const conflict = await this._userSeasonFriendRepository.hasConflictingLink(friendUsersSeasonId);
+
+        if (conflict) {
+            throw new ServiceError(409, "Ce visionnage participe déjà à un autre visionnage partagé");
+        }
+        const linked = await this._userSeasonFriendRepository.accept(userSeasonId, currentUserId, friendUsersSeasonId);
+
+        if (!linked) {
+            throw new ServiceError(500, "Impossible d'accepter cette invitation");
+        }
+        eventBus.emit("season.watched_with.accepted", {
+            recipientUserId: owned.userId, actorUserId: currentUserId,
+            showId: owned.showId, metadata: {seasonNumber: owned.number},
+        });
     }
 }

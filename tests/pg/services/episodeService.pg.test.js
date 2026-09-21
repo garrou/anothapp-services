@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import db from "../../../config/db.js";
 import EpisodeService from "../../../services/episodeService.js";
+import SeasonService from "../../../services/seasonService.js";
 import { resetDb } from "../resetDb.js";
 import { insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason, insertEpisode } from "../fixtures.js";
 
@@ -99,6 +100,64 @@ describe("EpisodeService (real Postgres)", () => {
             await service.addAllViewings(userId, userSeasonId);
 
             const res = await db.query(`SELECT COUNT(*) AS total FROM users_episodes WHERE users_seasons_id = $1`, [userSeasonId]);
+            expect(parseInt(res.rows[0].total)).toBe(1);
+        });
+    });
+
+    describe("watch-together fan-out", () => {
+        const setupAcceptedLink = async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            const seasonService = new SeasonService();
+            seasonService._showService._searchService.getByShowId = async () => { throw new Error("should not be called"); };
+            seasonService._showService._searchService.getSeasonByShowIdByNumber = async () => { throw new Error("should not be called"); };
+            await seasonService.updateWatchedWith(userId, userSeasonId, [friendId]);
+            await seasonService.respondToWatchedWith(friendId, userSeasonId, true);
+            const friendSeason = await db.query(`SELECT id FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = 1`, [friendId, showId]);
+            return { userId, friendId, showId, userSeasonId, friendUserSeasonId: friendSeason.rows[0].id };
+        };
+
+        it("addViewing mirrors the episode into the accepted friend's own viewing", async () => {
+            const { userId, friendUserSeasonId, showId, userSeasonId } = await setupAcceptedLink();
+            const episodeId = await insertEpisode(showId, 1, { date: "2020-01-01" });
+
+            await service.addViewing(userId, userSeasonId, episodeId);
+
+            const res = await db.query(`SELECT * FROM users_episodes WHERE users_seasons_id = $1 AND episode_id = $2`, [friendUserSeasonId, episodeId]);
+            expect(res.rowCount).toBe(1);
+        });
+
+        it("addAllViewings mirrors newly-watched episodes into the accepted friend's viewing", async () => {
+            const { userId, friendUserSeasonId, showId, userSeasonId } = await setupAcceptedLink();
+            await insertEpisode(showId, 1, { number: 1, date: "2020-01-01" });
+            await insertEpisode(showId, 1, { number: 2, date: "2999-01-01" });
+
+            await service.addAllViewings(userId, userSeasonId);
+
+            const res = await db.query(`SELECT COUNT(*) AS total FROM users_episodes WHERE users_seasons_id = $1`, [friendUserSeasonId]);
+            expect(parseInt(res.rows[0].total)).toBe(1);
+        });
+
+        it("does not mirror an episode add for a viewing that has no accepted link", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            const seasonService = new SeasonService();
+            await seasonService.updateWatchedWith(userId, userSeasonId, [friendId]);
+            const episodeId = await insertEpisode(showId, 1, { date: "2020-01-01" });
+
+            await service.addViewing(userId, userSeasonId, episodeId);
+
+            const res = await db.query(`SELECT COUNT(*) AS total FROM users_episodes`);
             expect(parseInt(res.rows[0].total)).toBe(1);
         });
     });

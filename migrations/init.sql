@@ -191,11 +191,25 @@ CREATE TABLE users_seasons (
     FOREIGN KEY(user_id, show_id) REFERENCES users_shows(user_id, show_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE watch_together_statuses (
+    id VARCHAR(20),
+    name VARCHAR(30) NOT NULL,
+    PRIMARY KEY(id)
+);
+
+INSERT INTO watch_together_statuses (id, name) VALUES
+('accepted', 'Acceptée'),
+('declined', 'Refusée');
+
 CREATE TABLE users_seasons_friends (
     users_season_id INTEGER NOT NULL,
     friend_user_id UUID NOT NULL,
+    status_id VARCHAR(20) DEFAULT NULL,
+    friend_users_season_id INTEGER DEFAULT NULL,
     FOREIGN KEY(users_season_id) REFERENCES users_seasons(id) ON DELETE CASCADE,
     FOREIGN KEY(friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(status_id) REFERENCES watch_together_statuses(id),
+    FOREIGN KEY(friend_users_season_id) REFERENCES users_seasons(id) ON DELETE CASCADE,
     PRIMARY KEY(users_season_id, friend_user_id)
 );
 
@@ -700,6 +714,7 @@ CREATE INDEX idx_users_episodes_user_id ON users_episodes(user_id);
 CREATE INDEX idx_users_episodes_users_seasons_id ON users_episodes(users_seasons_id);
 CREATE INDEX idx_friends_sec_user_id ON friends(sec_user_id);
 CREATE INDEX idx_users_seasons_friends_friend ON users_seasons_friends(friend_user_id);
+CREATE INDEX idx_users_seasons_friends_friend_season ON users_seasons_friends(friend_users_season_id);
 CREATE INDEX idx_playlists_user_id ON playlists(user_id);
 CREATE INDEX idx_notifications_recipient_unread ON notifications(recipient_user_id, read_at);
 CREATE INDEX idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);

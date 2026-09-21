@@ -1,6 +1,7 @@
 import EpisodeRepository from "../repositories/episodeRepository.js";
 import UserEpisodeRepository from "../repositories/userEpisodeRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
+import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
 import SearchService from "./searchService.js";
 import ServiceError from "../helpers/serviceError.js";
 import Validator from "../helpers/validator.js";
@@ -14,7 +15,22 @@ export default class EpisodeService {
         this._episodeRepository = new EpisodeRepository();
         this._userEpisodeRepository = new UserEpisodeRepository();
         this._userSeasonRepository = new UserSeasonRepository();
+        this._userSeasonFriendRepository = new UserSeasonFriendRepository();
         this._searchService = new SearchService();
+    }
+
+    /**
+     * @param {number} userSeasonId
+     * @param {number} episodeId
+     * @param {string} watchedAt
+     * @param {number} platformId
+     * @returns {Promise<void>}
+     */
+    #mirrorToLinkedViewings = async (userSeasonId, episodeId, watchedAt, platformId) => {
+        const linked = await this._userSeasonFriendRepository.getLinkedViewings(userSeasonId);
+        await Promise.all(linked.map((viewing) =>
+            this._userEpisodeRepository.createIfMissing(viewing.userId, viewing.id, episodeId, watchedAt, platformId)
+        ));
     }
 
     /**
@@ -122,8 +138,9 @@ export default class EpisodeService {
         if (exists) {
             throw new ServiceError(409, "Cet épisode a déjà été visionné pour ce visionnage");
         }
+        const watchedAt = new Date().toISOString();
         const created = await this._userEpisodeRepository.create(
-            userId, userSeasonId, episodeId, new Date().toISOString(), season.platformId
+            userId, userSeasonId, episodeId, watchedAt, season.platformId
         );
 
         if (!created) {
@@ -134,6 +151,7 @@ export default class EpisodeService {
             showId: season.showId,
             metadata: {seasonNumber: season.number, episodeCode: episode.code, episodeTitle: episode.title},
         });
+        await this.#mirrorToLinkedViewings(userSeasonId, episodeId, watchedAt, season.platformId);
     }
 
     /**
@@ -157,14 +175,17 @@ export default class EpisodeService {
         const created = await Promise.all(aired.map((episode) =>
             this._userEpisodeRepository.createIfMissing(userId, userSeasonId, episode.id, watchedAt, season.platformId)
         ));
-        const newlyWatchedCount = created.filter(Boolean).length;
+        const newlyWatched = aired.filter((_, i) => created[i]);
 
-        if (newlyWatchedCount > 0) {
+        if (newlyWatched.length > 0) {
             eventBus.emit("episode.bulk_watched", {
                 actorUserId: userId,
                 showId: season.showId,
-                metadata: {seasonNumber: season.number, count: newlyWatchedCount},
+                metadata: {seasonNumber: season.number, count: newlyWatched.length},
             });
+            await Promise.all(newlyWatched.map((episode) =>
+                this.#mirrorToLinkedViewings(userSeasonId, episode.id, watchedAt, season.platformId)
+            ));
         }
     }
 

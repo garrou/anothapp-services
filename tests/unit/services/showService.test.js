@@ -40,6 +40,7 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     create: vi.fn(),
     getDistinctByUserIdByShowId: vi.fn(),
     getInfosByUserIdByShowId: vi.fn(),
+    findAnyByUserIdShowIdNumber: vi.fn(),
 }));
 const seasonRepoMocks = vi.hoisted(() => ({
     getSeasonByShowIdByNumber: vi.fn(),
@@ -367,6 +368,97 @@ describe("ShowService.addSeason", () => {
         );
     });
 
+});
+
+describe("ShowService.ensureSeasonTracked", () => {
+    let showService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        showService = new ShowService();
+    });
+
+    it("returns the existing viewing id without creating anything when one already exists", async () => {
+        userSeasonRepoMocks.findAnyByUserIdShowIdNumber.mockResolvedValue(55);
+
+        const result = await showService.ensureSeasonTracked("user-1", 42, 1, 999);
+
+        expect(result).toBe(55);
+        expect(userShowRepoMocks.checkShowExistsByUserIdByShowId).not.toHaveBeenCalled();
+        expect(userSeasonRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("adds the show first when the user doesn't have it yet, without emitting show.started", async () => {
+        userSeasonRepoMocks.findAnyByUserIdShowIdNumber.mockResolvedValue(null);
+        userShowRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(false);
+        showRepoMocks.getShow.mockResolvedValue({ id: 42, poster: "poster.jpg" });
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(77);
+
+        const result = await showService.ensureSeasonTracked("user-1", 42, 1, 999);
+
+        expect(userShowRepoMocks.create).toHaveBeenCalledWith("user-1", 42);
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
+        expect(result).toBe(77);
+    });
+
+    it("does not re-add the show when the user already has it in their collection", async () => {
+        userSeasonRepoMocks.findAnyByUserIdShowIdNumber.mockResolvedValue(null);
+        userShowRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(true);
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(77);
+
+        await showService.ensureSeasonTracked("user-1", 42, 1, 999);
+
+        expect(userShowRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("creates the season locally when it doesn't exist yet, falling back to the show's poster", async () => {
+        userSeasonRepoMocks.findAnyByUserIdShowIdNumber.mockResolvedValue(null);
+        userShowRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(true);
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue(null);
+        searchServiceMocks.getSeasonByShowIdByNumber.mockResolvedValue({ episodes: 10, number: 1, image: null });
+        showRepoMocks.getShow.mockResolvedValue({ id: 42, poster: "show-poster.jpg" });
+        seasonRepoMocks.createSeason.mockResolvedValue(true);
+        userSeasonRepoMocks.create.mockResolvedValue(77);
+
+        await showService.ensureSeasonTracked("user-1", 42, 1, 999);
+
+        expect(seasonRepoMocks.createSeason).toHaveBeenCalledWith(10, 1, "show-poster.jpg", 42);
+    });
+
+    it("creates the viewing with the given platform id, copied from the invite's owner", async () => {
+        userSeasonRepoMocks.findAnyByUserIdShowIdNumber.mockResolvedValue(null);
+        userShowRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(true);
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(77);
+
+        await showService.ensureSeasonTracked("user-1", 42, 1, 3);
+
+        expect(userSeasonRepoMocks.create).toHaveBeenCalledWith("user-1", 42, 1, 3);
+    });
+
+    it("throws a 500 when the season can't be found locally or via the search API", async () => {
+        userSeasonRepoMocks.findAnyByUserIdShowIdNumber.mockResolvedValue(null);
+        userShowRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(true);
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue(null);
+        searchServiceMocks.getSeasonByShowIdByNumber.mockResolvedValue(null);
+
+        await expect(showService.ensureSeasonTracked("user-1", 42, 1, 999)).rejects.toThrow(
+            "Impossible d'ajouter la saison"
+        );
+    });
+
+    it("throws a 500 when creating the viewing fails", async () => {
+        userSeasonRepoMocks.findAnyByUserIdShowIdNumber.mockResolvedValue(null);
+        userShowRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(true);
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+        userSeasonRepoMocks.create.mockResolvedValue(null);
+
+        await expect(showService.ensureSeasonTracked("user-1", 42, 1, 999)).rejects.toThrow(
+            "Impossible d'ajouter la saison"
+        );
+    });
 });
 
 describe("ShowService.updateByShowId", () => {

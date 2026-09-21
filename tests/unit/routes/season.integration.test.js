@@ -10,6 +10,8 @@ const seasonServiceMocks = vi.hoisted(() => ({
     addAllEpisodesViewing: vi.fn(),
     updateBySeasonId: vi.fn(),
     updateWatchedWith: vi.fn(),
+    getPendingWatchedWith: vi.fn(),
+    respondToWatchedWith: vi.fn(),
 }));
 
 vi.mock("../../../services/seasonService.js", () => ({
@@ -106,5 +108,36 @@ describe("PATCH /seasons/:id/watched-with", () => {
 
         expect(seasonServiceMocks.updateWatchedWith).toHaveBeenCalledWith("user-1", "5", ["user-2"]);
         expect(res.status).toBe(200);
+    });
+});
+
+describe("GET /seasons/watched-with/pending", () => {
+    it("returns the current user's pending invitations", async () => {
+        seasonServiceMocks.getPendingWatchedWith.mockResolvedValue([{userSeasonId: 5}]);
+
+        const res = await request(app).get("/seasons/watched-with/pending").set("Cookie", cookie);
+
+        expect(seasonServiceMocks.getPendingWatchedWith).toHaveBeenCalledWith("user-1");
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual([{userSeasonId: 5}]);
+    });
+});
+
+describe("PATCH /seasons/:id/watched-with/response", () => {
+    it("returns 200 when the invitation is accepted", async () => {
+        seasonServiceMocks.respondToWatchedWith.mockResolvedValue(undefined);
+
+        const res = await request(app).patch("/seasons/5/watched-with/response").set("Cookie", cookie).send({accepted: true});
+
+        expect(seasonServiceMocks.respondToWatchedWith).toHaveBeenCalledWith("user-1", "5", true);
+        expect(res.status).toBe(200);
+    });
+
+    it("returns 409 when the friend's viewing already belongs to another group", async () => {
+        seasonServiceMocks.respondToWatchedWith.mockRejectedValue(new ServiceError(409, "Conflit"));
+
+        const res = await request(app).patch("/seasons/5/watched-with/response").set("Cookie", cookie).send({accepted: true});
+
+        expect(res.status).toBe(409);
     });
 });

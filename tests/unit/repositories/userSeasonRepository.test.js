@@ -111,6 +111,38 @@ describe("UserSeasonRepository", () => {
         });
     });
 
+    describe("getSeasonViewingById", () => {
+        it("returns the viewing regardless of who owns it", async () => {
+            db.query.mockResolvedValue({rowCount: 1, rows: [{user_id: "user-1", show_id: 10, number: 1, platform_id: 2}]});
+
+            const result = await repo.getSeasonViewingById(5);
+
+            expect(result).toEqual({userId: "user-1", showId: 10, number: 1, platformId: 2});
+        });
+
+        it("returns null when not found", async () => {
+            db.query.mockResolvedValue({rowCount: 0, rows: []});
+
+            expect(await repo.getSeasonViewingById(999)).toBeNull();
+        });
+    });
+
+    describe("findAnyByUserIdShowIdNumber", () => {
+        it("returns the id of an existing viewing", async () => {
+            db.query.mockResolvedValue({rowCount: 1, rows: [{id: 5}]});
+
+            const result = await repo.findAnyByUserIdShowIdNumber("user-1", 10, 1);
+
+            expect(result).toBe(5);
+        });
+
+        it("returns null when the user doesn't track that season", async () => {
+            db.query.mockResolvedValue({rowCount: 0, rows: []});
+
+            expect(await repo.findAnyByUserIdShowIdNumber("user-1", 10, 1)).toBeNull();
+        });
+    });
+
     describe("getDistinctByUserIdByShowId", () => {
         it("maps rows to Season instances with cumulated episode intervals", async () => {
             db.query.mockResolvedValue({rows: [{number: 1, image: "img1.png", episodes: 8}, {number: 2, image: "img2.png", episodes: 10}]});

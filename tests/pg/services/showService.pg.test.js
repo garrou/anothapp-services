@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import db from "../../../config/db.js";
 import ShowService from "../../../services/showService.js";
 import { resetDb } from "../resetDb.js";
-import { insertUser, insertShow, insertSeason, insertUserShow } from "../fixtures.js";
+import { insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason } from "../fixtures.js";
 
 describe("ShowService (real Postgres)", () => {
     /** @type {ShowService} */
@@ -148,6 +148,36 @@ describe("ShowService (real Postgres)", () => {
             const showId = await insertShow();
 
             await expect(service.addSeason(userId, showId, 1)).rejects.toMatchObject({ status: 400 });
+        });
+    });
+
+    describe("ensureSeasonTracked", () => {
+        it("reuses an existing viewing instead of creating a duplicate", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const existingId = await insertUserSeason(userId, showId, 1);
+
+            const result = await service.ensureSeasonTracked(userId, showId, 1, 999);
+
+            expect(result).toBe(existingId);
+            const res = await db.query(`SELECT COUNT(*) AS total FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = 1`, [userId, showId]);
+            expect(parseInt(res.rows[0].total)).toBe(1);
+        });
+
+        it("adds the show and season, copying the given platform, when the user has neither yet", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+
+            const result = await service.ensureSeasonTracked(userId, showId, 1, 2);
+
+            const show = await db.query(`SELECT * FROM users_shows WHERE user_id = $1 AND show_id = $2`, [userId, showId]);
+            expect(show.rowCount).toBe(1);
+            const season = await db.query(`SELECT id, platform_id FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = 1`, [userId, showId]);
+            expect(season.rows[0].id).toBe(result);
+            expect(season.rows[0]["platform_id"]).toBe(2);
         });
     });
 

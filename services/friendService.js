@@ -1,5 +1,6 @@
 import FriendRepository from "../repositories/friendRepository.js";
 import PlaylistCollaboratorRepository from "../repositories/playlistCollaboratorRepository.js";
+import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import {DUPLICATE_ERROR_CODE, ERROR_ALREADY_FRIEND, ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import eventBus from "../helpers/eventBus.js";
@@ -9,6 +10,7 @@ export default class FriendService {
     constructor() {
         this._friendRepository = new FriendRepository();
         this._playlistCollaboratorRepository = new PlaylistCollaboratorRepository();
+        this._userSeasonFriendRepository = new UserSeasonFriendRepository();
     }
 
     /**
@@ -72,9 +74,11 @@ export default class FriendService {
         if (!deleted) {
             throw new ServiceError(500, "Impossible de supprimer cet ami");
         }
-        // Playlist collaboration was granted on the strength of the friendship - revoke it
-        // in both directions so it doesn't outlive the relationship it depended on.
+        // Playlist collaboration and watch-together were both granted on the strength of the
+        // friendship - revoke them in both directions so neither outlives the relationship it
+        // depended on. Like every other revoke path, this never touches episodes already synced.
         await this._playlistCollaboratorRepository.removeAllBetween(currentUserId, userId);
+        await this._userSeasonFriendRepository.declineAllBetweenUsers(currentUserId, userId);
 
         if (!deleted.wasAccepted && deleted.requesterId !== currentUserId) {
             eventBus.emit("friend.declined", {recipientUserId: deleted.requesterId, actorUserId: currentUserId});

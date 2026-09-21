@@ -11,6 +11,11 @@ describe("SeasonService (real Postgres)", () => {
     beforeEach(async () => {
         await resetDb();
         service = new SeasonService();
+        // The auto-add-on-accept path can fall back to the real Betaseries API when a show/season
+        // isn't known locally yet - tests pre-seed what they need and stub these to guard against
+        // an accidental real network call, following the same pattern as showService.pg.test.js.
+        service._showService._searchService.getByShowId = async () => { throw new Error("should not be called"); };
+        service._showService._searchService.getSeasonByShowIdByNumber = async () => { throw new Error("should not be called"); };
     });
 
     describe("deleteBySeasonId", () => {
@@ -102,6 +107,114 @@ describe("SeasonService (real Postgres)", () => {
             const userSeasonId = await insertUserSeason(otherUserId, showId, 1);
 
             await expect(service.updateWatchedWith(userId, userSeasonId, [])).rejects.toMatchObject({ status: 404 });
+        });
+    });
+
+    describe("respondToWatchedWith", () => {
+        it("rejects when there is no invitation for this user", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+
+            await expect(service.respondToWatchedWith(friendId, userSeasonId, true)).rejects.toMatchObject({ status: 404 });
+        });
+
+        it("declining marks the link declined without creating anything for the friend", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+
+            await service.respondToWatchedWith(friendId, userSeasonId, false);
+
+            const link = await db.query(`SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
+            expect(link.rows[0]["status_id"]).toBe("declined");
+            const friendShow = await db.query(`SELECT * FROM users_shows WHERE user_id = $1 AND show_id = $2`, [friendId, showId]);
+            expect(friendShow.rowCount).toBe(0);
+        });
+
+        it("accepting auto-adds the show and season for the friend, copying the owner's platform", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1, { platformId: 1 });
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+
+            await service.respondToWatchedWith(friendId, userSeasonId, true);
+
+            const friendShow = await db.query(`SELECT * FROM users_shows WHERE user_id = $1 AND show_id = $2`, [friendId, showId]);
+            expect(friendShow.rowCount).toBe(1);
+            const friendSeason = await db.query(`SELECT id, platform_id FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = 1`, [friendId, showId]);
+            expect(friendSeason.rows[0]["platform_id"]).toBe(1);
+            const link = await db.query(`SELECT status_id, friend_users_season_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
+            expect(link.rows[0]["status_id"]).toBe("accepted");
+            expect(link.rows[0]["friend_users_season_id"]).toBe(friendSeason.rows[0].id);
+        });
+
+        it("accepting reuses the friend's existing viewing instead of creating a duplicate", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await insertUserShow(friendId, showId);
+            const friendExistingSeasonId = await insertUserSeason(friendId, showId, 1);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+
+            await service.respondToWatchedWith(friendId, userSeasonId, true);
+
+            const friendSeasons = await db.query(`SELECT id FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = 1`, [friendId, showId]);
+            expect(friendSeasons.rowCount).toBe(1);
+            expect(friendSeasons.rows[0].id).toBe(friendExistingSeasonId);
+        });
+
+        it("rejects when the friend's viewing is already part of another watch-together group", async () => {
+            const userId = await insertUser();
+            const otherOwnerId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [otherOwnerId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await insertUserShow(otherOwnerId, showId);
+            const otherOwnerSeasonId = await insertUserSeason(otherOwnerId, showId, 1);
+            await service.updateWatchedWith(otherOwnerId, otherOwnerSeasonId, [friendId]);
+            await service.respondToWatchedWith(friendId, otherOwnerSeasonId, true);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+
+            await expect(service.respondToWatchedWith(friendId, userSeasonId, true)).rejects.toMatchObject({ status: 409 });
+        });
+    });
+
+    describe("getPendingWatchedWith", () => {
+        it("lists the current user's pending invitations", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+
+            const pending = await service.getPendingWatchedWith(friendId);
+
+            expect(pending).toHaveLength(1);
+            expect(pending[0].userSeasonId).toBe(userSeasonId);
         });
     });
 });
