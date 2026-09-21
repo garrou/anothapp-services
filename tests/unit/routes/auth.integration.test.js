@@ -5,7 +5,7 @@ import SecurityHelper from "../../../helpers/security.js";
 const userRepoMocks = vi.hoisted(() => ({
     createUser: vi.fn(),
     cancelDeletion: vi.fn(),
-    getUserById: vi.fn(),
+    getUserWithAuthById: vi.fn(),
 }));
 const userAuthRepoMocks = vi.hoisted(() => ({
     findForLogin: vi.fn(),
@@ -92,8 +92,9 @@ describe("POST /auth/confirm-login", () => {
             attempts: 0,
             confirmedAt: null,
         });
-        userRepoMocks.getUserById.mockResolvedValue({ id: "1", username: "adrien" });
-        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "adrien@test.fr", emailVerified: true });
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
+            id: "1", username: "adrien", email: "adrien@test.fr", emailVerified: true,
+        });
         loginChallengeRepoMocks.confirm.mockResolvedValue(true);
         refreshRepoMocks.create.mockResolvedValue(true);
 
@@ -162,8 +163,9 @@ describe("POST /auth/cancel-deletion", () => {
     it("cancels the deletion and sets auth cookies with a valid token", async () => {
         const cancellationToken = SecurityHelper.signJwt("1", SecurityHelper.deletionCancellationSecret());
         userRepoMocks.cancelDeletion.mockResolvedValue(true);
-        userRepoMocks.getUserById.mockResolvedValue({ id: "1", username: "adrien" });
-        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "adrien@test.fr", emailVerified: true });
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
+            id: "1", username: "adrien", email: "adrien@test.fr", emailVerified: true,
+        });
         refreshRepoMocks.create.mockResolvedValue(true);
 
         const res = await request(app)

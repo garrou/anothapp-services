@@ -127,6 +127,16 @@ describe("LoginChallengeRepository (real Postgres)", () => {
 
             expect(result).toBe(false);
         });
+
+        it("refuses to confirm a superseded (non-most-recent) challenge, even with its own correct code, enforced by the UPDATE itself and not just an earlier read", async () => {
+            const userId = await insertUser();
+            const staleId = await repo.create(userId, "old-hash", new Date(Date.now() + 10 * 60 * 1000));
+            await repo.create(userId, "new-hash", new Date(Date.now() + 10 * 60 * 1000));
+
+            const result = await repo.confirm(userId, staleId, "old-hash");
+
+            expect(result).toBe(false);
+        });
     });
 
     describe("deleteOlderThanDays", () => {

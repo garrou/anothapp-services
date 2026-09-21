@@ -63,6 +63,9 @@ export default class LoginChallengeRepository {
               AND expires_at > NOW()
               AND attempts < $4
               AND confirmed_at IS NULL
+              AND id = (
+                  SELECT id FROM login_challenges WHERE user_id = $2 ORDER BY created_at DESC LIMIT 1
+              )
         `, [challengeId, userId, codeHash, MAX_LOGIN_CODE_ATTEMPTS]);
         return res.rowCount === 1;
     }

@@ -16,7 +16,6 @@ import MailerService from "./mailerService.js";
 import { sanitizeErrorForLog } from "../helpers/utils.js";
 
 const GRACE_PERIOD_MS = DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000;
-// keep in sync with the "10m" JWT expiry passed to signJwt in login()
 const LOGIN_CODE_EXPIRY_MS = 10 * 60 * 1000;
 
 export default class AuthService {
@@ -29,10 +28,6 @@ export default class AuthService {
     }
 
     /**
-     * A correct password never opens a session on its own: every login (a brand-new unverified
-     * account's first one included) needs its code confirmed through confirmLogin. This also
-     * closes the old email-verified/not-verified oracle, since both cases now get the exact same
-     * {pendingApproval} response.
      * @param {string?} identifier
      * @param {string?} password
      * @returns {Promise<Object>} {pendingApproval: true, approvalToken}, or {pendingDeletion: true,
@@ -72,17 +67,6 @@ export default class AuthService {
     }
 
     /**
-     * Confirms the code sent by login and opens the session - also marks the account's email as
-     * verified if it wasn't already, since receiving and typing back this code already proves
-     * ownership of the address.
-     *
-     * The code is checked against its stored hash and consumed in the same atomic UPDATE
-     * (LoginChallengeRepository.confirm), so two concurrent calls with the same valid
-     * (approvalToken, code) can't both succeed - only whichever runs first still finds a matching
-     * row. A wrong guess is likewise recorded with a bounded, atomic increment
-     * (incrementAttempts), so the attempt count can't be raced past MAX_LOGIN_CODE_ATTEMPTS
-     * either. This is on top of the IP-based confirmLoginLimiter: a wrong guess only costs one of
-     * MAX_LOGIN_CODE_ATTEMPTS regardless of which IP it comes from.
      * @param {string?} approvalToken
      * @param {string?} code
      * @returns {Promise<Object>}
@@ -113,7 +97,7 @@ export default class AuthService {
             await this._loginChallengeRepository.incrementAttempts(userId, challengeId);
             throw new ServiceError(401, ERROR_LOGIN_CODE_INVALID);
         }
-        const user = await this.#getFullUser(userId);
+        const user = await this._userRepository.getUserWithAuthById(userId);
 
         if (!user) {
             throw new ServiceError(401, ERROR_TOKEN_INVALID);
@@ -140,25 +124,8 @@ export default class AuthService {
         if (!cancelled) {
             throw new ServiceError(500, "Impossible d'annuler la suppression du compte");
         }
-        const user = await this.#getFullUser(userId);
+        const user = await this._userRepository.getUserWithAuthById(userId);
         return this.#issueSession(user);
-    }
-
-    /**
-     * Combines the account's business row (`users`) and auth row (`users_auth`) into the single
-     * shape UserProfile and the rest of this service expect - the two live in separate tables and
-     * repositories, but almost every auth flow needs fields from both.
-     * @param {string} userId
-     * @returns {Promise<Object|null>}
-     */
-    #getFullUser = async (userId) => {
-        const user = await this._userRepository.getUserById(userId);
-
-        if (!user) {
-            return null;
-        }
-        const auth = await this._userAuthRepository.getByUserId(userId);
-        return { ...user, ...auth };
     }
 
     /**
@@ -272,9 +239,6 @@ export default class AuthService {
         const { sub: userId } = SecurityHelper.verifyJwt(token, SecurityHelper.emailVerificationSecret());
         const auth = await this._userAuthRepository.getByUserId(userId);
 
-        // a pending_email means this token confirms an email *change* (see UserService.#changeEmail)
-        // rather than the initial registration - move it into email instead of touching
-        // email_verified, which never left true for the account's already-proven old address
         if (auth?.pendingEmail) {
             let updated;
 
@@ -299,8 +263,6 @@ export default class AuthService {
     }
 
     /**
-     * Always resolves the same way whether or not the email has an account, so this endpoint
-     * can't be used to enumerate accounts.
      * @param {string?} email
      * @returns {Promise<void>}
      */
@@ -321,10 +283,6 @@ export default class AuthService {
     }
 
     /**
-     * The token's signature is checked against a secret derived from the target account's
-     * *current* password hash (see SecurityHelper.passwordResetSecret), so its `sub` claim can't
-     * be trusted until that account is looked up - decoding it first (without verifying) is only
-     * used to know which user's hash to derive the secret from.
      * @param {string} token
      * @param {string?} password
      * @param {string?} confirm

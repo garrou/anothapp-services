@@ -83,7 +83,7 @@ INSERT INTO kinds (id, name) VALUES
 
 CREATE TABLE users (
     id UUID DEFAULT gen_random_uuid(),
-    username VARCHAR(25) UNIQUE NOT NULL,
+    username VARCHAR(25) NOT NULL,
     picture VARCHAR(255),
     last_export TIMESTAMPTZ,
     episode_tracking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
@@ -94,7 +94,7 @@ CREATE TABLE users (
 
 CREATE TABLE users_auth (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     pending_email VARCHAR(255)

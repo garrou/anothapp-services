@@ -24,7 +24,7 @@ export default class UserService {
      * {string} userId
      * @returns {Promise<Object>}
      */
-    getUser = async (userId) => this.#getFullUser(userId);
+    getUser = async (userId) => this._userRepository.getUserWithAuthById(userId);
 
     /**
      * @param {string} userId
@@ -55,7 +55,7 @@ export default class UserService {
      * @returns {Promise<UserProfile>}
      */
     getProfile = async (userId, isCurrentUser) => {
-        const user = await this.#getFullUser(userId);
+        const user = await this._userRepository.getUserWithAuthById(userId);
 
         if (user) {
             const profile = new UserProfile(user, isCurrentUser);
@@ -65,23 +65,6 @@ export default class UserService {
             return profile;
         }
         throw new ServiceError(404, "Profil introuvable");
-    }
-
-    /**
-     * Combines the account's business row (`users`) and auth row (`users_auth`) into the single
-     * shape UserProfile (and export data, etc.) expect - see AuthService.#getFullUser for the
-     * same reasoning.
-     * @param {string} userId
-     * @returns {Promise<Object|null>}
-     */
-    #getFullUser = async (userId) => {
-        const user = await this._userRepository.getUserById(userId);
-
-        if (!user) {
-            return null;
-        }
-        const auth = await this._userAuthRepository.getByUserId(userId);
-        return { ...user, ...auth };
     }
 
     /**
@@ -241,18 +224,12 @@ export default class UserService {
         if (existing) {
             throw new ServiceError(409, "Cet email est déjà associé à un compte");
         }
-        // the account keeps working with the old, already-proven address until the new one is
-        // confirmed (see AuthService.verifyEmail) - so a typo'd new address never locks the user
-        // out the way overwriting `email` directly used to
         const updated = await db.transaction(async (client) => {
             const changed = await this._userAuthRepository.updateField(currentUserId, "pending_email", newEmail, client);
 
             if (!changed) {
                 return false;
             }
-            // a stolen session (not the password, which was just re-checked above) must not be
-            // enough to silently redirect the confirmation to an attacker's inbox and keep going
-            // unnoticed
             await this._refreshTokenRepository.revokeAllForUser(currentUserId, client);
             return true;
         });
@@ -260,7 +237,6 @@ export default class UserService {
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier l'email");
         }
-        // fire-and-forget: see AuthService.register for why this isn't awaited
         this._authService.issueEmailVerification(currentUserId, newEmail).catch((err) => {
             console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
         });

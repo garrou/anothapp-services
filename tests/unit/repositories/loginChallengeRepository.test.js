@@ -108,6 +108,16 @@ describe("LoginChallengeRepository.confirm", () => {
 
         expect(result).toBe(false);
     });
+
+    it("requires the challenge to still be the most recent one in the same atomic statement, not just via an earlier read", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        await repo.confirm("user-1", "challenge-1", "hash");
+
+        const [query] = db.query.mock.calls[0];
+        expect(query).toContain("ORDER BY created_at DESC LIMIT 1");
+        expect(query).toMatch(/id = \(\s*SELECT id FROM login_challenges WHERE user_id = \$2/);
+    });
 });
 
 describe("LoginChallengeRepository.deleteOlderThanDays", () => {

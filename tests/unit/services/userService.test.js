@@ -6,7 +6,7 @@ import { ERROR_BAD_PASSWORD } from "../../../constants/errors.js";
 
 const userRepoMocks = vi.hoisted(() => ({
     updateField: vi.fn(),
-    getUserById: vi.fn(),
+    getUserWithAuthById: vi.fn(),
     getUsersByUsername: vi.fn(),
     requestDeletion: vi.fn(),
 }));
@@ -235,10 +235,10 @@ describe("UserService.getProfile", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         userService = new UserService();
-        userRepoMocks.getUserById.mockResolvedValue({
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
             id: "user-2", username: "user2", picture: null, episodeTrackingEnabled: false,
+            email: "user2@test.fr",
         });
-        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "user2@test.fr" });
     });
 
     it("never includes the email when viewing another user's profile", async () => {
@@ -255,7 +255,7 @@ describe("UserService.getProfile", () => {
     });
 
     it("includes createdAt for the profile owner", async () => {
-        userRepoMocks.getUserById.mockResolvedValue({
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
             id: "user-2", username: "user2", picture: null,
             episodeTrackingEnabled: false, createdAt: "2020-05-01T00:00:00.000Z",
         });
@@ -266,7 +266,7 @@ describe("UserService.getProfile", () => {
     });
 
     it("never includes createdAt when viewing another user's profile (GET /users/:id has no friendship check)", async () => {
-        userRepoMocks.getUserById.mockResolvedValue({
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
             id: "user-2", username: "user2", picture: null,
             episodeTrackingEnabled: false, createdAt: "2020-05-01T00:00:00.000Z",
         });
@@ -276,11 +276,10 @@ describe("UserService.getProfile", () => {
         expect(profile.createdAt).toBeUndefined();
     });
 
-    it("throws a 404 when the business row doesn't exist, without querying users_auth", async () => {
-        userRepoMocks.getUserById.mockResolvedValue(null);
+    it("throws a 404 when the account doesn't exist", async () => {
+        userRepoMocks.getUserWithAuthById.mockResolvedValue(null);
 
         await expect(userService.getProfile("unknown", true)).rejects.toThrow("Profil introuvable");
-        expect(userAuthRepoMocks.getByUserId).not.toHaveBeenCalled();
     });
 });
 

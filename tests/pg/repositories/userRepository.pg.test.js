@@ -76,6 +76,25 @@ describe("UserRepository (real Postgres)", () => {
         });
     });
 
+    describe("getUserWithAuthById", () => {
+        it("returns the business and auth fields merged from a single joined query", async () => {
+            const userId = await insertUser({ username: "Joined", email: "joined@test.fr" });
+
+            const result = await repo.getUserWithAuthById(userId);
+
+            expect(result.id).toBe(userId);
+            expect(result.username).toBe("Joined");
+            expect(result.email).toBe("joined@test.fr");
+            expect(result.emailVerified).toBe(true);
+        });
+
+        it("returns null for an unknown id", async () => {
+            const result = await repo.getUserWithAuthById("00000000-0000-0000-0000-000000000000");
+
+            expect(result).toBeNull();
+        });
+    });
+
     describe("getUserCount / getAllUserIds", () => {
         it("counts and lists every user", async () => {
             const a = await insertUser();

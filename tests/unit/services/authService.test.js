@@ -4,7 +4,7 @@ import SecurityHelper from "../../../helpers/security.js";
 import { DUPLICATE_ERROR_CODE } from "../../../constants/errors.js";
 
 const userRepoMocks = vi.hoisted(() => ({
-    getUserById: vi.fn(),
+    getUserWithAuthById: vi.fn(),
     createUser: vi.fn(),
     cancelDeletion: vi.fn(),
 }));
@@ -165,8 +165,9 @@ describe("AuthService.confirmLogin", () => {
         vi.clearAllMocks();
         authService = new AuthService();
         loginChallengeRepoMocks.getMostRecentByUserId.mockResolvedValue(activeChallenge());
-        userRepoMocks.getUserById.mockResolvedValue({ id: "1", username: "adrien" });
-        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "adrien@test.fr", emailVerified: true });
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
+            id: "1", username: "adrien", email: "adrien@test.fr", emailVerified: true,
+        });
     });
 
     it("rejects a token that wasn't signed with the login-approval secret", async () => {
@@ -194,7 +195,9 @@ describe("AuthService.confirmLogin", () => {
 
     it("marks the email as verified when it wasn't already, since typing back the code proves ownership of the address", async () => {
         const approvalToken = approvalTokenFor();
-        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "adrien@test.fr", emailVerified: false });
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
+            id: "1", email: "adrien@test.fr", emailVerified: false,
+        });
         loginChallengeRepoMocks.confirm.mockResolvedValue(true);
         userAuthRepoMocks.updateField.mockResolvedValue(true);
         refreshRepoMocks.create.mockResolvedValue(true);
@@ -206,7 +209,9 @@ describe("AuthService.confirmLogin", () => {
 
     it("throws when marking the email as verified fails in the database", async () => {
         const approvalToken = approvalTokenFor();
-        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "adrien@test.fr", emailVerified: false });
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
+            id: "1", email: "adrien@test.fr", emailVerified: false,
+        });
         loginChallengeRepoMocks.confirm.mockResolvedValue(true);
         userAuthRepoMocks.updateField.mockResolvedValue(false);
 
@@ -218,7 +223,7 @@ describe("AuthService.confirmLogin", () => {
     it("rejects when the account behind the token no longer exists", async () => {
         const approvalToken = approvalTokenFor();
         loginChallengeRepoMocks.confirm.mockResolvedValue(true);
-        userRepoMocks.getUserById.mockResolvedValue(null);
+        userRepoMocks.getUserWithAuthById.mockResolvedValue(null);
 
         await expect(authService.confirmLogin(approvalToken, "123456")).rejects.toMatchObject({ status: 401 });
     });
@@ -354,8 +359,9 @@ describe("AuthService.cancelDeletion", () => {
     it("cancels the deletion and opens a real session", async () => {
         const token = SecurityHelper.signJwt("1", SecurityHelper.deletionCancellationSecret());
         userRepoMocks.cancelDeletion.mockResolvedValue(true);
-        userRepoMocks.getUserById.mockResolvedValue({ id: "1", username: "adrien" });
-        userAuthRepoMocks.getByUserId.mockResolvedValue({ email: "adrien@test.fr", emailVerified: true });
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
+            id: "1", username: "adrien", email: "adrien@test.fr", emailVerified: true,
+        });
         refreshRepoMocks.create.mockResolvedValue(true);
 
         const result = await authService.cancelDeletion(token);

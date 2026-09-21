@@ -60,6 +60,38 @@ describe("UserRepository.getUserById", () => {
     });
 });
 
+describe("UserRepository.getUserWithAuthById", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserRepository();
+    });
+
+    it("returns the business and auth fields merged from a single joined row", async () => {
+        db.query.mockResolvedValue({
+            rowCount: 1,
+            rows: [{
+                ...validUserRow, user_id: "user-1", email: "a@b.com", password_hash: "hash",
+                email_verified: true, pending_email: null,
+            }],
+        });
+
+        const result = await repo.getUserWithAuthById("user-1");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("JOIN users_auth"), ["user-1"]);
+        expect(result).toMatchObject({id: "user-1", username: "bob", email: "a@b.com", password: "hash", emailVerified: true});
+    });
+
+    it("returns null when the account (or its auth row) doesn't exist", async () => {
+        db.query.mockResolvedValue({rowCount: 0, rows: []});
+
+        const result = await repo.getUserWithAuthById("unknown");
+
+        expect(result).toBeNull();
+    });
+});
+
 describe("UserRepository.getUserCount", () => {
     let repo;
 

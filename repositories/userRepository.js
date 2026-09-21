@@ -1,5 +1,6 @@
 import db from "../config/db.js";
 import User from "../models/user.js";
+import UserAuth from "../models/userAuth.js";
 import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import RefreshTokenRepository from "./refreshTokenRepository.js";
@@ -38,6 +39,24 @@ export default class UserRepository {
             WHERE id = $1
         `, [id]);
         return res.rowCount === 1 ? new User(res.rows[0]) : null;
+    }
+
+    /**
+     * @param {string} id
+     * @returns {Promise<Object|null>}
+     */
+    getUserWithAuthById = async (id) => {
+        const res = await db.query(`
+            SELECT u.*, ua.user_id, ua.email, ua.password_hash, ua.email_verified, ua.pending_email
+            FROM users u
+            JOIN users_auth ua ON ua.user_id = u.id
+            WHERE u.id = $1
+        `, [id]);
+
+        if (res.rowCount !== 1) {
+            return null;
+        }
+        return { ...new User(res.rows[0]), ...new UserAuth(res.rows[0]) };
     }
 
     /**
@@ -161,10 +180,6 @@ export default class UserRepository {
     }
 
     /**
-     * The "already anonymized" guard checks `users_auth.email` (still the anonymization job's
-     * marker, see anonymizeEligibleAccounts) rather than username, since a real user is free to
-     * pick a username starting with "deleted-" - the `@anothapp.invalid` domain isn't a real
-     * address anyone could register with instead.
      * @param {string} id
      * @returns {Promise<boolean>}
      */
