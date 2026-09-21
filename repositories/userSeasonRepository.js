@@ -2,7 +2,6 @@ import db from "../config/db.js";
 import {cumulate, frenchMonth} from "../helpers/utils.js";
 import Season from "../models/season.js";
 import {PartialUserSeason, UserSeason} from "../models/userSeason.js";
-import SeasonTimeline from "../models/seasonTimeline.js";
 import Stat from "../models/stat.js";
 import UserSeasonFriendRepository from "./userSeasonFriendRepository.js";
 
@@ -181,23 +180,6 @@ export default class UserSeasonRepository {
             WHERE user_id = $1
         `, [userId]);
         return parseInt(res.rows[0]["total"] ?? 0);
-    }
-
-    /**
-     * @param {string} userId
-     * @param {number} month
-     * @returns {Promise<SeasonTimeline[]>}
-     */
-    getViewedByMonthAgo = async (userId, month) => {
-        const res = await db.query(`
-            SELECT s.id, s.title, s.poster, se.image, se.episodes, us.number, us.added_at, us.platform_id
-            FROM users_seasons us
-            JOIN seasons se ON se.show_id = us.show_id
-            JOIN shows s ON s.id = se.show_id AND se.number = us.number AND added_at >= DATE_TRUNC('month', CURRENT_DATE) - $2 * INTERVAL '1 month'
-            WHERE us.user_id = $1
-            ORDER BY added_at DESC
-        `, [userId, month]);
-        return res.rows.map((row) => new SeasonTimeline(row));
     }
 
     /**

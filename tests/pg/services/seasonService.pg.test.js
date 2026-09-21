@@ -47,10 +47,10 @@ describe("SeasonService (real Postgres)", () => {
             expect(result).toHaveLength(1);
         });
 
-        it("rejects when neither a month shortcut nor a year is given", async () => {
+        it("rejects when no year is given", async () => {
             const userId = await insertUser();
 
-            await expect(service.getSeasons(userId, undefined, undefined)).rejects.toMatchObject({ status: 400 });
+            await expect(service.getSeasons(userId, undefined)).rejects.toMatchObject({ status: 400 });
         });
     });
 

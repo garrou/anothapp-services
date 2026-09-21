@@ -199,17 +199,6 @@ describe("UserSeasonRepository", () => {
         });
     });
 
-    describe("getViewedByMonthAgo", () => {
-        it("maps rows to SeasonTimeline instances", async () => {
-            db.query.mockResolvedValue({rows: [{id: 10, title: "Show", poster: "poster.png", image: "img.png", episodes: 8, number: 1, added_at: "2024-01-01", platform_id: 2}]});
-
-            const result = await repo.getViewedByMonthAgo("user-1", 3);
-
-            expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 3]);
-            expect(result).toEqual([{showId: 10, showTitle: "Show", addedAt: "2024-01-01", platformId: 2, season: {number: 1, episodes: 8, image: "img.png", interval: ""}}]);
-        });
-    });
-
     describe("getSeasonsByAddedYear", () => {
         it("maps rows to Season instances", async () => {
             db.query.mockResolvedValue({rows: [{show_id: 10, number: 1, episodes: 8, image: "img.png"}]});

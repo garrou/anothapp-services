@@ -13,7 +13,6 @@ export default class NotificationListener {
     #register = () => {
         eventBus.on("show.started", this.#notifyFriends("show_started"));
         eventBus.on("show.rated", this.#notifyFriends("show_rated"));
-        eventBus.on("season.watched", this.#notifyFriends("season_watched"));
         eventBus.on("season.watched_with", this.#notifyList("season_watched_with"));
         eventBus.on("episode.watched", this.#notifyFriends("episode_watched"));
         eventBus.on("episode.bulk_watched", this.#notifyFriends("episode_bulk_watched"));

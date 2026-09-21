@@ -6,7 +6,6 @@ const seasonRepoMocks = vi.hoisted(() => ({
     updateSeason: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
-    getViewedByMonthAgo: vi.fn(),
     getSeasonsByAddedYear: vi.fn(),
     getOwnedSeasonViewing: vi.fn(),
 }));
@@ -116,43 +115,17 @@ describe("SeasonService.getSeasons", () => {
         seasonService = new SeasonService();
     });
 
-    it("delegates to getViewedByMonthAgo when month matches one of the accepted string values", async () => {
-        userSeasonRepoMocks.getViewedByMonthAgo.mockResolvedValue(["recent-season"]);
-
-        const result = await seasonService.getSeasons("user-1", undefined, "1");
-
-        expect(result).toEqual(["recent-season"]);
-        expect(userSeasonRepoMocks.getViewedByMonthAgo).toHaveBeenCalledWith("user-1", "1");
-    });
-
-    it("accepts every documented month shortcut value", async () => {
-        userSeasonRepoMocks.getViewedByMonthAgo.mockResolvedValue([]);
-
-        for (const month of ["0", "1", "2", "3", "6", "12"]) {
-            await expect(seasonService.getSeasons("user-1", undefined, month)).resolves.toEqual([]);
-        }
-    });
-
-    it("does NOT match month passed as a number, since MONTHS holds strings (falls through)", async () => {
-        // documents current behavior: month=1 (number) isn't found in MONTHS
-        // (array of strings), so with no year it ends up rejected as invalid
-        await expect(seasonService.getSeasons("user-1", undefined, 1)).rejects.toThrow(
-            "Requête invalide"
-        );
-        expect(userSeasonRepoMocks.getViewedByMonthAgo).not.toHaveBeenCalled();
-    });
-
-    it("falls back to getSeasonsByAddedYear when a year is given and month doesn't match", async () => {
+    it("returns the seasons added in the given year", async () => {
         userSeasonRepoMocks.getSeasonsByAddedYear.mockResolvedValue(["season-2024"]);
 
-        const result = await seasonService.getSeasons("user-1", 2024, undefined);
+        const result = await seasonService.getSeasons("user-1", 2024);
 
         expect(result).toEqual(["season-2024"]);
         expect(userSeasonRepoMocks.getSeasonsByAddedYear).toHaveBeenCalledWith("user-1", 2024);
     });
 
-    it("rejects with a 400 when neither a valid month nor a year is given", async () => {
-        await expect(seasonService.getSeasons("user-1", undefined, undefined)).rejects.toThrow(
+    it("rejects with a 400 when no year is given", async () => {
+        await expect(seasonService.getSeasons("user-1", undefined)).rejects.toThrow(
             "Requête invalide"
         );
     });

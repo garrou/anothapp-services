@@ -37,12 +37,12 @@ describe("GET /seasons", () => {
         expect(res.status).toBe(401);
     });
 
-    it("passes year and month query params to the service", async () => {
+    it("passes the year query param to the service", async () => {
         seasonServiceMocks.getSeasons.mockResolvedValue([{number: 1}]);
 
-        const res = await request(app).get("/seasons").query({year: "2024", month: "1"}).set("Cookie", cookie);
+        const res = await request(app).get("/seasons").query({year: "2024"}).set("Cookie", cookie);
 
-        expect(seasonServiceMocks.getSeasons).toHaveBeenCalledWith("user-1", "2024", "1");
+        expect(seasonServiceMocks.getSeasons).toHaveBeenCalledWith("user-1", "2024");
         expect(res.status).toBe(200);
     });
 });

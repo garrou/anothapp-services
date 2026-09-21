@@ -24,8 +24,8 @@ export default class SeasonController {
      */
     getSeasons = async (req, res, next) => {
         try {
-            const {year, month} = req.query;
-            const response = await this._seasonService.getSeasons(req.userId, year, month);
+            const {year} = req.query;
+            const response = await this._seasonService.getSeasons(req.userId, year);
             res.status(200).json(response);
         } catch (e) {
             next(e);
