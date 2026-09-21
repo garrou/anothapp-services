@@ -105,7 +105,7 @@ describe("SettingService.exportData", () => {
         expect(filename).toMatch(/^user-data-user-1-\d{4}-\d{2}-\d{2}\.json$/);
         expect(exportedData.user).toEqual({
             id: "user-1", username: "bob", email: "a@b.com", picture: null, current: true,
-            episodeTrackingEnabled: true, createdAt: "2023-01-01",
+            episodeTrackingEnabled: true, createdAt: "2023-01-01", isAdmin: false,
         });
         expect(exportedData.stats).toEqual({total: 1});
         expect(exportedData.shows).toHaveLength(1);

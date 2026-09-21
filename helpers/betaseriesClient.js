@@ -14,9 +14,10 @@ export default class BetaseriesClient {
 
     /**
      * @param {string} path starting with "/", including any query string
+     * @param {number} [timeoutMs]
      * @returns {Promise<any>} the parsed response body
      */
-    get = async (path) => {
-        return HttpClient.get(`${this.baseUrl}${path}`, this.headers);
+    get = async (path, timeoutMs) => {
+        return HttpClient.get(`${this.baseUrl}${path}`, this.headers, timeoutMs);
     }
 }

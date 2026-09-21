@@ -16,6 +16,7 @@ export default class UserProfile {
             this.email = user.email;
             this.emailVerified = user.emailVerified;
             this.pendingEmail = user.pendingEmail;
+            this.isAdmin = user.id === process.env.ADMIN_ID;
         }
     }
 }

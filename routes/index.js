@@ -1,5 +1,6 @@
 import {Router} from "express";
 import {checkJwt} from "../middlewares/guard.js";
+import {checkAdmin} from "../middlewares/adminGuard.js";
 import cache from "../middlewares/cache.js";
 import userRoutes from "./userRoutes.js";
 import authRoutes from "./authRoutes.js";
@@ -15,6 +16,7 @@ import notificationRoutes from "./notificationRoutes.js";
 import actorRoutes from "./actorRoutes.js";
 import playlistRoutes from "./playlistRoutes.js";
 import achievementRoutes from "./achievementRoutes.js";
+import adminRoutes from "./adminRoutes.js";
 import NotificationListener from "../services/notificationListener.js";
 import AchievementListener from "../services/achievementListener.js";
 import {isOwnRequest} from "../helpers/utils.js";
@@ -38,6 +40,7 @@ router.use("/notifications", checkJwt, notificationRoutes);
 router.use("/actors", checkJwt, actorRoutes);
 router.use("/playlists", checkJwt, playlistRoutes);
 router.use("/achievements", checkJwt, achievementRoutes);
+router.use("/admin", checkJwt, checkAdmin, adminRoutes);
 
 router.use("*", (req, res) => {
     res.status(404).json({ message: "Not found" });

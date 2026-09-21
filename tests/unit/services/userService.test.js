@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import UserService from "../../../services/userService.js";
 import UserUpdate from "../../../models/userUpdate.js";
 import SecurityHelper from "../../../helpers/security.js";
@@ -305,12 +305,29 @@ describe("UserService.getUsers", () => {
 describe("UserService.requestDeletion", () => {
     let userService;
 
+    beforeAll(() => {
+        process.env.ADMIN_ID = "admin-1";
+    });
+
     beforeEach(async () => {
         vi.clearAllMocks();
         userService = new UserService();
         userAuthRepoMocks.getByUserId.mockResolvedValue({
             password: await SecurityHelper.createHash("goodpassword"),
         });
+    });
+
+    it("rejects deleting the admin account, without checking the password", async () => {
+        const compareSpy = vi.spyOn(SecurityHelper, "comparePassword");
+
+        await expect(userService.requestDeletion("admin-1", "goodpassword")).rejects.toMatchObject({
+            status: 403, message: "Impossible de supprimer le compte administrateur",
+        });
+        // the 404 (account exists?) check still runs first - the admin guard only kicks in once
+        // we know there's a real account behind that id
+        expect(userAuthRepoMocks.getByUserId).toHaveBeenCalledWith("admin-1");
+        expect(compareSpy).not.toHaveBeenCalled();
+        expect(userRepoMocks.requestDeletion).not.toHaveBeenCalled();
     });
 
     it("throws a 404 when the account has no auth row", async () => {

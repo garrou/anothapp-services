@@ -104,6 +104,9 @@ export default class UserService {
         if (!auth) {
             throw new ServiceError(404, ERROR_UNKNOWN_USER);
         }
+        if (userId === process.env.ADMIN_ID) {
+            throw new ServiceError(403, "Impossible de supprimer le compte administrateur");
+        }
         const same = await SecurityHelper.comparePassword(password, auth.password);
 
         if (!same) {
