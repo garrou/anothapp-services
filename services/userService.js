@@ -99,6 +99,9 @@ export default class UserService {
      * @returns {Promise<void>}
      */
     requestDeletion = async (userId, password) => {
+        if (userId === process.env.ADMIN_ID) {
+            throw new ServiceError(403, "Impossible de supprimer le compte administrateur");
+        }
         const auth = await this._userAuthRepository.getByUserId(userId);
 
         if (!auth) {

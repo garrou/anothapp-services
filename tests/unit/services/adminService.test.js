@@ -15,7 +15,7 @@ const adminRepoMocks = vi.hoisted(() => ({
     getPendingDeletionsCount: vi.fn(),
     getAnonymizedCount: vi.fn(),
     getActiveSessionsCount: vi.fn(),
-    getSuspiciousLoginActivity: vi.fn(),
+    getLoginChallengesReachingAttemptLimit: vi.fn(),
     searchUsers: vi.fn(),
 }));
 const adminActionRepoMocks = vi.hoisted(() => ({
@@ -25,7 +25,13 @@ const adminActionRepoMocks = vi.hoisted(() => ({
 const healthServiceMocks = vi.hoisted(() => ({
     check: vi.fn(),
 }));
+const dbMocks = vi.hoisted(() => ({
+    // runs the callback with a stand-in client - the mocked repositories below don't care what
+    // they receive as their `client` argument, they just record it
+    transaction: vi.fn((callback) => callback({ query: vi.fn() })),
+}));
 
+vi.mock("../../../config/db.js", () => ({ default: dbMocks }));
 vi.mock("../../../repositories/userRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
 }));
@@ -60,22 +66,18 @@ describe("AdminService.getDashboard", () => {
         adminRepoMocks.getPendingDeletionsCount.mockResolvedValue(2);
         adminRepoMocks.getAnonymizedCount.mockResolvedValue(1);
         adminRepoMocks.getActiveSessionsCount.mockResolvedValue(10);
-        adminRepoMocks.getSuspiciousLoginActivity.mockResolvedValue([]);
+        adminRepoMocks.getLoginChallengesReachingAttemptLimit.mockResolvedValue([]);
         adminActionRepoMocks.getRecent.mockResolvedValue([]);
         healthServiceMocks.check.mockResolvedValue({ betaseries: { reachable: true }, mailer: { reachable: true } });
 
         const result = await service.getDashboard();
 
         expect(result).toEqual({
-            userCount: 42,
-            databaseSize: "12 MB",
-            newUsersByDay: [{ day: "2024-01-01", count: 3 }],
-            pendingDeletions: 2,
-            anonymizedAccounts: 1,
-            activeSessions: 10,
-            suspiciousLogins: [],
-            recentActions: [],
+            users: { total: 42, newByDay: [{ day: "2024-01-01", count: 3 }], pendingDeletions: 2, anonymized: 1 },
+            sessions: { active: 10, loginAttemptLimit: [] },
+            database: { size: "12 MB" },
             health: { betaseries: { reachable: true }, mailer: { reachable: true } },
+            recentActions: [],
         });
     });
 });
@@ -114,19 +116,24 @@ describe("AdminService.searchUsers", () => {
 
 describe("AdminService.revokeUserSessions", () => {
     let service;
+    let client;
 
     beforeEach(() => {
         vi.clearAllMocks();
         service = new AdminService();
+        client = { query: vi.fn() };
+        dbMocks.transaction.mockImplementation(async (callback) => callback(client));
     });
 
-    it("revokes the target's sessions and logs the action against the acting admin", async () => {
+    it("revokes the target's sessions and logs the action against the acting admin, in the same transaction", async () => {
         refreshRepoMocks.revokeAllForUser.mockResolvedValue(3);
 
         const result = await service.revokeUserSessions("admin-1", "user-1");
 
-        expect(refreshRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1");
-        expect(adminActionRepoMocks.create).toHaveBeenCalledWith("admin-1", ADMIN_ACTION_REVOKE_SESSIONS, "user-1");
+        expect(refreshRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1", client);
+        expect(adminActionRepoMocks.create).toHaveBeenCalledWith(
+            "admin-1", ADMIN_ACTION_REVOKE_SESSIONS, "user-1", client
+        );
         expect(result).toEqual({ revokedCount: 3 });
     });
 
@@ -135,7 +142,17 @@ describe("AdminService.revokeUserSessions", () => {
 
         const result = await service.revokeUserSessions("admin-1", "user-2");
 
-        expect(adminActionRepoMocks.create).toHaveBeenCalledWith("admin-1", ADMIN_ACTION_REVOKE_SESSIONS, "user-2");
+        expect(adminActionRepoMocks.create).toHaveBeenCalledWith(
+            "admin-1", ADMIN_ACTION_REVOKE_SESSIONS, "user-2", client
+        );
         expect(result).toEqual({ revokedCount: 0 });
+    });
+
+    it("never logs the action when revoking the sessions fails, since both happen in the same transaction", async () => {
+        refreshRepoMocks.revokeAllForUser.mockRejectedValue(new Error("db down"));
+
+        await expect(service.revokeUserSessions("admin-1", "user-1")).rejects.toThrow("db down");
+
+        expect(adminActionRepoMocks.create).not.toHaveBeenCalled();
     });
 });

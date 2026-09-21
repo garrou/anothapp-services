@@ -77,7 +77,7 @@ describe("AdminRepository.getActiveSessionsCount", () => {
     });
 });
 
-describe("AdminRepository.getSuspiciousLoginActivity", () => {
+describe("AdminRepository.getLoginChallengesReachingAttemptLimit", () => {
     let repo;
 
     beforeEach(() => {
@@ -90,7 +90,7 @@ describe("AdminRepository.getSuspiciousLoginActivity", () => {
             rows: [{ user_id: "user-1", username: "bob", maxed_out_count: "2", last_attempt_at: "2024-01-01" }],
         });
 
-        const result = await repo.getSuspiciousLoginActivity(1);
+        const result = await repo.getLoginChallengesReachingAttemptLimit(1);
 
         expect(db.query).toHaveBeenCalledWith(expect.stringContaining("attempts >= $2"), [1, 5]);
         expect(result).toEqual([{

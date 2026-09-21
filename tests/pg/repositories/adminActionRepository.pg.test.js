@@ -47,6 +47,18 @@ describe("AdminActionRepository (real Postgres)", () => {
             expect(recent[0].action).toBe("action_2");
         });
 
+        it("rolls back with the rest of the transaction when given a client, like every other write in this codebase", async () => {
+            const adminId = await insertUser({ username: "Admin" });
+
+            await expect(db.transaction(async (client) => {
+                await repo.create(adminId, "revoke_sessions", null, client);
+                throw new Error("boom");
+            })).rejects.toThrow("boom");
+
+            const recent = await repo.getRecent();
+            expect(recent).toHaveLength(0);
+        });
+
         it("keeps the log entry (with a null target) once the target account's row is gone", async () => {
             // target_user_id is ON DELETE SET NULL - the audit trail survives even if the
             // referenced account row is later removed, unlike admin_user_id (ON DELETE CASCADE)

@@ -75,7 +75,7 @@ describe("AdminRepository (real Postgres)", () => {
         });
     });
 
-    describe("getSuspiciousLoginActivity", () => {
+    describe("getLoginChallengesReachingAttemptLimit", () => {
         it("lists accounts whose recent challenge maxed out the allowed attempts", async () => {
             const userId = await insertUser({ username: "MaxedOut" });
             await db.query(`
@@ -84,7 +84,7 @@ describe("AdminRepository (real Postgres)", () => {
             `, [userId, MAX_LOGIN_CODE_ATTEMPTS]);
             await insertUser({ username: "Fine" });
 
-            const result = await repo.getSuspiciousLoginActivity(1);
+            const result = await repo.getLoginChallengesReachingAttemptLimit(1);
 
             expect(result).toHaveLength(1);
             expect(result[0]).toMatchObject({ userId, username: "MaxedOut", maxedOutCount: 1 });
@@ -97,7 +97,7 @@ describe("AdminRepository (real Postgres)", () => {
                 VALUES ($1, 'hash', NOW() + INTERVAL '10 minutes', $2, NOW() - INTERVAL '2 days')
             `, [userId, MAX_LOGIN_CODE_ATTEMPTS]);
 
-            const result = await repo.getSuspiciousLoginActivity(1);
+            const result = await repo.getLoginChallengesReachingAttemptLimit(1);
 
             expect(result).toHaveLength(0);
         });

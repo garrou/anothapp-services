@@ -19,8 +19,6 @@ export default class AdminRepository {
     }
 
     /**
-     * Accounts still within their deletion grace period - not yet anonymized (see
-     * UserRepository.anonymizeEligibleAccounts, same "not anonymized" marker).
      * @returns {Promise<number>}
      */
     getPendingDeletionsCount = async () => {
@@ -58,12 +56,10 @@ export default class AdminRepository {
     }
 
     /**
-     * Accounts whose most recent login_challenges row(s) maxed out the allowed attempts -
-     * candidates for a brute-force attempt (or just someone repeatedly mistyping their code).
      * @param {number} days
      * @returns {Promise<{userId: string, username: string, maxedOutCount: number, lastAttemptAt: string}[]>}
      */
-    getSuspiciousLoginActivity = async (days) => {
+    getLoginChallengesReachingAttemptLimit = async (days) => {
         const res = await db.query(`
             SELECT lc.user_id, u.username, COUNT(*) AS maxed_out_count, MAX(lc.created_at) AS last_attempt_at
             FROM login_challenges lc

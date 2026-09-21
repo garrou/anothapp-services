@@ -7,10 +7,11 @@ export default class AdminActionRepository {
      * @param {string} adminUserId
      * @param {string} action
      * @param {string?} targetUserId
+     * @param {{query: Function}} [client]
      * @returns {Promise<string>} the new row's id
      */
-    create = async (adminUserId, action, targetUserId = null) => {
-        const res = await db.query(`
+    create = async (adminUserId, action, targetUserId = null, client = db) => {
+        const res = await client.query(`
             INSERT INTO admin_actions (admin_user_id, action, target_user_id)
             VALUES ($1, $2, $3)
             RETURNING id
@@ -24,7 +25,8 @@ export default class AdminActionRepository {
      */
     getRecent = async (limit = 50) => {
         const res = await db.query(`
-            SELECT * FROM admin_actions
+            SELECT id, admin_user_id, action, target_user_id, created_at
+            FROM admin_actions
             ORDER BY created_at DESC
             LIMIT $1
         `, [limit]);

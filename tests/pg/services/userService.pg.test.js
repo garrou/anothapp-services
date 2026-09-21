@@ -205,5 +205,19 @@ describe("UserService (real Postgres)", () => {
             await expect(service.requestDeletion("00000000-0000-0000-0000-000000000000", "x"))
                 .rejects.toMatchObject({ status: 404 });
         });
+
+        it("refuses to delete the admin account, even with the correct password", async () => {
+            const hash = await SecurityHelper.createHash("MyPassword1");
+            const userId = await insertUser({ password: hash });
+            process.env.ADMIN_ID = userId;
+
+            try {
+                await expect(service.requestDeletion(userId, "MyPassword1")).rejects.toMatchObject({ status: 403 });
+                const user = await service.getUser(userId);
+                expect(user.deletedAt).toBeNull();
+            } finally {
+                delete process.env.ADMIN_ID;
+            }
+        });
     });
 });

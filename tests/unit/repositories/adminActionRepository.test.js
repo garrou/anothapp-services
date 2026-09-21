@@ -32,6 +32,15 @@ describe("AdminActionRepository.create", () => {
 
         expect(db.query).toHaveBeenCalledWith(expect.any(String), ["admin-1", "some_action", null]);
     });
+
+    it("uses the provided client instead of the default db when given (e.g. inside a transaction)", async () => {
+        const client = { query: vi.fn().mockResolvedValue({ rows: [{ id: "action-3" }] }) };
+
+        await repo.create("admin-1", "revoke_sessions", "user-1", client);
+
+        expect(client.query).toHaveBeenCalled();
+        expect(db.query).not.toHaveBeenCalled();
+    });
 });
 
 describe("AdminActionRepository.getRecent", () => {
@@ -52,7 +61,10 @@ describe("AdminActionRepository.getRecent", () => {
 
         const result = await repo.getRecent(10);
 
-        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("ORDER BY created_at DESC"), [10]);
+        const [query, params] = db.query.mock.calls[0];
+        expect(query).toContain("SELECT id, admin_user_id, action, target_user_id, created_at");
+        expect(query).toContain("ORDER BY created_at DESC");
+        expect(params).toEqual([10]);
         expect(result).toEqual([expect.objectContaining({ id: "action-1", adminUserId: "admin-1" })]);
     });
 

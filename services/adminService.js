@@ -1,3 +1,4 @@
+import db from "../config/db.js";
 import UserRepository from "../repositories/userRepository.js";
 import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
 import DatabaseRepository from "../repositories/databaseRepository.js";
@@ -6,7 +7,7 @@ import AdminActionRepository from "../repositories/adminActionRepository.js";
 import HealthService from "./healthService.js";
 
 const NEW_USERS_WINDOW_DAYS = 14;
-const SUSPICIOUS_LOGIN_WINDOW_DAYS = 1;
+const LOGIN_ATTEMPT_LIMIT_WINDOW_DAYS = 1;
 const SEARCH_RESULTS_LIMIT = 10;
 const RECENT_ACTIONS_LIMIT = 50;
 
@@ -28,7 +29,7 @@ export default class AdminService {
     getDashboard = async () => {
         const [
             userCount, databaseSize, newUsersByDay, pendingDeletions, anonymizedAccounts,
-            activeSessions, suspiciousLogins, recentActions, health,
+            activeSessions, loginAttemptLimit, recentActions, health,
         ] = await Promise.all([
             this._userRepository.getUserCount(),
             this._databaseRepository.getDatabaseSize(),
@@ -36,13 +37,16 @@ export default class AdminService {
             this._adminRepository.getPendingDeletionsCount(),
             this._adminRepository.getAnonymizedCount(),
             this._adminRepository.getActiveSessionsCount(),
-            this._adminRepository.getSuspiciousLoginActivity(SUSPICIOUS_LOGIN_WINDOW_DAYS),
+            this._adminRepository.getLoginChallengesReachingAttemptLimit(LOGIN_ATTEMPT_LIMIT_WINDOW_DAYS),
             this._adminActionRepository.getRecent(RECENT_ACTIONS_LIMIT),
             this._healthService.check(),
         ]);
         return {
-            userCount, databaseSize, newUsersByDay, pendingDeletions, anonymizedAccounts,
-            activeSessions, suspiciousLogins, recentActions, health,
+            users: { total: userCount, newByDay: newUsersByDay, pendingDeletions, anonymized: anonymizedAccounts },
+            sessions: { active: activeSessions, loginAttemptLimit },
+            database: { size: databaseSize },
+            health,
+            recentActions,
         };
     }
 
@@ -63,8 +67,10 @@ export default class AdminService {
      * @returns {Promise<{revokedCount: number}>}
      */
     revokeUserSessions = async (adminUserId, targetUserId) => {
-        const revokedCount = await this._refreshTokenRepository.revokeAllForUser(targetUserId);
-        await this._adminActionRepository.create(adminUserId, ADMIN_ACTION_REVOKE_SESSIONS, targetUserId);
-        return { revokedCount };
+        return db.transaction(async (client) => {
+            const revokedCount = await this._refreshTokenRepository.revokeAllForUser(targetUserId, client);
+            await this._adminActionRepository.create(adminUserId, ADMIN_ACTION_REVOKE_SESSIONS, targetUserId, client);
+            return { revokedCount };
+        });
     }
 }

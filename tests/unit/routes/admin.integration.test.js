@@ -16,7 +16,7 @@ const adminRepoMocks = vi.hoisted(() => ({
     getPendingDeletionsCount: vi.fn().mockResolvedValue(0),
     getAnonymizedCount: vi.fn().mockResolvedValue(0),
     getActiveSessionsCount: vi.fn().mockResolvedValue(0),
-    getSuspiciousLoginActivity: vi.fn().mockResolvedValue([]),
+    getLoginChallengesReachingAttemptLimit: vi.fn().mockResolvedValue([]),
     searchUsers: vi.fn().mockResolvedValue([]),
 }));
 const adminActionRepoMocks = vi.hoisted(() => ({
@@ -26,7 +26,11 @@ const adminActionRepoMocks = vi.hoisted(() => ({
 const healthServiceMocks = vi.hoisted(() => ({
     check: vi.fn().mockResolvedValue({ betaseries: { reachable: true }, mailer: { reachable: true } }),
 }));
+const dbMocks = vi.hoisted(() => ({
+    transaction: vi.fn((callback) => callback({ query: vi.fn() })),
+}));
 
+vi.mock("../../../config/db.js", () => ({ default: dbMocks }));
 vi.mock("../../../repositories/userRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userRepoMocks; }),
 }));
@@ -77,7 +81,7 @@ describe("GET /admin/dashboard", () => {
         const res = await request(app).get("/admin/dashboard").set("Cookie", cookieFor("admin-1"));
 
         expect(res.status).toBe(200);
-        expect(res.body.databaseSize).toBe("1 MB");
+        expect(res.body.database.size).toBe("1 MB");
         expect(res.body.health.betaseries.reachable).toBe(true);
     });
 });
@@ -117,7 +121,7 @@ describe("POST /admin/users/:id/revoke-sessions", () => {
 
         expect(res.status).toBe(200);
         expect(res.body).toEqual({ revokedCount: 2 });
-        expect(refreshRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1");
-        expect(adminActionRepoMocks.create).toHaveBeenCalledWith("admin-1", "revoke_sessions", "user-1");
+        expect(refreshRepoMocks.revokeAllForUser).toHaveBeenCalledWith("user-1", expect.anything());
+        expect(adminActionRepoMocks.create).toHaveBeenCalledWith("admin-1", "revoke_sessions", "user-1", expect.anything());
     });
 });
