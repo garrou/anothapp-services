@@ -60,6 +60,31 @@ describe("Validator.isValidChangePassword", () => {
     });
 });
 
+describe("Validator.isValidChangeUsername", () => {
+    it("rejects when the new username is identical to the old one", () => {
+        const result = Validator.isValidChangeUsername("adrien", "adrien", "adrien");
+        expect(result.status).toBe(false);
+        // app-facing error message stays in French, matching validator.js
+        expect(result.message).toContain("différent");
+    });
+
+    it("rejects when the two usernames differ", () => {
+        const result = Validator.isValidChangeUsername("adrien", "newname", "othername");
+        expect(result.status).toBe(false);
+        expect(result.message).toContain("différents");
+    });
+
+    it("rejects an invalid new username, delegating format checks to isValidUsername", () => {
+        const result = Validator.isValidChangeUsername("adrien", "ab", "ab");
+        expect(result.status).toBe(false);
+    });
+
+    it("accepts a valid change", () => {
+        const result = Validator.isValidChangeUsername("adrien", "newname", "newname");
+        expect(result.status).toBe(true);
+    });
+});
+
 describe("Validator.isString / isBoolean / isPlainObject", () => {
     it("isString accepts only strings", () => {
         expect(Validator.isString("abc")).toBe(true);

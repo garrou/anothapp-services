@@ -16,6 +16,6 @@ export default class User {
      * @return boolean
      */
     static isValidField = (field) => {
-        return ["picture", "last_export"].includes(field);
+        return ["picture", "last_export", "username"].includes(field);
     }
 }

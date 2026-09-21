@@ -174,6 +174,99 @@ describe("UserService.updateUser - email change", () => {
     });
 });
 
+describe("UserService.updateUser - username change", () => {
+    let userService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        userService = new UserService();
+    });
+
+    it("changes the username immediately, without a transaction or session revocation", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({ username: "oldname", password: hash });
+        userRepoMocks.getUsersByUsername.mockResolvedValue([]);
+        userRepoMocks.updateField.mockResolvedValue(true);
+
+        const message = await userService.updateUser(
+            "user-1", new UserUpdate({ newUsername: "newname", confirmUsername: "newname", currentPassword: "GoodPassword1" })
+        );
+
+        expect(message).toBe("Nom d'utilisateur modifié");
+        expect(userRepoMocks.updateField).toHaveBeenCalledWith("user-1", "username", "newname");
+        expect(refreshTokenRepoMocks.revokeAllForUser).not.toHaveBeenCalled();
+        expect(dbMocks.transaction).not.toHaveBeenCalled();
+    });
+
+    it("rejects mismatched username confirmation, without touching anything", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({ username: "oldname", password: hash });
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ newUsername: "newname", confirmUsername: "othername", currentPassword: "GoodPassword1" })
+        )).rejects.toMatchObject({ status: 400 });
+
+        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+    });
+
+    it("rejects a username identical to the current one", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({ username: "oldname", password: hash });
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ newUsername: "oldname", confirmUsername: "oldname", currentPassword: "GoodPassword1" })
+        )).rejects.toMatchObject({ status: 400 });
+
+        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+    });
+
+    it("rejects a missing or wrong current password, without touching anything", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({ username: "oldname", password: hash });
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ newUsername: "newname", confirmUsername: "newname" })
+        )).rejects.toMatchObject({ status: 400, message: ERROR_BAD_PASSWORD });
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ newUsername: "newname", confirmUsername: "newname", currentPassword: "WrongPassword" })
+        )).rejects.toMatchObject({ status: 400, message: ERROR_BAD_PASSWORD });
+
+        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+    });
+
+    it("throws a 404 when the account has no user row", async () => {
+        userRepoMocks.getUserWithAuthById.mockResolvedValue(null);
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ newUsername: "newname", confirmUsername: "newname", currentPassword: "GoodPassword1" })
+        )).rejects.toThrow("Utilisateur inconnu");
+    });
+
+    it("rejects when the new username is already taken", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({ username: "oldname", password: hash });
+        userRepoMocks.getUsersByUsername.mockResolvedValue([{ id: "user-2" }]);
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ newUsername: "taken", confirmUsername: "taken", currentPassword: "GoodPassword1" })
+        )).rejects.toMatchObject({ status: 409 });
+
+        expect(userRepoMocks.updateField).not.toHaveBeenCalled();
+    });
+
+    it("throws a 500 when the database update fails", async () => {
+        const hash = await SecurityHelper.createHash("GoodPassword1");
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({ username: "oldname", password: hash });
+        userRepoMocks.getUsersByUsername.mockResolvedValue([]);
+        userRepoMocks.updateField.mockResolvedValue(false);
+
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ newUsername: "newname", confirmUsername: "newname", currentPassword: "GoodPassword1" })
+        )).rejects.toThrow("Impossible de modifier le nom d'utilisateur");
+    });
+});
+
 describe("UserService.getProfile", () => {
     let userService;
 

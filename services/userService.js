@@ -77,6 +77,9 @@ export default class UserService {
         } else if (userUpdate.isEmailUpdate()) {
             await this.#changeEmail(currentUserId, userUpdate.newEmail, userUpdate.confirmEmail, userUpdate.currentPassword);
             return "Vérifiez votre nouvelle adresse email pour confirmer le changement";
+        } else if (userUpdate.isUsernameUpdate()) {
+            await this.#changeUsername(currentUserId, userUpdate.newUsername, userUpdate.confirmUsername, userUpdate.currentPassword);
+            return "Nom d'utilisateur modifié";
         } else if (userUpdate.image) {
             await this.#changeImage(currentUserId, userUpdate.image);
             return "Image de profil définie";
@@ -220,5 +223,43 @@ export default class UserService {
         this._authService.issueEmailVerification(currentUserId, newEmail).catch((err) => {
             console.error("Échec de l'envoi de l'email de confirmation", sanitizeErrorForLog(err));
         });
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {string} newUsername
+     * @param {string} confirmUsername
+     * @param {string} currentPassword
+     * @returns {Promise<void>}
+     */
+    #changeUsername = async (currentUserId, newUsername, confirmUsername, currentPassword) => {
+        if (!Validator.isString(currentPassword)) {
+            throw new ServiceError(400, ERROR_BAD_PASSWORD);
+        }
+        const user = await this._userRepository.getUserWithAuthById(currentUserId);
+
+        if (!user) {
+            throw new ServiceError(404, ERROR_UNKNOWN_USER);
+        }
+        const changeValid = Validator.isValidChangeUsername(user.username, newUsername, confirmUsername);
+
+        if (!changeValid.status) {
+            throw new ServiceError(400, changeValid.message);
+        }
+        const same = await SecurityHelper.comparePassword(currentPassword, user.password);
+
+        if (!same) {
+            throw new ServiceError(400, ERROR_BAD_PASSWORD);
+        }
+        const existing = await this._userRepository.getUsersByUsername(newUsername, true);
+
+        if (existing.length) {
+            throw new ServiceError(409, "Ce nom d'utilisateur est déjà pris");
+        }
+        const updated = await this._userRepository.updateField(currentUserId, "username", newUsername);
+
+        if (!updated) {
+            throw new ServiceError(500, "Impossible de modifier le nom d'utilisateur");
+        }
     }
 }

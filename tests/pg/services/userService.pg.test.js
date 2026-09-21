@@ -146,6 +146,58 @@ describe("UserService (real Postgres)", () => {
         });
     });
 
+    describe("updateUser - username change", () => {
+        it("changes the username immediately when the current password matches", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            const userId = await insertUser({ username: "OldName", password: hash });
+
+            const message = await service.updateUser(userId, new UserUpdate({
+                newUsername: "NewName", confirmUsername: "NewName", currentPassword: "GoodPassword1",
+            }));
+
+            expect(message).toBe("Nom d'utilisateur modifié");
+            const user = await service.getUser(userId);
+            expect(user.username).toBe("NewName");
+        });
+
+        it("rejects mismatched username confirmation", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            const userId = await insertUser({ username: "OldName", password: hash });
+
+            await expect(service.updateUser(userId, new UserUpdate({
+                newUsername: "NewName", confirmUsername: "DifferentName", currentPassword: "GoodPassword1",
+            }))).rejects.toMatchObject({ status: 400 });
+        });
+
+        it("rejects a wrong current password", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            const userId = await insertUser({ username: "OldName", password: hash });
+
+            await expect(service.updateUser(userId, new UserUpdate({
+                newUsername: "NewName", confirmUsername: "NewName", currentPassword: "WrongPassword",
+            }))).rejects.toMatchObject({ status: 400 });
+        });
+
+        it("rejects a username identical to the current one", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            const userId = await insertUser({ username: "OldName", password: hash });
+
+            await expect(service.updateUser(userId, new UserUpdate({
+                newUsername: "OldName", confirmUsername: "OldName", currentPassword: "GoodPassword1",
+            }))).rejects.toMatchObject({ status: 400 });
+        });
+
+        it("rejects when the new username is already taken, enforced by the case-insensitive unique index", async () => {
+            const hash = await SecurityHelper.createHash("GoodPassword1");
+            const userId = await insertUser({ username: "MyName", password: hash });
+            await insertUser({ username: "TakenName" });
+
+            await expect(service.updateUser(userId, new UserUpdate({
+                newUsername: "takenname", confirmUsername: "takenname", currentPassword: "GoodPassword1",
+            }))).rejects.toMatchObject({ status: 409 });
+        });
+    });
+
     describe("updateUser - image change", () => {
         it("changes the profile picture", async () => {
             const userId = await insertUser();
