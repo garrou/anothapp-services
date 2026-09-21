@@ -6,7 +6,6 @@ const seasonRepoMocks = vi.hoisted(() => ({
     updateSeason: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
-    getSeasonsByAddedYear: vi.fn(),
     getOwnedSeasonViewing: vi.fn(),
 }));
 const userSeasonFriendRepoMocks = vi.hoisted(() => ({
@@ -104,30 +103,6 @@ describe("SeasonService.addEpisodeViewing", () => {
         await seasonService.addEpisodeViewing("user-1", 7, 100);
 
         expect(episodeServiceMocks.addViewing).toHaveBeenCalledWith("user-1", 7, 100);
-    });
-});
-
-describe("SeasonService.getSeasons", () => {
-    let seasonService;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        seasonService = new SeasonService();
-    });
-
-    it("returns the seasons added in the given year", async () => {
-        userSeasonRepoMocks.getSeasonsByAddedYear.mockResolvedValue(["season-2024"]);
-
-        const result = await seasonService.getSeasons("user-1", 2024);
-
-        expect(result).toEqual(["season-2024"]);
-        expect(userSeasonRepoMocks.getSeasonsByAddedYear).toHaveBeenCalledWith("user-1", 2024);
-    });
-
-    it("rejects with a 400 when no year is given", async () => {
-        await expect(seasonService.getSeasons("user-1", undefined)).rejects.toThrow(
-            "Requête invalide"
-        );
     });
 });
 

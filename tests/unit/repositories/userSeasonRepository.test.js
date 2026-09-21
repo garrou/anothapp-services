@@ -199,16 +199,6 @@ describe("UserSeasonRepository", () => {
         });
     });
 
-    describe("getSeasonsByAddedYear", () => {
-        it("maps rows to Season instances", async () => {
-            db.query.mockResolvedValue({rows: [{show_id: 10, number: 1, episodes: 8, image: "img.png"}]});
-
-            const result = await repo.getSeasonsByAddedYear("user-1", 2024);
-
-            expect(result).toEqual([{number: 1, episodes: 8, image: "img.png", interval: ""}]);
-        });
-    });
-
     describe("getNbSeasonsByUserIdGroupByMonthByCurrentYear", () => {
         it("maps rows to Stat instances with french month labels", async () => {
             db.query.mockResolvedValue({rows: [{num: "4", value: "2"}]});

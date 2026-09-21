@@ -63,18 +63,6 @@ export default class SeasonService {
     }
 
     /**
-     * @param currentUserId
-     * @param year
-     * @returns {Promise<Season[]>}
-     */
-    getSeasons = async (currentUserId, year) => {
-        if (!year) {
-            throw new ServiceError(400, ERROR_INVALID_REQUEST);
-        }
-        return await this._userSeasonRepository.getSeasonsByAddedYear(currentUserId, year);
-    }
-
-    /**
      * @param {string} currentUserId
      * @param {number?} seasonId
      * @param {number?} platformId

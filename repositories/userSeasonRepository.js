@@ -184,22 +184,6 @@ export default class UserSeasonRepository {
 
     /**
      * @param {string} userId
-     * @param {number} year
-     * @returns Promise<Season[]>
-     */
-    getSeasonsByAddedYear = async (userId, year) => {
-        const res = await db.query(`
-            SELECT seasons.show_id, users_seasons.number, seasons.episodes, seasons.image
-            FROM users_seasons
-            JOIN seasons ON seasons.show_id = users_seasons.show_id AND seasons.number = users_seasons.number
-            WHERE users_seasons.user_id = $1 AND EXTRACT(year FROM added_at) = $2
-            ORDER BY added_at, number
-        `, [userId, year]);
-        return res.rows.map((row) => new Season(row));
-    }
-
-    /**
-     * @param {string} userId
      * @returns Promise<Stat[]>
      */
     getNbSeasonsByUserIdGroupByMonthByCurrentYear = async (userId)  => {

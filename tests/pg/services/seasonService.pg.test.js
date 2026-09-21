@@ -34,26 +34,6 @@ describe("SeasonService (real Postgres)", () => {
         });
     });
 
-    describe("getSeasons", () => {
-        it("returns seasons added in a given year", async () => {
-            const userId = await insertUser();
-            const showId = await insertShow();
-            await insertSeason(showId, 1);
-            await insertUserShow(userId, showId);
-            await insertUserSeason(userId, showId, 1, { addedAt: "2025-06-01" });
-
-            const result = await service.getSeasons(userId, 2025);
-
-            expect(result).toHaveLength(1);
-        });
-
-        it("rejects when no year is given", async () => {
-            const userId = await insertUser();
-
-            await expect(service.getSeasons(userId, undefined)).rejects.toMatchObject({ status: 400 });
-        });
-    });
-
     describe("updateBySeasonId", () => {
         it("updates the platform and viewing date, and syncs episode platforms", async () => {
             const userId = await insertUser();

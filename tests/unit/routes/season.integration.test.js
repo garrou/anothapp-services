@@ -5,7 +5,6 @@ import ServiceError from "../../../helpers/serviceError.js";
 
 const seasonServiceMocks = vi.hoisted(() => ({
     deleteBySeasonId: vi.fn(),
-    getSeasons: vi.fn(),
     getEpisodesBySeasonId: vi.fn(),
     addEpisodeViewing: vi.fn(),
     addAllEpisodesViewing: vi.fn(),
@@ -31,23 +30,12 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe("GET /seasons", () => {
+describe("GET /seasons/:id/episodes", () => {
     it("returns 401 without an access cookie", async () => {
-        const res = await request(app).get("/seasons");
+        const res = await request(app).get("/seasons/5/episodes");
         expect(res.status).toBe(401);
     });
 
-    it("passes the year query param to the service", async () => {
-        seasonServiceMocks.getSeasons.mockResolvedValue([{number: 1}]);
-
-        const res = await request(app).get("/seasons").query({year: "2024"}).set("Cookie", cookie);
-
-        expect(seasonServiceMocks.getSeasons).toHaveBeenCalledWith("user-1", "2024");
-        expect(res.status).toBe(200);
-    });
-});
-
-describe("GET /seasons/:id/episodes", () => {
     it("returns the season's episodes", async () => {
         seasonServiceMocks.getEpisodesBySeasonId.mockResolvedValue([{id: 1, title: "Pilot"}]);
 
