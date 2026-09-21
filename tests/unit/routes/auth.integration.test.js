@@ -87,7 +87,7 @@ describe("POST /auth/confirm-login", () => {
         const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret(), "10m", { jti: "challenge-1" });
         loginChallengeRepoMocks.getMostRecentByUserId.mockResolvedValue({
             id: "challenge-1",
-            codeHash: SecurityHelper.hashToken("123456"),
+            codeHash: SecurityHelper.hashLoginCode("123456"),
             expiresAt: new Date(Date.now() + 10 * 60 * 1000),
             attempts: 0,
             confirmedAt: null,
@@ -112,7 +112,7 @@ describe("POST /auth/confirm-login", () => {
         const approvalToken = SecurityHelper.signJwt("1", SecurityHelper.loginApprovalSecret(), "10m", { jti: "challenge-1" });
         loginChallengeRepoMocks.getMostRecentByUserId.mockResolvedValue({
             id: "challenge-1",
-            codeHash: SecurityHelper.hashToken("123456"),
+            codeHash: SecurityHelper.hashLoginCode("123456"),
             expiresAt: new Date(Date.now() + 10 * 60 * 1000),
             attempts: 0,
             confirmedAt: null,

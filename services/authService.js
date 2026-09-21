@@ -54,7 +54,7 @@ export default class AuthService {
             return { pendingDeletion: true, cancellationToken };
         }
         const code = SecurityHelper.generateLoginCode();
-        const codeHash = SecurityHelper.hashToken(code);
+        const codeHash = SecurityHelper.hashLoginCode(code);
         const expiresAt = new Date(Date.now() + LOGIN_CODE_EXPIRY_MS);
         const challengeId = await this._loginChallengeRepository.create(found.id, codeHash, expiresAt);
 
@@ -90,7 +90,7 @@ export default class AuthService {
         if (noActiveChallenge) {
             throw new ServiceError(401, ERROR_LOGIN_CODE_EXPIRED);
         }
-        const codeHash = SecurityHelper.hashToken(code);
+        const codeHash = SecurityHelper.hashLoginCode(code);
         const confirmed = await this._loginChallengeRepository.confirm(userId, challengeId, codeHash);
 
         if (!confirmed) {

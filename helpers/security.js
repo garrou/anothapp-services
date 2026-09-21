@@ -62,6 +62,23 @@ export default class SecurityHelper {
     static generateLoginCode = () => crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
 
     /**
+     * @returns {string}
+     */
+    static loginCodePepper = () => crypto
+        .createHash("sha256")
+        .update(`${process.env.JWT_SECRET}:login-code`)
+        .digest("hex");
+
+    /**
+     * @param {string} code
+     * @returns {string}
+     */
+    static hashLoginCode = (code) => crypto
+        .createHash("sha256")
+        .update(`${SecurityHelper.loginCodePepper()}:${code}`)
+        .digest("hex");
+
+    /**
      * @param {string} passwordHash
      * @returns {string}
      */

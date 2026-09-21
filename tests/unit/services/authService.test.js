@@ -152,7 +152,7 @@ describe("AuthService.confirmLogin", () => {
     const activeChallenge = (overrides = {}) => ({
         id: CHALLENGE_ID,
         userId: "1",
-        codeHash: SecurityHelper.hashToken("123456"),
+        codeHash: SecurityHelper.hashLoginCode("123456"),
         expiresAt: FUTURE,
         attempts: 0,
         confirmedAt: null,
@@ -188,7 +188,7 @@ describe("AuthService.confirmLogin", () => {
         expect(result.refreshToken).toBeDefined();
         expect(result.user).toBeDefined();
         expect(loginChallengeRepoMocks.confirm).toHaveBeenCalledWith(
-            "1", CHALLENGE_ID, SecurityHelper.hashToken("123456")
+            "1", CHALLENGE_ID, SecurityHelper.hashLoginCode("123456")
         );
         expect(userAuthRepoMocks.updateField).not.toHaveBeenCalled();
     });
@@ -301,7 +301,7 @@ describe("AuthService.confirmLogin", () => {
         // confirming, which overwrites the active challenge with B / code 222222
         const tokenA = approvalTokenFor("challenge-A");
         const currentChallenge = activeChallenge({
-            id: "challenge-B", codeHash: SecurityHelper.hashToken("222222"),
+            id: "challenge-B", codeHash: SecurityHelper.hashLoginCode("222222"),
         });
         loginChallengeRepoMocks.getMostRecentByUserId.mockResolvedValue(currentChallenge);
 

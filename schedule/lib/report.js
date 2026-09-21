@@ -82,6 +82,9 @@ const formatReport = (results) => {
     if (results.tokens) {
         lines.push(`🔑 <b>${results.tokens.deleted}</b> jeton(s) de renouvellement supprimé(s)`);
     }
+    if (results.loginChallenges) {
+        lines.push(`🔐 <b>${results.loginChallenges.deleted}</b> challenge(s) de connexion supprimé(s)`);
+    }
     if (results.notifications) {
         lines.push(`🗑️ <b>${results.notifications.deleted}</b> notification(s) supprimée(s)`);
     }

@@ -136,6 +136,43 @@ describe("SecurityHelper.generateLoginCode", () => {
     });
 });
 
+describe("SecurityHelper.loginCodePepper", () => {
+    it("is deterministic for the same JWT_SECRET, and distinct from the other derived secrets", () => {
+        expect(SecurityHelper.loginCodePepper()).toBe(SecurityHelper.loginCodePepper());
+        expect(SecurityHelper.loginCodePepper()).not.toBe(SecurityHelper.loginApprovalSecret());
+        expect(SecurityHelper.loginCodePepper()).not.toBe(SecurityHelper.deletionCancellationSecret());
+    });
+
+    it("changes when JWT_SECRET changes", () => {
+        const first = SecurityHelper.loginCodePepper();
+        process.env.JWT_SECRET = "different-secret";
+        const second = SecurityHelper.loginCodePepper();
+        process.env.JWT_SECRET = SECRET;
+        expect(first).not.toBe(second);
+    });
+});
+
+describe("SecurityHelper.hashLoginCode", () => {
+    it("is deterministic: the same code always produces the same hash", () => {
+        expect(SecurityHelper.hashLoginCode("123456")).toBe(SecurityHelper.hashLoginCode("123456"));
+    });
+
+    it("produces different hashes for different codes", () => {
+        expect(SecurityHelper.hashLoginCode("123456")).not.toBe(SecurityHelper.hashLoginCode("654321"));
+    });
+
+    it("cannot be recomputed from the code alone, unlike hashToken - it also depends on JWT_SECRET", () => {
+        expect(SecurityHelper.hashLoginCode("123456")).not.toBe(SecurityHelper.hashToken("123456"));
+
+        const withThisSecret = SecurityHelper.hashLoginCode("123456");
+        process.env.JWT_SECRET = "different-secret";
+        const withAnotherSecret = SecurityHelper.hashLoginCode("123456");
+        process.env.JWT_SECRET = SECRET;
+
+        expect(withThisSecret).not.toBe(withAnotherSecret);
+    });
+});
+
 describe("SecurityHelper.passwordResetSecret", () => {
     it("changes when the password hash changes, so a reset token can't be replayed after the password was already changed", () => {
         const first = SecurityHelper.passwordResetSecret("hash-a");
