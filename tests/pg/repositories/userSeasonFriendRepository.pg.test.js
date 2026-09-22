@@ -63,6 +63,43 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
             expect(result[0].status).toBe("revoked");
         });
 
+        it("keeps a revoked friend untouched (not re-declined) on a later save where they're still absent", async () => {
+            const userId = await insertUser();
+            const friendA = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await repo.setForUserSeasonId(userSeasonId, [friendA]);
+            await repo.accept(userSeasonId, friendA);
+            await repo.setForUserSeasonId(userSeasonId, []);
+
+            const { invited, revoked } = await repo.setForUserSeasonId(userSeasonId, []);
+
+            expect(invited).toEqual([]);
+            expect(revoked).toEqual([]);
+            const result = await repo.getByUserSeasonIds([userSeasonId]).then((m) => m.get(userSeasonId));
+            expect(result[0].status).toBe("revoked");
+        });
+
+        it("re-adding a revoked friend resets them to pending", async () => {
+            const userId = await insertUser();
+            const friendA = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await repo.setForUserSeasonId(userSeasonId, [friendA]);
+            await repo.accept(userSeasonId, friendA);
+            await repo.setForUserSeasonId(userSeasonId, []);
+
+            const { invited } = await repo.setForUserSeasonId(userSeasonId, [friendA]);
+
+            expect(invited).toEqual([friendA]);
+            const result = await repo.getByUserSeasonIds([userSeasonId]).then((m) => m.get(userSeasonId));
+            expect(result[0].status).toBe("pending");
+        });
+
         it("declines rather than deletes when given an empty list", async () => {
             const userId = await insertUser();
             const friendA = await insertUser();

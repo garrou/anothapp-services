@@ -56,7 +56,12 @@ export default class UserSeasonFriendRepository {
             const revoked = [];
 
             for (const friendId of currentByFriendId.keys()) {
-                if (!newIds.has(friendId) && currentByFriendId.get(friendId) !== "declined") {
+                // Already in a terminal state (declined/revoked) and still absent from the list -
+                // nothing to do, and re-stamping a revoked friend "declined" would lose the
+                // "they left after accepting" distinction (and wrongly drop them out of stats).
+                const isTerminal = ["declined", "revoked"].includes(currentByFriendId.get(friendId));
+
+                if (!newIds.has(friendId) && !isTerminal) {
                     const wasAccepted = currentByFriendId.get(friendId) === "accepted";
                     await client.query(`
                         UPDATE users_seasons_friends SET status_id = $3
@@ -69,12 +74,16 @@ export default class UserSeasonFriendRepository {
                 }
             }
             for (const friendId of friendIds) {
+                // A friend re-appearing here after being declined/revoked is an explicit choice by
+                // the caller (they're no longer part of the pre-filled "current" selection once
+                // terminal, so their presence means the user deliberately picked them again) -
+                // this is the only path back to "pending", never an implicit side effect.
                 if (!currentByFriendId.has(friendId)) {
                     await client.query(`
                         INSERT INTO users_seasons_friends (users_season_id, friend_user_id) VALUES ($1, $2)
                     `, [userSeasonId, friendId]);
                     invited.push(friendId);
-                } else if (currentByFriendId.get(friendId) === "declined") {
+                } else if (["declined", "revoked"].includes(currentByFriendId.get(friendId))) {
                     await client.query(`
                         UPDATE users_seasons_friends SET status_id = 'pending'
                         WHERE users_season_id = $1 AND friend_user_id = $2

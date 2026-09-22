@@ -106,8 +106,27 @@ describe("UserSeasonFriendRepository.setForUserSeasonId", () => {
         expect(client.query).toHaveBeenCalledTimes(1);
     });
 
+    it("does not re-stamp a friend already revoked and still absent from the list - it would lose the 'left after accepting' distinction", async () => {
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: "revoked"}]);
+
+        const {invited, revoked} = await repo.setForUserSeasonId(1, []);
+
+        expect(client.query).toHaveBeenCalledTimes(1);
+        expect(invited).toEqual([]);
+        expect(revoked).toEqual([]);
+    });
+
     it("resets a previously declined friend back to pending when re-added", async () => {
         const client = mockCurrent([{friend_user_id: "user-2", status_id: "declined"}]);
+
+        const {invited} = await repo.setForUserSeasonId(1, ["user-2"]);
+
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = 'pending'"), [1, "user-2"]);
+        expect(invited).toEqual(["user-2"]);
+    });
+
+    it("resets a previously revoked friend back to pending when explicitly re-added", async () => {
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: "revoked"}]);
 
         const {invited} = await repo.setForUserSeasonId(1, ["user-2"]);
 
