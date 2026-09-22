@@ -211,24 +211,39 @@ export default class ShowService {
         if (!show) {
             throw new ServiceError(400, "Cette série n'est pas dans votre collection");
         }
-        let existingSeason = await this._seasonRepository.getSeasonByShowIdByNumber(id, num);
-
-        if (!existingSeason) {
-            const season = await this._searchService.getSeasonByShowIdByNumber(id, num);
-
-            if (!season) {
-                throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
-            }
-            const created = await this._seasonRepository.createSeason(season.episodes, season.number, season.image ?? show.poster, id);
-
-            if (!created) {
-                throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
-            }
-            existingSeason = season;
-        }
+        await this.#ensureSeasonExists(id, num, async () => show.poster);
         const added = await this._userSeasonRepository.create(currentUserId, id, num);
 
         if (!added) {
+            throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
+        }
+    }
+
+    /**
+     * Ensures a season row exists in the shared catalog (shows/seasons tables, not a specific
+     * user's viewing of it) - shared by addSeason (adding a season to a show already in the
+     * collection) and ensureSeasonTracked (auto-adding a season for a friend accepting a share).
+     * @param {number} showId
+     * @param {number} number
+     * @param {() => Promise<string>} getPosterFallback lazy - only called when the season needs
+     *   creating and the API didn't return its own image
+     * @returns {Promise<void>}
+     */
+    #ensureSeasonExists = async (showId, number, getPosterFallback) => {
+        const existing = await this._seasonRepository.getSeasonByShowIdByNumber(showId, number);
+
+        if (existing) {
+            return;
+        }
+        const apiSeason = await this._searchService.getSeasonByShowIdByNumber(showId, number);
+
+        if (!apiSeason) {
+            throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
+        }
+        const poster = apiSeason.image ?? await getPosterFallback();
+        const created = await this._seasonRepository.createSeason(apiSeason.episodes, apiSeason.number, poster, showId);
+
+        if (!created) {
             throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
         }
     }
@@ -252,21 +267,8 @@ export default class ShowService {
             await this.ensureShowExists(showId);
             await this._userShowRepository.create(userId, showId);
         }
-        let season = await this._seasonRepository.getSeasonByShowIdByNumber(showId, number);
+        await this.#ensureSeasonExists(showId, number, async () => (await this._showRepository.getShow(showId)).poster);
 
-        if (!season) {
-            const apiSeason = await this._searchService.getSeasonByShowIdByNumber(showId, number);
-
-            if (!apiSeason) {
-                throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
-            }
-            const show = await this._showRepository.getShow(showId);
-            const created = await this._seasonRepository.createSeason(apiSeason.episodes, apiSeason.number, apiSeason.image ?? show.poster, showId);
-
-            if (!created) {
-                throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
-            }
-        }
         // Two concurrent calls (e.g. a double-submitted accept) can both pass the `existing` check
         // above before either inserts - an advisory lock scoped to just this recheck-then-create
         // step (not the API calls above, so a slow BetaSeries response never holds a lock) closes
