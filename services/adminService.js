@@ -5,6 +5,7 @@ import DatabaseRepository from "../repositories/databaseRepository.js";
 import AdminRepository from "../repositories/adminRepository.js";
 import AdminActionRepository from "../repositories/adminActionRepository.js";
 import ServiceCallCountRepository from "../repositories/serviceCallCountRepository.js";
+import CatalogRepository from "../repositories/catalogRepository.js";
 import HealthService from "./healthService.js";
 
 const NEW_USERS_WINDOW_DAYS = 14;
@@ -22,6 +23,7 @@ export default class AdminService {
         this._adminRepository = new AdminRepository();
         this._adminActionRepository = new AdminActionRepository();
         this._serviceCallCountRepository = new ServiceCallCountRepository();
+        this._catalogRepository = new CatalogRepository();
         this._healthService = new HealthService();
     }
 
@@ -30,12 +32,13 @@ export default class AdminService {
      */
     getDashboard = async () => {
         const [
-            userCount, databaseSize, databaseSizeHistory, newUsersByDay, pendingDeletions, anonymizedAccounts,
-            activeSessions, loginAttemptLimit, recentActions, health, serviceCalls,
+            userCount, databaseSize, databaseSizeHistory, catalogSizeHistory, newUsersByDay, pendingDeletions,
+            anonymizedAccounts, activeSessions, loginAttemptLimit, recentActions, health, serviceCalls,
         ] = await Promise.all([
             this._userRepository.getUserCount(),
             this._databaseRepository.getDatabaseSize(),
             this._databaseRepository.getSizeHistory(),
+            this._catalogRepository.getSizeHistory(),
             this._adminRepository.getNewUsersByDay(NEW_USERS_WINDOW_DAYS),
             this._adminRepository.getPendingDeletionsCount(),
             this._adminRepository.getAnonymizedCount(),
@@ -49,6 +52,7 @@ export default class AdminService {
             users: { total: userCount, newByDay: newUsersByDay, pendingDeletions, anonymized: anonymizedAccounts },
             sessions: { active: activeSessions, loginAttemptLimit },
             database: { size: databaseSize, history: databaseSizeHistory },
+            catalog: { history: catalogSizeHistory },
             health,
             recentActions,
             serviceCalls,

@@ -122,6 +122,11 @@ describe("formatReport", () => {
         expect(report).toBe("💾 Taille de la base : <b>128 MB</b>");
     });
 
+    it("formats catalog size results", () => {
+        const report = formatReport({catalog: {shows: 42, seasons: 100, episodes: 2000}});
+        expect(report).toBe("📚 Catalogue : <b>42</b> série(s), <b>100</b> saison(s), <b>2000</b> épisode(s)");
+    });
+
     it("formats deletedAccounts results", () => {
         const report = formatReport({deletedAccounts: {anonymized: 3}});
         expect(report).toBe("🗑️ <b>3</b> compte(s) anonymisé(s)");

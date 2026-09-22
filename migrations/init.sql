@@ -144,6 +144,15 @@ CREATE TABLE database_size_history (
     PRIMARY KEY(id)
 );
 
+CREATE TABLE catalog_size_history (
+    id SERIAL,
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    shows_count INTEGER NOT NULL,
+    seasons_count INTEGER NOT NULL,
+    episodes_count INTEGER NOT NULL,
+    PRIMARY KEY(id)
+);
+
 CREATE TABLE shows (
     id INTEGER,
     title VARCHAR(255) UNIQUE NOT NULL,
@@ -760,4 +769,5 @@ CREATE INDEX idx_playlists_collaborators_user_id ON playlists_collaborators(user
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 CREATE INDEX idx_admin_actions_created_at ON admin_actions(created_at DESC);
 CREATE INDEX idx_database_size_history_recorded_at ON database_size_history(recorded_at);
+CREATE INDEX idx_catalog_size_history_recorded_at ON catalog_size_history(recorded_at);
 CREATE UNIQUE INDEX idx_friends_unordered_pair ON friends (LEAST(fst_user_id, sec_user_id), GREATEST(fst_user_id, sec_user_id));

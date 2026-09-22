@@ -14,6 +14,9 @@ const databaseRepoMocks = vi.hoisted(() => ({
 const serviceCallCountRepoMocks = vi.hoisted(() => ({
     getAll: vi.fn(),
 }));
+const catalogRepoMocks = vi.hoisted(() => ({
+    getSizeHistory: vi.fn(),
+}));
 const adminRepoMocks = vi.hoisted(() => ({
     getNewUsersByDay: vi.fn(),
     getPendingDeletionsCount: vi.fn(),
@@ -54,6 +57,9 @@ vi.mock("../../../repositories/adminActionRepository.js", () => ({
 vi.mock("../../../repositories/serviceCallCountRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return serviceCallCountRepoMocks; }),
 }));
+vi.mock("../../../repositories/catalogRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return catalogRepoMocks; }),
+}));
 vi.mock("../../../services/healthService.js", () => ({
     default: vi.fn().mockImplementation(function () { return healthServiceMocks; }),
 }));
@@ -70,6 +76,7 @@ describe("AdminService.getDashboard", () => {
         userRepoMocks.getUserCount.mockResolvedValue(42);
         databaseRepoMocks.getDatabaseSize.mockResolvedValue("12 MB");
         databaseRepoMocks.getSizeHistory.mockResolvedValue([{ recordedAt: "2024-01-01", sizeBytes: 100 }]);
+        catalogRepoMocks.getSizeHistory.mockResolvedValue([{ recordedAt: "2024-01-01", shows: 42, seasons: 100, episodes: 2000 }]);
         adminRepoMocks.getNewUsersByDay.mockResolvedValue([{ day: "2024-01-01", count: 3 }]);
         adminRepoMocks.getPendingDeletionsCount.mockResolvedValue(2);
         adminRepoMocks.getAnonymizedCount.mockResolvedValue(1);
@@ -90,6 +97,7 @@ describe("AdminService.getDashboard", () => {
             users: { total: 42, newByDay: [{ day: "2024-01-01", count: 3 }], pendingDeletions: 2, anonymized: 1 },
             sessions: { active: 10, loginAttemptLimit: [] },
             database: { size: "12 MB", history: [{ recordedAt: "2024-01-01", sizeBytes: 100 }] },
+            catalog: { history: [{ recordedAt: "2024-01-01", shows: 42, seasons: 100, episodes: 2000 }] },
             health: { betaseries: { reachable: true }, mailer: { reachable: true } },
             recentActions: [],
             serviceCalls: {

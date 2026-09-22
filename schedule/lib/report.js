@@ -104,6 +104,10 @@ const formatReport = (results) => {
     if (results.database) {
         lines.push(`💾 Taille de la base : <b>${results.database.size}</b>`);
     }
+    if (results.catalog) {
+        const {shows, seasons, episodes} = results.catalog;
+        lines.push(`📚 Catalogue : <b>${shows}</b> série(s), <b>${seasons}</b> saison(s), <b>${episodes}</b> épisode(s)`);
+    }
     if (results.deletedAccounts) {
         lines.push(`🗑️ <b>${results.deletedAccounts.anonymized}</b> compte(s) anonymisé(s)`);
     }
