@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import db from "../../../config/db.js";
 import ShowService from "../../../services/showService.js";
+import SeasonService from "../../../services/seasonService.js";
 import { resetDb } from "../resetDb.js";
 import { insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason } from "../fixtures.js";
 
@@ -94,6 +95,32 @@ describe("ShowService (real Postgres)", () => {
             const showId = await insertShow();
 
             await expect(service.deleteByShowId(userId, showId, "false")).rejects.toMatchObject({ status: 500 });
+        });
+
+        it("ends the friend's live watch-together relation but keeps the owner's historical tag when the friend deletes their whole show", async () => {
+            const ownerId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [ownerId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(ownerId, showId);
+            const ownerSeasonId = await insertUserSeason(ownerId, showId, 1);
+            const seasonService = new SeasonService();
+            seasonService._showService._searchService.getByShowId = async () => { throw new Error("should not be called"); };
+            seasonService._showService._searchService.getSeasonByShowIdByNumber = async () => { throw new Error("should not be called"); };
+            await seasonService.updateWatchedWith(ownerId, ownerSeasonId, [friendId]);
+            await seasonService.respondToWatchedWith(friendId, ownerSeasonId, true);
+
+            await service.deleteByShowId(friendId, showId, "false");
+
+            const friendShow = await db.query(`SELECT * FROM users_shows WHERE user_id = $1 AND show_id = $2`, [friendId, showId]);
+            expect(friendShow.rowCount).toBe(0);
+            const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1`, [ownerSeasonId]);
+            expect(relation.rowCount).toBe(0);
+            const tag = await db.query(`
+                SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2
+            `, [ownerSeasonId, friendId]);
+            expect(tag.rows[0]["status_id"]).toBe("accepted");
         });
     });
 

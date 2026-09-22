@@ -8,48 +8,26 @@ vi.mock("../../../config/db.js", () => ({
 
 describe("SeasonRepository.deleteSeasonById", () => {
     let repo;
-    let clientMocks;
 
     beforeEach(() => {
         vi.clearAllMocks();
         repo = new SeasonRepository();
-        clientMocks = {query: vi.fn()};
-        db.transaction.mockImplementation((callback) => callback(clientMocks));
     });
 
-    it("deletes the season and re-creates any accepted pairing as declined", async () => {
-        clientMocks.query
-            .mockResolvedValueOnce({rows: [{users_season_id: 5, friend_user_id: "friend-1"}]})
-            .mockResolvedValueOnce({rowCount: 1})
-            .mockResolvedValueOnce({});
+    it("returns true when a row was deleted", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
 
         const result = await repo.deleteSeasonById("user-1", 1);
 
-        expect(clientMocks.query).toHaveBeenNthCalledWith(1, expect.stringContaining("SELECT users_season_id"), [1]);
-        expect(clientMocks.query).toHaveBeenNthCalledWith(2, expect.stringContaining("DELETE FROM users_seasons"), [1, "user-1"]);
-        expect(clientMocks.query).toHaveBeenNthCalledWith(3, expect.stringContaining("INSERT INTO users_seasons_friends"), [5, "friend-1"]);
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("DELETE FROM users_seasons"), [1, "user-1"]);
         expect(result).toBe(true);
     });
 
-    it("deletes a season with no pairing without touching users_seasons_friends", async () => {
-        clientMocks.query
-            .mockResolvedValueOnce({rows: []})
-            .mockResolvedValueOnce({rowCount: 1});
-
-        const result = await repo.deleteSeasonById("user-1", 1);
-
-        expect(clientMocks.query).toHaveBeenCalledTimes(2);
-        expect(result).toBe(true);
-    });
-
-    it("returns false and does not touch any pairing when no matching row existed", async () => {
-        clientMocks.query
-            .mockResolvedValueOnce({rows: [{users_season_id: 5, friend_user_id: "friend-1"}]})
-            .mockResolvedValueOnce({rowCount: 0});
+    it("returns false when no matching row existed", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
 
         const result = await repo.deleteSeasonById("user-1", 999);
 
-        expect(clientMocks.query).toHaveBeenCalledTimes(2);
         expect(result).toBe(false);
     });
 });

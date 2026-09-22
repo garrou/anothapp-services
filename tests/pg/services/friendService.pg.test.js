@@ -100,6 +100,29 @@ describe("FriendService (real Postgres)", () => {
             const link = await db.query(`SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, otherId]);
             expect(link.rows[0]["status_id"]).toBe("declined");
         });
+
+        it("ends an accepted watch-together relation and keeps its historical tag as revoked", async () => {
+            const userId = await insertUser();
+            const otherId = await insertUser();
+            await service.sendFriendRequest(userId, otherId);
+            await service.acceptFriend(otherId, userId, userId);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            const seasonService = new SeasonService();
+            seasonService._showService._searchService.getByShowId = async () => { throw new Error("should not be called"); };
+            seasonService._showService._searchService.getSeasonByShowIdByNumber = async () => { throw new Error("should not be called"); };
+            await seasonService.updateWatchedWith(userId, userSeasonId, [otherId]);
+            await seasonService.respondToWatchedWith(otherId, userSeasonId, true);
+
+            await service.deleteFriend(userId, otherId);
+
+            const tag = await db.query(`SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, otherId]);
+            expect(tag.rows[0]["status_id"]).toBe("revoked");
+            const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, otherId]);
+            expect(relation.rowCount).toBe(0);
+        });
     });
 
     describe("getFriends", () => {

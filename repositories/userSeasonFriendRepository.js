@@ -34,11 +34,13 @@ export default class UserSeasonFriendRepository {
      * Replaces the tag list for a viewing with `friendIds`, preserving each friend's existing
      * watch-together status instead of resetting everything - only friends genuinely new to the
      * list (or re-added after having declined) start (back) at NULL ("pending"/not yet answered).
-     * Friends dropped from the list are marked declined rather than deleted, so any episodes
-     * already synced with them are never touched.
+     * Friends dropped from the list are marked declined/revoked rather than deleted, so any
+     * episodes already synced with them are never touched.
      * @param {number} userSeasonId
      * @param {string[]} friendIds
-     * @returns {Promise<string[]>} friend ids that just became newly invited (worth notifying)
+     * @returns {Promise<{invited: string[], revoked: string[]}>} invited: friend ids newly invited
+     *   (worth notifying); revoked: friend ids dropped while their relation was accepted (the
+     *   caller must also end their live watch_together relation)
      */
     setForUserSeasonId = async (userSeasonId, friendIds) => {
         return db.transaction(async (client) => {
@@ -48,13 +50,19 @@ export default class UserSeasonFriendRepository {
             const currentByFriendId = new Map(current.rows.map((row) => [row["friend_user_id"], row["status_id"]]));
             const newIds = new Set(friendIds);
             const invited = [];
+            const revoked = [];
 
             for (const friendId of currentByFriendId.keys()) {
                 if (!newIds.has(friendId) && currentByFriendId.get(friendId) !== "declined") {
+                    const wasAccepted = currentByFriendId.get(friendId) === "accepted";
                     await client.query(`
-                        UPDATE users_seasons_friends SET status_id = 'declined', friend_users_season_id = NULL
+                        UPDATE users_seasons_friends SET status_id = $3
                         WHERE users_season_id = $1 AND friend_user_id = $2
-                    `, [userSeasonId, friendId]);
+                    `, [userSeasonId, friendId, wasAccepted ? "revoked" : "declined"]);
+
+                    if (wasAccepted) {
+                        revoked.push(friendId);
+                    }
                 }
             }
             for (const friendId of friendIds) {
@@ -65,13 +73,13 @@ export default class UserSeasonFriendRepository {
                     invited.push(friendId);
                 } else if (currentByFriendId.get(friendId) === "declined") {
                     await client.query(`
-                        UPDATE users_seasons_friends SET status_id = NULL, friend_users_season_id = NULL
+                        UPDATE users_seasons_friends SET status_id = NULL
                         WHERE users_season_id = $1 AND friend_user_id = $2
                     `, [userSeasonId, friendId]);
                     invited.push(friendId);
                 }
             }
-            return invited;
+            return {invited, revoked};
         });
     }
 
@@ -90,14 +98,13 @@ export default class UserSeasonFriendRepository {
     /**
      * @param {number} userSeasonId
      * @param {string} friendUserId
-     * @param {number} friendUsersSeasonId
      * @returns {Promise<boolean>}
      */
-    accept = async (userSeasonId, friendUserId, friendUsersSeasonId) => {
+    accept = async (userSeasonId, friendUserId) => {
         const res = await db.query(`
-            UPDATE users_seasons_friends SET status_id = 'accepted', friend_users_season_id = $3
+            UPDATE users_seasons_friends SET status_id = 'accepted'
             WHERE users_season_id = $1 AND friend_user_id = $2
-        `, [userSeasonId, friendUserId, friendUsersSeasonId]);
+        `, [userSeasonId, friendUserId]);
         return res.rowCount === 1;
     }
 
@@ -107,8 +114,11 @@ export default class UserSeasonFriendRepository {
      * @returns {Promise<boolean>}
      */
     decline = async (userSeasonId, friendUserId) => {
+        // "declined" for an invite that was never accepted, "revoked" for one that was - the
+        // latter is still counted as "watched together" in the stats below, the former isn't.
         const res = await db.query(`
-            UPDATE users_seasons_friends SET status_id = 'declined', friend_users_season_id = NULL
+            UPDATE users_seasons_friends
+            SET status_id = CASE WHEN status_id = 'accepted' THEN 'revoked' ELSE 'declined' END
             WHERE users_season_id = $1 AND friend_user_id = $2
         `, [userSeasonId, friendUserId]);
         return res.rowCount === 1;
@@ -122,30 +132,12 @@ export default class UserSeasonFriendRepository {
     declineAllBetweenUsers = async (userIdA, userIdB) => {
         await db.query(`
             UPDATE users_seasons_friends usf
-            SET status_id = 'declined', friend_users_season_id = NULL
+            SET status_id = CASE WHEN usf.status_id = 'accepted' THEN 'revoked' ELSE 'declined' END
             FROM users_seasons us
             WHERE usf.users_season_id = us.id
               AND usf.status_id IS DISTINCT FROM 'declined'
               AND ((us.user_id = $1 AND usf.friend_user_id = $2) OR (us.user_id = $2 AND usf.friend_user_id = $1))
         `, [userIdA, userIdB]);
-    }
-
-    /**
-     * A viewing must belong to at most one watch-together group: it can't already be someone
-     * else's accepted friend-slot, and it can't already be a root with its own accepted friends,
-     * before it's linked as a new friend-slot - otherwise the fan-out graph becomes ambiguous.
-     * @param {number} viewingId
-     * @returns {Promise<boolean>}
-     */
-    hasConflictingLink = async (viewingId) => {
-        const res = await db.query(`
-            SELECT EXISTS(
-                SELECT 1 FROM users_seasons_friends WHERE friend_users_season_id = $1 AND status_id = 'accepted'
-            ) OR EXISTS(
-                SELECT 1 FROM users_seasons_friends WHERE users_season_id = $1 AND status_id = 'accepted'
-            ) AS conflict
-        `, [viewingId]);
-        return res.rows[0]["conflict"];
     }
 
     /**
@@ -176,66 +168,6 @@ export default class UserSeasonFriendRepository {
 
     /**
      * @param {string} userId
-     * @returns {Promise<{userSeasonId: number, showId: number, showTitle: string, showPoster: string,
-     *   seasonNumber: number, actor: {id: string, username: string, picture: string}}[]>}
-     */
-    getActiveForUser = async (userId) => {
-        const res = await db.query(`
-            SELECT us.id AS users_season_id, us.show_id, us.number, s.title, s.poster,
-                   owner.id AS owner_id, owner.username AS owner_username, owner.picture AS owner_picture
-            FROM users_seasons_friends usf
-            JOIN users_seasons us ON us.id = usf.users_season_id
-            JOIN shows s ON s.id = us.show_id
-            JOIN users owner ON owner.id = us.user_id
-            WHERE usf.friend_user_id = $1 AND usf.status_id = 'accepted'
-            ORDER BY us.added_at DESC
-        `, [userId]);
-        return res.rows.map((row) => ({
-            userSeasonId: row["users_season_id"],
-            showId: row["show_id"],
-            showTitle: row.title,
-            showPoster: row.poster,
-            seasonNumber: row.number,
-            actor: {id: row["owner_id"], username: row["owner_username"], picture: row["owner_picture"]},
-        }));
-    }
-
-    /**
-     * @param {number} userSeasonId
-     * @returns {Promise<{id: number, userId: string}[]>}
-     */
-    getLinkedViewings = async (userSeasonId) => {
-        const res = await db.query(`
-            WITH root AS (
-                SELECT CASE
-                    WHEN EXISTS (SELECT 1 FROM users_seasons_friends WHERE users_season_id = $1)
-                        THEN $1
-                    ELSE (
-                        SELECT users_season_id FROM users_seasons_friends
-                        WHERE friend_users_season_id = $1 AND status_id = 'accepted'
-                    )
-                END AS id
-            ),
-            members AS (
-                SELECT root.id FROM root WHERE root.id IS NOT NULL
-
-                UNION
-
-                SELECT usf.friend_users_season_id AS id
-                FROM root
-                JOIN users_seasons_friends usf ON usf.users_season_id = root.id
-                WHERE usf.status_id = 'accepted' AND usf.friend_users_season_id IS NOT NULL
-            )
-            SELECT us.id, us.user_id
-            FROM members m
-            JOIN users_seasons us ON us.id = m.id
-            WHERE m.id <> $1
-        `, [userSeasonId]);
-        return res.rows.map((row) => ({id: row.id, userId: row["user_id"]}));
-    }
-
-    /**
-     * @param {string} userId
      * @param {number} limit
      * @returns {Promise<Stat[]>}
      */
@@ -246,14 +178,14 @@ export default class UserSeasonFriendRepository {
                 SELECT usf.friend_user_id AS other_id
                 FROM users_seasons_friends usf
                 JOIN users_seasons us ON us.id = usf.users_season_id
-                WHERE us.user_id = $1 AND (usf.status_id IS NULL OR usf.status_id = 'accepted')
+                WHERE us.user_id = $1 AND (usf.status_id IS NULL OR usf.status_id != 'declined')
 
                 UNION ALL
 
                 SELECT us.user_id AS other_id
                 FROM users_seasons_friends usf
                 JOIN users_seasons us ON us.id = usf.users_season_id
-                WHERE usf.friend_user_id = $1 AND (usf.status_id IS NULL OR usf.status_id = 'accepted')
+                WHERE usf.friend_user_id = $1 AND (usf.status_id IS NULL OR usf.status_id != 'declined')
             ) pairs
             JOIN users other_user ON other_user.id = pairs.other_id
             GROUP BY other_user.id, other_user.username
@@ -274,14 +206,14 @@ export default class UserSeasonFriendRepository {
                 SELECT usf.friend_user_id AS other_id
                 FROM users_seasons_friends usf
                 JOIN users_seasons us ON us.id = usf.users_season_id
-                WHERE us.user_id = $1 AND (usf.status_id IS NULL OR usf.status_id = 'accepted')
+                WHERE us.user_id = $1 AND (usf.status_id IS NULL OR usf.status_id != 'declined')
 
                 UNION ALL
 
                 SELECT us.user_id AS other_id
                 FROM users_seasons_friends usf
                 JOIN users_seasons us ON us.id = usf.users_season_id
-                WHERE usf.friend_user_id = $1 AND (usf.status_id IS NULL OR usf.status_id = 'accepted')
+                WHERE usf.friend_user_id = $1 AND (usf.status_id IS NULL OR usf.status_id != 'declined')
             ) pairs
         `, [userId]);
         return parseInt(res.rows[0]["total"] ?? 0);
@@ -300,7 +232,7 @@ export default class UserSeasonFriendRepository {
                 FROM users_seasons_friends usf
                 JOIN users_seasons us ON us.id = usf.users_season_id
                 WHERE us.user_id = $1 AND EXTRACT(YEAR FROM us.added_at) = $2
-                  AND (usf.status_id IS NULL OR usf.status_id = 'accepted')
+                  AND (usf.status_id IS NULL OR usf.status_id != 'declined')
 
                 UNION ALL
 
@@ -308,7 +240,7 @@ export default class UserSeasonFriendRepository {
                 FROM users_seasons_friends usf
                 JOIN users_seasons us ON us.id = usf.users_season_id
                 WHERE usf.friend_user_id = $1 AND EXTRACT(YEAR FROM us.added_at) = $2
-                  AND (usf.status_id IS NULL OR usf.status_id = 'accepted')
+                  AND (usf.status_id IS NULL OR usf.status_id != 'declined')
             ) pairs
             JOIN users other_user ON other_user.id = pairs.other_id
             GROUP BY other_user.id, other_user.username

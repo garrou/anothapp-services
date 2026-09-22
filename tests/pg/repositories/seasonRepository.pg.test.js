@@ -63,7 +63,7 @@ describe("SeasonRepository (real Postgres)", () => {
             expect(res.rowCount).toBe(1);
         });
 
-        it("keeps the pairing as declined when the friend deletes their own synced copy", async () => {
+        it("ends the live watch-together relation but keeps the historical tag untouched when the friend deletes their own synced copy", async () => {
             const ownerId = await insertUser();
             const friendId = await insertUser();
             const showId = await insertShow();
@@ -73,20 +73,23 @@ describe("SeasonRepository (real Postgres)", () => {
             await insertUserShow(friendId, showId);
             const friendSeasonId = await insertUserSeason(friendId, showId, 1);
             await db.query(`
-                INSERT INTO users_seasons_friends (users_season_id, friend_user_id, status_id, friend_users_season_id)
-                VALUES ($1, $2, 'accepted', $3)
-            `, [ownerSeasonId, friendId, friendSeasonId]);
+                INSERT INTO users_seasons_friends (users_season_id, friend_user_id, status_id)
+                VALUES ($1, $2, 'accepted')
+            `, [ownerSeasonId, friendId]);
+            await db.query(`
+                INSERT INTO watch_together (users_season_id, friend_users_season_id, friend_user_id)
+                VALUES ($1, $2, $3)
+            `, [ownerSeasonId, friendSeasonId, friendId]);
 
             const result = await repo.deleteSeasonById(friendId, friendSeasonId);
 
             expect(result).toBe(true);
-            const link = await db.query(`
-                SELECT status_id, friend_users_season_id FROM users_seasons_friends
-                WHERE users_season_id = $1 AND friend_user_id = $2
+            const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1`, [ownerSeasonId]);
+            expect(relation.rowCount).toBe(0);
+            const tag = await db.query(`
+                SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2
             `, [ownerSeasonId, friendId]);
-            expect(link.rowCount).toBe(1);
-            expect(link.rows[0]["status_id"]).toBe("declined");
-            expect(link.rows[0]["friend_users_season_id"]).toBeNull();
+            expect(tag.rows[0]["status_id"]).toBe("accepted");
         });
     });
 

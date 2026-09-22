@@ -28,7 +28,7 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
             expect(result.get(userSeasonId).map((f) => f.username).sort()).toEqual(["FriendA", "FriendB"]);
         });
 
-        it("keeps a friend dropped from the list, marked declined, instead of removing them", async () => {
+        it("keeps a pending friend dropped from the list, marked declined, instead of removing them", async () => {
             const userId = await insertUser();
             const friendA = await insertUser({ username: "FriendA" });
             const friendB = await insertUser({ username: "FriendB" });
@@ -46,6 +46,23 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
             expect(result.find((f) => f.username === "FriendB").status).toBeNull();
         });
 
+        it("keeps an accepted friend dropped from the list marked revoked, and reports them for the caller to end their live relation", async () => {
+            const userId = await insertUser();
+            const friendA = await insertUser({ username: "FriendA" });
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await repo.setForUserSeasonId(userSeasonId, [friendA]);
+            await repo.accept(userSeasonId, friendA);
+
+            const { revoked } = await repo.setForUserSeasonId(userSeasonId, []);
+
+            expect(revoked).toEqual([friendA]);
+            const result = await repo.getByUserSeasonIds([userSeasonId]).then((m) => m.get(userSeasonId));
+            expect(result[0].status).toBe("revoked");
+        });
+
         it("declines rather than deletes when given an empty list", async () => {
             const userId = await insertUser();
             const friendA = await insertUser();
@@ -55,7 +72,7 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
             const userSeasonId = await insertUserSeason(userId, showId, 1);
             await repo.setForUserSeasonId(userSeasonId, [friendA]);
 
-            const invited = await repo.setForUserSeasonId(userSeasonId, []);
+            const { invited } = await repo.setForUserSeasonId(userSeasonId, []);
 
             expect(invited).toEqual([]);
             const result = await repo.getByUserSeasonIds([userSeasonId]).then((m) => m.get(userSeasonId));
@@ -72,7 +89,7 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
             await repo.setForUserSeasonId(userSeasonId, [friendA]);
             await repo.setForUserSeasonId(userSeasonId, []);
 
-            const invited = await repo.setForUserSeasonId(userSeasonId, [friendA]);
+            const { invited } = await repo.setForUserSeasonId(userSeasonId, [friendA]);
 
             expect(invited).toEqual([friendA]);
             const result = await repo.getByUserSeasonIds([userSeasonId]).then((m) => m.get(userSeasonId));
@@ -87,24 +104,22 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
     });
 
     describe("accept / decline / getStatus", () => {
-        it("accept links the friend's own viewing and getStatus reflects it", async () => {
+        it("accept sets the status to accepted", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();
             const showId = await insertShow();
             await insertSeason(showId, 1);
             await insertUserShow(userId, showId);
             const userSeasonId = await insertUserSeason(userId, showId, 1);
-            await insertUserShow(friendId, showId);
-            const friendSeasonId = await insertUserSeason(friendId, showId, 1);
             await repo.setForUserSeasonId(userSeasonId, [friendId]);
 
-            const linked = await repo.accept(userSeasonId, friendId, friendSeasonId);
+            const linked = await repo.accept(userSeasonId, friendId);
 
             expect(linked).toBe(true);
             expect(await repo.getStatus(userSeasonId, friendId)).toBe("accepted");
         });
 
-        it("decline clears any linked viewing", async () => {
+        it("decline marks a never-accepted invite declined", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();
             const showId = await insertShow();
@@ -117,6 +132,21 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
 
             expect(declined).toBe(true);
             expect(await repo.getStatus(userSeasonId, friendId)).toBe("declined");
+        });
+
+        it("decline marks a previously accepted invite revoked instead of declined", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await repo.setForUserSeasonId(userSeasonId, [friendId]);
+            await repo.accept(userSeasonId, friendId);
+
+            await repo.decline(userSeasonId, friendId);
+
+            expect(await repo.getStatus(userSeasonId, friendId)).toBe("revoked");
         });
 
         it("getStatus returns undefined when there is no link at all", async () => {
@@ -132,7 +162,7 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
     });
 
     describe("declineAllBetweenUsers", () => {
-        it("declines links between the two users in either direction, leaving others untouched", async () => {
+        it("declines a pending link and revokes an accepted one, between the two users in either direction, leaving others untouched", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();
             const otherFriendId = await insertUser();
@@ -141,54 +171,13 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
             await insertUserShow(userId, showId);
             const userSeasonId = await insertUserSeason(userId, showId, 1);
             await repo.setForUserSeasonId(userSeasonId, [friendId, otherFriendId]);
+            await repo.accept(userSeasonId, friendId);
 
             await repo.declineAllBetweenUsers(userId, friendId);
 
             const result = await repo.getByUserSeasonIds([userSeasonId]).then((m) => m.get(userSeasonId));
-            expect(result.find((f) => f.id === friendId).status).toBe("declined");
+            expect(result.find((f) => f.id === friendId).status).toBe("revoked");
             expect(result.find((f) => f.id === otherFriendId).status).toBeNull();
-        });
-    });
-
-    describe("hasConflictingLink", () => {
-        it("is false for a viewing with no accepted link", async () => {
-            const userId = await insertUser();
-            const showId = await insertShow();
-            await insertSeason(showId, 1);
-            await insertUserShow(userId, showId);
-            const userSeasonId = await insertUserSeason(userId, showId, 1);
-
-            expect(await repo.hasConflictingLink(userSeasonId)).toBe(false);
-        });
-
-        it("is true once the viewing is someone's accepted friend-slot", async () => {
-            const userId = await insertUser();
-            const friendId = await insertUser();
-            const showId = await insertShow();
-            await insertSeason(showId, 1);
-            await insertUserShow(userId, showId);
-            const userSeasonId = await insertUserSeason(userId, showId, 1);
-            await insertUserShow(friendId, showId);
-            const friendSeasonId = await insertUserSeason(friendId, showId, 1);
-            await repo.setForUserSeasonId(userSeasonId, [friendId]);
-            await repo.accept(userSeasonId, friendId, friendSeasonId);
-
-            expect(await repo.hasConflictingLink(friendSeasonId)).toBe(true);
-        });
-
-        it("is true once the viewing is itself a root with an accepted friend", async () => {
-            const userId = await insertUser();
-            const friendId = await insertUser();
-            const showId = await insertShow();
-            await insertSeason(showId, 1);
-            await insertUserShow(userId, showId);
-            const userSeasonId = await insertUserSeason(userId, showId, 1);
-            await insertUserShow(friendId, showId);
-            const friendSeasonId = await insertUserSeason(friendId, showId, 1);
-            await repo.setForUserSeasonId(userSeasonId, [friendId]);
-            await repo.accept(userSeasonId, friendId, friendSeasonId);
-
-            expect(await repo.hasConflictingLink(userSeasonId)).toBe(true);
         });
     });
 
@@ -225,90 +214,6 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
         });
     });
 
-    describe("getActiveForUser", () => {
-        it("lists only accepted watch-together links for a user", async () => {
-            const userId = await insertUser();
-            const friendId = await insertUser();
-            const showId = await insertShow({ title: "Dexter" });
-            await insertSeason(showId, 2);
-            await insertUserShow(userId, showId);
-            const userSeasonId = await insertUserSeason(userId, showId, 2);
-            await insertUserShow(friendId, showId);
-            const friendSeasonId = await insertUserSeason(friendId, showId, 2);
-            await repo.setForUserSeasonId(userSeasonId, [friendId]);
-            await repo.accept(userSeasonId, friendId, friendSeasonId);
-
-            const active = await repo.getActiveForUser(friendId);
-
-            expect(active).toEqual([{
-                userSeasonId, showId, showTitle: "Dexter", showPoster: null, seasonNumber: 2,
-                actor: { id: userId, username: expect.any(String), picture: null },
-            }]);
-        });
-
-        it("excludes a pending or declined link", async () => {
-            const userId = await insertUser();
-            const friendId = await insertUser();
-            const showId = await insertShow();
-            await insertSeason(showId, 1);
-            await insertUserShow(userId, showId);
-            const userSeasonId = await insertUserSeason(userId, showId, 1);
-            await repo.setForUserSeasonId(userSeasonId, [friendId]);
-
-            expect(await repo.getActiveForUser(friendId)).toEqual([]);
-
-            await repo.decline(userSeasonId, friendId);
-
-            expect(await repo.getActiveForUser(friendId)).toEqual([]);
-        });
-    });
-
-    describe("getLinkedViewings", () => {
-        it("returns the other members of the group when queried from the root viewing", async () => {
-            const userId = await insertUser();
-            const friendId = await insertUser();
-            const showId = await insertShow();
-            await insertSeason(showId, 1);
-            await insertUserShow(userId, showId);
-            const userSeasonId = await insertUserSeason(userId, showId, 1);
-            await insertUserShow(friendId, showId);
-            const friendSeasonId = await insertUserSeason(friendId, showId, 1);
-            await repo.setForUserSeasonId(userSeasonId, [friendId]);
-            await repo.accept(userSeasonId, friendId, friendSeasonId);
-
-            const linked = await repo.getLinkedViewings(userSeasonId);
-
-            expect(linked).toEqual([{ id: friendSeasonId, userId: friendId }]);
-        });
-
-        it("returns the root and other accepted members when queried from a friend's own viewing", async () => {
-            const userId = await insertUser();
-            const friendId = await insertUser();
-            const showId = await insertShow();
-            await insertSeason(showId, 1);
-            await insertUserShow(userId, showId);
-            const userSeasonId = await insertUserSeason(userId, showId, 1);
-            await insertUserShow(friendId, showId);
-            const friendSeasonId = await insertUserSeason(friendId, showId, 1);
-            await repo.setForUserSeasonId(userSeasonId, [friendId]);
-            await repo.accept(userSeasonId, friendId, friendSeasonId);
-
-            const linked = await repo.getLinkedViewings(friendSeasonId);
-
-            expect(linked).toEqual([{ id: userSeasonId, userId }]);
-        });
-
-        it("returns nothing for a viewing with no accepted watch-together link", async () => {
-            const userId = await insertUser();
-            const showId = await insertShow();
-            await insertSeason(showId, 1);
-            await insertUserShow(userId, showId);
-            const userSeasonId = await insertUserSeason(userId, showId, 1);
-
-            expect(await repo.getLinkedViewings(userSeasonId)).toEqual([]);
-        });
-    });
-
     describe("getTopFriendsByUserId / getDistinctFriendsCountByUserId", () => {
         it("counts watches with a friend from both directions (as watcher and as tagged friend)", async () => {
             const userId = await insertUser();
@@ -332,6 +237,28 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
             expect(result[0]).toMatchObject({ id: friendA, label: "FriendA", value: 3 });
             expect(result[1]).toMatchObject({ id: friendB, label: "FriendB", value: 1 });
             expect(await repo.getDistinctFriendsCountByUserId(userId)).toBe(2);
+        });
+
+        it("still counts a revoked (previously accepted) watch, but not a declined one", async () => {
+            const userId = await insertUser();
+            const friendA = await insertUser({ username: "FriendA" });
+            const friendB = await insertUser({ username: "FriendB" });
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertSeason(showId, 2);
+            await insertUserShow(userId, showId);
+            const season1 = await insertUserSeason(userId, showId, 1);
+            const season2 = await insertUserSeason(userId, showId, 2);
+            await repo.setForUserSeasonId(season1, [friendA]);
+            await repo.accept(season1, friendA);
+            await repo.decline(season1, friendA);
+            await repo.setForUserSeasonId(season2, [friendB]);
+            await repo.decline(season2, friendB);
+
+            const result = await repo.getTopFriendsByUserId(userId);
+
+            expect(result).toEqual([{ id: friendA, label: "FriendA", value: 1 }]);
+            expect(await repo.getDistinctFriendsCountByUserId(userId)).toBe(1);
         });
 
         it("returns an empty array/0 for a user who never watched with friends", async () => {

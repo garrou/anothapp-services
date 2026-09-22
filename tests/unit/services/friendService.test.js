@@ -17,6 +17,9 @@ const playlistCollaboratorRepoMocks = vi.hoisted(() => ({
 const userSeasonFriendRepoMocks = vi.hoisted(() => ({
     declineAllBetweenUsers: vi.fn(),
 }));
+const watchTogetherRepoMocks = vi.hoisted(() => ({
+    removeAllBetweenUsers: vi.fn(),
+}));
 const eventBusMocks = vi.hoisted(() => ({
     emit: vi.fn(),
 }));
@@ -29,6 +32,9 @@ vi.mock("../../../repositories/playlistCollaboratorRepository.js", () => ({
 }));
 vi.mock("../../../repositories/userSeasonFriendRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userSeasonFriendRepoMocks; }),
+}));
+vi.mock("../../../repositories/watchTogetherRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return watchTogetherRepoMocks; }),
 }));
 vi.mock("../../../helpers/eventBus.js", () => ({
     default: eventBusMocks,
@@ -173,11 +179,18 @@ describe("FriendService.deleteFriend", () => {
         expect(playlistCollaboratorRepoMocks.removeAllBetween).toHaveBeenCalledWith("user-1", "user-2");
     });
 
-    it("declines any watch-together link between the two users, in either direction", async () => {
+    it("marks the historical watch-together tag declined/revoked between the two users, in either direction", async () => {
         friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
 
         await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
         expect(userSeasonFriendRepoMocks.declineAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2");
+    });
+
+    it("ends any live watch-together relation between the two users, in either direction", async () => {
+        friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
+
+        await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
+        expect(watchTogetherRepoMocks.removeAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2");
     });
 });
 

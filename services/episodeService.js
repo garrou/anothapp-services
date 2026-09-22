@@ -1,7 +1,7 @@
 import EpisodeRepository from "../repositories/episodeRepository.js";
 import UserEpisodeRepository from "../repositories/userEpisodeRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
-import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
+import WatchTogetherRepository from "../repositories/watchTogetherRepository.js";
 import SearchService from "./searchService.js";
 import ServiceError from "../helpers/serviceError.js";
 import Validator from "../helpers/validator.js";
@@ -15,7 +15,7 @@ export default class EpisodeService {
         this._episodeRepository = new EpisodeRepository();
         this._userEpisodeRepository = new UserEpisodeRepository();
         this._userSeasonRepository = new UserSeasonRepository();
-        this._userSeasonFriendRepository = new UserSeasonFriendRepository();
+        this._watchTogetherRepository = new WatchTogetherRepository();
         this._searchService = new SearchService();
     }
 
@@ -27,7 +27,7 @@ export default class EpisodeService {
      * @returns {Promise<void>}
      */
     #mirrorToLinkedViewings = async (userSeasonId, episodeId, watchedAt, platformId) => {
-        const linked = await this._userSeasonFriendRepository.getLinkedViewings(userSeasonId);
+        const linked = await this._watchTogetherRepository.getLinkedViewings(userSeasonId);
         await Promise.all(linked.map((viewing) =>
             this._userEpisodeRepository.createIfMissing(viewing.userId, viewing.id, episodeId, watchedAt, platformId)
         ));

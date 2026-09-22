@@ -1,6 +1,7 @@
 import SeasonRepository from "../repositories/seasonRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
+import WatchTogetherRepository from "../repositories/watchTogetherRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import EpisodeService from "./episodeService.js";
 import ShowService from "./showService.js";
@@ -16,6 +17,7 @@ export default class SeasonService {
         this._seasonRepository = new SeasonRepository();
         this._userSeasonRepository = new UserSeasonRepository();
         this._userSeasonFriendRepository = new UserSeasonFriendRepository();
+        this._watchTogetherRepository = new WatchTogetherRepository();
         this._friendRepository = new FriendRepository();
         this._episodeService = new EpisodeService();
         this._showService = new ShowService();
@@ -112,7 +114,11 @@ export default class SeasonService {
                 throw new ServiceError(400, "Vous ne pouvez taguer que des amis");
             }
         }
-        const invited = await this._userSeasonFriendRepository.setForUserSeasonId(seasonId, uniqueFriendIds);
+        const {invited, revoked} = await this._userSeasonFriendRepository.setForUserSeasonId(seasonId, uniqueFriendIds);
+
+        // A friend dropped from the list while their invite was accepted loses the live sync too -
+        // the historical tag stays (now "revoked"), only the relation actually routing episodes ends.
+        await Promise.all(revoked.map((friendId) => this._watchTogetherRepository.remove(seasonId, friendId)));
 
         if (invited.length) {
             eventBus.emit("season.watched_with", {
@@ -134,7 +140,7 @@ export default class SeasonService {
             case "pending":
                 return this._userSeasonFriendRepository.getPendingForUser(currentUserId);
             case "active":
-                return this._userSeasonFriendRepository.getActiveForUser(currentUserId);
+                return this._watchTogetherRepository.getActiveForUser(currentUserId);
             default:
                 throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
@@ -158,7 +164,10 @@ export default class SeasonService {
         const owned = await this._userSeasonRepository.getSeasonViewingById(userSeasonId);
 
         if (!accepted) {
+            // Marking declined here always keeps the historical tag (never deleted); revoking the
+            // live relation is a plain no-op when the invite was never accepted in the first place.
             await this._userSeasonFriendRepository.decline(userSeasonId, currentUserId);
+            await this._watchTogetherRepository.remove(userSeasonId, currentUserId);
             eventBus.emit("season.watched_with.declined", {
                 recipientUserId: owned.userId, actorUserId: currentUserId,
                 showId: owned.showId, metadata: {seasonNumber: owned.number},
@@ -176,12 +185,13 @@ export default class SeasonService {
         const friendUsersSeasonId = await this._showService.ensureSeasonTracked(
             currentUserId, owned.showId, owned.number, owned.platformId
         );
-        const conflict = await this._userSeasonFriendRepository.hasConflictingLink(friendUsersSeasonId);
+        const conflict = await this._watchTogetherRepository.hasConflictingLink(userSeasonId, friendUsersSeasonId);
 
         if (conflict) {
             throw new ServiceError(409, "Ce visionnage participe déjà à un autre visionnage partagé");
         }
-        const linked = await this._userSeasonFriendRepository.accept(userSeasonId, currentUserId, friendUsersSeasonId);
+        await this._userSeasonFriendRepository.accept(userSeasonId, currentUserId);
+        const linked = await this._watchTogetherRepository.create(userSeasonId, friendUsersSeasonId, currentUserId);
 
         if (!linked) {
             throw new ServiceError(500, "Impossible d'accepter cette invitation");

@@ -9,31 +9,11 @@ export default class SeasonRepository {
      * @returns {Promise<boolean>}
      */
     deleteSeasonById = async (userId, id) => {
-        return db.transaction(async (client) => {
-            const linked = await client.query(`
-                SELECT users_season_id, friend_user_id FROM users_seasons_friends
-                WHERE friend_users_season_id = $1 AND status_id = 'accepted'
-            `, [id]);
-            const res = await client.query(`
-                DELETE FROM users_seasons
-                WHERE id = $1 AND user_id = $2
-            `, [id, userId]);
-
-            if (res.rowCount !== 1) {
-                return false;
-            }
-            // The DELETE above cascades away (FK on friend_users_season_id) the pairing row for
-            // anyone who had this season as their friend-slot - re-create it as "declined" so
-            // deleting the copy is never a silent, untracked way to drop out, unlike every other
-            // path (which always keeps the row and only ever moves it to "declined").
-            for (const row of linked.rows) {
-                await client.query(`
-                    INSERT INTO users_seasons_friends (users_season_id, friend_user_id, status_id)
-                    VALUES ($1, $2, 'declined')
-                `, [row["users_season_id"], row["friend_user_id"]]);
-            }
-            return true;
-        });
+        const res = await db.query(`
+            DELETE FROM users_seasons
+            WHERE id = $1 AND user_id = $2
+        `, [id, userId]);
+        return res.rowCount === 1;
     }
 
     /**

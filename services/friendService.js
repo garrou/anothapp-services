@@ -1,6 +1,7 @@
 import FriendRepository from "../repositories/friendRepository.js";
 import PlaylistCollaboratorRepository from "../repositories/playlistCollaboratorRepository.js";
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
+import WatchTogetherRepository from "../repositories/watchTogetherRepository.js";
 import ServiceError from "../helpers/serviceError.js";
 import {DUPLICATE_ERROR_CODE, ERROR_ALREADY_FRIEND, ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import eventBus from "../helpers/eventBus.js";
@@ -11,6 +12,7 @@ export default class FriendService {
         this._friendRepository = new FriendRepository();
         this._playlistCollaboratorRepository = new PlaylistCollaboratorRepository();
         this._userSeasonFriendRepository = new UserSeasonFriendRepository();
+        this._watchTogetherRepository = new WatchTogetherRepository();
     }
 
     /**
@@ -76,9 +78,11 @@ export default class FriendService {
         }
         // Playlist collaboration and watch-together were both granted on the strength of the
         // friendship - revoke them in both directions so neither outlives the relationship it
-        // depended on. Like every other revoke path, this never touches episodes already synced.
+        // depended on. Like every other revoke path, this never touches episodes already synced,
+        // and it keeps the historical tag (declined/revoked), only the live relation is removed.
         await this._playlistCollaboratorRepository.removeAllBetween(currentUserId, userId);
         await this._userSeasonFriendRepository.declineAllBetweenUsers(currentUserId, userId);
+        await this._watchTogetherRepository.removeAllBetweenUsers(currentUserId, userId);
 
         if (!deleted.wasAccepted && deleted.requesterId !== currentUserId) {
             eventBus.emit("friend.declined", {recipientUserId: deleted.requesterId, actorUserId: currentUserId});

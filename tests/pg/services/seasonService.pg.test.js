@@ -156,9 +156,31 @@ describe("SeasonService (real Postgres)", () => {
             expect(friendShow.rowCount).toBe(1);
             const friendSeason = await db.query(`SELECT id, platform_id FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = 1`, [friendId, showId]);
             expect(friendSeason.rows[0]["platform_id"]).toBe(1);
-            const link = await db.query(`SELECT status_id, friend_users_season_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
-            expect(link.rows[0]["status_id"]).toBe("accepted");
-            expect(link.rows[0]["friend_users_season_id"]).toBe(friendSeason.rows[0].id);
+            const tag = await db.query(`SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
+            expect(tag.rows[0]["status_id"]).toBe("accepted");
+            const relation = await db.query(`SELECT friend_users_season_id FROM watch_together WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
+            expect(relation.rows[0]["friend_users_season_id"]).toBe(friendSeason.rows[0].id);
+        });
+
+        it("a single owner can share the same season with several friends at once", async () => {
+            const userId = await insertUser();
+            const friendA = await insertUser();
+            const friendB = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendA]);
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendB]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await service.updateWatchedWith(userId, userSeasonId, [friendA, friendB]);
+
+            await service.respondToWatchedWith(friendA, userSeasonId, true);
+            await service.respondToWatchedWith(friendB, userSeasonId, true);
+
+            expect(await service.getWatchedWith(friendA, "active")).toHaveLength(1);
+            expect(await service.getWatchedWith(friendB, "active")).toHaveLength(1);
+            const relations = await db.query(`SELECT friend_user_id FROM watch_together WHERE users_season_id = $1`, [userSeasonId]);
+            expect(relations.rows.map((r) => r["friend_user_id"]).sort()).toEqual([friendA, friendB].sort());
         });
 
         it("accepting reuses the friend's existing viewing instead of creating a duplicate", async () => {
@@ -252,7 +274,7 @@ describe("SeasonService (real Postgres)", () => {
             expect(await service.getWatchedWith(friendId, "pending")).toEqual([]);
         });
 
-        it("no longer lists a link as active once the friend leaves after accepting", async () => {
+        it("no longer lists a link as active once the friend leaves after accepting, but keeps the historical tag as revoked", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();
             await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
@@ -266,9 +288,10 @@ describe("SeasonService (real Postgres)", () => {
             await service.respondToWatchedWith(friendId, userSeasonId, false);
 
             expect(await service.getWatchedWith(friendId, "active")).toEqual([]);
-            const link = await db.query(`SELECT status_id, friend_users_season_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
-            expect(link.rows[0]["status_id"]).toBe("declined");
-            expect(link.rows[0]["friend_users_season_id"]).toBeNull();
+            const tag = await db.query(`SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
+            expect(tag.rows[0]["status_id"]).toBe("revoked");
+            const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
+            expect(relation.rowCount).toBe(0);
         });
 
         it("rejects with a 400 for a missing or unknown status", async () => {

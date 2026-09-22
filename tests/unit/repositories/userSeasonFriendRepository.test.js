@@ -71,19 +71,31 @@ describe("UserSeasonFriendRepository.setForUserSeasonId", () => {
     it("inserts a brand new friend id and reports it as newly invited", async () => {
         const client = mockCurrent([]);
 
-        const invited = await repo.setForUserSeasonId(1, ["user-2"]);
+        const {invited, revoked} = await repo.setForUserSeasonId(1, ["user-2"]);
 
         expect(client.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users_seasons_friends"), [1, "user-2"]);
         expect(invited).toEqual(["user-2"]);
+        expect(revoked).toEqual([]);
     });
 
-    it("marks a friend dropped from the list as declined instead of deleting the row", async () => {
+    it("marks a pending friend dropped from the list as declined instead of deleting the row", async () => {
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: null}]);
+
+        const {invited, revoked} = await repo.setForUserSeasonId(1, []);
+
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = $3"), [1, "user-2", "declined"]);
+        expect(invited).toEqual([]);
+        expect(revoked).toEqual([]);
+    });
+
+    it("marks an accepted friend dropped from the list as revoked and reports it, so its live relation can be ended", async () => {
         const client = mockCurrent([{friend_user_id: "user-2", status_id: "accepted"}]);
 
-        const invited = await repo.setForUserSeasonId(1, []);
+        const {invited, revoked} = await repo.setForUserSeasonId(1, []);
 
-        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = 'declined'"), [1, "user-2"]);
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = $3"), [1, "user-2", "revoked"]);
         expect(invited).toEqual([]);
+        expect(revoked).toEqual(["user-2"]);
     });
 
     it("does not touch a friend already declined and still absent from the list", async () => {
@@ -97,7 +109,7 @@ describe("UserSeasonFriendRepository.setForUserSeasonId", () => {
     it("resets a previously declined friend back to pending when re-added", async () => {
         const client = mockCurrent([{friend_user_id: "user-2", status_id: "declined"}]);
 
-        const invited = await repo.setForUserSeasonId(1, ["user-2"]);
+        const {invited} = await repo.setForUserSeasonId(1, ["user-2"]);
 
         expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = NULL"), [1, "user-2"]);
         expect(invited).toEqual(["user-2"]);
@@ -106,10 +118,11 @@ describe("UserSeasonFriendRepository.setForUserSeasonId", () => {
     it("leaves an already accepted friend untouched when still present in the list", async () => {
         const client = mockCurrent([{friend_user_id: "user-2", status_id: "accepted"}]);
 
-        const invited = await repo.setForUserSeasonId(1, ["user-2"]);
+        const {invited, revoked} = await repo.setForUserSeasonId(1, ["user-2"]);
 
         expect(client.query).toHaveBeenCalledTimes(1);
         expect(invited).toEqual([]);
+        expect(revoked).toEqual([]);
     });
 });
 
@@ -146,21 +159,21 @@ describe("UserSeasonFriendRepository.accept / decline", () => {
         repo = new UserSeasonFriendRepository();
     });
 
-    it("accept sets status to accepted and links the friend's viewing", async () => {
+    it("accept sets status to accepted", async () => {
         db.query.mockResolvedValue({rowCount: 1});
 
-        const result = await repo.accept(1, "user-2", 42);
+        const result = await repo.accept(1, "user-2");
 
-        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("status_id = 'accepted'"), [1, "user-2", 42]);
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("status_id = 'accepted'"), [1, "user-2"]);
         expect(result).toBe(true);
     });
 
-    it("decline sets status to declined and clears the linked viewing", async () => {
+    it("decline sets status to declined or revoked depending on the current status", async () => {
         db.query.mockResolvedValue({rowCount: 1});
 
         const result = await repo.decline(1, "user-2");
 
-        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("status_id = 'declined'"), [1, "user-2"]);
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("WHEN status_id = 'accepted' THEN 'revoked' ELSE 'declined'"), [1, "user-2"]);
         expect(result).toBe(true);
     });
 });
@@ -179,27 +192,6 @@ describe("UserSeasonFriendRepository.declineAllBetweenUsers", () => {
         await repo.declineAllBetweenUsers("user-1", "user-2");
 
         expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", "user-2"]);
-    });
-});
-
-describe("UserSeasonFriendRepository.hasConflictingLink", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserSeasonFriendRepository();
-    });
-
-    it("returns true when the viewing is already linked elsewhere", async () => {
-        db.query.mockResolvedValue({rows: [{conflict: true}]});
-
-        expect(await repo.hasConflictingLink(42)).toBe(true);
-    });
-
-    it("returns false when the viewing is free", async () => {
-        db.query.mockResolvedValue({rows: [{conflict: false}]});
-
-        expect(await repo.hasConflictingLink(42)).toBe(false);
     });
 });
 
@@ -225,49 +217,6 @@ describe("UserSeasonFriendRepository.getPendingForUser", () => {
             userSeasonId: 1, showId: 10, showTitle: "Dexter", showPoster: "poster.jpg", seasonNumber: 2,
             actor: {id: "user-2", username: "bob", picture: null},
         }]);
-    });
-});
-
-describe("UserSeasonFriendRepository.getActiveForUser", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserSeasonFriendRepository();
-    });
-
-    it("maps active (accepted) watch-together links", async () => {
-        db.query.mockResolvedValue({
-            rows: [{
-                users_season_id: 1, show_id: 10, title: "Dexter", poster: "poster.jpg", number: 2,
-                owner_id: "user-2", owner_username: "bob", owner_picture: null,
-            }],
-        });
-
-        const result = await repo.getActiveForUser("user-1");
-
-        expect(result).toEqual([{
-            userSeasonId: 1, showId: 10, showTitle: "Dexter", showPoster: "poster.jpg", seasonNumber: 2,
-            actor: {id: "user-2", username: "bob", picture: null},
-        }]);
-    });
-});
-
-describe("UserSeasonFriendRepository.getLinkedViewings", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new UserSeasonFriendRepository();
-    });
-
-    it("maps rows to id/userId pairs", async () => {
-        db.query.mockResolvedValue({rows: [{id: 2, user_id: "user-2"}]});
-
-        const result = await repo.getLinkedViewings(1);
-
-        expect(db.query).toHaveBeenCalledWith(expect.any(String), [1]);
-        expect(result).toEqual([{id: 2, userId: "user-2"}]);
     });
 });
 
