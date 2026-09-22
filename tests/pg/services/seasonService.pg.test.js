@@ -228,7 +228,7 @@ describe("SeasonService (real Postgres)", () => {
             await expect(service.respondToWatchedWith(friendId, userSeasonId, true)).rejects.toMatchObject({ status: 409 });
         });
 
-        it("backfills the owner's already-watched episodes into the friend's newly linked viewing", async () => {
+        it("backfills the owner's already-watched episodes into the friend's newly linked viewing, preserving the original watched_at and platform_id", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();
             await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
@@ -237,14 +237,50 @@ describe("SeasonService (real Postgres)", () => {
             await insertUserShow(userId, showId);
             const userSeasonId = await insertUserSeason(userId, showId, 1);
             const episodeId = await insertEpisode(showId, 1);
-            await insertUserEpisode(userId, userSeasonId, episodeId);
+            await insertUserEpisode(userId, userSeasonId, episodeId, {watchedAt: "2024-01-15T20:00:00.000Z", platformId: 3});
             await service.updateWatchedWith(userId, userSeasonId, [friendId]);
 
             await service.respondToWatchedWith(friendId, userSeasonId, true);
 
             const friendSeason = await db.query(`SELECT id FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = 1`, [friendId, showId]);
-            const friendViewing = await db.query(`SELECT * FROM users_episodes WHERE users_seasons_id = $1 AND episode_id = $2`, [friendSeason.rows[0].id, episodeId]);
+            const friendViewing = await db.query(`SELECT episode_id, watched_at, platform_id FROM users_episodes WHERE users_seasons_id = $1 AND episode_id = $2`, [friendSeason.rows[0].id, episodeId]);
             expect(friendViewing.rowCount).toBe(1);
+            expect(friendViewing.rows[0]).toMatchObject({
+                episode_id: episodeId,
+                watched_at: new Date("2024-01-15T20:00:00.000Z"),
+                platform_id: 3,
+            });
+        });
+
+        it("merges overlapping watched episodes from both sides without creating duplicates", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            const episode1 = await insertEpisode(showId, 1, {number: 1});
+            const episode2 = await insertEpisode(showId, 1, {number: 2});
+            const episode3 = await insertEpisode(showId, 1, {number: 3});
+            // owner watched E1, E2 - friend already watched E2, E3 on their own, before accepting
+            await insertUserEpisode(userId, userSeasonId, episode1);
+            await insertUserEpisode(userId, userSeasonId, episode2);
+            await insertUserShow(friendId, showId);
+            const friendExistingSeasonId = await insertUserSeason(friendId, showId, 1);
+            await insertUserEpisode(friendId, friendExistingSeasonId, episode2);
+            await insertUserEpisode(friendId, friendExistingSeasonId, episode3);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+
+            await service.respondToWatchedWith(friendId, userSeasonId, true);
+
+            const ownerEpisodes = await db.query(`SELECT episode_id FROM users_episodes WHERE users_seasons_id = $1`, [userSeasonId]);
+            const friendEpisodes = await db.query(`SELECT episode_id FROM users_episodes WHERE users_seasons_id = $1`, [friendExistingSeasonId]);
+            expect(ownerEpisodes.rows.map((r) => r["episode_id"]).sort()).toEqual([episode1, episode2, episode3].sort());
+            expect(friendEpisodes.rows.map((r) => r["episode_id"]).sort()).toEqual([episode1, episode2, episode3].sort());
+            // E2 was already watched by both sides before accepting - the merge must not have duplicated it
+            const e2Count = await db.query(`SELECT COUNT(*) FROM users_episodes WHERE episode_id = $1`, [episode2]);
+            expect(parseInt(e2Count.rows[0].count)).toBe(2);
         });
 
         it("also backfills the friend's own already-watched episodes into the owner's viewing", async () => {

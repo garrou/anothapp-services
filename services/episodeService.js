@@ -256,18 +256,21 @@ export default class EpisodeService {
      * @returns {Promise<void>}
      */
     backfillLinkedViewings = async (userId, userSeasonId, friendUserId, friendUsersSeasonId, client) => {
-        const [ownWatched, friendWatched] = await Promise.all([
-            this._userEpisodeRepository.getWatchedForUserSeasonId(userSeasonId, client),
-            this._userEpisodeRepository.getWatchedForUserSeasonId(friendUsersSeasonId, client),
-        ]);
-        await Promise.all([
-            ...ownWatched.map((e) => this._userEpisodeRepository.createIfMissing(
+        // A transaction client is a single Postgres connection - unlike the pool, it can't run
+        // queries concurrently, so every query against it here is awaited one at a time.
+        const ownWatched = await this._userEpisodeRepository.getWatchedForUserSeasonId(userSeasonId, client);
+        const friendWatched = await this._userEpisodeRepository.getWatchedForUserSeasonId(friendUsersSeasonId, client);
+
+        for (const e of ownWatched) {
+            await this._userEpisodeRepository.createIfMissing(
                 friendUserId, friendUsersSeasonId, e.episodeId, e.watchedAt, e.platformId, client
-            )),
-            ...friendWatched.map((e) => this._userEpisodeRepository.createIfMissing(
+            );
+        }
+        for (const e of friendWatched) {
+            await this._userEpisodeRepository.createIfMissing(
                 userId, userSeasonId, e.episodeId, e.watchedAt, e.platformId, client
-            )),
-        ]);
+            );
+        }
     }
 
     /**
