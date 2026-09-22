@@ -90,21 +90,37 @@ export default class WatchTogetherRepository {
     }
 
     /**
+     * Active relations from either side: the owner sees each friend they're sharing a season
+     * with (isOwner true), a friend sees the owner of the season they joined (isOwner false).
      * @param {string} userId
      * @returns {Promise<{userSeasonId: number, showId: number, showTitle: string, showPoster: string,
-     *   seasonNumber: number, actor: {id: string, username: string, picture: string}}[]>}
+     *   seasonNumber: number, actor: {id: string, username: string, picture: string}, isOwner: boolean}[]>}
      */
     getActiveForUser = async (userId) => {
         const res = await db.query(`
             SELECT us.id AS users_season_id, us.show_id, us.number, s.title, s.poster,
-                   owner.id AS owner_id, owner.username AS owner_username, owner.picture AS owner_picture
+                   owner.id AS actor_id, owner.username AS actor_username, owner.picture AS actor_picture,
+                   FALSE AS is_owner, wt.created_at
             FROM watch_together wt
             JOIN users_seasons us ON us.id = wt.users_season_id
             JOIN users_seasons friend_season ON friend_season.id = wt.friend_users_season_id
             JOIN shows s ON s.id = us.show_id
             JOIN users owner ON owner.id = us.user_id
             WHERE friend_season.user_id = $1
-            ORDER BY wt.created_at DESC
+
+            UNION ALL
+
+            SELECT us.id AS users_season_id, us.show_id, us.number, s.title, s.poster,
+                   friend.id AS actor_id, friend.username AS actor_username, friend.picture AS actor_picture,
+                   TRUE AS is_owner, wt.created_at
+            FROM watch_together wt
+            JOIN users_seasons us ON us.id = wt.users_season_id
+            JOIN users_seasons friend_season ON friend_season.id = wt.friend_users_season_id
+            JOIN shows s ON s.id = us.show_id
+            JOIN users friend ON friend.id = friend_season.user_id
+            WHERE us.user_id = $1
+
+            ORDER BY created_at DESC
         `, [userId]);
         return res.rows.map((row) => ({
             userSeasonId: row["users_season_id"],
@@ -112,8 +128,31 @@ export default class WatchTogetherRepository {
             showTitle: row.title,
             showPoster: row.poster,
             seasonNumber: row.number,
-            actor: {id: row["owner_id"], username: row["owner_username"], picture: row["owner_picture"]},
+            actor: {id: row["actor_id"], username: row["actor_username"], picture: row["actor_picture"]},
+            isOwner: row["is_owner"],
         }));
+    }
+
+    /**
+     * @param {number[]} userSeasonIds season ids to check, from the perspective of being the
+     *   friend/leaf side of a relation
+     * @returns {Promise<Map<number, {id: string, username: string, picture: string}>>} the owner
+     *   sharing that season, keyed by season id, for the ones currently in an active relation
+     */
+    getOwnersByFriendSeasonIds = async (userSeasonIds) => {
+        if (!userSeasonIds.length) {
+            return new Map();
+        }
+        const res = await db.query(`
+            SELECT wt.friend_users_season_id AS season_id, owner.id, owner.username, owner.picture
+            FROM watch_together wt
+            JOIN users_seasons us ON us.id = wt.users_season_id
+            JOIN users owner ON owner.id = us.user_id
+            WHERE wt.friend_users_season_id = ANY($1::int[])
+        `, [userSeasonIds]);
+        return new Map(res.rows.map((row) => [
+            row["season_id"], {id: row.id, username: row.username, picture: row.picture}
+        ]));
     }
 
     /**

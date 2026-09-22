@@ -196,7 +196,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
     });
 
     describe("getActiveForUser", () => {
-        it("lists active watch-together relations for a user", async () => {
+        it("lists active watch-together relations for a friend, with the owner as actor", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();
             const showId = await insertShow({ title: "Dexter" });
@@ -211,7 +211,26 @@ describe("WatchTogetherRepository (real Postgres)", () => {
 
             expect(active).toEqual([{
                 userSeasonId, showId, showTitle: "Dexter", showPoster: null, seasonNumber: 2,
-                actor: { id: userId, username: expect.any(String), picture: null },
+                actor: { id: userId, username: expect.any(String), picture: null }, isOwner: false,
+            }]);
+        });
+
+        it("also lists it for the owner, with the friend as actor", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            const showId = await insertShow({ title: "Dexter" });
+            await insertSeason(showId, 2);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 2);
+            await insertUserShow(friendId, showId);
+            const friendSeasonId = await insertUserSeason(friendId, showId, 2);
+            await repo.create(userSeasonId, friendSeasonId);
+
+            const active = await repo.getActiveForUser(userId);
+
+            expect(active).toEqual([{
+                userSeasonId, showId, showTitle: "Dexter", showPoster: null, seasonNumber: 2,
+                actor: { id: friendId, username: expect.any(String), picture: null }, isOwner: true,
             }]);
         });
 
@@ -228,6 +247,30 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             await repo.remove(userSeasonId, friendId);
 
             expect(await repo.getActiveForUser(friendId)).toEqual([]);
+            expect(await repo.getActiveForUser(userId)).toEqual([]);
+        });
+    });
+
+    describe("getOwnersByFriendSeasonIds", () => {
+        it("returns an empty map without querying when there are no season ids", async () => {
+            expect((await repo.getOwnersByFriendSeasonIds([])).size).toBe(0);
+        });
+
+        it("maps the sharing owner by friend season id, only for active relations", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await insertUserShow(friendId, showId);
+            const friendSeasonId = await insertUserSeason(friendId, showId, 1);
+            await repo.create(userSeasonId, friendSeasonId);
+
+            const owners = await repo.getOwnersByFriendSeasonIds([friendSeasonId, userSeasonId]);
+
+            expect(owners.get(friendSeasonId)).toEqual({ id: userId, username: expect.any(String), picture: null });
+            expect(owners.has(userSeasonId)).toBe(false);
         });
     });
 
