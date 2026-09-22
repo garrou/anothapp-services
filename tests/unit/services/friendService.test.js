@@ -185,7 +185,7 @@ describe("FriendService.deleteFriend", () => {
         friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
 
         await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
-        expect(playlistCollaboratorRepoMocks.removeAllBetween).toHaveBeenCalledWith("user-1", "user-2");
+        expect(playlistCollaboratorRepoMocks.removeAllBetween).toHaveBeenCalledWith("user-1", "user-2", fakeClient);
     });
 
     it("marks the historical watch-together tag declined/revoked and ends the live relation, in the same transaction, between the two users in either direction", async () => {
@@ -194,6 +194,15 @@ describe("FriendService.deleteFriend", () => {
         await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
         expect(userSeasonFriendRepoMocks.declineAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2", fakeClient);
         expect(watchTogetherRepoMocks.removeAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2", fakeClient);
+    });
+
+    it("deletes the friendship itself in the same transaction as the playlist/watch-together revokes, not as a separate prior step", async () => {
+        friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
+
+        await friendService.deleteFriend("user-1", "user-2");
+
+        expect(dbMocks.transaction).toHaveBeenCalledTimes(1);
+        expect(friendRepoMocks.deleteFriend).toHaveBeenCalledWith("user-1", "user-2", fakeClient);
     });
 });
 

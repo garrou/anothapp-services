@@ -117,10 +117,11 @@ export default class PlaylistCollaboratorRepository {
     /**
      * @param {string} userId1
      * @param {string} userId2
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<number>} number of collaborator rows removed
      */
-    removeAllBetween = async (userId1, userId2) => {
-        const res = await db.query(`
+    removeAllBetween = async (userId1, userId2, client = db) => {
+        const res = await client.query(`
             DELETE FROM playlists_collaborators pc
             USING playlists p
             WHERE pc.playlist_id = p.id

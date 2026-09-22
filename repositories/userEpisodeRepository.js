@@ -61,17 +61,22 @@ export default class UserEpisodeRepository {
     }
 
     /**
+     * ON CONFLICT DO NOTHING (rather than a separate existence check before this INSERT) matters
+     * here: a watch-together mirror can race this exact (users_seasons_id, episode_id) pair from
+     * the other side of the link (see #mirrorToLinkedViewings) between any prior check and this
+     * write, so only an atomic upsert avoids a spurious unique-constraint violation.
      * @param {string} userId
      * @param {number} userSeasonId
      * @param {number} episodeId
      * @param {string} watchedAt
      * @param {number} platformId
-     * @returns {Promise<boolean>}
+     * @returns {Promise<boolean>} false if a row for that (userSeasonId, episodeId) already existed
      */
     create = async (userId, userSeasonId, episodeId, watchedAt, platformId) => {
         const res = await db.query(`
             INSERT INTO users_episodes (user_id, users_seasons_id, episode_id, watched_at, platform_id)
             VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (episode_id, users_seasons_id) DO NOTHING
         `, [userId, userSeasonId, episodeId, watchedAt, platformId]);
         return res.rowCount === 1;
     }
@@ -82,17 +87,30 @@ export default class UserEpisodeRepository {
      * @param {number} episodeId
      * @param {string} watchedAt
      * @param {number} platformId
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<void>}
      */
-    createIfMissing = async (userId, userSeasonId, episodeId, watchedAt, platformId) => {
-        const res = await db.query(`
+    createIfMissing = async (userId, userSeasonId, episodeId, watchedAt, platformId, client = db) => {
+        const res = await client.query(`
             INSERT INTO users_episodes (user_id, users_seasons_id, episode_id, watched_at, platform_id)
-            SELECT $1, $2, $3, $4, $5
-            WHERE NOT EXISTS (
-                SELECT 1 FROM users_episodes WHERE users_seasons_id = $2 AND episode_id = $3
-            )
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (episode_id, users_seasons_id) DO NOTHING
         `, [userId, userSeasonId, episodeId, watchedAt, platformId]);
         return res.rowCount === 1;
+    }
+
+    /**
+     * @param {number} userSeasonId
+     * @param {import("pg").PoolClient} client
+     * @returns {Promise<{episodeId: number, watchedAt: string, platformId: number}[]>}
+     */
+    getWatchedForUserSeasonId = async (userSeasonId, client = db) => {
+        const res = await client.query(`
+            SELECT episode_id, watched_at, platform_id FROM users_episodes WHERE users_seasons_id = $1
+        `, [userSeasonId]);
+        return res.rows.map((row) => ({
+            episodeId: row["episode_id"], watchedAt: row["watched_at"], platformId: row["platform_id"],
+        }));
     }
 
     /**

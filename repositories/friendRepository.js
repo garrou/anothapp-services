@@ -119,10 +119,11 @@ export default class FriendRepository {
     /**
      * @param {string} userId
      * @param {string} otherId
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<boolean>}
      */
-    deleteFriend = async (userId, otherId) => {
-        const res = await db.query(`
+    deleteFriend = async (userId, otherId, client = db) => {
+        const res = await client.query(`
             DELETE FROM friends
             WHERE (fst_user_id = $1 AND sec_user_id = $2) OR (fst_user_id = $2 AND sec_user_id = $1)
             RETURNING fst_user_id, accepted

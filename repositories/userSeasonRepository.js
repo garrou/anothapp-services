@@ -19,10 +19,11 @@ export default class UserSeasonRepository {
      * @param {number} number
      * @param {number} platform
      * @param {string?} addedAt used on import, to restore the exported viewing date instead of NOW()
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<number|null>} the created row's id, or null on failure
      */
-    create = async (userId, showId, number, platform = 999, addedAt = null) => {
-        const res = await db.query(`
+    create = async (userId, showId, number, platform = 999, addedAt = null, client = db) => {
+        const res = await client.query(`
             INSERT INTO users_seasons (user_id, show_id, number, platform_id, added_at)
             VALUES ($1, $2, $3, $4, COALESCE($5, NOW()))
             RETURNING id
@@ -49,6 +50,22 @@ export default class UserSeasonRepository {
               AND date_trunc('milliseconds', added_at) IS NOT DISTINCT FROM date_trunc('milliseconds', $4::timestamptz)
         `, [userId, showId, number, addedAt]);
         return res.rowCount === 1 ? res.rows[0]["id"] : null;
+    }
+
+    /**
+     * Serializes concurrent find-or-create attempts for the same (userId, showId, number) - there's
+     * no unique constraint on users_seasons for this triple (rewatches are allowed), so nothing at
+     * the DB level would otherwise catch two callers both finding "nothing yet" before either
+     * inserts. Held only for the lifetime of `client`'s transaction, released automatically on
+     * commit or rollback.
+     * @param {import("pg").PoolClient} client
+     * @param {string} userId
+     * @param {number} showId
+     * @param {number} number
+     * @returns {Promise<void>}
+     */
+    lockSeasonSlot = async (client, userId, showId, number) => {
+        await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`${userId}:${showId}:${number}`]);
     }
 
     /**
@@ -85,10 +102,11 @@ export default class UserSeasonRepository {
      * @param {string} userId
      * @param {number} showId
      * @param {number} number
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<number|null>} the id of any existing viewing of that season by userId
      */
-    findAnyByUserIdShowIdNumber = async (userId, showId, number) => {
-        const res = await db.query(`
+    findAnyByUserIdShowIdNumber = async (userId, showId, number, client = db) => {
+        const res = await client.query(`
             SELECT id FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = $3 LIMIT 1
         `, [userId, showId, number]);
         return res.rowCount === 1 ? res.rows[0]["id"] : null;

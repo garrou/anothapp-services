@@ -167,7 +167,11 @@ export default class EpisodeService {
         );
 
         if (!created) {
-            throw new ServiceError(500, "Impossible d'ajouter le visionnage");
+            // A concurrent mirror from a linked watch-together viewing (see #mirrorToLinkedViewings)
+            // can win the race against the existsForViewing check above and insert this exact row
+            // first - functionally the same outcome as the episode already being marked watched, so
+            // it's reported the same way rather than as an unexplained 500.
+            throw new ServiceError(409, "Cet épisode a déjà été visionné pour ce visionnage");
         }
         eventBus.emit("episode.watched", {
             actorUserId: userId,
@@ -240,6 +244,65 @@ export default class EpisodeService {
      */
     updatePlatformForSeason = async (userId, userSeasonId, platformId) => {
         await this._userEpisodeRepository.updatePlatformByUserSeasonId(userSeasonId, platformId);
+    }
+
+    /**
+     * Called once, right when a watch-together invite is accepted: from then on, marking an
+     * episode watched already mirrors it to every linked viewing (see #mirrorToLinkedViewings),
+     * but that only covers episodes watched from this point forward. Without this, whichever
+     * member already had episodes marked before joining - the root, an existing friend, or the one
+     * just accepting - would keep looking behind the rest of the group. Runs after the new link is
+     * already written (in the same transaction as `client`), so getLinkedViewings already includes
+     * the newcomer alongside every pre-existing member - the merge below is the union of everyone's
+     * history, applied to everyone, not just a pairwise copy between the root and the newcomer.
+     * @param {number} userSeasonId the group's root viewing id
+     * @param {string} rootUserId
+     * @param {import("pg").PoolClient} client
+     * @returns {Promise<string[]>} the ids of the members who actually received at least one
+     *   backfilled episode - the caller uses this to re-evaluate their episode-based achievements,
+     *   since these rows are inserted directly rather than through addViewing/addAllViewings, which
+     *   would otherwise be the ones emitting "episode.watched"/"episode.bulk_watched" for that
+     */
+    backfillLinkedViewings = async (userSeasonId, rootUserId, client) => {
+        const members = [
+            {id: userSeasonId, userId: rootUserId},
+            ...await this._watchTogetherRepository.getLinkedViewings(userSeasonId, client),
+        ];
+        // A transaction client is a single Postgres connection - unlike the pool, it can't run
+        // queries concurrently, so every query against it here is awaited one at a time.
+        const watchedByMember = new Map();
+
+        for (const member of members) {
+            watchedByMember.set(member.id, await this._userEpisodeRepository.getWatchedForUserSeasonId(member.id, client));
+        }
+        const union = new Map();
+
+        for (const watched of watchedByMember.values()) {
+            for (const episode of watched) {
+                if (!union.has(episode.episodeId)) {
+                    union.set(episode.episodeId, episode);
+                }
+            }
+        }
+        const backfilledUserIds = [];
+
+        for (const member of members) {
+            const alreadyWatched = new Set(watchedByMember.get(member.id).map((e) => e.episodeId));
+            let backfilled = false;
+
+            for (const [episodeId, episode] of union) {
+                if (!alreadyWatched.has(episodeId)) {
+                    await this._userEpisodeRepository.createIfMissing(
+                        member.userId, member.id, episodeId, episode.watchedAt, episode.platformId, client
+                    );
+                    backfilled = true;
+                }
+            }
+            if (backfilled) {
+                backfilledUserIds.push(member.userId);
+            }
+        }
+        return backfilledUserIds;
     }
 
     /**

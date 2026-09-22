@@ -22,6 +22,7 @@ export default class AchievementListener {
         eventBus.on("season.watched_with", this.#evaluate(WATCHED_WITH_CODES, (p) => [p.actorUserId, ...p.recipientIds]));
         eventBus.on("episode.watched", this.#evaluate(EPISODE_CODES, (p) => [p.actorUserId]));
         eventBus.on("episode.bulk_watched", this.#evaluate(EPISODE_CODES, (p) => [p.actorUserId]));
+        eventBus.on("episode.backfilled", this.#evaluate(EPISODE_CODES, (p) => [p.actorUserId]));
         eventBus.on("show.started", this.#evaluate(SHOW_STARTED_CODES, (p) => [p.actorUserId]));
         eventBus.on("show.rated", this.#evaluate(SHOW_RATED_CODES, (p) => [p.actorUserId]));
         eventBus.on("friend.accepted", this.#evaluate(FRIEND_ACCEPTED_CODES, (p) => [p.actorUserId, p.recipientUserId]));

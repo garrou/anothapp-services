@@ -72,22 +72,26 @@ export default class FriendService {
         if (!userId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const deleted = await this._friendRepository.deleteFriend(currentUserId, userId);
+        // The friendship itself, playlist collaboration and watch-together are all revoked in one
+        // transaction: playlist access and watch-together were both granted on the strength of the
+        // friendship, so a failure partway through (crash, dropped connection) must never leave the
+        // friendship gone while either still outlives it. Like every other revoke path, this never
+        // touches episodes already synced, and it keeps the historical tag (declined/revoked), only
+        // the live relation is removed.
+        const deleted = await db.transaction(async (client) => {
+            const result = await this._friendRepository.deleteFriend(currentUserId, userId, client);
+
+            if (result) {
+                await this._playlistCollaboratorRepository.removeAllBetween(currentUserId, userId, client);
+                await this._userSeasonFriendRepository.declineAllBetweenUsers(currentUserId, userId, client);
+                await this._watchTogetherRepository.removeAllBetweenUsers(currentUserId, userId, client);
+            }
+            return result;
+        });
 
         if (!deleted) {
             throw new ServiceError(500, "Impossible de supprimer cet ami");
         }
-        // Playlist collaboration and watch-together were both granted on the strength of the
-        // friendship - revoke them in both directions so neither outlives the relationship it
-        // depended on. Like every other revoke path, this never touches episodes already synced,
-        // and it keeps the historical tag (declined/revoked), only the live relation is removed.
-        // The tag and the relation are updated in one transaction so a failure between the two
-        // can never leave one revoked while the other keeps routing episodes.
-        await this._playlistCollaboratorRepository.removeAllBetween(currentUserId, userId);
-        await db.transaction(async (client) => {
-            await this._userSeasonFriendRepository.declineAllBetweenUsers(currentUserId, userId, client);
-            await this._watchTogetherRepository.removeAllBetweenUsers(currentUserId, userId, client);
-        });
 
         if (!deleted.wasAccepted && deleted.requesterId !== currentUserId) {
             eventBus.emit("friend.declined", {recipientUserId: deleted.requesterId, actorUserId: currentUserId});

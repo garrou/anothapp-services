@@ -175,6 +175,15 @@ describe("PlaylistCollaboratorRepository", () => {
 
             expect(result).toBe(0);
         });
+
+        it("runs against the given client instead of the pool, when provided", async () => {
+            const client = {query: vi.fn().mockResolvedValue({rowCount: 1})};
+
+            await repo.removeAllBetween("user-1", "user-2", client);
+
+            expect(client.query).toHaveBeenCalledWith(expect.any(String), ["user-1", "user-2"]);
+            expect(db.query).not.toHaveBeenCalled();
+        });
     });
 
     describe("getPendingByUserId", () => {

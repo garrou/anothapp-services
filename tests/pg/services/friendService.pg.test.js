@@ -123,6 +123,19 @@ describe("FriendService (real Postgres)", () => {
             const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1`, [userSeasonId]);
             expect(relation.rowCount).toBe(0);
         });
+
+        it("rolls back the friendship deletion itself when a later step in the same transaction fails", async () => {
+            const userId = await insertUser();
+            const otherId = await insertUser();
+            await service.sendFriendRequest(userId, otherId);
+            await service.acceptFriend(otherId, userId, userId);
+            service._watchTogetherRepository.removeAllBetweenUsers = async () => { throw new Error("boom"); };
+
+            await expect(service.deleteFriend(userId, otherId)).rejects.toThrow("boom");
+
+            const friends = await db.query(`SELECT * FROM friends WHERE fst_user_id = $1 OR sec_user_id = $1`, [userId]);
+            expect(friends.rowCount).toBe(1);
+        });
     });
 
     describe("getFriends", () => {

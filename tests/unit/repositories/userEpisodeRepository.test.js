@@ -76,6 +76,15 @@ describe("UserEpisodeRepository", () => {
             expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users_episodes"), ["user-1", 1, 5, "2024-01-01", 2]);
             expect(result).toBe(true);
         });
+
+        it("returns false instead of throwing when a concurrent write already inserted that row (ON CONFLICT DO NOTHING)", async () => {
+            db.query.mockResolvedValue({rowCount: 0});
+
+            const result = await repo.create("user-1", 1, 5, "2024-01-01", 2);
+
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("ON CONFLICT"), ["user-1", 1, 5, "2024-01-01", 2]);
+            expect(result).toBe(false);
+        });
     });
 
     describe("createIfMissing", () => {
@@ -93,6 +102,37 @@ describe("UserEpisodeRepository", () => {
             const result = await repo.createIfMissing("user-1", 1, 5, "2024-01-01", 2);
 
             expect(result).toBe(false);
+        });
+
+        it("runs against the given client instead of the pool, when provided", async () => {
+            const client = {query: vi.fn().mockResolvedValue({rowCount: 1})};
+
+            await repo.createIfMissing("user-1", 1, 5, "2024-01-01", 2, client);
+
+            expect(client.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 1, 5, "2024-01-01", 2]);
+            expect(db.query).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("getWatchedForUserSeasonId", () => {
+        it("maps rows to {episodeId, watchedAt, platformId}", async () => {
+            db.query.mockResolvedValue({
+                rows: [{episode_id: 5, watched_at: "2024-01-01", platform_id: 2}],
+            });
+
+            const result = await repo.getWatchedForUserSeasonId(1);
+
+            expect(db.query).toHaveBeenCalledWith(expect.any(String), [1]);
+            expect(result).toEqual([{episodeId: 5, watchedAt: "2024-01-01", platformId: 2}]);
+        });
+
+        it("runs against the given client instead of the pool, when provided", async () => {
+            const client = {query: vi.fn().mockResolvedValue({rows: []})};
+
+            await repo.getWatchedForUserSeasonId(1, client);
+
+            expect(client.query).toHaveBeenCalledWith(expect.any(String), [1]);
+            expect(db.query).not.toHaveBeenCalled();
         });
     });
 

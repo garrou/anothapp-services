@@ -17,6 +17,7 @@ const userEpisodeRepoMocks = vi.hoisted(() => ({
     getViewedByMonthAgo: vi.fn(),
     getWatchedTimeByShowIdBySeasonNumber: vi.fn(),
     getWatchedTimeAndCountByShowId: vi.fn(),
+    getWatchedForUserSeasonId: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
     getOwnedSeasonViewing: vi.fn(),
@@ -249,14 +250,19 @@ describe("EpisodeService.addViewing", () => {
         });
     });
 
-    it("throws a 500 when creation fails", async () => {
+    it("rejects with a 409 when create() loses a race against a concurrent watch-together mirror, rather than a 500", async () => {
+        // existsForViewing found nothing, but a mirrored write from a linked viewing can still land
+        // first on the exact same (userSeasonId, episodeId) row before this create() runs - create()
+        // then reports it via ON CONFLICT DO NOTHING (rowCount 0) instead of throwing
         const past = new Date(Date.now() - 86400000).toISOString();
         episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1, showId: 42, seasonNumber: 1, date: past });
         userEpisodeRepoMocks.create.mockResolvedValue(false);
 
         await expect(episodeService.addViewing("user-1", 7, 1)).rejects.toThrow(
-            "Impossible d'ajouter le visionnage"
+            "Cet épisode a déjà été visionné pour ce visionnage"
         );
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
+        expect(watchTogetherRepoMocks.getLinkedViewings).not.toHaveBeenCalled();
     });
 
     it("mirrors the episode into every watch-together linked viewing", async () => {
@@ -365,6 +371,81 @@ describe("EpisodeService.addAllViewings", () => {
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 1, expect.any(String), 999);
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 2, expect.any(String), 999);
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 3, expect.any(String), 999);
+    });
+});
+
+describe("EpisodeService.backfillLinkedViewings", () => {
+    let episodeService;
+    const client = {};
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        episodeService = new EpisodeService();
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([]);
+    });
+
+    it("copies each side's already-watched episodes into the other's viewing, for a simple pair", async () => {
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([{id: 55, userId: "friend-1"}]);
+        userEpisodeRepoMocks.getWatchedForUserSeasonId
+            .mockResolvedValueOnce([{episodeId: 1, watchedAt: "2024-01-01", platformId: 999}])
+            .mockResolvedValueOnce([{episodeId: 2, watchedAt: "2024-01-02", platformId: 1}]);
+
+        const result = await episodeService.backfillLinkedViewings(7, "owner-1", client);
+
+        expect(watchTogetherRepoMocks.getLinkedViewings).toHaveBeenCalledWith(7, client);
+        expect(userEpisodeRepoMocks.getWatchedForUserSeasonId).toHaveBeenCalledWith(7, client);
+        expect(userEpisodeRepoMocks.getWatchedForUserSeasonId).toHaveBeenCalledWith(55, client);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 55, 1, "2024-01-01", 999, client);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("owner-1", 7, 2, "2024-01-02", 1, client);
+        expect(result.sort()).toEqual(["friend-1", "owner-1"].sort());
+    });
+
+    it("does nothing when no member has watched anything yet", async () => {
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([{id: 55, userId: "friend-1"}]);
+        userEpisodeRepoMocks.getWatchedForUserSeasonId.mockResolvedValue([]);
+
+        const result = await episodeService.backfillLinkedViewings(7, "owner-1", client);
+
+        expect(userEpisodeRepoMocks.createIfMissing).not.toHaveBeenCalled();
+        expect(result).toEqual([]);
+    });
+
+    it("returns only the members who actually received a backfilled episode", async () => {
+        // root already has everything the group has ever watched - only the friend is missing E1
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([{id: 55, userId: "friend-1"}]);
+        userEpisodeRepoMocks.getWatchedForUserSeasonId.mockImplementation(async (userSeasonId) => (
+            userSeasonId === 7 ? [{episodeId: 1, watchedAt: "2024-01-01", platformId: 999}] : []
+        ));
+
+        const result = await episodeService.backfillLinkedViewings(7, "owner-1", client);
+
+        expect(result).toEqual(["friend-1"]);
+    });
+
+    it("merges the union of every member's history across a group of more than two, not just root/newcomer", async () => {
+        // root already watched E1, an existing friend already watched E2, the one just joining
+        // already watched E3 - every member should end up missing only the episodes it doesn't have
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([
+            {id: 55, userId: "friend-A"}, {id: 77, userId: "friend-B"},
+        ]);
+        userEpisodeRepoMocks.getWatchedForUserSeasonId.mockImplementation(async (userSeasonId) => {
+            if (userSeasonId === 7) return [{episodeId: 1, watchedAt: "2024-01-01", platformId: 999}];
+            if (userSeasonId === 55) return [{episodeId: 2, watchedAt: "2024-01-02", platformId: 999}];
+            if (userSeasonId === 77) return [{episodeId: 3, watchedAt: "2024-01-03", platformId: 999}];
+            return [];
+        });
+
+        const result = await episodeService.backfillLinkedViewings(7, "owner-1", client);
+
+        // root (7) gets E2 and E3, friend-A (55) gets E1 and E3, friend-B (77) gets E1 and E2
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("owner-1", 7, 2, "2024-01-02", 999, client);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("owner-1", 7, 3, "2024-01-03", 999, client);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-A", 55, 1, "2024-01-01", 999, client);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-A", 55, 3, "2024-01-03", 999, client);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-B", 77, 1, "2024-01-01", 999, client);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-B", 77, 2, "2024-01-02", 999, client);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledTimes(6);
+        expect(result.sort()).toEqual(["friend-A", "friend-B", "owner-1"].sort());
     });
 });
 

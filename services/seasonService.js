@@ -168,6 +168,18 @@ export default class SeasonService {
         }
         const owned = await this._userSeasonRepository.getSeasonViewingById(userSeasonId);
 
+        // Once a tag is terminal (declined/revoked), it must never be re-stamped by replaying this
+        // same response - only an explicit re-invite from the owner (updateWatchedWith) can bring it
+        // back to "pending". Without this, a double-tap or a client retry on decline() would flip an
+        // already-"revoked" tag to "declined" (losing the "watched together" stat credit), and an
+        // accept() replayed on a stale invite would resurrect a relation the owner never re-sent.
+        if (!accepted && !["pending", "accepted"].includes(status)) {
+            throw new ServiceError(409, "Cette invitation a déjà été traitée");
+        }
+        if (accepted && status !== "pending") {
+            throw new ServiceError(409, "Cette invitation a déjà été traitée");
+        }
+
         if (!accepted) {
             // Marking declined here always keeps the historical tag (never deleted); revoking the
             // live relation is a plain no-op when the invite was never accepted in the first place.
@@ -198,7 +210,7 @@ export default class SeasonService {
         // seasons, in the same transaction, so two concurrent accepts touching either season can
         // never both pass the check before either has written - closing the race hasConflictingLink
         // would otherwise have on its own.
-        const linked = await db.transaction(async (client) => {
+        const {linked, backfilledUserIds} = await db.transaction(async (client) => {
             await this._watchTogetherRepository.lockSeasons(client, userSeasonId, friendUsersSeasonId);
             const conflict = await this._watchTogetherRepository.hasConflictingLink(userSeasonId, friendUsersSeasonId, client);
 
@@ -206,12 +218,21 @@ export default class SeasonService {
                 throw new ServiceError(409, "Ce visionnage participe déjà à un autre visionnage partagé");
             }
             await this._userSeasonFriendRepository.accept(userSeasonId, currentUserId, client);
-            return this._watchTogetherRepository.create(userSeasonId, friendUsersSeasonId, client);
+            const created = await this._watchTogetherRepository.create(userSeasonId, friendUsersSeasonId, client);
+            const backfilledUserIds = created
+                ? await this._episodeService.backfillLinkedViewings(userSeasonId, owned.userId, client)
+                : [];
+            return {linked: created, backfilledUserIds};
         });
 
         if (!linked) {
             throw new ServiceError(500, "Impossible d'accepter cette invitation");
         }
+        // Backfilled rows are inserted directly, not through addViewing/addAllViewings, so they
+        // never emit episode.watched/bulk_watched themselves - this re-evaluates episode-based
+        // achievements for whoever's history actually changed, without the friend notifications
+        // those events also trigger (a historical merge from joining isn't something to notify about).
+        backfilledUserIds.forEach((userId) => eventBus.emit("episode.backfilled", {actorUserId: userId}));
         eventBus.emit("season.watched_with.accepted", {
             recipientUserId: owned.userId, actorUserId: currentUserId,
             showId: owned.showId, metadata: {seasonNumber: owned.number},
