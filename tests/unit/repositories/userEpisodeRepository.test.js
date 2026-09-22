@@ -76,6 +76,15 @@ describe("UserEpisodeRepository", () => {
             expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users_episodes"), ["user-1", 1, 5, "2024-01-01", 2]);
             expect(result).toBe(true);
         });
+
+        it("returns false instead of throwing when a concurrent write already inserted that row (ON CONFLICT DO NOTHING)", async () => {
+            db.query.mockResolvedValue({rowCount: 0});
+
+            const result = await repo.create("user-1", 1, 5, "2024-01-01", 2);
+
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining("ON CONFLICT"), ["user-1", 1, 5, "2024-01-01", 2]);
+            expect(result).toBe(false);
+        });
     });
 
     describe("createIfMissing", () => {

@@ -105,6 +105,23 @@ describe("UserEpisodeRepository (real Postgres)", () => {
             expect(result).toBe(true);
             expect(await repo.existsForViewing(userSeasonId, episodeId)).toBe(true);
         });
+
+        it("returns false instead of throwing a unique-constraint error when the row already exists", async () => {
+            // simulates the watch-together race: a mirrored write lands on this exact
+            // (users_seasons_id, episode_id) row before this call - real Postgres, real UNIQUE
+            // constraint, must resolve via ON CONFLICT DO NOTHING rather than propagate an error
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            const episodeId = await insertEpisode(showId, 1);
+            await repo.create(userId, userSeasonId, episodeId, new Date().toISOString(), 999);
+
+            const result = await repo.create(userId, userSeasonId, episodeId, new Date().toISOString(), 999);
+
+            expect(result).toBe(false);
+        });
     });
 
     describe("createIfMissing", () => {

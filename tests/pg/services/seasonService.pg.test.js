@@ -142,6 +142,61 @@ describe("SeasonService (real Postgres)", () => {
             expect(friendShow.rowCount).toBe(0);
         });
 
+        it("rejects declining an already-declined invite instead of leaving it untouched (idempotent, not a re-stamp)", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+            await service.respondToWatchedWith(friendId, userSeasonId, false);
+
+            await expect(service.respondToWatchedWith(friendId, userSeasonId, false)).rejects.toMatchObject({ status: 409 });
+        });
+
+        it("rejects re-declining (leaving again) an already-revoked relation, instead of downgrading it to declined", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+            await service.respondToWatchedWith(friendId, userSeasonId, true);
+            await service.respondToWatchedWith(friendId, userSeasonId, false);
+
+            await expect(service.respondToWatchedWith(friendId, userSeasonId, false)).rejects.toMatchObject({ status: 409 });
+
+            // the historical "watched together" credit must survive - not silently flipped to declined
+            const link = await db.query(`SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
+            expect(link.rows[0]["status_id"]).toBe("revoked");
+        });
+
+        it("rejects re-accepting a stale declined or revoked invite - only a fresh invite from the owner can bring it back to pending", async () => {
+            for (const leaveFirst of [false, true]) {
+                const userId = await insertUser();
+                const friendId = await insertUser();
+                await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+                const showId = await insertShow();
+                await insertSeason(showId, 1);
+                await insertUserShow(userId, showId);
+                const userSeasonId = await insertUserSeason(userId, showId, 1);
+                await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+
+                if (leaveFirst) {
+                    await service.respondToWatchedWith(friendId, userSeasonId, true);
+                }
+                await service.respondToWatchedWith(friendId, userSeasonId, false);
+
+                await expect(service.respondToWatchedWith(friendId, userSeasonId, true)).rejects.toMatchObject({ status: 409 });
+                const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1`, [userSeasonId]);
+                expect(relation.rowCount).toBe(0);
+            }
+        });
+
         it("accepting auto-adds the show and season for the friend, copying the owner's platform", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();

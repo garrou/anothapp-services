@@ -250,14 +250,19 @@ describe("EpisodeService.addViewing", () => {
         });
     });
 
-    it("throws a 500 when creation fails", async () => {
+    it("rejects with a 409 when create() loses a race against a concurrent watch-together mirror, rather than a 500", async () => {
+        // existsForViewing found nothing, but a mirrored write from a linked viewing can still land
+        // first on the exact same (userSeasonId, episodeId) row before this create() runs - create()
+        // then reports it via ON CONFLICT DO NOTHING (rowCount 0) instead of throwing
         const past = new Date(Date.now() - 86400000).toISOString();
         episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1, showId: 42, seasonNumber: 1, date: past });
         userEpisodeRepoMocks.create.mockResolvedValue(false);
 
         await expect(episodeService.addViewing("user-1", 7, 1)).rejects.toThrow(
-            "Impossible d'ajouter le visionnage"
+            "Cet épisode a déjà été visionné pour ce visionnage"
         );
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
+        expect(watchTogetherRepoMocks.getLinkedViewings).not.toHaveBeenCalled();
     });
 
     it("mirrors the episode into every watch-together linked viewing", async () => {

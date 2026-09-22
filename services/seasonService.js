@@ -168,6 +168,18 @@ export default class SeasonService {
         }
         const owned = await this._userSeasonRepository.getSeasonViewingById(userSeasonId);
 
+        // Once a tag is terminal (declined/revoked), it must never be re-stamped by replaying this
+        // same response - only an explicit re-invite from the owner (updateWatchedWith) can bring it
+        // back to "pending". Without this, a double-tap or a client retry on decline() would flip an
+        // already-"revoked" tag to "declined" (losing the "watched together" stat credit), and an
+        // accept() replayed on a stale invite would resurrect a relation the owner never re-sent.
+        if (!accepted && !["pending", "accepted"].includes(status)) {
+            throw new ServiceError(409, "Cette invitation a déjà été traitée");
+        }
+        if (accepted && status !== "pending") {
+            throw new ServiceError(409, "Cette invitation a déjà été traitée");
+        }
+
         if (!accepted) {
             // Marking declined here always keeps the historical tag (never deleted); revoking the
             // live relation is a plain no-op when the invite was never accepted in the first place.

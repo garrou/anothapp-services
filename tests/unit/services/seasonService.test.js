@@ -341,7 +341,7 @@ describe("SeasonService.respondToWatchedWith", () => {
     });
 
     it("declining marks the link declined, ends any live relation and notifies the owner", async () => {
-        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue("pending");
 
         await seasonService.respondToWatchedWith("friend-1", 7, false);
 
@@ -353,8 +353,37 @@ describe("SeasonService.respondToWatchedWith", () => {
         });
     });
 
+    it("a friend can leave an already-accepted relation - decline() there means 'leave', not 'reject'", async () => {
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue("accepted");
+
+        await seasonService.respondToWatchedWith("friend-1", 7, false);
+
+        expect(userSeasonFriendRepoMocks.decline).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+        expect(watchTogetherRepoMocks.remove).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+    });
+
+    it("rejects with a 409 when declining an invite that was already declined or revoked, instead of re-stamping it", async () => {
+        for (const status of ["declined", "revoked"]) {
+            userSeasonFriendRepoMocks.getStatus.mockResolvedValue(status);
+
+            await expect(seasonService.respondToWatchedWith("friend-1", 7, false)).rejects.toMatchObject({status: 409});
+            expect(userSeasonFriendRepoMocks.decline).not.toHaveBeenCalled();
+            expect(watchTogetherRepoMocks.remove).not.toHaveBeenCalled();
+        }
+    });
+
+    it("rejects with a 409 when accepting an invite that isn't pending (already accepted, declined or revoked)", async () => {
+        for (const status of ["accepted", "declined", "revoked"]) {
+            userSeasonFriendRepoMocks.getStatus.mockResolvedValue(status);
+
+            await expect(seasonService.respondToWatchedWith("friend-1", 7, true)).rejects.toMatchObject({status: 409});
+            expect(friendRepoMocks.checkIfAlreadyFriend).not.toHaveBeenCalled();
+            expect(showServiceMocks.ensureSeasonTracked).not.toHaveBeenCalled();
+        }
+    });
+
     it("accepting ensures the friend's own viewing, creates the live relation and notifies the owner", async () => {
-        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue("pending");
         friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
         showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
         watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(false);
@@ -377,7 +406,7 @@ describe("SeasonService.respondToWatchedWith", () => {
     });
 
     it("re-evaluates episode achievements for whoever actually received a backfilled episode", async () => {
-        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue("pending");
         friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
         showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
         watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(false);
@@ -392,7 +421,10 @@ describe("SeasonService.respondToWatchedWith", () => {
     });
 
     it("rejects with a 400 when accepting an invite from someone who is no longer a friend", async () => {
-        userSeasonFriendRepoMocks.getStatus.mockResolvedValue("declined");
+        // still "pending" - the friendship ended after the invite was sent but before it was
+        // answered, which is the scenario this specific re-check exists for (a stale non-pending
+        // invite is instead caught by the status guard above, whether or not they're still friends)
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue("pending");
         friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
 
         await expect(seasonService.respondToWatchedWith("friend-1", 7, true)).rejects.toThrow(
@@ -403,7 +435,7 @@ describe("SeasonService.respondToWatchedWith", () => {
     });
 
     it("rejects with a 409 when the friend's viewing already belongs to another watch-together group", async () => {
-        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue("pending");
         friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
         showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
         watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(true);
@@ -413,7 +445,7 @@ describe("SeasonService.respondToWatchedWith", () => {
     });
 
     it("throws a 500 when linking fails in the database", async () => {
-        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue("pending");
         friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
         showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
         watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(false);

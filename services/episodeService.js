@@ -167,7 +167,11 @@ export default class EpisodeService {
         );
 
         if (!created) {
-            throw new ServiceError(500, "Impossible d'ajouter le visionnage");
+            // A concurrent mirror from a linked watch-together viewing (see #mirrorToLinkedViewings)
+            // can win the race against the existsForViewing check above and insert this exact row
+            // first - functionally the same outcome as the episode already being marked watched, so
+            // it's reported the same way rather than as an unexplained 500.
+            throw new ServiceError(409, "Cet épisode a déjà été visionné pour ce visionnage");
         }
         eventBus.emit("episode.watched", {
             actorUserId: userId,
