@@ -85,4 +85,31 @@ export default class SeasonController {
             next(e);
         }
     }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    getWatchedWith = async (req, res, next) => {
+        try {
+            const {status} = req.query;
+            const result = await this._seasonService.getWatchedWith(req.userId, status);
+            res.status(200).json(result);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    respondToWatchedWith = async (req, res, next) => {
+        try {
+            const {id} = req.params;
+            const {accepted} = req.body;
+            await this._seasonService.respondToWatchedWith(req.userId, id, accepted);
+            res.sendStatus(200);
+        } catch (e) {
+            next(e);
+        }
+    }
 }

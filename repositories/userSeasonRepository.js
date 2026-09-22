@@ -64,6 +64,35 @@ export default class UserSeasonRepository {
     }
 
     /**
+     * @param {number} id
+     * @returns {Promise<{userId: string, showId: number, number: number, platformId: number}|null>}
+     */
+    getSeasonViewingById = async (id) => {
+        const res = await db.query(`
+            SELECT user_id, show_id, number, platform_id FROM users_seasons WHERE id = $1
+        `, [id]);
+        return res.rowCount === 1 ? {
+            userId: res.rows[0]["user_id"],
+            showId: res.rows[0]["show_id"],
+            number: res.rows[0].number,
+            platformId: res.rows[0]["platform_id"],
+        } : null;
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} showId
+     * @param {number} number
+     * @returns {Promise<number|null>} the id of any existing viewing of that season by userId
+     */
+    findAnyByUserIdShowIdNumber = async (userId, showId, number) => {
+        const res = await db.query(`
+            SELECT id FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = $3 LIMIT 1
+        `, [userId, showId, number]);
+        return res.rowCount === 1 ? res.rows[0]["id"] : null;
+    }
+
+    /**
      * @param {string} userId
      * @param {number} showId
      * @returns {Promise<Season[]>}

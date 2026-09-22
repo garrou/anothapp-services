@@ -151,6 +151,28 @@ describe("NotificationListener", () => {
         );
     });
 
+    it("notifies the owner when their watch-together invite is accepted, with the show id", async () => {
+        eventBus.emit("season.watched_with.accepted", {
+            recipientUserId: "user-1", actorUserId: "user-2", showId: 42, metadata: {seasonNumber: 1},
+        });
+        await flush();
+
+        expect(notificationRepoMocks.create).toHaveBeenCalledWith(
+            "user-1", "user-2", "season_watched_with_accepted", 42, {seasonNumber: 1}
+        );
+    });
+
+    it("notifies the owner when their watch-together invite is declined, with the show id", async () => {
+        eventBus.emit("season.watched_with.declined", {
+            recipientUserId: "user-1", actorUserId: "user-2", showId: 42, metadata: {seasonNumber: 1},
+        });
+        await flush();
+
+        expect(notificationRepoMocks.create).toHaveBeenCalledWith(
+            "user-1", "user-2", "season_watched_with_declined", 42, {seasonNumber: 1}
+        );
+    });
+
     it("a listener failure is isolated and does not throw back into the emitter", async () => {
         friendRepoMocks.getFriends.mockRejectedValue(new Error("db down"));
 

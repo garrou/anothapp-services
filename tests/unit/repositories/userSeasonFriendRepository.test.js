@@ -6,8 +6,6 @@ vi.mock("../../../config/db.js", () => ({
     default: {query: vi.fn(), transaction: vi.fn()},
 }));
 
-const makeClient = () => ({query: vi.fn().mockResolvedValue({rowCount: 0, rows: []})});
-
 describe("UserSeasonFriendRepository.getByUserSeasonIds", () => {
     let repo;
 
@@ -39,30 +37,236 @@ describe("UserSeasonFriendRepository.getByUserSeasonIds", () => {
         expect(result.get(2)).toHaveLength(1);
         expect(result.get(1)[0].username).toBe("bob");
     });
+
+    it("attaches each friend's watch-together status to their profile", async () => {
+        db.query.mockResolvedValue({
+            rows: [{users_season_id: 1, status_id: "accepted", id: "user-2", username: "bob", picture: null}],
+        });
+
+        const result = await repo.getByUserSeasonIds([1]);
+
+        expect(result.get(1)[0].status).toBe("accepted");
+    });
 });
 
 describe("UserSeasonFriendRepository.setForUserSeasonId", () => {
     let repo;
-    let client;
 
     beforeEach(() => {
         vi.clearAllMocks();
         repo = new UserSeasonFriendRepository();
-        client = makeClient();
+    });
+
+    /** @param {{friend_user_id: string, status_id: string|null}[]} currentRows */
+    const mockCurrent = (currentRows) => {
+        const client = {
+            query: vi.fn((sql) => sql.includes("SELECT friend_user_id")
+                ? Promise.resolve({rows: currentRows})
+                : Promise.resolve({rowCount: 1})),
+        };
         db.transaction.mockImplementation(async (callback) => callback(client));
+        return client;
+    };
+
+    it("inserts a brand new friend id and reports it as newly invited", async () => {
+        const client = mockCurrent([]);
+
+        const {invited, revoked} = await repo.setForUserSeasonId(1, ["user-2"]);
+
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users_seasons_friends"), [1, "user-2"]);
+        expect(invited).toEqual(["user-2"]);
+        expect(revoked).toEqual([]);
     });
 
-    it("deletes then inserts the new friend ids", async () => {
-        await repo.setForUserSeasonId(1, ["user-2", "user-3"]);
+    it("marks a pending friend dropped from the list as declined instead of deleting the row", async () => {
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: "pending"}]);
 
-        expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining("DELETE FROM users_seasons_friends"), [1]);
-        expect(client.query).toHaveBeenNthCalledWith(2, expect.stringContaining("INSERT INTO users_seasons_friends"), [1, "user-2", "user-3"]);
+        const {invited, revoked} = await repo.setForUserSeasonId(1, []);
+
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = $3"), [1, "user-2", "declined"]);
+        expect(invited).toEqual([]);
+        expect(revoked).toEqual([]);
     });
 
-    it("only deletes when friendIds is empty", async () => {
+    it("marks an accepted friend dropped from the list as revoked and reports it, so its live relation can be ended", async () => {
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: "accepted"}]);
+
+        const {invited, revoked} = await repo.setForUserSeasonId(1, []);
+
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = $3"), [1, "user-2", "revoked"]);
+        expect(invited).toEqual([]);
+        expect(revoked).toEqual(["user-2"]);
+    });
+
+    it("does not touch a friend already declined and still absent from the list", async () => {
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: "declined"}]);
+
         await repo.setForUserSeasonId(1, []);
 
         expect(client.query).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not re-stamp a friend already revoked and still absent from the list - it would lose the 'left after accepting' distinction", async () => {
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: "revoked"}]);
+
+        const {invited, revoked} = await repo.setForUserSeasonId(1, []);
+
+        expect(client.query).toHaveBeenCalledTimes(1);
+        expect(invited).toEqual([]);
+        expect(revoked).toEqual([]);
+    });
+
+    it("resets a previously declined friend back to pending when re-added", async () => {
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: "declined"}]);
+
+        const {invited} = await repo.setForUserSeasonId(1, ["user-2"]);
+
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = 'pending'"), [1, "user-2"]);
+        expect(invited).toEqual(["user-2"]);
+    });
+
+    it("resets a previously revoked friend back to pending when explicitly re-added", async () => {
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: "revoked"}]);
+
+        const {invited} = await repo.setForUserSeasonId(1, ["user-2"]);
+
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = 'pending'"), [1, "user-2"]);
+        expect(invited).toEqual(["user-2"]);
+    });
+
+    it("leaves an already accepted friend untouched when still present in the list", async () => {
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: "accepted"}]);
+
+        const {invited, revoked} = await repo.setForUserSeasonId(1, ["user-2"]);
+
+        expect(client.query).toHaveBeenCalledTimes(1);
+        expect(invited).toEqual([]);
+        expect(revoked).toEqual([]);
+    });
+
+    it("runs on a provided client instead of opening its own transaction, so it can be combined with another write atomically", async () => {
+        const providedClient = {query: vi.fn((sql) => sql.includes("SELECT friend_user_id")
+            ? Promise.resolve({rows: []})
+            : Promise.resolve({rowCount: 1}))};
+
+        const {invited} = await repo.setForUserSeasonId(1, ["user-2"], providedClient);
+
+        expect(db.transaction).not.toHaveBeenCalled();
+        expect(providedClient.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users_seasons_friends"), [1, "user-2"]);
+        expect(invited).toEqual(["user-2"]);
+    });
+});
+
+describe("UserSeasonFriendRepository.getStatus", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserSeasonFriendRepository();
+    });
+
+    it("returns the status_id when a link exists", async () => {
+        db.query.mockResolvedValue({rowCount: 1, rows: [{status_id: "accepted"}]});
+
+        const result = await repo.getStatus(1, "user-2");
+
+        expect(result).toBe("accepted");
+    });
+
+    it("returns undefined when no link exists", async () => {
+        db.query.mockResolvedValue({rowCount: 0, rows: []});
+
+        const result = await repo.getStatus(1, "user-2");
+
+        expect(result).toBeUndefined();
+    });
+});
+
+describe("UserSeasonFriendRepository.accept / decline", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserSeasonFriendRepository();
+    });
+
+    it("accept sets status to accepted", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        const result = await repo.accept(1, "user-2");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("status_id = 'accepted'"), [1, "user-2"]);
+        expect(result).toBe(true);
+    });
+
+    it("decline sets status to declined or revoked depending on the current status", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        const result = await repo.decline(1, "user-2");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("WHEN status_id = 'accepted' THEN 'revoked' ELSE 'declined'"), [1, "user-2"]);
+        expect(result).toBe(true);
+    });
+
+    it("accept/decline run on a provided client instead of the shared pool, when given one", async () => {
+        const client = {query: vi.fn().mockResolvedValue({rowCount: 1})};
+
+        await repo.accept(1, "user-2", client);
+        await repo.decline(1, "user-2", client);
+
+        expect(client.query).toHaveBeenCalledTimes(2);
+        expect(db.query).not.toHaveBeenCalled();
+    });
+});
+
+describe("UserSeasonFriendRepository.declineAllBetweenUsers", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserSeasonFriendRepository();
+    });
+
+    it("updates links between the two users in either direction", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        await repo.declineAllBetweenUsers("user-1", "user-2");
+
+        expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", "user-2"]);
+    });
+
+    it("runs on a provided client instead of the shared pool, when given one", async () => {
+        const client = {query: vi.fn().mockResolvedValue({rowCount: 1})};
+
+        await repo.declineAllBetweenUsers("user-1", "user-2", client);
+
+        expect(client.query).toHaveBeenCalled();
+        expect(db.query).not.toHaveBeenCalled();
+    });
+});
+
+describe("UserSeasonFriendRepository.getPendingForUser", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserSeasonFriendRepository();
+    });
+
+    it("maps pending invitations", async () => {
+        db.query.mockResolvedValue({
+            rows: [{
+                users_season_id: 1, show_id: 10, title: "Dexter", poster: "poster.jpg", number: 2,
+                owner_id: "user-2", owner_username: "bob", owner_picture: null,
+            }],
+        });
+
+        const result = await repo.getPendingForUser("user-1");
+
+        expect(result).toEqual([{
+            userSeasonId: 1, showId: 10, showTitle: "Dexter", showPoster: "poster.jpg", seasonNumber: 2,
+            actor: {id: "user-2", username: "bob", picture: null},
+        }]);
     });
 });
 

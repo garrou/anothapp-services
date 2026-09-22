@@ -7,12 +7,29 @@ const seasonRepoMocks = vi.hoisted(() => ({
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
     getOwnedSeasonViewing: vi.fn(),
+    getSeasonViewingById: vi.fn(),
 }));
 const userSeasonFriendRepoMocks = vi.hoisted(() => ({
     setForUserSeasonId: vi.fn(),
+    getStatus: vi.fn(),
+    accept: vi.fn(),
+    decline: vi.fn(),
+    getPendingForUser: vi.fn(),
 }));
+const watchTogetherRepoMocks = vi.hoisted(() => ({
+    lockSeasons: vi.fn(),
+    create: vi.fn(),
+    remove: vi.fn(),
+    hasConflictingLink: vi.fn(),
+    getActiveForUser: vi.fn(),
+}));
+const dbMocks = vi.hoisted(() => ({
+    transaction: vi.fn(),
+}));
+const fakeClient = vi.hoisted(() => ({}));
 const friendRepoMocks = vi.hoisted(() => ({
     getFriends: vi.fn(),
+    checkIfAlreadyFriend: vi.fn(),
 }));
 const eventBusMocks = vi.hoisted(() => ({
     emit: vi.fn(),
@@ -22,7 +39,13 @@ const episodeServiceMocks = vi.hoisted(() => ({
     addViewing: vi.fn(),
     updatePlatformForSeason: vi.fn(),
 }));
+const showServiceMocks = vi.hoisted(() => ({
+    ensureSeasonTracked: vi.fn(),
+}));
 
+vi.mock("../../../config/db.js", () => ({
+    default: dbMocks,
+}));
 vi.mock("../../../repositories/seasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return seasonRepoMocks; }),
 }));
@@ -31,6 +54,9 @@ vi.mock("../../../repositories/userSeasonRepository.js", () => ({
 }));
 vi.mock("../../../repositories/userSeasonFriendRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userSeasonFriendRepoMocks; }),
+}));
+vi.mock("../../../repositories/watchTogetherRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return watchTogetherRepoMocks; }),
 }));
 vi.mock("../../../repositories/friendRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return friendRepoMocks; }),
@@ -41,6 +67,13 @@ vi.mock("../../../helpers/eventBus.js", () => ({
 vi.mock("../../../services/episodeService.js", () => ({
     default: vi.fn().mockImplementation(function () { return episodeServiceMocks; }),
 }));
+vi.mock("../../../services/showService.js", () => ({
+    default: vi.fn().mockImplementation(function () { return showServiceMocks; }),
+}));
+
+// db.transaction just runs the callback against a shared fake client - clearAllMocks() (used by
+// every describe block below) clears call history but keeps this implementation in place.
+dbMocks.transaction.mockImplementation((callback) => callback(fakeClient));
 
 describe("SeasonService.deleteBySeasonId", () => {
     let seasonService;
@@ -200,10 +233,12 @@ describe("SeasonService.updateWatchedWith", () => {
         expect(userSeasonFriendRepoMocks.setForUserSeasonId).not.toHaveBeenCalled();
     });
 
-    it("dedupes friend ids, persists them and notifies each tagged friend", async () => {
+    it("dedupes friend ids, persists them and notifies only the newly invited ones", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: ["friend-1", "friend-2"], revoked: []});
+
         await seasonService.updateWatchedWith("user-1", 7, ["friend-1", "friend-1", "friend-2"]);
 
-        expect(userSeasonFriendRepoMocks.setForUserSeasonId).toHaveBeenCalledWith(7, ["friend-1", "friend-2"]);
+        expect(userSeasonFriendRepoMocks.setForUserSeasonId).toHaveBeenCalledWith(7, ["friend-1", "friend-2"], fakeClient);
         expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with", {
             actorUserId: "user-1",
             recipientIds: ["friend-1", "friend-2"],
@@ -212,11 +247,161 @@ describe("SeasonService.updateWatchedWith", () => {
         });
     });
 
+    it("does not notify a friend who was already tagged and unaffected by the update", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: [], revoked: []});
+
+        await seasonService.updateWatchedWith("user-1", 7, ["friend-1", "friend-2"]);
+
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
+    });
+
     it("clears the tags without checking friendship or notifying when friendIds is empty", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: [], revoked: []});
+
         await seasonService.updateWatchedWith("user-1", 7, []);
 
         expect(friendRepoMocks.getFriends).not.toHaveBeenCalled();
-        expect(userSeasonFriendRepoMocks.setForUserSeasonId).toHaveBeenCalledWith(7, []);
+        expect(userSeasonFriendRepoMocks.setForUserSeasonId).toHaveBeenCalledWith(7, [], fakeClient);
         expect(eventBusMocks.emit).not.toHaveBeenCalled();
+    });
+
+    it("ends the live relation for a friend dropped from the list while their invite was accepted, in the same transaction as the tag update", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: [], revoked: ["friend-1"]});
+
+        await seasonService.updateWatchedWith("user-1", 7, []);
+
+        expect(watchTogetherRepoMocks.remove).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+    });
+});
+
+describe("SeasonService.getWatchedWith", () => {
+    let seasonService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        seasonService = new SeasonService();
+    });
+
+    it("delegates to getPendingForUser for status=pending", async () => {
+        userSeasonFriendRepoMocks.getPendingForUser.mockResolvedValue(["invite-1"]);
+
+        const result = await seasonService.getWatchedWith("user-1", "pending");
+
+        expect(result).toEqual(["invite-1"]);
+        expect(userSeasonFriendRepoMocks.getPendingForUser).toHaveBeenCalledWith("user-1");
+    });
+
+    it("delegates to getActiveForUser for status=active", async () => {
+        watchTogetherRepoMocks.getActiveForUser.mockResolvedValue(["active-1"]);
+
+        const result = await seasonService.getWatchedWith("user-1", "active");
+
+        expect(result).toEqual(["active-1"]);
+        expect(watchTogetherRepoMocks.getActiveForUser).toHaveBeenCalledWith("user-1");
+    });
+
+    it("rejects with a 400 for a missing or unknown status", async () => {
+        await expect(seasonService.getWatchedWith("user-1", undefined)).rejects.toThrow("Requête invalide");
+        await expect(seasonService.getWatchedWith("user-1", "unknown")).rejects.toThrow("Requête invalide");
+        expect(userSeasonFriendRepoMocks.getPendingForUser).not.toHaveBeenCalled();
+        expect(watchTogetherRepoMocks.getActiveForUser).not.toHaveBeenCalled();
+    });
+});
+
+describe("SeasonService.respondToWatchedWith", () => {
+    let seasonService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        seasonService = new SeasonService();
+        userSeasonRepoMocks.getSeasonViewingById.mockResolvedValue({userId: "owner-1", showId: 42, number: 1, platformId: 999});
+    });
+
+    it("rejects with a 400 when userSeasonId is missing", async () => {
+        await expect(seasonService.respondToWatchedWith("friend-1", undefined, true)).rejects.toThrow(
+            "Requête invalide"
+        );
+    });
+
+    it("rejects with a 400 when accepted isn't a boolean", async () => {
+        await expect(seasonService.respondToWatchedWith("friend-1", 7, "yes")).rejects.toThrow(
+            "Requête invalide"
+        );
+    });
+
+    it("rejects with a 404 when there is no invitation for this user", async () => {
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(undefined);
+
+        await expect(seasonService.respondToWatchedWith("friend-1", 7, true)).rejects.toThrow(
+            "Invitation introuvable"
+        );
+        expect(showServiceMocks.ensureSeasonTracked).not.toHaveBeenCalled();
+    });
+
+    it("declining marks the link declined, ends any live relation and notifies the owner", async () => {
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+
+        await seasonService.respondToWatchedWith("friend-1", 7, false);
+
+        expect(userSeasonFriendRepoMocks.decline).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+        expect(watchTogetherRepoMocks.remove).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+        expect(showServiceMocks.ensureSeasonTracked).not.toHaveBeenCalled();
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with.declined", {
+            recipientUserId: "owner-1", actorUserId: "friend-1", showId: 42, metadata: {seasonNumber: 1},
+        });
+    });
+
+    it("accepting ensures the friend's own viewing, creates the live relation and notifies the owner", async () => {
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
+        watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(false);
+        userSeasonFriendRepoMocks.accept.mockResolvedValue(true);
+        watchTogetherRepoMocks.create.mockResolvedValue(true);
+
+        await seasonService.respondToWatchedWith("friend-1", 7, true);
+
+        expect(friendRepoMocks.checkIfAlreadyFriend).toHaveBeenCalledWith("owner-1", "friend-1");
+        expect(showServiceMocks.ensureSeasonTracked).toHaveBeenCalledWith("friend-1", 42, 1, 999);
+        expect(watchTogetherRepoMocks.lockSeasons).toHaveBeenCalledWith(fakeClient, 7, 55);
+        expect(watchTogetherRepoMocks.hasConflictingLink).toHaveBeenCalledWith(7, 55, fakeClient);
+        expect(userSeasonFriendRepoMocks.accept).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+        expect(watchTogetherRepoMocks.create).toHaveBeenCalledWith(7, 55, fakeClient);
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with.accepted", {
+            recipientUserId: "owner-1", actorUserId: "friend-1", showId: 42, metadata: {seasonNumber: 1},
+        });
+    });
+
+    it("rejects with a 400 when accepting an invite from someone who is no longer a friend", async () => {
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue("declined");
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
+
+        await expect(seasonService.respondToWatchedWith("friend-1", 7, true)).rejects.toThrow(
+            "Vous n'êtes pas en relation avec cette personne"
+        );
+        expect(showServiceMocks.ensureSeasonTracked).not.toHaveBeenCalled();
+        expect(userSeasonFriendRepoMocks.accept).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a 409 when the friend's viewing already belongs to another watch-together group", async () => {
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
+        watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(true);
+
+        await expect(seasonService.respondToWatchedWith("friend-1", 7, true)).rejects.toMatchObject({status: 409});
+        expect(userSeasonFriendRepoMocks.accept).not.toHaveBeenCalled();
+    });
+
+    it("throws a 500 when linking fails in the database", async () => {
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
+        watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(false);
+        watchTogetherRepoMocks.create.mockResolvedValue(false);
+
+        await expect(seasonService.respondToWatchedWith("friend-1", 7, true)).rejects.toThrow(
+            "Impossible d'accepter cette invitation"
+        );
     });
 });

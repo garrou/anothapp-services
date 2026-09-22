@@ -14,6 +14,8 @@ export default class NotificationListener {
         eventBus.on("show.started", this.#notifyFriends("show_started"));
         eventBus.on("show.rated", this.#notifyFriends("show_rated"));
         eventBus.on("season.watched_with", this.#notifyList("season_watched_with"));
+        eventBus.on("season.watched_with.accepted", this.#notifyOne("season_watched_with_accepted"));
+        eventBus.on("season.watched_with.declined", this.#notifyOne("season_watched_with_declined"));
         eventBus.on("episode.watched", this.#notifyFriends("episode_watched"));
         eventBus.on("episode.bulk_watched", this.#notifyFriends("episode_bulk_watched"));
         eventBus.on("actor.favorited", this.#notifyFriends("actor_favorited"));
@@ -42,10 +44,10 @@ export default class NotificationListener {
 
     /**
      * @param {string} type
-     * @returns {(payload: {recipientUserId: string, actorUserId: string, metadata?: Object}) => Promise<void>}
+     * @returns {(payload: {recipientUserId: string, actorUserId: string, showId?: number, metadata?: Object}) => Promise<void>}
      */
-    #notifyOne = (type) => async ({ recipientUserId, actorUserId, metadata }) =>
-        this._notificationRepository.create(recipientUserId, actorUserId, type, undefined, metadata);
+    #notifyOne = (type) => async ({ recipientUserId, actorUserId, showId, metadata }) =>
+        this._notificationRepository.create(recipientUserId, actorUserId, type, showId, metadata);
 
     /**
      * @param {string} type

@@ -21,6 +21,9 @@ const userEpisodeRepoMocks = vi.hoisted(() => ({
 const userSeasonRepoMocks = vi.hoisted(() => ({
     getOwnedSeasonViewing: vi.fn(),
 }));
+const watchTogetherRepoMocks = vi.hoisted(() => ({
+    getLinkedViewings: vi.fn(),
+}));
 const searchServiceMocks = vi.hoisted(() => ({
     getEpisodesByShowIdBySeason: vi.fn(),
 }));
@@ -39,6 +42,9 @@ vi.mock("../../../repositories/userEpisodeRepository.js", () => ({
 }));
 vi.mock("../../../repositories/userSeasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return userSeasonRepoMocks; }),
+}));
+vi.mock("../../../repositories/watchTogetherRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return watchTogetherRepoMocks; }),
 }));
 vi.mock("../../../services/searchService.js", () => ({
     default: vi.fn().mockImplementation(function () { return searchServiceMocks; }),
@@ -185,6 +191,7 @@ describe("EpisodeService.addViewing", () => {
         userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({ showId: 42, number: 1, platformId: 999 });
         userEpisodeRepoMocks.existsForViewing.mockResolvedValue(false);
         userEpisodeRepoMocks.create.mockResolvedValue(true);
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([]);
     });
 
     it("rejects with a 400 when userSeasonId or episodeId is missing", async () => {
@@ -251,6 +258,28 @@ describe("EpisodeService.addViewing", () => {
             "Impossible d'ajouter le visionnage"
         );
     });
+
+    it("mirrors the episode into every watch-together linked viewing", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1, showId: 42, seasonNumber: 1, date: past });
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([
+            { id: 8, userId: "friend-1" }, { id: 9, userId: "friend-2" },
+        ]);
+
+        await episodeService.addViewing("user-1", 7, 1);
+
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 1, expect.any(String), 999);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-2", 9, 1, expect.any(String), 999);
+    });
+
+    it("does not fan out when there is no watch-together link", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1, showId: 42, seasonNumber: 1, date: past });
+
+        await episodeService.addViewing("user-1", 7, 1);
+
+        expect(userEpisodeRepoMocks.createIfMissing).not.toHaveBeenCalled();
+    });
 });
 
 describe("EpisodeService.addAllViewings", () => {
@@ -261,6 +290,7 @@ describe("EpisodeService.addAllViewings", () => {
         episodeService = new EpisodeService();
         userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({ showId: 42, number: 1, platformId: 999 });
         episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([]);
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([]);
     });
 
     it("rejects with a 400 when no userSeasonId is given", async () => {
@@ -303,6 +333,38 @@ describe("EpisodeService.addAllViewings", () => {
         await episodeService.addAllViewings("user-1", 7);
 
         expect(eventBusMocks.emit).not.toHaveBeenCalled();
+        expect(watchTogetherRepoMocks.getLinkedViewings).not.toHaveBeenCalled();
+    });
+
+    it("mirrors only the newly-watched episodes into linked viewings", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([{ id: 1, date: past }, { id: 2, date: past }]);
+        userEpisodeRepoMocks.createIfMissing
+            .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValue(true);
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([{ id: 8, userId: "friend-1" }]);
+
+        await episodeService.addAllViewings("user-1", 7);
+
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 1, expect.any(String), 999);
+        expect(userEpisodeRepoMocks.createIfMissing).not.toHaveBeenCalledWith("friend-1", 8, 2, expect.any(String), 999);
+    });
+
+    it("fetches the linked viewings only once for the whole batch, not once per newly-watched episode", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
+            { id: 1, date: past }, { id: 2, date: past }, { id: 3, date: past },
+        ]);
+        userEpisodeRepoMocks.createIfMissing.mockResolvedValue(true);
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([{ id: 8, userId: "friend-1" }]);
+
+        await episodeService.addAllViewings("user-1", 7);
+
+        expect(watchTogetherRepoMocks.getLinkedViewings).toHaveBeenCalledTimes(1);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 1, expect.any(String), 999);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 2, expect.any(String), 999);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 3, expect.any(String), 999);
     });
 });
 

@@ -14,19 +14,40 @@ const friendRepoMocks = vi.hoisted(() => ({
 const playlistCollaboratorRepoMocks = vi.hoisted(() => ({
     removeAllBetween: vi.fn(),
 }));
+const userSeasonFriendRepoMocks = vi.hoisted(() => ({
+    declineAllBetweenUsers: vi.fn(),
+}));
+const watchTogetherRepoMocks = vi.hoisted(() => ({
+    removeAllBetweenUsers: vi.fn(),
+}));
 const eventBusMocks = vi.hoisted(() => ({
     emit: vi.fn(),
 }));
+const dbMocks = vi.hoisted(() => ({
+    transaction: vi.fn(),
+}));
+const fakeClient = vi.hoisted(() => ({}));
 
+vi.mock("../../../config/db.js", () => ({
+    default: dbMocks,
+}));
 vi.mock("../../../repositories/friendRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return friendRepoMocks; }),
 }));
 vi.mock("../../../repositories/playlistCollaboratorRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return playlistCollaboratorRepoMocks; }),
 }));
+vi.mock("../../../repositories/userSeasonFriendRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return userSeasonFriendRepoMocks; }),
+}));
+vi.mock("../../../repositories/watchTogetherRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return watchTogetherRepoMocks; }),
+}));
 vi.mock("../../../helpers/eventBus.js", () => ({
     default: eventBusMocks,
 }));
+
+dbMocks.transaction.mockImplementation((callback) => callback(fakeClient));
 
 describe("FriendService.sendFriendRequest", () => {
     let friendService;
@@ -165,6 +186,14 @@ describe("FriendService.deleteFriend", () => {
 
         await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
         expect(playlistCollaboratorRepoMocks.removeAllBetween).toHaveBeenCalledWith("user-1", "user-2");
+    });
+
+    it("marks the historical watch-together tag declined/revoked and ends the live relation, in the same transaction, between the two users in either direction", async () => {
+        friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
+
+        await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
+        expect(userSeasonFriendRepoMocks.declineAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2", fakeClient);
+        expect(watchTogetherRepoMocks.removeAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2", fakeClient);
     });
 });
 

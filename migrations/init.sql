@@ -191,12 +191,46 @@ CREATE TABLE users_seasons (
     FOREIGN KEY(user_id, show_id) REFERENCES users_shows(user_id, show_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE watch_together_statuses (
+    id VARCHAR(20),
+    name VARCHAR(30) NOT NULL,
+    PRIMARY KEY(id)
+);
+
+INSERT INTO watch_together_statuses (id, name) VALUES
+('pending', 'En attente'),
+('accepted', 'Acceptée'),
+('declined', 'Refusée'),
+('revoked', 'Terminée');
+
+-- Historical "watched with" tag: does a friend appear as having watched a season together.
+-- Purely declarative/statistical - status_id is never rewritten by what happens to the live
+-- watch_together relation below, so it stays a permanent record even after that relation ends,
+-- and it never references the friend's own season, so deleting it never touches this table.
 CREATE TABLE users_seasons_friends (
     users_season_id INTEGER NOT NULL,
     friend_user_id UUID NOT NULL,
+    status_id VARCHAR(20) NOT NULL DEFAULT 'pending',
     FOREIGN KEY(users_season_id) REFERENCES users_seasons(id) ON DELETE CASCADE,
     FOREIGN KEY(friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(status_id) REFERENCES watch_together_statuses(id),
     PRIMARY KEY(users_season_id, friend_user_id)
+);
+
+-- Live watch-together relation: routes new episode adds between the two seasons it links.
+-- Its existence alone means "active" - it carries no history and no status, and is simply
+-- deleted (never updated) when the relation ends, for any reason (leave, unfriend, either
+-- season or show deleted). Losing this row never loses the users_seasons_friends tag above.
+CREATE TABLE watch_together (
+    id SERIAL,
+    users_season_id INTEGER NOT NULL,
+    friend_users_season_id INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY(id),
+    FOREIGN KEY(users_season_id) REFERENCES users_seasons(id) ON DELETE CASCADE,
+    FOREIGN KEY(friend_users_season_id) REFERENCES users_seasons(id) ON DELETE CASCADE,
+    CHECK (users_season_id <> friend_users_season_id),
+    UNIQUE(friend_users_season_id)
 );
 
 CREATE TABLE episodes (
@@ -700,6 +734,7 @@ CREATE INDEX idx_users_episodes_user_id ON users_episodes(user_id);
 CREATE INDEX idx_users_episodes_users_seasons_id ON users_episodes(users_seasons_id);
 CREATE INDEX idx_friends_sec_user_id ON friends(sec_user_id);
 CREATE INDEX idx_users_seasons_friends_friend ON users_seasons_friends(friend_user_id);
+CREATE INDEX idx_watch_together_users_season_id ON watch_together(users_season_id);
 CREATE INDEX idx_playlists_user_id ON playlists(user_id);
 CREATE INDEX idx_notifications_recipient_unread ON notifications(recipient_user_id, read_at);
 CREATE INDEX idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);
