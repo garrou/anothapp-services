@@ -19,10 +19,12 @@ import achievementRoutes from "./achievementRoutes.js";
 import adminRoutes from "./adminRoutes.js";
 import NotificationListener from "../services/notificationListener.js";
 import AchievementListener from "../services/achievementListener.js";
+import AdminListener from "../services/adminListener.js";
 import {isOwnRequest} from "../helpers/utils.js";
 
 new NotificationListener();
 new AchievementListener();
+new AdminListener();
 
 const router = new Router();
 

@@ -102,6 +102,16 @@ describe("formatReport", () => {
         expect(report).toBe("🔑 <b>0</b> jeton(s) de renouvellement supprimé(s)");
     });
 
+    it("does not report users, database size, catalog size or deleted accounts anymore - visible on the admin page instead", () => {
+        const report = formatReport({
+            users: {total: 128},
+            database: {size: "128 MB"},
+            catalog: {shows: 42, seasons: 100, episodes: 2000},
+            deletedAccounts: {anonymized: 3},
+        });
+        expect(report).toBe("");
+    });
+
     it("formats notifications results", () => {
         const report = formatReport({notifications: {deleted: 12}});
         expect(report).toBe("🗑️ <b>12</b> notification(s) supprimée(s)");
@@ -110,21 +120,6 @@ describe("formatReport", () => {
     it("formats reminders results", () => {
         const report = formatReport({reminders: {created: 5}});
         expect(report).toBe("🔔 <b>5</b> rappel(s) d'épisode créé(s)");
-    });
-
-    it("formats user count results", () => {
-        const report = formatReport({users: {total: 128}});
-        expect(report).toBe("👥 <b>128</b> utilisateur(s) au total");
-    });
-
-    it("formats database size results", () => {
-        const report = formatReport({database: {size: "128 MB"}});
-        expect(report).toBe("💾 Taille de la base : <b>128 MB</b>");
-    });
-
-    it("formats deletedAccounts results", () => {
-        const report = formatReport({deletedAccounts: {anonymized: 3}});
-        expect(report).toBe("🗑️ <b>3</b> compte(s) anonymisé(s)");
     });
 
     it("formats accountAgeAchievements results", () => {

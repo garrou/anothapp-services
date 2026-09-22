@@ -1,4 +1,5 @@
 import HttpClient from "./httpClient.js";
+import eventBus from "./eventBus.js";
 
 const BASE_URL = "https://api.betaseries.com";
 
@@ -18,6 +19,7 @@ export default class BetaseriesClient {
      * @returns {Promise<any>} the parsed response body
      */
     get = async (path, timeoutMs) => {
+        eventBus.emit("betaseries.called");
         return HttpClient.get(`${this.baseUrl}${path}`, this.headers, timeoutMs);
     }
 }

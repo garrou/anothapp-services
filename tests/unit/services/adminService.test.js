@@ -9,6 +9,13 @@ const refreshRepoMocks = vi.hoisted(() => ({
 }));
 const databaseRepoMocks = vi.hoisted(() => ({
     getDatabaseSize: vi.fn(),
+    getSizeHistory: vi.fn(),
+}));
+const serviceCallCountRepoMocks = vi.hoisted(() => ({
+    getAll: vi.fn(),
+}));
+const catalogRepoMocks = vi.hoisted(() => ({
+    getSizeHistory: vi.fn(),
 }));
 const adminRepoMocks = vi.hoisted(() => ({
     getNewUsersByDay: vi.fn(),
@@ -47,6 +54,12 @@ vi.mock("../../../repositories/adminRepository.js", () => ({
 vi.mock("../../../repositories/adminActionRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return adminActionRepoMocks; }),
 }));
+vi.mock("../../../repositories/serviceCallCountRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return serviceCallCountRepoMocks; }),
+}));
+vi.mock("../../../repositories/catalogRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return catalogRepoMocks; }),
+}));
 vi.mock("../../../services/healthService.js", () => ({
     default: vi.fn().mockImplementation(function () { return healthServiceMocks; }),
 }));
@@ -62,6 +75,8 @@ describe("AdminService.getDashboard", () => {
     it("aggregates every metric into a single object", async () => {
         userRepoMocks.getUserCount.mockResolvedValue(42);
         databaseRepoMocks.getDatabaseSize.mockResolvedValue("12 MB");
+        databaseRepoMocks.getSizeHistory.mockResolvedValue([{ recordedAt: "2024-01-01", sizeBytes: 100 }]);
+        catalogRepoMocks.getSizeHistory.mockResolvedValue([{ recordedAt: "2024-01-01", shows: 42, seasons: 100, episodes: 2000 }]);
         adminRepoMocks.getNewUsersByDay.mockResolvedValue([{ day: "2024-01-01", count: 3 }]);
         adminRepoMocks.getPendingDeletionsCount.mockResolvedValue(2);
         adminRepoMocks.getAnonymizedCount.mockResolvedValue(1);
@@ -69,15 +84,28 @@ describe("AdminService.getDashboard", () => {
         adminRepoMocks.getLoginChallengesReachingAttemptLimit.mockResolvedValue([]);
         adminActionRepoMocks.getRecent.mockResolvedValue([]);
         healthServiceMocks.check.mockResolvedValue({ betaseries: { reachable: true }, mailer: { reachable: true } });
+        serviceCallCountRepoMocks.getAll.mockResolvedValue({
+            mailer: { total: 5, history: [{ day: "2024-01-01", count: 5 }] },
+            betaseries: { total: 20, history: [{ day: "2024-01-01", count: 20 }] },
+            export: { total: 1, history: [{ day: "2024-01-01", count: 1 }] },
+            import: { total: 0, history: [] },
+        });
 
         const result = await service.getDashboard();
 
         expect(result).toEqual({
             users: { total: 42, newByDay: [{ day: "2024-01-01", count: 3 }], pendingDeletions: 2, anonymized: 1 },
             sessions: { active: 10, loginAttemptLimit: [] },
-            database: { size: "12 MB" },
+            database: { size: "12 MB", history: [{ recordedAt: "2024-01-01", sizeBytes: 100 }] },
+            catalog: { history: [{ recordedAt: "2024-01-01", shows: 42, seasons: 100, episodes: 2000 }] },
             health: { betaseries: { reachable: true }, mailer: { reachable: true } },
             recentActions: [],
+            serviceCalls: {
+                mailer: { total: 5, history: [{ day: "2024-01-01", count: 5 }] },
+                betaseries: { total: 20, history: [{ day: "2024-01-01", count: 20 }] },
+                export: { total: 1, history: [{ day: "2024-01-01", count: 1 }] },
+                import: { total: 0, history: [] },
+            },
         });
     });
 });

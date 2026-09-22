@@ -11,11 +11,15 @@ import cleanupLoginChallenges from "./tasks/cleanupLoginChallenges.js";
 import cleanupNotifications from "./tasks/cleanupNotifications.js";
 import reportUserCount from "./tasks/reportUserCount.js";
 import reportDatabaseSize from "./tasks/reportDatabaseSize.js";
+import reportCatalogSize from "./tasks/reportCatalogSize.js";
 import evaluateAccountAgeAchievements from "./tasks/evaluateAccountAgeAchievements.js";
 import anonymizeDeletedAccounts from "./tasks/anonymizeDeletedAccounts.js";
 import sendTelegramMessage from "./lib/notify.js";
 import {formatReport} from "./lib/report.js";
 import { isProdMode } from "../helpers/utils.js";
+import AdminListener from "../services/adminListener.js";
+
+new AdminListener();
 
 const TASKS = {
     platforms: updatePlatforms,
@@ -30,6 +34,7 @@ const TASKS = {
     notifications: cleanupNotifications,
     users: reportUserCount,
     database: reportDatabaseSize,
+    catalog: reportCatalogSize,
     accountAgeAchievements: evaluateAccountAgeAchievements,
     deletedAccounts: anonymizeDeletedAccounts,
 };

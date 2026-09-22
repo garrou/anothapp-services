@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const transporterMocks = vi.hoisted(() => ({ sendMail: vi.fn() }));
+const eventBusMocks = vi.hoisted(() => ({ emit: vi.fn() }));
 let mockTransporter = null;
+
+vi.mock("../../../helpers/eventBus.js", () => ({ default: eventBusMocks }));
 
 // config/mailer.js exports a single value decided once at import time (null, or a real
 // transporter, depending on EMAIL_HOST) - re-mock it per test via vi.doMock + a fresh dynamic
@@ -23,6 +26,7 @@ describe("MailerService", () => {
         const service = new MailerService();
 
         await expect(service.sendVerificationEmail("a@b.com", "https://x/verify")).resolves.toBeUndefined();
+        expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });
 
     it("sends a verification email through the transporter when configured", async () => {
@@ -39,6 +43,7 @@ describe("MailerService", () => {
             subject: expect.stringContaining("Confirmez"),
             html: expect.stringContaining("https://x/verify-email/tok"),
         }));
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("mailer.sent");
     });
 
     it("sends a password-reset email through the transporter when configured", async () => {

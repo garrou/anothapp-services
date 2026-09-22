@@ -4,6 +4,7 @@ import SettingService from "../../../services/settingService.js";
 const securityMocks = vi.hoisted(() => ({
     signExportData: vi.fn(() => "mock-signature"), verifyExportSignature: vi.fn(() => true),
 }));
+const eventBusMocks = vi.hoisted(() => ({ emit: vi.fn() }));
 const userServiceMocks = vi.hoisted(() => ({markExported: vi.fn(), getUser: vi.fn()}));
 const statServiceMocks = vi.hoisted(() => ({getStats: vi.fn()}));
 const playlistServiceMocks = vi.hoisted(() => ({getPlaylists: vi.fn()}));
@@ -59,6 +60,9 @@ vi.mock("../../../repositories/playlistRepository.js", () => ({
 vi.mock("../../../helpers/security.js", () => ({
     default: securityMocks,
 }));
+vi.mock("../../../helpers/eventBus.js", () => ({
+    default: eventBusMocks,
+}));
 
 describe("SettingService.exportData", () => {
     let service;
@@ -84,6 +88,14 @@ describe("SettingService.exportData", () => {
 
         await expect(service.exportData("user-1")).rejects.toMatchObject({status: 400});
         expect(userServiceMocks.getUser).not.toHaveBeenCalled();
+    });
+
+    it("counts the request even when it ends up rate-limited", async () => {
+        userServiceMocks.markExported.mockResolvedValue(false);
+
+        await expect(service.exportData("user-1")).rejects.toMatchObject({status: 400});
+
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("settings.exported");
     });
 
     it("builds the export with shows, their seasons and episodes nested", async () => {
@@ -197,6 +209,12 @@ describe("SettingService.importData", () => {
     it("rejects a payload without a shows array", async () => {
         await expect(service.importData("user-1", {})).rejects.toMatchObject({status: 400});
         expect(userShowRepoMocks.create).not.toHaveBeenCalled();
+    });
+
+    it("counts the request even when the payload turns out invalid", async () => {
+        await expect(service.importData("user-1", {})).rejects.toMatchObject({status: 400});
+
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("settings.imported");
     });
 
     it("rejects a missing payload", async () => {
