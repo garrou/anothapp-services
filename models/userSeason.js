@@ -1,16 +1,21 @@
 import Platform from "./platform.js";
+import UserProfile from "./userProfile.js";
 
 class PartialUserSeason {
 
     /**
      * @param {Object} obj
      * @param {import("./userProfile.js").default[]} [watchedWith]
+     * @param {{id: string, username: string, picture: string}?} [sharedBy] the owner sharing this
+     *   season with the current user, when this viewing is the friend/leaf side of an active
+     *   watch-together relation - read-only, never sourced from users_seasons_friends
      */
-    constructor(obj, watchedWith = []) {
+    constructor(obj, watchedWith = [], sharedBy = null) {
         this.id = obj.id;
         this.addedAt = obj["added_at"];
         this.platform = new Platform(obj);
         this.watchedWith = watchedWith;
+        this.sharedBy = sharedBy ? new UserProfile(sharedBy) : null;
     }
 }
 

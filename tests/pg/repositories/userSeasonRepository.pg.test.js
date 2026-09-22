@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import db from "../../../config/db.js";
 import UserSeasonRepository from "../../../repositories/userSeasonRepository.js";
+import WatchTogetherRepository from "../../../repositories/watchTogetherRepository.js";
 import { resetDb } from "../resetDb.js";
 import { insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason } from "../fixtures.js";
 
@@ -193,6 +194,57 @@ describe("UserSeasonRepository (real Postgres)", () => {
             const result = await repo.getMaxRewatchCountByUserId(userId);
 
             expect(result).toBe(0);
+        });
+    });
+
+    describe("getInfosByUserIdByShowId", () => {
+        it("leaves sharedBy null for a season that isn't part of an active relation", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            await insertUserSeason(userId, showId, 1);
+
+            const result = await repo.getInfosByUserIdByShowId(userId, showId, 1);
+
+            expect(result[0].sharedBy).toBeNull();
+        });
+
+        it("enriches a friend's own season with the owner sharing it", async () => {
+            const watchTogetherRepo = new WatchTogetherRepository();
+            const ownerId = await insertUser();
+            const friendId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(ownerId, showId);
+            const ownerSeasonId = await insertUserSeason(ownerId, showId, 1);
+            await insertUserShow(friendId, showId);
+            const friendSeasonId = await insertUserSeason(friendId, showId, 1);
+            await watchTogetherRepo.create(ownerSeasonId, friendSeasonId);
+
+            const result = await repo.getInfosByUserIdByShowId(friendId, showId, 1);
+
+            expect(result).toEqual([expect.objectContaining({
+                id: friendSeasonId,
+                sharedBy: { id: ownerId, username: expect.any(String), picture: null, current: false },
+            })]);
+        });
+
+        it("never enriches the owner's own season with themself", async () => {
+            const watchTogetherRepo = new WatchTogetherRepository();
+            const ownerId = await insertUser();
+            const friendId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(ownerId, showId);
+            const ownerSeasonId = await insertUserSeason(ownerId, showId, 1);
+            await insertUserShow(friendId, showId);
+            const friendSeasonId = await insertUserSeason(friendId, showId, 1);
+            await watchTogetherRepo.create(ownerSeasonId, friendSeasonId);
+
+            const result = await repo.getInfosByUserIdByShowId(ownerId, showId, 1);
+
+            expect(result[0].sharedBy).toBeNull();
         });
     });
 

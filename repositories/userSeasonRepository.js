@@ -4,11 +4,13 @@ import Season from "../models/season.js";
 import {PartialUserSeason, UserSeason} from "../models/userSeason.js";
 import Stat from "../models/stat.js";
 import UserSeasonFriendRepository from "./userSeasonFriendRepository.js";
+import WatchTogetherRepository from "./watchTogetherRepository.js";
 
 export default class UserSeasonRepository {
 
     constructor() {
         this._userSeasonFriendRepository = new UserSeasonFriendRepository();
+        this._watchTogetherRepository = new WatchTogetherRepository();
     }
 
     /**
@@ -142,10 +144,14 @@ export default class UserSeasonRepository {
             WHERE user_id = $1 AND show_id = $2 AND number = $3
             ORDER BY added_at
         `, [userId, showId, number]);
-        const watchedWithByUserSeasonId = await this._userSeasonFriendRepository.getByUserSeasonIds(
-            res.rows.map((row) => row.id)
-        );
-        return res.rows.map((row) => new PartialUserSeason(row, watchedWithByUserSeasonId.get(row.id) ?? []));
+        const seasonIds = res.rows.map((row) => row.id);
+        const [watchedWithByUserSeasonId, sharedByUserSeasonId] = await Promise.all([
+            this._userSeasonFriendRepository.getByUserSeasonIds(seasonIds),
+            this._watchTogetherRepository.getOwnersByFriendSeasonIds(seasonIds),
+        ]);
+        return res.rows.map((row) => new PartialUserSeason(
+            row, watchedWithByUserSeasonId.get(row.id) ?? [], sharedByUserSeasonId.get(row.id) ?? null
+        ));
     }
 
     /**

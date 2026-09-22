@@ -167,6 +167,10 @@ describe("UserSeasonRepository", () => {
     });
 
     describe("getInfosByUserIdByShowId", () => {
+        beforeEach(() => {
+            repo._watchTogetherRepository.getOwnersByFriendSeasonIds = vi.fn().mockResolvedValue(new Map());
+        });
+
         it("maps rows to PartialUserSeason instances enriched with watchedWith", async () => {
             db.query.mockResolvedValue({rows: [{id: 1, added_at: "2024-01-01", pid: 2, name: "Netflix", logo: "netflix.png"}]});
             repo._userSeasonFriendRepository.getByUserSeasonIds = vi.fn().mockResolvedValue(new Map([[1, [{id: "user-2", username: "bob"}]]]));
@@ -178,6 +182,7 @@ describe("UserSeasonRepository", () => {
                 id: 1, addedAt: "2024-01-01",
                 platform: {id: 2, name: "Netflix", logo: "netflix.png"},
                 watchedWith: [{id: "user-2", username: "bob"}],
+                sharedBy: null,
             }]);
         });
 
@@ -188,6 +193,19 @@ describe("UserSeasonRepository", () => {
             const result = await repo.getInfosByUserIdByShowId("user-1", 10, 1);
 
             expect(result[0].watchedWith).toEqual([]);
+        });
+
+        it("enriches a friend/leaf season with the owner sharing it", async () => {
+            db.query.mockResolvedValue({rows: [{id: 1, added_at: "2024-01-01", pid: 2, name: "Netflix", logo: "netflix.png"}]});
+            repo._userSeasonFriendRepository.getByUserSeasonIds = vi.fn().mockResolvedValue(new Map());
+            repo._watchTogetherRepository.getOwnersByFriendSeasonIds = vi.fn().mockResolvedValue(
+                new Map([[1, {id: "user-2", username: "bob", picture: null}]])
+            );
+
+            const result = await repo.getInfosByUserIdByShowId("user-1", 10, 1);
+
+            expect(repo._watchTogetherRepository.getOwnersByFriendSeasonIds).toHaveBeenCalledWith([1]);
+            expect(result[0].sharedBy).toEqual({id: "user-2", username: "bob", picture: null, current: false});
         });
     });
 

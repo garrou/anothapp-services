@@ -142,20 +142,61 @@ describe("WatchTogetherRepository.getActiveForUser", () => {
         repo = new WatchTogetherRepository();
     });
 
-    it("maps active watch-together relations", async () => {
+    it("maps active watch-together relations, on either side of the relation", async () => {
         db.query.mockResolvedValue({
-            rows: [{
-                users_season_id: 1, show_id: 10, title: "Dexter", poster: "poster.jpg", number: 2,
-                owner_id: "user-2", owner_username: "bob", owner_picture: null,
-            }],
+            rows: [
+                {
+                    users_season_id: 1, show_id: 10, title: "Dexter", poster: "poster.jpg", number: 2,
+                    actor_id: "user-2", actor_username: "bob", actor_picture: null, is_owner: false,
+                },
+                {
+                    users_season_id: 5, show_id: 11, title: "Lost", poster: "poster2.jpg", number: 1,
+                    actor_id: "user-3", actor_username: "alice", actor_picture: null, is_owner: true,
+                },
+            ],
         });
 
         const result = await repo.getActiveForUser("user-1");
 
-        expect(result).toEqual([{
-            userSeasonId: 1, showId: 10, showTitle: "Dexter", showPoster: "poster.jpg", seasonNumber: 2,
-            actor: {id: "user-2", username: "bob", picture: null},
-        }]);
+        expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1"]);
+        expect(result).toEqual([
+            {
+                userSeasonId: 1, showId: 10, showTitle: "Dexter", showPoster: "poster.jpg", seasonNumber: 2,
+                actor: {id: "user-2", username: "bob", picture: null}, isOwner: false,
+            },
+            {
+                userSeasonId: 5, showId: 11, showTitle: "Lost", showPoster: "poster2.jpg", seasonNumber: 1,
+                actor: {id: "user-3", username: "alice", picture: null}, isOwner: true,
+            },
+        ]);
+    });
+});
+
+describe("WatchTogetherRepository.getOwnersByFriendSeasonIds", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new WatchTogetherRepository();
+    });
+
+    it("returns an empty map without querying when there are no season ids", async () => {
+        const result = await repo.getOwnersByFriendSeasonIds([]);
+
+        expect(db.query).not.toHaveBeenCalled();
+        expect(result.size).toBe(0);
+    });
+
+    it("maps the sharing owner by friend season id", async () => {
+        db.query.mockResolvedValue({
+            rows: [{season_id: 5, id: "user-2", username: "bob", picture: null}],
+        });
+
+        const result = await repo.getOwnersByFriendSeasonIds([5, 6]);
+
+        expect(db.query).toHaveBeenCalledWith(expect.any(String), [[5, 6]]);
+        expect(result.get(5)).toEqual({id: "user-2", username: "bob", picture: null});
+        expect(result.has(6)).toBe(false);
     });
 });
 
