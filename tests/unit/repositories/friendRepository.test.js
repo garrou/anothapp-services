@@ -191,4 +191,13 @@ describe("FriendRepository.deleteFriend", () => {
 
         expect(result).toBeNull();
     });
+
+    it("runs against the given client instead of the pool, when provided", async () => {
+        const client = {query: vi.fn().mockResolvedValue({rowCount: 1, rows: [{fst_user_id: "user-1", accepted: true}]})};
+
+        await repo.deleteFriend("user-1", "user-2", client);
+
+        expect(client.query).toHaveBeenCalledWith(expect.any(String), ["user-1", "user-2"]);
+        expect(db.query).not.toHaveBeenCalled();
+    });
 });

@@ -41,6 +41,7 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     getDistinctByUserIdByShowId: vi.fn(),
     getInfosByUserIdByShowId: vi.fn(),
     findAnyByUserIdShowIdNumber: vi.fn(),
+    lockSeasonSlot: vi.fn(),
 }));
 const seasonRepoMocks = vi.hoisted(() => ({
     getSeasonByShowIdByNumber: vi.fn(),
@@ -52,6 +53,14 @@ const episodeServiceMocks = vi.hoisted(() => ({
 }));
 const eventBusMocks = vi.hoisted(() => ({
     emit: vi.fn(),
+}));
+const dbMocks = vi.hoisted(() => ({
+    transaction: vi.fn(),
+}));
+const fakeClient = vi.hoisted(() => ({}));
+
+vi.mock("../../../config/db.js", () => ({
+    default: dbMocks,
 }));
 vi.mock("../../../helpers/eventBus.js", () => ({
     default: eventBusMocks,
@@ -80,6 +89,8 @@ vi.mock("../../../repositories/userSeasonRepository.js", () => ({
 vi.mock("../../../repositories/seasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return seasonRepoMocks; }),
 }));
+
+dbMocks.transaction.mockImplementation((callback) => callback(fakeClient));
 
 const validShow = {
     id: 42,
@@ -435,7 +446,7 @@ describe("ShowService.ensureSeasonTracked", () => {
 
         await showService.ensureSeasonTracked("user-1", 42, 1, 3);
 
-        expect(userSeasonRepoMocks.create).toHaveBeenCalledWith("user-1", 42, 1, 3);
+        expect(userSeasonRepoMocks.create).toHaveBeenCalledWith("user-1", 42, 1, 3, null, fakeClient);
     });
 
     it("throws a 500 when the season can't be found locally or via the search API", async () => {
@@ -458,6 +469,24 @@ describe("ShowService.ensureSeasonTracked", () => {
         await expect(showService.ensureSeasonTracked("user-1", 42, 1, 999)).rejects.toThrow(
             "Impossible d'ajouter la saison"
         );
+    });
+
+    it("re-checks under an advisory lock and returns the concurrently-created viewing instead of inserting a duplicate", async () => {
+        // simulates the race: the first check (before the lock) found nothing, but by the time this
+        // call acquires the lock, a concurrent call has already created and committed the viewing
+        userSeasonRepoMocks.findAnyByUserIdShowIdNumber
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(88);
+        userShowRepoMocks.checkShowExistsByUserIdByShowId.mockResolvedValue(true);
+        seasonRepoMocks.getSeasonByShowIdByNumber.mockResolvedValue({ id: 1, number: 1 });
+
+        const result = await showService.ensureSeasonTracked("user-1", 42, 1, 999);
+
+        expect(userSeasonRepoMocks.lockSeasonSlot).toHaveBeenCalledWith(fakeClient, "user-1", 42, 1);
+        expect(userSeasonRepoMocks.findAnyByUserIdShowIdNumber).toHaveBeenCalledTimes(2);
+        expect(userSeasonRepoMocks.findAnyByUserIdShowIdNumber).toHaveBeenLastCalledWith("user-1", 42, 1, fakeClient);
+        expect(userSeasonRepoMocks.create).not.toHaveBeenCalled();
+        expect(result).toBe(88);
     });
 });
 

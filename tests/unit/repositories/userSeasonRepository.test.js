@@ -14,6 +14,19 @@ describe("UserSeasonRepository", () => {
         repo = new UserSeasonRepository();
     });
 
+    describe("lockSeasonSlot", () => {
+        it("acquires an advisory lock keyed by the user/show/season triple, on the given client", async () => {
+            const client = {query: vi.fn().mockResolvedValue({})};
+
+            await repo.lockSeasonSlot(client, "user-1", 10, 1);
+
+            expect(client.query).toHaveBeenCalledWith(
+                expect.stringContaining("pg_advisory_xact_lock"), ["user-1:10:1"]
+            );
+            expect(db.query).not.toHaveBeenCalled();
+        });
+    });
+
     describe("create", () => {
         it("returns the created row's id", async () => {
             db.query.mockResolvedValue({rowCount: 1, rows: [{id: 5}]});
@@ -48,6 +61,15 @@ describe("UserSeasonRepository", () => {
             const result = await repo.create("user-1", 10, 1);
 
             expect(result).toBeNull();
+        });
+
+        it("runs against the given client instead of the pool, when provided", async () => {
+            const client = {query: vi.fn().mockResolvedValue({rowCount: 1, rows: [{id: 5}]})};
+
+            await repo.create("user-1", 10, 1, 2, null, client);
+
+            expect(client.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 10, 1, 2, null]);
+            expect(db.query).not.toHaveBeenCalled();
         });
     });
 
@@ -140,6 +162,15 @@ describe("UserSeasonRepository", () => {
             db.query.mockResolvedValue({rowCount: 0, rows: []});
 
             expect(await repo.findAnyByUserIdShowIdNumber("user-1", 10, 1)).toBeNull();
+        });
+
+        it("runs against the given client instead of the pool, when provided", async () => {
+            const client = {query: vi.fn().mockResolvedValue({rowCount: 0, rows: []})};
+
+            await repo.findAnyByUserIdShowIdNumber("user-1", 10, 1, client);
+
+            expect(client.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 10, 1]);
+            expect(db.query).not.toHaveBeenCalled();
         });
     });
 

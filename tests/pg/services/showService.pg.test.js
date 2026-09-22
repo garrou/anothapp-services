@@ -206,6 +206,21 @@ describe("ShowService (real Postgres)", () => {
             expect(season.rows[0].id).toBe(result);
             expect(season.rows[0]["platform_id"]).toBe(2);
         });
+
+        it("never creates two viewings when called concurrently for the same user/show/season (real advisory lock, real pool connections)", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+
+            const results = await Promise.all(
+                Array.from({ length: 5 }, () => service.ensureSeasonTracked(userId, showId, 1, 999))
+            );
+
+            expect(new Set(results).size).toBe(1);
+            const res = await db.query(`SELECT COUNT(*) AS total FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = 1`, [userId, showId]);
+            expect(parseInt(res.rows[0].total)).toBe(1);
+        });
     });
 
     describe("updateByShowId", () => {

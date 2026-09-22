@@ -1,3 +1,4 @@
+import db from "../config/db.js";
 import ShowRepository from "../repositories/showRepository.js";
 import UserShowRepository from "../repositories/userShowRepository.js";
 import SearchService from "./searchService.js";
@@ -266,7 +267,19 @@ export default class ShowService {
                 throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
             }
         }
-        const createdId = await this._userSeasonRepository.create(userId, showId, number, platformId);
+        // Two concurrent calls (e.g. a double-submitted accept) can both pass the `existing` check
+        // above before either inserts - an advisory lock scoped to just this recheck-then-create
+        // step (not the API calls above, so a slow BetaSeries response never holds a lock) closes
+        // that window.
+        const createdId = await db.transaction(async (client) => {
+            await this._userSeasonRepository.lockSeasonSlot(client, userId, showId, number);
+            const stillMissing = await this._userSeasonRepository.findAnyByUserIdShowIdNumber(userId, showId, number, client);
+
+            if (stillMissing) {
+                return stillMissing;
+            }
+            return this._userSeasonRepository.create(userId, showId, number, platformId, null, client);
+        });
 
         if (!createdId) {
             throw new ServiceError(500, ERROR_FAILED_ADD_SEASON);
