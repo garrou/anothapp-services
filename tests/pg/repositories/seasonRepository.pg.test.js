@@ -62,6 +62,32 @@ describe("SeasonRepository (real Postgres)", () => {
             const res = await db.query(`SELECT * FROM users_seasons WHERE id = $1`, [userSeasonId]);
             expect(res.rowCount).toBe(1);
         });
+
+        it("keeps the pairing as declined when the friend deletes their own synced copy", async () => {
+            const ownerId = await insertUser();
+            const friendId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(ownerId, showId);
+            const ownerSeasonId = await insertUserSeason(ownerId, showId, 1);
+            await insertUserShow(friendId, showId);
+            const friendSeasonId = await insertUserSeason(friendId, showId, 1);
+            await db.query(`
+                INSERT INTO users_seasons_friends (users_season_id, friend_user_id, status_id, friend_users_season_id)
+                VALUES ($1, $2, 'accepted', $3)
+            `, [ownerSeasonId, friendId, friendSeasonId]);
+
+            const result = await repo.deleteSeasonById(friendId, friendSeasonId);
+
+            expect(result).toBe(true);
+            const link = await db.query(`
+                SELECT status_id, friend_users_season_id FROM users_seasons_friends
+                WHERE users_season_id = $1 AND friend_user_id = $2
+            `, [ownerSeasonId, friendId]);
+            expect(link.rowCount).toBe(1);
+            expect(link.rows[0]["status_id"]).toBe("declined");
+            expect(link.rows[0]["friend_users_season_id"]).toBeNull();
+        });
     });
 
     describe("updateSeason", () => {

@@ -6,7 +6,7 @@ import EpisodeService from "./episodeService.js";
 import ShowService from "./showService.js";
 import ServiceError from "../helpers/serviceError.js";
 import Validator from "../helpers/validator.js";
-import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND} from "../constants/errors.js";
 import {MAX_WATCHED_WITH} from "../constants/validation.js";
 import eventBus from "../helpers/eventBus.js";
 
@@ -164,6 +164,14 @@ export default class SeasonService {
                 showId: owned.showId, metadata: {seasonNumber: owned.number},
             });
             return;
+        }
+        // Friendship is only checked when the invite is created (updateWatchedWith) - it may have
+        // ended since (unfriend, or the invite predates it), so it's re-checked here too, otherwise
+        // a stale/declined-by-unfriend invite could be (re)accepted between two people no longer friends.
+        const stillFriends = await this._friendRepository.checkIfAlreadyFriend(owned.userId, currentUserId);
+
+        if (!stillFriends) {
+            throw new ServiceError(400, ERROR_NOT_FRIEND);
         }
         const friendUsersSeasonId = await this._showService.ensureSeasonTracked(
             currentUserId, owned.showId, owned.number, owned.platformId

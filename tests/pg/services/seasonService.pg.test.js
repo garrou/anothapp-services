@@ -198,6 +198,23 @@ describe("SeasonService (real Postgres)", () => {
 
             await expect(service.respondToWatchedWith(friendId, userSeasonId, true)).rejects.toMatchObject({ status: 409 });
         });
+
+        it("rejects accepting once the two users are no longer friends", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+            await db.query(`DELETE FROM friends WHERE fst_user_id = $1 AND sec_user_id = $2`, [userId, friendId]);
+
+            await expect(service.respondToWatchedWith(friendId, userSeasonId, true)).rejects.toMatchObject({ status: 400 });
+
+            const friendShow = await db.query(`SELECT * FROM users_shows WHERE user_id = $1 AND show_id = $2`, [friendId, showId]);
+            expect(friendShow.rowCount).toBe(0);
+        });
     });
 
     describe("getWatchedWith", () => {

@@ -20,6 +20,7 @@ const userSeasonFriendRepoMocks = vi.hoisted(() => ({
 }));
 const friendRepoMocks = vi.hoisted(() => ({
     getFriends: vi.fn(),
+    checkIfAlreadyFriend: vi.fn(),
 }));
 const eventBusMocks = vi.hoisted(() => ({
     emit: vi.fn(),
@@ -324,12 +325,14 @@ describe("SeasonService.respondToWatchedWith", () => {
 
     it("accepting ensures the friend's own viewing, links it and notifies the owner", async () => {
         userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
         showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
         userSeasonFriendRepoMocks.hasConflictingLink.mockResolvedValue(false);
         userSeasonFriendRepoMocks.accept.mockResolvedValue(true);
 
         await seasonService.respondToWatchedWith("friend-1", 7, true);
 
+        expect(friendRepoMocks.checkIfAlreadyFriend).toHaveBeenCalledWith("owner-1", "friend-1");
         expect(showServiceMocks.ensureSeasonTracked).toHaveBeenCalledWith("friend-1", 42, 1, 999);
         expect(userSeasonFriendRepoMocks.accept).toHaveBeenCalledWith(7, "friend-1", 55);
         expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with.accepted", {
@@ -337,8 +340,20 @@ describe("SeasonService.respondToWatchedWith", () => {
         });
     });
 
+    it("rejects with a 400 when accepting an invite from someone who is no longer a friend", async () => {
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue("declined");
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
+
+        await expect(seasonService.respondToWatchedWith("friend-1", 7, true)).rejects.toThrow(
+            "Vous n'êtes pas en relation avec cette personne"
+        );
+        expect(showServiceMocks.ensureSeasonTracked).not.toHaveBeenCalled();
+        expect(userSeasonFriendRepoMocks.accept).not.toHaveBeenCalled();
+    });
+
     it("rejects with a 409 when the friend's viewing already belongs to another watch-together group", async () => {
         userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
         showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
         userSeasonFriendRepoMocks.hasConflictingLink.mockResolvedValue(true);
 
@@ -348,6 +363,7 @@ describe("SeasonService.respondToWatchedWith", () => {
 
     it("throws a 500 when linking fails in the database", async () => {
         userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
         showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
         userSeasonFriendRepoMocks.hasConflictingLink.mockResolvedValue(false);
         userSeasonFriendRepoMocks.accept.mockResolvedValue(false);
