@@ -39,6 +39,15 @@ describe("AchievementListener", () => {
         );
     });
 
+    it("evaluates the same narrowed codes for episodes backfilled by joining a watch-together group", async () => {
+        eventBus.emit("episode.backfilled", { actorUserId: "user-1" });
+        await flush();
+
+        expect(achievementServiceMocks.evaluate).toHaveBeenCalledWith(
+            "user-1", ["streak", "watch_time", "shows_completed", "rewatch", "binge"]
+        );
+    });
+
     it("evaluates only shows_started/countries/kinds for a show started", async () => {
         eventBus.emit("show.started", { actorUserId: "user-1", showId: 42 });
         await flush();

@@ -254,7 +254,10 @@ export default class EpisodeService {
      * @param {number} userSeasonId the group's root viewing id
      * @param {string} rootUserId
      * @param {import("pg").PoolClient} client
-     * @returns {Promise<void>}
+     * @returns {Promise<string[]>} the ids of the members who actually received at least one
+     *   backfilled episode - the caller uses this to re-evaluate their episode-based achievements,
+     *   since these rows are inserted directly rather than through addViewing/addAllViewings, which
+     *   would otherwise be the ones emitting "episode.watched"/"episode.bulk_watched" for that
      */
     backfillLinkedViewings = async (userSeasonId, rootUserId, client) => {
         const members = [
@@ -277,17 +280,25 @@ export default class EpisodeService {
                 }
             }
         }
+        const backfilledUserIds = [];
+
         for (const member of members) {
             const alreadyWatched = new Set(watchedByMember.get(member.id).map((e) => e.episodeId));
+            let backfilled = false;
 
             for (const [episodeId, episode] of union) {
                 if (!alreadyWatched.has(episodeId)) {
                     await this._userEpisodeRepository.createIfMissing(
                         member.userId, member.id, episodeId, episode.watchedAt, episode.platformId, client
                     );
+                    backfilled = true;
                 }
             }
+            if (backfilled) {
+                backfilledUserIds.push(member.userId);
+            }
         }
+        return backfilledUserIds;
     }
 
     /**

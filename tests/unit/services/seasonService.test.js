@@ -316,6 +316,7 @@ describe("SeasonService.respondToWatchedWith", () => {
         vi.clearAllMocks();
         seasonService = new SeasonService();
         userSeasonRepoMocks.getSeasonViewingById.mockResolvedValue({userId: "owner-1", showId: 42, number: 1, platformId: 999});
+        episodeServiceMocks.backfillLinkedViewings.mockResolvedValue([]);
     });
 
     it("rejects with a 400 when userSeasonId is missing", async () => {
@@ -369,9 +370,25 @@ describe("SeasonService.respondToWatchedWith", () => {
         expect(userSeasonFriendRepoMocks.accept).toHaveBeenCalledWith(7, "friend-1", fakeClient);
         expect(watchTogetherRepoMocks.create).toHaveBeenCalledWith(7, 55, fakeClient);
         expect(episodeServiceMocks.backfillLinkedViewings).toHaveBeenCalledWith(7, "owner-1", fakeClient);
+        expect(eventBusMocks.emit).not.toHaveBeenCalledWith("episode.backfilled", expect.anything());
         expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with.accepted", {
             recipientUserId: "owner-1", actorUserId: "friend-1", showId: 42, metadata: {seasonNumber: 1},
         });
+    });
+
+    it("re-evaluates episode achievements for whoever actually received a backfilled episode", async () => {
+        userSeasonFriendRepoMocks.getStatus.mockResolvedValue(null);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
+        watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(false);
+        userSeasonFriendRepoMocks.accept.mockResolvedValue(true);
+        watchTogetherRepoMocks.create.mockResolvedValue(true);
+        episodeServiceMocks.backfillLinkedViewings.mockResolvedValue(["friend-1", "owner-1"]);
+
+        await seasonService.respondToWatchedWith("friend-1", 7, true);
+
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("episode.backfilled", {actorUserId: "friend-1"});
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("episode.backfilled", {actorUserId: "owner-1"});
     });
 
     it("rejects with a 400 when accepting an invite from someone who is no longer a friend", async () => {

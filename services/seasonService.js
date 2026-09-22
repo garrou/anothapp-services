@@ -198,7 +198,7 @@ export default class SeasonService {
         // seasons, in the same transaction, so two concurrent accepts touching either season can
         // never both pass the check before either has written - closing the race hasConflictingLink
         // would otherwise have on its own.
-        const linked = await db.transaction(async (client) => {
+        const {linked, backfilledUserIds} = await db.transaction(async (client) => {
             await this._watchTogetherRepository.lockSeasons(client, userSeasonId, friendUsersSeasonId);
             const conflict = await this._watchTogetherRepository.hasConflictingLink(userSeasonId, friendUsersSeasonId, client);
 
@@ -207,16 +207,20 @@ export default class SeasonService {
             }
             await this._userSeasonFriendRepository.accept(userSeasonId, currentUserId, client);
             const created = await this._watchTogetherRepository.create(userSeasonId, friendUsersSeasonId, client);
-
-            if (created) {
-                await this._episodeService.backfillLinkedViewings(userSeasonId, owned.userId, client);
-            }
-            return created;
+            const backfilledUserIds = created
+                ? await this._episodeService.backfillLinkedViewings(userSeasonId, owned.userId, client)
+                : [];
+            return {linked: created, backfilledUserIds};
         });
 
         if (!linked) {
             throw new ServiceError(500, "Impossible d'accepter cette invitation");
         }
+        // Backfilled rows are inserted directly, not through addViewing/addAllViewings, so they
+        // never emit episode.watched/bulk_watched themselves - this re-evaluates episode-based
+        // achievements for whoever's history actually changed, without the friend notifications
+        // those events also trigger (a historical merge from joining isn't something to notify about).
+        backfilledUserIds.forEach((userId) => eventBus.emit("episode.backfilled", {actorUserId: userId}));
         eventBus.emit("season.watched_with.accepted", {
             recipientUserId: owned.userId, actorUserId: currentUserId,
             showId: owned.showId, metadata: {seasonNumber: owned.number},
