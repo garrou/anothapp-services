@@ -350,6 +350,22 @@ describe("EpisodeService.addAllViewings", () => {
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 1, expect.any(String), 999);
         expect(userEpisodeRepoMocks.createIfMissing).not.toHaveBeenCalledWith("friend-1", 8, 2, expect.any(String), 999);
     });
+
+    it("fetches the linked viewings only once for the whole batch, not once per newly-watched episode", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([
+            { id: 1, date: past }, { id: 2, date: past }, { id: 3, date: past },
+        ]);
+        userEpisodeRepoMocks.createIfMissing.mockResolvedValue(true);
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([{ id: 8, userId: "friend-1" }]);
+
+        await episodeService.addAllViewings("user-1", 7);
+
+        expect(watchTogetherRepoMocks.getLinkedViewings).toHaveBeenCalledTimes(1);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 1, expect.any(String), 999);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 2, expect.any(String), 999);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 3, expect.any(String), 999);
+    });
 });
 
 describe("EpisodeService.updateViewing", () => {

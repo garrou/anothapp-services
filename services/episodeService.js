@@ -28,9 +28,32 @@ export default class EpisodeService {
      */
     #mirrorToLinkedViewings = async (userSeasonId, episodeId, watchedAt, platformId) => {
         const linked = await this._watchTogetherRepository.getLinkedViewings(userSeasonId);
-        await Promise.all(linked.map((viewing) =>
+        await this.#mirrorEpisodesToViewings(linked, [episodeId], watchedAt, platformId);
+    }
+
+    /**
+     * @param {number} userSeasonId
+     * @param {number[]} episodeIds
+     * @param {string} watchedAt
+     * @param {number} platformId
+     * @returns {Promise<void>}
+     */
+    #mirrorManyToLinkedViewings = async (userSeasonId, episodeIds, watchedAt, platformId) => {
+        const linked = await this._watchTogetherRepository.getLinkedViewings(userSeasonId);
+        await this.#mirrorEpisodesToViewings(linked, episodeIds, watchedAt, platformId);
+    }
+
+    /**
+     * @param {{id: number, userId: string}[]} linked
+     * @param {number[]} episodeIds
+     * @param {string} watchedAt
+     * @param {number} platformId
+     * @returns {Promise<void>}
+     */
+    #mirrorEpisodesToViewings = async (linked, episodeIds, watchedAt, platformId) => {
+        await Promise.all(linked.flatMap((viewing) => episodeIds.map((episodeId) =>
             this._userEpisodeRepository.createIfMissing(viewing.userId, viewing.id, episodeId, watchedAt, platformId)
-        ));
+        )));
     }
 
     /**
@@ -183,9 +206,9 @@ export default class EpisodeService {
                 showId: season.showId,
                 metadata: {seasonNumber: season.number, count: newlyWatched.length},
             });
-            await Promise.all(newlyWatched.map((episode) =>
-                this.#mirrorToLinkedViewings(userSeasonId, episode.id, watchedAt, season.platformId)
-            ));
+            await this.#mirrorManyToLinkedViewings(
+                userSeasonId, newlyWatched.map((episode) => episode.id), watchedAt, season.platformId
+            );
         }
     }
 
