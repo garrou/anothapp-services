@@ -198,6 +198,7 @@ CREATE TABLE watch_together_statuses (
 );
 
 INSERT INTO watch_together_statuses (id, name) VALUES
+('pending', 'En attente'),
 ('accepted', 'Acceptée'),
 ('declined', 'Refusée'),
 ('revoked', 'Terminée');
@@ -209,7 +210,7 @@ INSERT INTO watch_together_statuses (id, name) VALUES
 CREATE TABLE users_seasons_friends (
     users_season_id INTEGER NOT NULL,
     friend_user_id UUID NOT NULL,
-    status_id VARCHAR(20) DEFAULT NULL,
+    status_id VARCHAR(20) NOT NULL DEFAULT 'pending',
     FOREIGN KEY(users_season_id) REFERENCES users_seasons(id) ON DELETE CASCADE,
     FOREIGN KEY(friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(status_id) REFERENCES watch_together_statuses(id),
@@ -220,19 +221,14 @@ CREATE TABLE users_seasons_friends (
 -- Its existence alone means "active" - it carries no history and no status, and is simply
 -- deleted (never updated) when the relation ends, for any reason (leave, unfriend, either
 -- season or show deleted). Losing this row never loses the users_seasons_friends tag above.
--- One owner season can fan out to several accepted friends (Adrien -> Alice, Bob, Tom), so
--- there is no uniqueness on users_season_id - only a friend's own season can drive at most
--- one relation at a time, hence the UNIQUE on friend_users_season_id.
 CREATE TABLE watch_together (
     id SERIAL,
     users_season_id INTEGER NOT NULL,
     friend_users_season_id INTEGER NOT NULL,
-    friend_user_id UUID NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY(id),
     FOREIGN KEY(users_season_id) REFERENCES users_seasons(id) ON DELETE CASCADE,
     FOREIGN KEY(friend_users_season_id) REFERENCES users_seasons(id) ON DELETE CASCADE,
-    FOREIGN KEY(friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
     CHECK (users_season_id <> friend_users_season_id),
     UNIQUE(friend_users_season_id)
 );
@@ -739,7 +735,6 @@ CREATE INDEX idx_users_episodes_users_seasons_id ON users_episodes(users_seasons
 CREATE INDEX idx_friends_sec_user_id ON friends(sec_user_id);
 CREATE INDEX idx_users_seasons_friends_friend ON users_seasons_friends(friend_user_id);
 CREATE INDEX idx_watch_together_users_season_id ON watch_together(users_season_id);
-CREATE INDEX idx_watch_together_friend_user_id ON watch_together(friend_user_id);
 CREATE INDEX idx_playlists_user_id ON playlists(user_id);
 CREATE INDEX idx_notifications_recipient_unread ON notifications(recipient_user_id, read_at);
 CREATE INDEX idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);

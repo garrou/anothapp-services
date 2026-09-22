@@ -158,8 +158,8 @@ describe("SeasonService (real Postgres)", () => {
             expect(friendSeason.rows[0]["platform_id"]).toBe(1);
             const tag = await db.query(`SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
             expect(tag.rows[0]["status_id"]).toBe("accepted");
-            const relation = await db.query(`SELECT friend_users_season_id FROM watch_together WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
-            expect(relation.rows[0]["friend_users_season_id"]).toBe(friendSeason.rows[0].id);
+            const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1 AND friend_users_season_id = $2`, [userSeasonId, friendSeason.rows[0].id]);
+            expect(relation.rowCount).toBe(1);
         });
 
         it("a single owner can share the same season with several friends at once", async () => {
@@ -179,7 +179,12 @@ describe("SeasonService (real Postgres)", () => {
 
             expect(await service.getWatchedWith(friendA, "active")).toHaveLength(1);
             expect(await service.getWatchedWith(friendB, "active")).toHaveLength(1);
-            const relations = await db.query(`SELECT friend_user_id FROM watch_together WHERE users_season_id = $1`, [userSeasonId]);
+            const relations = await db.query(`
+                SELECT friend_season.user_id AS friend_user_id
+                FROM watch_together wt
+                JOIN users_seasons friend_season ON friend_season.id = wt.friend_users_season_id
+                WHERE wt.users_season_id = $1
+            `, [userSeasonId]);
             expect(relations.rows.map((r) => r["friend_user_id"]).sort()).toEqual([friendA, friendB].sort());
         });
 
@@ -290,7 +295,7 @@ describe("SeasonService (real Postgres)", () => {
             expect(await service.getWatchedWith(friendId, "active")).toEqual([]);
             const tag = await db.query(`SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
             expect(tag.rows[0]["status_id"]).toBe("revoked");
-            const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
+            const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1`, [userSeasonId]);
             expect(relation.rowCount).toBe(0);
         });
 

@@ -23,7 +23,14 @@ const watchTogetherRepoMocks = vi.hoisted(() => ({
 const eventBusMocks = vi.hoisted(() => ({
     emit: vi.fn(),
 }));
+const dbMocks = vi.hoisted(() => ({
+    transaction: vi.fn(),
+}));
+const fakeClient = vi.hoisted(() => ({}));
 
+vi.mock("../../../config/db.js", () => ({
+    default: dbMocks,
+}));
 vi.mock("../../../repositories/friendRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return friendRepoMocks; }),
 }));
@@ -39,6 +46,8 @@ vi.mock("../../../repositories/watchTogetherRepository.js", () => ({
 vi.mock("../../../helpers/eventBus.js", () => ({
     default: eventBusMocks,
 }));
+
+dbMocks.transaction.mockImplementation((callback) => callback(fakeClient));
 
 describe("FriendService.sendFriendRequest", () => {
     let friendService;
@@ -179,18 +188,12 @@ describe("FriendService.deleteFriend", () => {
         expect(playlistCollaboratorRepoMocks.removeAllBetween).toHaveBeenCalledWith("user-1", "user-2");
     });
 
-    it("marks the historical watch-together tag declined/revoked between the two users, in either direction", async () => {
+    it("marks the historical watch-together tag declined/revoked and ends the live relation, in the same transaction, between the two users in either direction", async () => {
         friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
 
         await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
-        expect(userSeasonFriendRepoMocks.declineAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2");
-    });
-
-    it("ends any live watch-together relation between the two users, in either direction", async () => {
-        friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
-
-        await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
-        expect(watchTogetherRepoMocks.removeAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2");
+        expect(userSeasonFriendRepoMocks.declineAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2", fakeClient);
+        expect(watchTogetherRepoMocks.removeAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2", fakeClient);
     });
 });
 

@@ -1,3 +1,4 @@
+import db from "../config/db.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import PlaylistCollaboratorRepository from "../repositories/playlistCollaboratorRepository.js";
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
@@ -80,9 +81,13 @@ export default class FriendService {
         // friendship - revoke them in both directions so neither outlives the relationship it
         // depended on. Like every other revoke path, this never touches episodes already synced,
         // and it keeps the historical tag (declined/revoked), only the live relation is removed.
+        // The tag and the relation are updated in one transaction so a failure between the two
+        // can never leave one revoked while the other keeps routing episodes.
         await this._playlistCollaboratorRepository.removeAllBetween(currentUserId, userId);
-        await this._userSeasonFriendRepository.declineAllBetweenUsers(currentUserId, userId);
-        await this._watchTogetherRepository.removeAllBetweenUsers(currentUserId, userId);
+        await db.transaction(async (client) => {
+            await this._userSeasonFriendRepository.declineAllBetweenUsers(currentUserId, userId, client);
+            await this._watchTogetherRepository.removeAllBetweenUsers(currentUserId, userId, client);
+        });
 
         if (!deleted.wasAccepted && deleted.requesterId !== currentUserId) {
             eventBus.emit("friend.declined", {recipientUserId: deleted.requesterId, actorUserId: currentUserId});

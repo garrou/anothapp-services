@@ -17,11 +17,16 @@ const userSeasonFriendRepoMocks = vi.hoisted(() => ({
     getPendingForUser: vi.fn(),
 }));
 const watchTogetherRepoMocks = vi.hoisted(() => ({
+    lockSeasons: vi.fn(),
     create: vi.fn(),
     remove: vi.fn(),
     hasConflictingLink: vi.fn(),
     getActiveForUser: vi.fn(),
 }));
+const dbMocks = vi.hoisted(() => ({
+    transaction: vi.fn(),
+}));
+const fakeClient = vi.hoisted(() => ({}));
 const friendRepoMocks = vi.hoisted(() => ({
     getFriends: vi.fn(),
     checkIfAlreadyFriend: vi.fn(),
@@ -38,6 +43,9 @@ const showServiceMocks = vi.hoisted(() => ({
     ensureSeasonTracked: vi.fn(),
 }));
 
+vi.mock("../../../config/db.js", () => ({
+    default: dbMocks,
+}));
 vi.mock("../../../repositories/seasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return seasonRepoMocks; }),
 }));
@@ -62,6 +70,10 @@ vi.mock("../../../services/episodeService.js", () => ({
 vi.mock("../../../services/showService.js", () => ({
     default: vi.fn().mockImplementation(function () { return showServiceMocks; }),
 }));
+
+// db.transaction just runs the callback against a shared fake client - clearAllMocks() (used by
+// every describe block below) clears call history but keeps this implementation in place.
+dbMocks.transaction.mockImplementation((callback) => callback(fakeClient));
 
 describe("SeasonService.deleteBySeasonId", () => {
     let seasonService;
@@ -226,7 +238,7 @@ describe("SeasonService.updateWatchedWith", () => {
 
         await seasonService.updateWatchedWith("user-1", 7, ["friend-1", "friend-1", "friend-2"]);
 
-        expect(userSeasonFriendRepoMocks.setForUserSeasonId).toHaveBeenCalledWith(7, ["friend-1", "friend-2"]);
+        expect(userSeasonFriendRepoMocks.setForUserSeasonId).toHaveBeenCalledWith(7, ["friend-1", "friend-2"], fakeClient);
         expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with", {
             actorUserId: "user-1",
             recipientIds: ["friend-1", "friend-2"],
@@ -249,16 +261,16 @@ describe("SeasonService.updateWatchedWith", () => {
         await seasonService.updateWatchedWith("user-1", 7, []);
 
         expect(friendRepoMocks.getFriends).not.toHaveBeenCalled();
-        expect(userSeasonFriendRepoMocks.setForUserSeasonId).toHaveBeenCalledWith(7, []);
+        expect(userSeasonFriendRepoMocks.setForUserSeasonId).toHaveBeenCalledWith(7, [], fakeClient);
         expect(eventBusMocks.emit).not.toHaveBeenCalled();
     });
 
-    it("ends the live relation for a friend dropped from the list while their invite was accepted", async () => {
+    it("ends the live relation for a friend dropped from the list while their invite was accepted, in the same transaction as the tag update", async () => {
         userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: [], revoked: ["friend-1"]});
 
         await seasonService.updateWatchedWith("user-1", 7, []);
 
-        expect(watchTogetherRepoMocks.remove).toHaveBeenCalledWith(7, "friend-1");
+        expect(watchTogetherRepoMocks.remove).toHaveBeenCalledWith(7, "friend-1", fakeClient);
     });
 });
 
@@ -331,8 +343,8 @@ describe("SeasonService.respondToWatchedWith", () => {
 
         await seasonService.respondToWatchedWith("friend-1", 7, false);
 
-        expect(userSeasonFriendRepoMocks.decline).toHaveBeenCalledWith(7, "friend-1");
-        expect(watchTogetherRepoMocks.remove).toHaveBeenCalledWith(7, "friend-1");
+        expect(userSeasonFriendRepoMocks.decline).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+        expect(watchTogetherRepoMocks.remove).toHaveBeenCalledWith(7, "friend-1", fakeClient);
         expect(showServiceMocks.ensureSeasonTracked).not.toHaveBeenCalled();
         expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with.declined", {
             recipientUserId: "owner-1", actorUserId: "friend-1", showId: 42, metadata: {seasonNumber: 1},
@@ -351,9 +363,10 @@ describe("SeasonService.respondToWatchedWith", () => {
 
         expect(friendRepoMocks.checkIfAlreadyFriend).toHaveBeenCalledWith("owner-1", "friend-1");
         expect(showServiceMocks.ensureSeasonTracked).toHaveBeenCalledWith("friend-1", 42, 1, 999);
-        expect(watchTogetherRepoMocks.hasConflictingLink).toHaveBeenCalledWith(7, 55);
-        expect(userSeasonFriendRepoMocks.accept).toHaveBeenCalledWith(7, "friend-1");
-        expect(watchTogetherRepoMocks.create).toHaveBeenCalledWith(7, 55, "friend-1");
+        expect(watchTogetherRepoMocks.lockSeasons).toHaveBeenCalledWith(fakeClient, 7, 55);
+        expect(watchTogetherRepoMocks.hasConflictingLink).toHaveBeenCalledWith(7, 55, fakeClient);
+        expect(userSeasonFriendRepoMocks.accept).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+        expect(watchTogetherRepoMocks.create).toHaveBeenCalledWith(7, 55, fakeClient);
         expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with.accepted", {
             recipientUserId: "owner-1", actorUserId: "friend-1", showId: 42, metadata: {seasonNumber: 1},
         });

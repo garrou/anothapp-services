@@ -1,3 +1,4 @@
+import db from "../config/db.js";
 import SeasonRepository from "../repositories/seasonRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
@@ -114,11 +115,15 @@ export default class SeasonService {
                 throw new ServiceError(400, "Vous ne pouvez taguer que des amis");
             }
         }
-        const {invited, revoked} = await this._userSeasonFriendRepository.setForUserSeasonId(seasonId, uniqueFriendIds);
-
         // A friend dropped from the list while their invite was accepted loses the live sync too -
         // the historical tag stays (now "revoked"), only the relation actually routing episodes ends.
-        await Promise.all(revoked.map((friendId) => this._watchTogetherRepository.remove(seasonId, friendId)));
+        // Both writes happen in one transaction so a friend can never end up "revoked" with their
+        // relation still routing episodes, or vice versa.
+        const {invited} = await db.transaction(async (client) => {
+            const result = await this._userSeasonFriendRepository.setForUserSeasonId(seasonId, uniqueFriendIds, client);
+            await Promise.all(result.revoked.map((friendId) => this._watchTogetherRepository.remove(seasonId, friendId, client)));
+            return result;
+        });
 
         if (invited.length) {
             eventBus.emit("season.watched_with", {
@@ -166,8 +171,12 @@ export default class SeasonService {
         if (!accepted) {
             // Marking declined here always keeps the historical tag (never deleted); revoking the
             // live relation is a plain no-op when the invite was never accepted in the first place.
-            await this._userSeasonFriendRepository.decline(userSeasonId, currentUserId);
-            await this._watchTogetherRepository.remove(userSeasonId, currentUserId);
+            // Both writes happen in one transaction: the tag can never end up "revoked" while the
+            // relation is still routing episodes, or the other way around.
+            await db.transaction(async (client) => {
+                await this._userSeasonFriendRepository.decline(userSeasonId, currentUserId, client);
+                await this._watchTogetherRepository.remove(userSeasonId, currentUserId, client);
+            });
             eventBus.emit("season.watched_with.declined", {
                 recipientUserId: owned.userId, actorUserId: currentUserId,
                 showId: owned.showId, metadata: {seasonNumber: owned.number},
@@ -185,13 +194,20 @@ export default class SeasonService {
         const friendUsersSeasonId = await this._showService.ensureSeasonTracked(
             currentUserId, owned.showId, owned.number, owned.platformId
         );
-        const conflict = await this._watchTogetherRepository.hasConflictingLink(userSeasonId, friendUsersSeasonId);
+        // The conflict check and the two writes below all run under one advisory lock on both
+        // seasons, in the same transaction, so two concurrent accepts touching either season can
+        // never both pass the check before either has written - closing the race hasConflictingLink
+        // would otherwise have on its own.
+        const linked = await db.transaction(async (client) => {
+            await this._watchTogetherRepository.lockSeasons(client, userSeasonId, friendUsersSeasonId);
+            const conflict = await this._watchTogetherRepository.hasConflictingLink(userSeasonId, friendUsersSeasonId, client);
 
-        if (conflict) {
-            throw new ServiceError(409, "Ce visionnage participe déjà à un autre visionnage partagé");
-        }
-        await this._userSeasonFriendRepository.accept(userSeasonId, currentUserId);
-        const linked = await this._watchTogetherRepository.create(userSeasonId, friendUsersSeasonId, currentUserId);
+            if (conflict) {
+                throw new ServiceError(409, "Ce visionnage participe déjà à un autre visionnage partagé");
+            }
+            await this._userSeasonFriendRepository.accept(userSeasonId, currentUserId, client);
+            return this._watchTogetherRepository.create(userSeasonId, friendUsersSeasonId, client);
+        });
 
         if (!linked) {
             throw new ServiceError(500, "Impossible d'accepter cette invitation");

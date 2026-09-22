@@ -79,7 +79,7 @@ describe("UserSeasonFriendRepository.setForUserSeasonId", () => {
     });
 
     it("marks a pending friend dropped from the list as declined instead of deleting the row", async () => {
-        const client = mockCurrent([{friend_user_id: "user-2", status_id: null}]);
+        const client = mockCurrent([{friend_user_id: "user-2", status_id: "pending"}]);
 
         const {invited, revoked} = await repo.setForUserSeasonId(1, []);
 
@@ -111,7 +111,7 @@ describe("UserSeasonFriendRepository.setForUserSeasonId", () => {
 
         const {invited} = await repo.setForUserSeasonId(1, ["user-2"]);
 
-        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = NULL"), [1, "user-2"]);
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("SET status_id = 'pending'"), [1, "user-2"]);
         expect(invited).toEqual(["user-2"]);
     });
 
@@ -123,6 +123,18 @@ describe("UserSeasonFriendRepository.setForUserSeasonId", () => {
         expect(client.query).toHaveBeenCalledTimes(1);
         expect(invited).toEqual([]);
         expect(revoked).toEqual([]);
+    });
+
+    it("runs on a provided client instead of opening its own transaction, so it can be combined with another write atomically", async () => {
+        const providedClient = {query: vi.fn((sql) => sql.includes("SELECT friend_user_id")
+            ? Promise.resolve({rows: []})
+            : Promise.resolve({rowCount: 1}))};
+
+        const {invited} = await repo.setForUserSeasonId(1, ["user-2"], providedClient);
+
+        expect(db.transaction).not.toHaveBeenCalled();
+        expect(providedClient.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users_seasons_friends"), [1, "user-2"]);
+        expect(invited).toEqual(["user-2"]);
     });
 });
 
@@ -176,6 +188,16 @@ describe("UserSeasonFriendRepository.accept / decline", () => {
         expect(db.query).toHaveBeenCalledWith(expect.stringContaining("WHEN status_id = 'accepted' THEN 'revoked' ELSE 'declined'"), [1, "user-2"]);
         expect(result).toBe(true);
     });
+
+    it("accept/decline run on a provided client instead of the shared pool, when given one", async () => {
+        const client = {query: vi.fn().mockResolvedValue({rowCount: 1})};
+
+        await repo.accept(1, "user-2", client);
+        await repo.decline(1, "user-2", client);
+
+        expect(client.query).toHaveBeenCalledTimes(2);
+        expect(db.query).not.toHaveBeenCalled();
+    });
 });
 
 describe("UserSeasonFriendRepository.declineAllBetweenUsers", () => {
@@ -192,6 +214,15 @@ describe("UserSeasonFriendRepository.declineAllBetweenUsers", () => {
         await repo.declineAllBetweenUsers("user-1", "user-2");
 
         expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", "user-2"]);
+    });
+
+    it("runs on a provided client instead of the shared pool, when given one", async () => {
+        const client = {query: vi.fn().mockResolvedValue({rowCount: 1})};
+
+        await repo.declineAllBetweenUsers("user-1", "user-2", client);
+
+        expect(client.query).toHaveBeenCalled();
+        expect(db.query).not.toHaveBeenCalled();
     });
 });
 

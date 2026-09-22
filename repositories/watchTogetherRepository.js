@@ -3,16 +3,32 @@ import db from "../config/db.js";
 export default class WatchTogetherRepository {
 
     /**
+     * Serializes any accept touching either of these two seasons, whatever their partner
+     * season is in each attempt - sorted order avoids deadlocks between two transactions
+     * locking the same pair the other way around. Held only for the lifetime of `client`'s
+     * transaction (pg_advisory_XACT_lock), released automatically on commit or rollback.
+     * @param {import("pg").PoolClient} client
+     * @param {number} seasonIdA
+     * @param {number} seasonIdB
+     * @returns {Promise<void>}
+     */
+    lockSeasons = async (client, seasonIdA, seasonIdB) => {
+        const [first, second] = [seasonIdA, seasonIdB].sort((a, b) => a - b);
+        await client.query(`SELECT pg_advisory_xact_lock($1::bigint)`, [first]);
+        await client.query(`SELECT pg_advisory_xact_lock($1::bigint)`, [second]);
+    }
+
+    /**
      * @param {number} userSeasonId
      * @param {number} friendUsersSeasonId
-     * @param {string} friendUserId
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<boolean>}
      */
-    create = async (userSeasonId, friendUsersSeasonId, friendUserId) => {
-        const res = await db.query(`
-            INSERT INTO watch_together (users_season_id, friend_users_season_id, friend_user_id)
-            VALUES ($1, $2, $3)
-        `, [userSeasonId, friendUsersSeasonId, friendUserId]);
+    create = async (userSeasonId, friendUsersSeasonId, client = db) => {
+        const res = await client.query(`
+            INSERT INTO watch_together (users_season_id, friend_users_season_id)
+            VALUES ($1, $2)
+        `, [userSeasonId, friendUsersSeasonId]);
         return res.rowCount === 1;
     }
 
@@ -21,25 +37,29 @@ export default class WatchTogetherRepository {
      * error) when the pairing was never accepted, e.g. declining a still-pending invite.
      * @param {number} userSeasonId
      * @param {string} friendUserId
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<void>}
      */
-    remove = async (userSeasonId, friendUserId) => {
-        await db.query(`
-            DELETE FROM watch_together WHERE users_season_id = $1 AND friend_user_id = $2
+    remove = async (userSeasonId, friendUserId, client = db) => {
+        await client.query(`
+            DELETE FROM watch_together
+            WHERE users_season_id = $1
+              AND friend_users_season_id IN (SELECT id FROM users_seasons WHERE user_id = $2)
         `, [userSeasonId, friendUserId]);
     }
 
     /**
      * @param {string} userIdA
      * @param {string} userIdB
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<void>}
      */
-    removeAllBetweenUsers = async (userIdA, userIdB) => {
-        await db.query(`
+    removeAllBetweenUsers = async (userIdA, userIdB, client = db) => {
+        await client.query(`
             DELETE FROM watch_together wt
-            USING users_seasons us
-            WHERE wt.users_season_id = us.id
-              AND ((us.user_id = $1 AND wt.friend_user_id = $2) OR (us.user_id = $2 AND wt.friend_user_id = $1))
+            USING users_seasons us, users_seasons friend_us
+            WHERE wt.users_season_id = us.id AND wt.friend_users_season_id = friend_us.id
+              AND ((us.user_id = $1 AND friend_us.user_id = $2) OR (us.user_id = $2 AND friend_us.user_id = $1))
         `, [userIdA, userIdB]);
     }
 
@@ -49,12 +69,15 @@ export default class WatchTogetherRepository {
      * friends, before it's linked as a new friend-slot - otherwise the fan-out graph becomes
      * ambiguous. Being a root with OTHER accepted friends is fine and expected (one owner can
      * share with several friends at once), so that case is deliberately not checked here.
+     * Call this only after `lockSeasons` has locked both ids in the same transaction, otherwise
+     * it's subject to a check-then-act race against a concurrent accept.
      * @param {number} userSeasonId the viewing the invite belongs to (the prospective new root)
      * @param {number} friendUsersSeasonId the friend's own viewing (the prospective new leaf)
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<boolean>}
      */
-    hasConflictingLink = async (userSeasonId, friendUsersSeasonId) => {
-        const res = await db.query(`
+    hasConflictingLink = async (userSeasonId, friendUsersSeasonId, client = db) => {
+        const res = await client.query(`
             SELECT EXISTS(
                 SELECT 1 FROM watch_together WHERE friend_users_season_id = $1
             ) OR EXISTS(
@@ -77,9 +100,10 @@ export default class WatchTogetherRepository {
                    owner.id AS owner_id, owner.username AS owner_username, owner.picture AS owner_picture
             FROM watch_together wt
             JOIN users_seasons us ON us.id = wt.users_season_id
+            JOIN users_seasons friend_season ON friend_season.id = wt.friend_users_season_id
             JOIN shows s ON s.id = us.show_id
             JOIN users owner ON owner.id = us.user_id
-            WHERE wt.friend_user_id = $1
+            WHERE friend_season.user_id = $1
             ORDER BY wt.created_at DESC
         `, [userId]);
         return res.rows.map((row) => ({

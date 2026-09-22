@@ -43,7 +43,7 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
             const result = await repo.getByUserSeasonIds([userSeasonId]).then((m) => m.get(userSeasonId));
             expect(result.map((f) => f.username).sort()).toEqual(["FriendA", "FriendB"]);
             expect(result.find((f) => f.username === "FriendA").status).toBe("declined");
-            expect(result.find((f) => f.username === "FriendB").status).toBeNull();
+            expect(result.find((f) => f.username === "FriendB").status).toBe("pending");
         });
 
         it("keeps an accepted friend dropped from the list marked revoked, and reports them for the caller to end their live relation", async () => {
@@ -93,7 +93,7 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
 
             expect(invited).toEqual([friendA]);
             const result = await repo.getByUserSeasonIds([userSeasonId]).then((m) => m.get(userSeasonId));
-            expect(result[0].status).toBeNull();
+            expect(result[0].status).toBe("pending");
         });
 
         it("getByUserSeasonIds returns an empty map for an empty list", async () => {
@@ -177,7 +177,7 @@ describe("UserSeasonFriendRepository (real Postgres)", () => {
 
             const result = await repo.getByUserSeasonIds([userSeasonId]).then((m) => m.get(userSeasonId));
             expect(result.find((f) => f.id === friendId).status).toBe("revoked");
-            expect(result.find((f) => f.id === otherFriendId).status).toBeNull();
+            expect(result.find((f) => f.id === otherFriendId).status).toBe("pending");
         });
     });
 

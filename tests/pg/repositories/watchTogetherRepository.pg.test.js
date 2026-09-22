@@ -17,6 +17,22 @@ describe("WatchTogetherRepository (real Postgres)", () => {
         friendRepo = new UserSeasonFriendRepository();
     });
 
+    describe("lockSeasons", () => {
+        it("locks both seasons within a transaction without erroring, regardless of the order given", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const seasonA = await insertUserSeason(userId, showId, 1);
+            const seasonB = await insertUserSeason(userId, showId, 1);
+
+            await db.transaction(async (client) => {
+                await repo.lockSeasons(client, seasonA, seasonB);
+                await repo.lockSeasons(client, seasonB, seasonA);
+            });
+        });
+    });
+
     describe("create / remove", () => {
         it("creates a relation between two viewings", async () => {
             const userId = await insertUser();
@@ -28,7 +44,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             await insertUserShow(friendId, showId);
             const friendSeasonId = await insertUserSeason(friendId, showId, 1);
 
-            const created = await repo.create(userSeasonId, friendSeasonId, friendId);
+            const created = await repo.create(userSeasonId, friendSeasonId);
 
             expect(created).toBe(true);
             const res = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1`, [userSeasonId]);
@@ -46,7 +62,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const friendSeasonId = await insertUserSeason(friendId, showId, 1);
             await friendRepo.setForUserSeasonId(userSeasonId, [friendId]);
             await friendRepo.accept(userSeasonId, friendId);
-            await repo.create(userSeasonId, friendSeasonId, friendId);
+            await repo.create(userSeasonId, friendSeasonId);
 
             await repo.remove(userSeasonId, friendId);
 
@@ -80,12 +96,17 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const friendSeasonId = await insertUserSeason(friendId, showId, 1);
             await insertUserShow(otherFriendId, showId);
             const otherFriendSeasonId = await insertUserSeason(otherFriendId, showId, 1);
-            await repo.create(userSeasonId, friendSeasonId, friendId);
-            await repo.create(userSeasonId, otherFriendSeasonId, otherFriendId);
+            await repo.create(userSeasonId, friendSeasonId);
+            await repo.create(userSeasonId, otherFriendSeasonId);
 
             await repo.removeAllBetweenUsers(userId, friendId);
 
-            const remaining = await db.query(`SELECT friend_user_id FROM watch_together WHERE users_season_id = $1`, [userSeasonId]);
+            const remaining = await db.query(`
+                SELECT friend_season.user_id AS friend_user_id
+                FROM watch_together wt
+                JOIN users_seasons friend_season ON friend_season.id = wt.friend_users_season_id
+                WHERE wt.users_season_id = $1
+            `, [userSeasonId]);
             expect(remaining.rows.map((r) => r["friend_user_id"])).toEqual([otherFriendId]);
         });
     });
@@ -110,7 +131,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const ownerSeasonId = await insertUserSeason(ownerId, showId, 1);
             await insertUserShow(friendId, showId);
             const friendSeasonId = await insertUserSeason(friendId, showId, 1);
-            await repo.create(ownerSeasonId, friendSeasonId, friendId);
+            await repo.create(ownerSeasonId, friendSeasonId);
 
             const newOwnerId = await insertUser();
             await insertUserShow(newOwnerId, showId);
@@ -129,7 +150,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const friendSeasonId = await insertUserSeason(friendId, showId, 1);
             await insertUserShow(subFriendId, showId);
             const subFriendSeasonId = await insertUserSeason(subFriendId, showId, 1);
-            await repo.create(friendSeasonId, subFriendSeasonId, subFriendId);
+            await repo.create(friendSeasonId, subFriendSeasonId);
 
             await insertUserShow(ownerId, showId);
             const ownerSeasonId = await insertUserSeason(ownerId, showId, 1);
@@ -146,7 +167,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const rootSeasonId = await insertUserSeason(rootOwnerId, showId, 1);
             await insertUserShow(middleUserId, showId);
             const middleSeasonId = await insertUserSeason(middleUserId, showId, 1);
-            await repo.create(rootSeasonId, middleSeasonId, middleUserId);
+            await repo.create(rootSeasonId, middleSeasonId);
 
             const newFriendId = await insertUser();
             await insertUserShow(newFriendId, showId);
@@ -165,7 +186,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const ownerSeasonId = await insertUserSeason(ownerId, showId, 1);
             await insertUserShow(friendA, showId);
             const friendASeasonId = await insertUserSeason(friendA, showId, 1);
-            await repo.create(ownerSeasonId, friendASeasonId, friendA);
+            await repo.create(ownerSeasonId, friendASeasonId);
 
             await insertUserShow(friendB, showId);
             const friendBSeasonId = await insertUserSeason(friendB, showId, 1);
@@ -184,7 +205,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const userSeasonId = await insertUserSeason(userId, showId, 2);
             await insertUserShow(friendId, showId);
             const friendSeasonId = await insertUserSeason(friendId, showId, 2);
-            await repo.create(userSeasonId, friendSeasonId, friendId);
+            await repo.create(userSeasonId, friendSeasonId);
 
             const active = await repo.getActiveForUser(friendId);
 
@@ -203,7 +224,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const userSeasonId = await insertUserSeason(userId, showId, 1);
             await insertUserShow(friendId, showId);
             const friendSeasonId = await insertUserSeason(friendId, showId, 1);
-            await repo.create(userSeasonId, friendSeasonId, friendId);
+            await repo.create(userSeasonId, friendSeasonId);
             await repo.remove(userSeasonId, friendId);
 
             expect(await repo.getActiveForUser(friendId)).toEqual([]);
@@ -220,7 +241,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const userSeasonId = await insertUserSeason(userId, showId, 1);
             await insertUserShow(friendId, showId);
             const friendSeasonId = await insertUserSeason(friendId, showId, 1);
-            await repo.create(userSeasonId, friendSeasonId, friendId);
+            await repo.create(userSeasonId, friendSeasonId);
 
             const linked = await repo.getLinkedViewings(userSeasonId);
 
@@ -236,7 +257,7 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const userSeasonId = await insertUserSeason(userId, showId, 1);
             await insertUserShow(friendId, showId);
             const friendSeasonId = await insertUserSeason(friendId, showId, 1);
-            await repo.create(userSeasonId, friendSeasonId, friendId);
+            await repo.create(userSeasonId, friendSeasonId);
 
             const linked = await repo.getLinkedViewings(friendSeasonId);
 
@@ -255,8 +276,8 @@ describe("WatchTogetherRepository (real Postgres)", () => {
             const friendASeasonId = await insertUserSeason(friendA, showId, 1);
             await insertUserShow(friendB, showId);
             const friendBSeasonId = await insertUserSeason(friendB, showId, 1);
-            await repo.create(ownerSeasonId, friendASeasonId, friendA);
-            await repo.create(ownerSeasonId, friendBSeasonId, friendB);
+            await repo.create(ownerSeasonId, friendASeasonId);
+            await repo.create(ownerSeasonId, friendBSeasonId);
 
             const linked = await repo.getLinkedViewings(ownerSeasonId);
 

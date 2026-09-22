@@ -77,9 +77,9 @@ describe("SeasonRepository (real Postgres)", () => {
                 VALUES ($1, $2, 'accepted')
             `, [ownerSeasonId, friendId]);
             await db.query(`
-                INSERT INTO watch_together (users_season_id, friend_users_season_id, friend_user_id)
-                VALUES ($1, $2, $3)
-            `, [ownerSeasonId, friendSeasonId, friendId]);
+                INSERT INTO watch_together (users_season_id, friend_users_season_id)
+                VALUES ($1, $2)
+            `, [ownerSeasonId, friendSeasonId]);
 
             const result = await repo.deleteSeasonById(friendId, friendSeasonId);
 

@@ -120,7 +120,7 @@ describe("FriendService (real Postgres)", () => {
 
             const tag = await db.query(`SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, otherId]);
             expect(tag.rows[0]["status_id"]).toBe("revoked");
-            const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, otherId]);
+            const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1`, [userSeasonId]);
             expect(relation.rowCount).toBe(0);
         });
     });
