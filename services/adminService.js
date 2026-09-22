@@ -4,6 +4,7 @@ import RefreshTokenRepository from "../repositories/refreshTokenRepository.js";
 import DatabaseRepository from "../repositories/databaseRepository.js";
 import AdminRepository from "../repositories/adminRepository.js";
 import AdminActionRepository from "../repositories/adminActionRepository.js";
+import ServiceCallCountRepository from "../repositories/serviceCallCountRepository.js";
 import HealthService from "./healthService.js";
 
 const NEW_USERS_WINDOW_DAYS = 14;
@@ -20,6 +21,7 @@ export default class AdminService {
         this._databaseRepository = new DatabaseRepository();
         this._adminRepository = new AdminRepository();
         this._adminActionRepository = new AdminActionRepository();
+        this._serviceCallCountRepository = new ServiceCallCountRepository();
         this._healthService = new HealthService();
     }
 
@@ -28,11 +30,12 @@ export default class AdminService {
      */
     getDashboard = async () => {
         const [
-            userCount, databaseSize, newUsersByDay, pendingDeletions, anonymizedAccounts,
-            activeSessions, loginAttemptLimit, recentActions, health,
+            userCount, databaseSize, databaseSizeHistory, newUsersByDay, pendingDeletions, anonymizedAccounts,
+            activeSessions, loginAttemptLimit, recentActions, health, serviceCalls,
         ] = await Promise.all([
             this._userRepository.getUserCount(),
             this._databaseRepository.getDatabaseSize(),
+            this._databaseRepository.getSizeHistory(),
             this._adminRepository.getNewUsersByDay(NEW_USERS_WINDOW_DAYS),
             this._adminRepository.getPendingDeletionsCount(),
             this._adminRepository.getAnonymizedCount(),
@@ -40,13 +43,15 @@ export default class AdminService {
             this._adminRepository.getLoginChallengesReachingAttemptLimit(LOGIN_ATTEMPT_LIMIT_WINDOW_DAYS),
             this._adminActionRepository.getRecent(RECENT_ACTIONS_LIMIT),
             this._healthService.check(),
+            this._serviceCallCountRepository.getAll(),
         ]);
         return {
             users: { total: userCount, newByDay: newUsersByDay, pendingDeletions, anonymized: anonymizedAccounts },
             sessions: { active: activeSessions, loginAttemptLimit },
-            database: { size: databaseSize },
+            database: { size: databaseSize, history: databaseSizeHistory },
             health,
             recentActions,
+            serviceCalls,
         };
     }
 

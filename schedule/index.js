@@ -16,6 +16,9 @@ import anonymizeDeletedAccounts from "./tasks/anonymizeDeletedAccounts.js";
 import sendTelegramMessage from "./lib/notify.js";
 import {formatReport} from "./lib/report.js";
 import { isProdMode } from "../helpers/utils.js";
+import AdminListener from "../services/adminListener.js";
+
+new AdminListener();
 
 const TASKS = {
     platforms: updatePlatforms,

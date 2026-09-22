@@ -1,5 +1,6 @@
 import transporter from "../config/mailer.js";
 import { isDevMode } from "../helpers/utils.js";
+import eventBus from "../helpers/eventBus.js";
 
 export default class MailerService {
 
@@ -16,6 +17,7 @@ export default class MailerService {
             }
             return;
         }
+        eventBus.emit("mailer.sent");
         await transporter.sendMail({ from: process.env.EMAIL_FROM, to, subject, html });
     }
 

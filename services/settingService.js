@@ -17,6 +17,7 @@ import {
     DUPLICATE_ERROR_CODE, ERROR_INVALID_REQUEST, ERROR_INVALID_SIGNATURE, TOO_MUCH_EXPORT_REQUEST
 } from "../constants/errors.js";
 import mapWithConcurrency from "../schedule/lib/concurrency.js";
+import eventBus from "../helpers/eventBus.js";
 
 const CONCURRENCY = parseInt(process.env.CRON_CONCURRENCY ?? "8", 10);
 
@@ -41,6 +42,7 @@ export default class SettingService {
      * @returns {Promise<[string, ExportData]>}
      */
     exportData = async (userId) => {
+        eventBus.emit("settings.exported");
         const canExport = await this._userService.markExported(userId);
 
         if (!canExport) {
@@ -98,6 +100,8 @@ export default class SettingService {
      * @returns {Promise<Object>} a per-category summary of what was imported
      */
     importData = async (userId, payload) => {
+        eventBus.emit("settings.imported");
+
         if (!Validator.isValidImportFile(payload)) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }

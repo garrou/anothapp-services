@@ -130,6 +130,20 @@ CREATE TABLE admin_actions (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE service_call_counts (
+    service VARCHAR(20),
+    day DATE,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(service, day)
+);
+
+CREATE TABLE database_size_history (
+    id SERIAL,
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    size_bytes BIGINT NOT NULL,
+    PRIMARY KEY(id)
+);
+
 CREATE TABLE shows (
     id INTEGER,
     title VARCHAR(255) UNIQUE NOT NULL,
@@ -745,4 +759,5 @@ CREATE INDEX idx_seasons_show_id ON seasons(show_id);
 CREATE INDEX idx_playlists_collaborators_user_id ON playlists_collaborators(user_id);
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 CREATE INDEX idx_admin_actions_created_at ON admin_actions(created_at DESC);
+CREATE INDEX idx_database_size_history_recorded_at ON database_size_history(recorded_at);
 CREATE UNIQUE INDEX idx_friends_unordered_pair ON friends (LEAST(fst_user_id, sec_user_id), GREATEST(fst_user_id, sec_user_id));
