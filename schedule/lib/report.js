@@ -88,9 +88,6 @@ const formatReport = (results) => {
     if (results.notifications) {
         lines.push(`🗑️ <b>${results.notifications.deleted}</b> notification(s) supprimée(s)`);
     }
-    if (results.users) {
-        lines.push(`👥 <b>${results.users.total}</b> utilisateur(s) au total`);
-    }
     if (results.accountAgeAchievements) {
         const {skipped, evaluated, total, failed} = results.accountAgeAchievements;
 
@@ -100,16 +97,6 @@ const formatReport = (results) => {
             lines.push(`🎂 <b>${evaluated}/${total}</b> utilisateur(s) évalué(s) pour l'ancienneté du compte`);
             reportFailures("Ancienneté du compte", "utilisateur(s) en erreur", failed, (f) => `[${f.userId}] ${escapeHtml(f.error)}`);
         }
-    }
-    if (results.database) {
-        lines.push(`💾 Taille de la base : <b>${results.database.size}</b>`);
-    }
-    if (results.catalog) {
-        const {shows, seasons, episodes} = results.catalog;
-        lines.push(`📚 Catalogue : <b>${shows}</b> série(s), <b>${seasons}</b> saison(s), <b>${episodes}</b> épisode(s)`);
-    }
-    if (results.deletedAccounts) {
-        lines.push(`🗑️ <b>${results.deletedAccounts.anonymized}</b> compte(s) anonymisé(s)`);
     }
     if (errorGroups.length > 0) {
         const totalErrors = errorGroups.reduce((acc, group) => acc + group.items.length, 0);
