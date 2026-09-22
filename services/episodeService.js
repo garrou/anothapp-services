@@ -245,31 +245,48 @@ export default class EpisodeService {
     /**
      * Called once, right when a watch-together invite is accepted: from then on, marking an
      * episode watched already mirrors it to every linked viewing (see #mirrorToLinkedViewings),
-     * but that only covers episodes watched from this point forward. Without this, whichever side
-     * already had episodes marked before accepting - either one, since a friend can bring their own
-     * pre-existing viewing of the season into the link - would keep looking behind to the other.
-     * @param {string} userId
-     * @param {number} userSeasonId
-     * @param {string} friendUserId
-     * @param {number} friendUsersSeasonId
+     * but that only covers episodes watched from this point forward. Without this, whichever
+     * member already had episodes marked before joining - the root, an existing friend, or the one
+     * just accepting - would keep looking behind the rest of the group. Runs after the new link is
+     * already written (in the same transaction as `client`), so getLinkedViewings already includes
+     * the newcomer alongside every pre-existing member - the merge below is the union of everyone's
+     * history, applied to everyone, not just a pairwise copy between the root and the newcomer.
+     * @param {number} userSeasonId the group's root viewing id
+     * @param {string} rootUserId
      * @param {import("pg").PoolClient} client
      * @returns {Promise<void>}
      */
-    backfillLinkedViewings = async (userId, userSeasonId, friendUserId, friendUsersSeasonId, client) => {
+    backfillLinkedViewings = async (userSeasonId, rootUserId, client) => {
+        const members = [
+            {id: userSeasonId, userId: rootUserId},
+            ...await this._watchTogetherRepository.getLinkedViewings(userSeasonId, client),
+        ];
         // A transaction client is a single Postgres connection - unlike the pool, it can't run
         // queries concurrently, so every query against it here is awaited one at a time.
-        const ownWatched = await this._userEpisodeRepository.getWatchedForUserSeasonId(userSeasonId, client);
-        const friendWatched = await this._userEpisodeRepository.getWatchedForUserSeasonId(friendUsersSeasonId, client);
+        const watchedByMember = new Map();
 
-        for (const e of ownWatched) {
-            await this._userEpisodeRepository.createIfMissing(
-                friendUserId, friendUsersSeasonId, e.episodeId, e.watchedAt, e.platformId, client
-            );
+        for (const member of members) {
+            watchedByMember.set(member.id, await this._userEpisodeRepository.getWatchedForUserSeasonId(member.id, client));
         }
-        for (const e of friendWatched) {
-            await this._userEpisodeRepository.createIfMissing(
-                userId, userSeasonId, e.episodeId, e.watchedAt, e.platformId, client
-            );
+        const union = new Map();
+
+        for (const watched of watchedByMember.values()) {
+            for (const episode of watched) {
+                if (!union.has(episode.episodeId)) {
+                    union.set(episode.episodeId, episode);
+                }
+            }
+        }
+        for (const member of members) {
+            const alreadyWatched = new Set(watchedByMember.get(member.id).map((e) => e.episodeId));
+
+            for (const [episodeId, episode] of union) {
+                if (!alreadyWatched.has(episodeId)) {
+                    await this._userEpisodeRepository.createIfMissing(
+                        member.userId, member.id, episodeId, episode.watchedAt, episode.platformId, client
+                    );
+                }
+            }
         }
     }
 

@@ -209,9 +209,7 @@ export default class SeasonService {
             const created = await this._watchTogetherRepository.create(userSeasonId, friendUsersSeasonId, client);
 
             if (created) {
-                await this._episodeService.backfillLinkedViewings(
-                    owned.userId, userSeasonId, currentUserId, friendUsersSeasonId, client
-                );
+                await this._episodeService.backfillLinkedViewings(userSeasonId, owned.userId, client);
             }
             return created;
         });

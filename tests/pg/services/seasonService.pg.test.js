@@ -190,6 +190,40 @@ describe("SeasonService (real Postgres)", () => {
             expect(relations.rows.map((r) => r["friend_user_id"]).sort()).toEqual([friendA, friendB].sort());
         });
 
+        it("when a second friend joins an existing group, the group-wide merge also reaches the first friend, not just the owner", async () => {
+            const userId = await insertUser();
+            const friendA = await insertUser();
+            const friendB = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendA]);
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendB]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            const episode1 = await insertEpisode(showId, 1, {number: 1, date: "2020-01-01"});
+            const episode2 = await insertEpisode(showId, 1, {number: 2});
+            await service.updateWatchedWith(userId, userSeasonId, [friendA, friendB]);
+            await service.respondToWatchedWith(friendA, userSeasonId, true);
+            const friendASeason = await db.query(`SELECT id FROM users_seasons WHERE user_id = $1 AND show_id = $2`, [friendA, showId]);
+            // friendA watches E1 live, after joining - the ongoing mirror already covers this
+            await service.addEpisodeViewing(friendA, friendASeason.rows[0].id, episode1);
+            // friendB already watched E2 on their own, before joining
+            await insertUserShow(friendB, showId);
+            const friendBExistingSeasonId = await insertUserSeason(friendB, showId, 1);
+            await insertUserEpisode(friendB, friendBExistingSeasonId, episode2);
+
+            await service.respondToWatchedWith(friendB, userSeasonId, true);
+
+            const ownerEpisodes = await db.query(`SELECT episode_id FROM users_episodes WHERE users_seasons_id = $1`, [userSeasonId]);
+            const friendAEpisodes = await db.query(`SELECT episode_id FROM users_episodes WHERE users_seasons_id = $1`, [friendASeason.rows[0].id]);
+            const friendBEpisodes = await db.query(`SELECT episode_id FROM users_episodes WHERE users_seasons_id = $1`, [friendBExistingSeasonId]);
+            expect(ownerEpisodes.rows.map((r) => r["episode_id"]).sort()).toEqual([episode1, episode2].sort());
+            // Before the group-wide fix, only the owner (root) received friendB's episode2 - friendA,
+            // an existing member of the group, never did.
+            expect(friendAEpisodes.rows.map((r) => r["episode_id"]).sort()).toEqual([episode1, episode2].sort());
+            expect(friendBEpisodes.rows.map((r) => r["episode_id"]).sort()).toEqual([episode1, episode2].sort());
+        });
+
         it("accepting reuses the friend's existing viewing instead of creating a duplicate", async () => {
             const userId = await insertUser();
             const friendId = await insertUser();

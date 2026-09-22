@@ -157,10 +157,11 @@ export default class WatchTogetherRepository {
 
     /**
      * @param {number} userSeasonId
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<{id: number, userId: string}[]>}
      */
-    getLinkedViewings = async (userSeasonId) => {
-        const res = await db.query(`
+    getLinkedViewings = async (userSeasonId, client = db) => {
+        const res = await client.query(`
             WITH root AS (
                 SELECT CASE
                     WHEN EXISTS (SELECT 1 FROM watch_together WHERE users_season_id = $1)

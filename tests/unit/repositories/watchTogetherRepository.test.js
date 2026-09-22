@@ -216,4 +216,13 @@ describe("WatchTogetherRepository.getLinkedViewings", () => {
         expect(db.query).toHaveBeenCalledWith(expect.any(String), [1]);
         expect(result).toEqual([{id: 2, userId: "user-2"}]);
     });
+
+    it("runs against the given client instead of the pool, when provided", async () => {
+        const client = {query: vi.fn().mockResolvedValue({rows: []})};
+
+        await repo.getLinkedViewings(1, client);
+
+        expect(client.query).toHaveBeenCalledWith(expect.any(String), [1]);
+        expect(db.query).not.toHaveBeenCalled();
+    });
 });

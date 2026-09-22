@@ -368,7 +368,7 @@ describe("SeasonService.respondToWatchedWith", () => {
         expect(watchTogetherRepoMocks.hasConflictingLink).toHaveBeenCalledWith(7, 55, fakeClient);
         expect(userSeasonFriendRepoMocks.accept).toHaveBeenCalledWith(7, "friend-1", fakeClient);
         expect(watchTogetherRepoMocks.create).toHaveBeenCalledWith(7, 55, fakeClient);
-        expect(episodeServiceMocks.backfillLinkedViewings).toHaveBeenCalledWith("owner-1", 7, "friend-1", 55, fakeClient);
+        expect(episodeServiceMocks.backfillLinkedViewings).toHaveBeenCalledWith(7, "owner-1", fakeClient);
         expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with.accepted", {
             recipientUserId: "owner-1", actorUserId: "friend-1", showId: 42, metadata: {seasonNumber: 1},
         });
