@@ -82,10 +82,11 @@ export default class UserEpisodeRepository {
      * @param {number} episodeId
      * @param {string} watchedAt
      * @param {number} platformId
+     * @param {import("pg").PoolClient} client
      * @returns {Promise<void>}
      */
-    createIfMissing = async (userId, userSeasonId, episodeId, watchedAt, platformId) => {
-        const res = await db.query(`
+    createIfMissing = async (userId, userSeasonId, episodeId, watchedAt, platformId, client = db) => {
+        const res = await client.query(`
             INSERT INTO users_episodes (user_id, users_seasons_id, episode_id, watched_at, platform_id)
             SELECT $1, $2, $3, $4, $5
             WHERE NOT EXISTS (
@@ -93,6 +94,20 @@ export default class UserEpisodeRepository {
             )
         `, [userId, userSeasonId, episodeId, watchedAt, platformId]);
         return res.rowCount === 1;
+    }
+
+    /**
+     * @param {number} userSeasonId
+     * @param {import("pg").PoolClient} client
+     * @returns {Promise<{episodeId: number, watchedAt: string, platformId: number}[]>}
+     */
+    getWatchedForUserSeasonId = async (userSeasonId, client = db) => {
+        const res = await client.query(`
+            SELECT episode_id, watched_at, platform_id FROM users_episodes WHERE users_seasons_id = $1
+        `, [userSeasonId]);
+        return res.rows.map((row) => ({
+            episodeId: row["episode_id"], watchedAt: row["watched_at"], platformId: row["platform_id"],
+        }));
     }
 
     /**

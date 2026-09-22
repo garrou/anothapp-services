@@ -38,6 +38,7 @@ const episodeServiceMocks = vi.hoisted(() => ({
     getByUserSeasonId: vi.fn(),
     addViewing: vi.fn(),
     updatePlatformForSeason: vi.fn(),
+    backfillLinkedViewings: vi.fn(),
 }));
 const showServiceMocks = vi.hoisted(() => ({
     ensureSeasonTracked: vi.fn(),
@@ -367,6 +368,7 @@ describe("SeasonService.respondToWatchedWith", () => {
         expect(watchTogetherRepoMocks.hasConflictingLink).toHaveBeenCalledWith(7, 55, fakeClient);
         expect(userSeasonFriendRepoMocks.accept).toHaveBeenCalledWith(7, "friend-1", fakeClient);
         expect(watchTogetherRepoMocks.create).toHaveBeenCalledWith(7, 55, fakeClient);
+        expect(episodeServiceMocks.backfillLinkedViewings).toHaveBeenCalledWith("owner-1", 7, "friend-1", 55, fakeClient);
         expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with.accepted", {
             recipientUserId: "owner-1", actorUserId: "friend-1", showId: 42, metadata: {seasonNumber: 1},
         });
@@ -403,5 +405,6 @@ describe("SeasonService.respondToWatchedWith", () => {
         await expect(seasonService.respondToWatchedWith("friend-1", 7, true)).rejects.toThrow(
             "Impossible d'accepter cette invitation"
         );
+        expect(episodeServiceMocks.backfillLinkedViewings).not.toHaveBeenCalled();
     });
 });

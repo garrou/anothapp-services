@@ -17,6 +17,7 @@ const userEpisodeRepoMocks = vi.hoisted(() => ({
     getViewedByMonthAgo: vi.fn(),
     getWatchedTimeByShowIdBySeasonNumber: vi.fn(),
     getWatchedTimeAndCountByShowId: vi.fn(),
+    getWatchedForUserSeasonId: vi.fn(),
 }));
 const userSeasonRepoMocks = vi.hoisted(() => ({
     getOwnedSeasonViewing: vi.fn(),
@@ -365,6 +366,37 @@ describe("EpisodeService.addAllViewings", () => {
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 1, expect.any(String), 999);
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 2, expect.any(String), 999);
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 3, expect.any(String), 999);
+    });
+});
+
+describe("EpisodeService.backfillLinkedViewings", () => {
+    let episodeService;
+    const client = {};
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        episodeService = new EpisodeService();
+    });
+
+    it("copies each side's already-watched episodes into the other's viewing", async () => {
+        userEpisodeRepoMocks.getWatchedForUserSeasonId
+            .mockResolvedValueOnce([{episodeId: 1, watchedAt: "2024-01-01", platformId: 999}])
+            .mockResolvedValueOnce([{episodeId: 2, watchedAt: "2024-01-02", platformId: 1}]);
+
+        await episodeService.backfillLinkedViewings("owner-1", 7, "friend-1", 55, client);
+
+        expect(userEpisodeRepoMocks.getWatchedForUserSeasonId).toHaveBeenCalledWith(7, client);
+        expect(userEpisodeRepoMocks.getWatchedForUserSeasonId).toHaveBeenCalledWith(55, client);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 55, 1, "2024-01-01", 999, client);
+        expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("owner-1", 7, 2, "2024-01-02", 1, client);
+    });
+
+    it("does nothing on either side when neither has watched anything yet", async () => {
+        userEpisodeRepoMocks.getWatchedForUserSeasonId.mockResolvedValue([]);
+
+        await episodeService.backfillLinkedViewings("owner-1", 7, "friend-1", 55, client);
+
+        expect(userEpisodeRepoMocks.createIfMissing).not.toHaveBeenCalled();
     });
 });
 

@@ -243,6 +243,34 @@ export default class EpisodeService {
     }
 
     /**
+     * Called once, right when a watch-together invite is accepted: from then on, marking an
+     * episode watched already mirrors it to every linked viewing (see #mirrorToLinkedViewings),
+     * but that only covers episodes watched from this point forward. Without this, whichever side
+     * already had episodes marked before accepting - either one, since a friend can bring their own
+     * pre-existing viewing of the season into the link - would keep looking behind to the other.
+     * @param {string} userId
+     * @param {number} userSeasonId
+     * @param {string} friendUserId
+     * @param {number} friendUsersSeasonId
+     * @param {import("pg").PoolClient} client
+     * @returns {Promise<void>}
+     */
+    backfillLinkedViewings = async (userId, userSeasonId, friendUserId, friendUsersSeasonId, client) => {
+        const [ownWatched, friendWatched] = await Promise.all([
+            this._userEpisodeRepository.getWatchedForUserSeasonId(userSeasonId, client),
+            this._userEpisodeRepository.getWatchedForUserSeasonId(friendUsersSeasonId, client),
+        ]);
+        await Promise.all([
+            ...ownWatched.map((e) => this._userEpisodeRepository.createIfMissing(
+                friendUserId, friendUsersSeasonId, e.episodeId, e.watchedAt, e.platformId, client
+            )),
+            ...friendWatched.map((e) => this._userEpisodeRepository.createIfMissing(
+                userId, userSeasonId, e.episodeId, e.watchedAt, e.platformId, client
+            )),
+        ]);
+    }
+
+    /**
      * @param {string} userId
      * @param {number?} id
      * @returns {Promise<void>}

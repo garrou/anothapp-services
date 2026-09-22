@@ -206,7 +206,14 @@ export default class SeasonService {
                 throw new ServiceError(409, "Ce visionnage participe déjà à un autre visionnage partagé");
             }
             await this._userSeasonFriendRepository.accept(userSeasonId, currentUserId, client);
-            return this._watchTogetherRepository.create(userSeasonId, friendUsersSeasonId, client);
+            const created = await this._watchTogetherRepository.create(userSeasonId, friendUsersSeasonId, client);
+
+            if (created) {
+                await this._episodeService.backfillLinkedViewings(
+                    owned.userId, userSeasonId, currentUserId, friendUsersSeasonId, client
+                );
+            }
+            return created;
         });
 
         if (!linked) {

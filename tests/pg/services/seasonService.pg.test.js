@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach } from "vitest";
 import db from "../../../config/db.js";
 import SeasonService from "../../../services/seasonService.js";
 import { resetDb } from "../resetDb.js";
-import { insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason } from "../fixtures.js";
+import {
+    insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason, insertEpisode, insertUserEpisode,
+} from "../fixtures.js";
 
 describe("SeasonService (real Postgres)", () => {
     /** @type {SeasonService} */
@@ -224,6 +226,45 @@ describe("SeasonService (real Postgres)", () => {
             await service.updateWatchedWith(userId, userSeasonId, [friendId]);
 
             await expect(service.respondToWatchedWith(friendId, userSeasonId, true)).rejects.toMatchObject({ status: 409 });
+        });
+
+        it("backfills the owner's already-watched episodes into the friend's newly linked viewing", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            const episodeId = await insertEpisode(showId, 1);
+            await insertUserEpisode(userId, userSeasonId, episodeId);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+
+            await service.respondToWatchedWith(friendId, userSeasonId, true);
+
+            const friendSeason = await db.query(`SELECT id FROM users_seasons WHERE user_id = $1 AND show_id = $2 AND number = 1`, [friendId, showId]);
+            const friendViewing = await db.query(`SELECT * FROM users_episodes WHERE users_seasons_id = $1 AND episode_id = $2`, [friendSeason.rows[0].id, episodeId]);
+            expect(friendViewing.rowCount).toBe(1);
+        });
+
+        it("also backfills the friend's own already-watched episodes into the owner's viewing", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+            const showId = await insertShow();
+            await insertSeason(showId, 1);
+            await insertUserShow(userId, showId);
+            const userSeasonId = await insertUserSeason(userId, showId, 1);
+            await insertUserShow(friendId, showId);
+            const friendExistingSeasonId = await insertUserSeason(friendId, showId, 1);
+            const episodeId = await insertEpisode(showId, 1);
+            await insertUserEpisode(friendId, friendExistingSeasonId, episodeId);
+            await service.updateWatchedWith(userId, userSeasonId, [friendId]);
+
+            await service.respondToWatchedWith(friendId, userSeasonId, true);
+
+            const ownerViewing = await db.query(`SELECT * FROM users_episodes WHERE users_seasons_id = $1 AND episode_id = $2`, [userSeasonId, episodeId]);
+            expect(ownerViewing.rowCount).toBe(1);
         });
 
         it("rejects accepting once the two users are no longer friends", async () => {
