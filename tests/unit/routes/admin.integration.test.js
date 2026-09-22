@@ -10,6 +10,18 @@ const refreshRepoMocks = vi.hoisted(() => ({
 }));
 const databaseRepoMocks = vi.hoisted(() => ({
     getDatabaseSize: vi.fn().mockResolvedValue("1 MB"),
+    getSizeHistory: vi.fn().mockResolvedValue([]),
+}));
+const serviceCallCountRepoMocks = vi.hoisted(() => ({
+    getAll: vi.fn().mockResolvedValue({
+        mailer: { total: 0, history: [] },
+        betaseries: { total: 0, history: [] },
+        export: { total: 0, history: [] },
+        import: { total: 0, history: [] },
+    }),
+}));
+const catalogRepoMocks = vi.hoisted(() => ({
+    getSizeHistory: vi.fn().mockResolvedValue([]),
 }));
 const adminRepoMocks = vi.hoisted(() => ({
     getNewUsersByDay: vi.fn().mockResolvedValue([]),
@@ -39,6 +51,12 @@ vi.mock("../../../repositories/refreshTokenRepository.js", () => ({
 }));
 vi.mock("../../../repositories/databaseRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return databaseRepoMocks; }),
+}));
+vi.mock("../../../repositories/serviceCallCountRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return serviceCallCountRepoMocks; }),
+}));
+vi.mock("../../../repositories/catalogRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return catalogRepoMocks; }),
 }));
 vi.mock("../../../repositories/adminRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return adminRepoMocks; }),
