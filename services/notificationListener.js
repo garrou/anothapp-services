@@ -32,14 +32,16 @@ export default class NotificationListener {
 
     /**
      * @param {string} type
-     * @returns {(payload: {actorUserId: string, showId?: number, metadata?: Object}) => Promise<void>}
+     * @returns {(payload: {actorUserId: string, showId?: number, metadata?: Object, excludeUserIds?: string[]}) => Promise<void>}
      */
-    #notifyFriends = (type) => async ({ actorUserId, showId, metadata }) => {
+    #notifyFriends = (type) => async ({ actorUserId, showId, metadata, excludeUserIds = [] }) => {
         const friends = await this._friendRepository.getFriends(actorUserId);
+        const excluded = new Set(excludeUserIds);
 
-        await Promise.all(friends.map((friend) =>
-            this._notificationRepository.create(friend.id, actorUserId, type, showId, metadata)
-        ));
+        await Promise.all(friends
+            .filter((friend) => !excluded.has(friend.id))
+            .map((friend) => this._notificationRepository.create(friend.id, actorUserId, type, showId, metadata))
+        );
     }
 
     /**

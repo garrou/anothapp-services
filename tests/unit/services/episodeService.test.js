@@ -286,6 +286,42 @@ describe("EpisodeService.addViewing", () => {
 
         expect(userEpisodeRepoMocks.createIfMissing).not.toHaveBeenCalled();
     });
+
+    it("notifies each mirrored viewer's own friends, excluding the rest of the watch-together group", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({
+            id: 1, showId: 42, seasonNumber: 1, date: past, code: "S01E01", title: "Pilot",
+        });
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([
+            { id: 8, userId: "friend-1" }, { id: 9, userId: "friend-2" },
+        ]);
+        userEpisodeRepoMocks.createIfMissing.mockResolvedValue(true);
+
+        await episodeService.addViewing("user-1", 7, 1);
+
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("episode.watched", {
+            actorUserId: "friend-1", showId: 42,
+            metadata: {seasonNumber: 1, episodeCode: "S01E01", episodeTitle: "Pilot"},
+            excludeUserIds: ["user-1", "friend-2"],
+        });
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("episode.watched", {
+            actorUserId: "friend-2", showId: 42,
+            metadata: {seasonNumber: 1, episodeCode: "S01E01", episodeTitle: "Pilot"},
+            excludeUserIds: ["user-1", "friend-1"],
+        });
+    });
+
+    it("does not notify on behalf of a mirrored viewer who already had the episode", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        episodeRepoMocks.getEpisodeById.mockResolvedValue({ id: 1, showId: 42, seasonNumber: 1, date: past });
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([{ id: 8, userId: "friend-1" }]);
+        userEpisodeRepoMocks.createIfMissing.mockResolvedValue(false);
+
+        await episodeService.addViewing("user-1", 7, 1);
+
+        expect(eventBusMocks.emit).toHaveBeenCalledTimes(1); // only the actor's own episode.watched
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("episode.watched", expect.objectContaining({ actorUserId: "user-1" }));
+    });
 });
 
 describe("EpisodeService.addAllViewings", () => {
@@ -371,6 +407,39 @@ describe("EpisodeService.addAllViewings", () => {
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 1, expect.any(String), 999);
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 2, expect.any(String), 999);
         expect(userEpisodeRepoMocks.createIfMissing).toHaveBeenCalledWith("friend-1", 8, 3, expect.any(String), 999);
+    });
+
+    it("notifies a mirrored viewer's own friends with their own count, excluding the group", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([{ id: 1, date: past }, { id: 2, date: past }]);
+        userEpisodeRepoMocks.createIfMissing.mockResolvedValue(true);
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([{ id: 8, userId: "friend-1" }]);
+
+        await episodeService.addAllViewings("user-1", 7);
+
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("episode.bulk_watched", {
+            actorUserId: "friend-1", showId: 42,
+            metadata: {seasonNumber: 1, count: 2},
+            excludeUserIds: ["user-1"],
+        });
+    });
+
+    it("counts only friend-1's own newly-created rows, not the actor's, when mirroring is partial", async () => {
+        const past = new Date(Date.now() - 86400000).toISOString();
+        episodeRepoMocks.getEpisodesByShowIdBySeason.mockResolvedValue([{ id: 1, date: past }, { id: 2, date: past }]);
+        // both newly-watched for the actor; friend-1 already had episode 1 from an earlier backfill
+        userEpisodeRepoMocks.createIfMissing
+            .mockResolvedValueOnce(true).mockResolvedValueOnce(true) // actor: ep1, ep2
+            .mockResolvedValueOnce(false).mockResolvedValueOnce(true); // friend-1: ep1 (skip), ep2 (new)
+        watchTogetherRepoMocks.getLinkedViewings.mockResolvedValue([{ id: 8, userId: "friend-1" }]);
+
+        await episodeService.addAllViewings("user-1", 7);
+
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("episode.bulk_watched", {
+            actorUserId: "friend-1", showId: 42,
+            metadata: {seasonNumber: 1, count: 1},
+            excludeUserIds: ["user-1"],
+        });
     });
 });
 

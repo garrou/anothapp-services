@@ -52,6 +52,18 @@ describe("NotificationListener", () => {
         );
     });
 
+    it("skips friends listed in excludeUserIds for a friend-scoped event", async () => {
+        friendRepoMocks.getFriends.mockResolvedValue([{ id: "friend-1" }, { id: "friend-2" }]);
+
+        eventBus.emit("episode.watched", {
+            actorUserId: "user-1", showId: 42, metadata: { seasonNumber: 1 }, excludeUserIds: ["friend-1"],
+        });
+        await flush();
+
+        expect(notificationRepoMocks.create).toHaveBeenCalledTimes(1);
+        expect(notificationRepoMocks.create).toHaveBeenCalledWith("friend-2", "user-1", "episode_watched", 42, { seasonNumber: 1 });
+    });
+
     it("does not fan out when the actor has no friends", async () => {
         friendRepoMocks.getFriends.mockResolvedValue([]);
 

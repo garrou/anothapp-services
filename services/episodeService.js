@@ -24,11 +24,12 @@ export default class EpisodeService {
      * @param {number} episodeId
      * @param {string} watchedAt
      * @param {number} platformId
-     * @returns {Promise<void>}
+     * @returns {Promise<{linked: {id: number, userId: string}[], mirrored: {userId: string, count: number}[]}>}
      */
     #mirrorToLinkedViewings = async (userSeasonId, episodeId, watchedAt, platformId) => {
         const linked = await this._watchTogetherRepository.getLinkedViewings(userSeasonId);
-        await this.#mirrorEpisodesToViewings(linked, [episodeId], watchedAt, platformId);
+        const mirrored = await this.#mirrorEpisodesToViewings(linked, [episodeId], watchedAt, platformId);
+        return {linked, mirrored};
     }
 
     /**
@@ -36,11 +37,12 @@ export default class EpisodeService {
      * @param {number[]} episodeIds
      * @param {string} watchedAt
      * @param {number} platformId
-     * @returns {Promise<void>}
+     * @returns {Promise<{linked: {id: number, userId: string}[], mirrored: {userId: string, count: number}[]}>}
      */
     #mirrorManyToLinkedViewings = async (userSeasonId, episodeIds, watchedAt, platformId) => {
         const linked = await this._watchTogetherRepository.getLinkedViewings(userSeasonId);
-        await this.#mirrorEpisodesToViewings(linked, episodeIds, watchedAt, platformId);
+        const mirrored = await this.#mirrorEpisodesToViewings(linked, episodeIds, watchedAt, platformId);
+        return {linked, mirrored};
     }
 
     /**
@@ -48,12 +50,45 @@ export default class EpisodeService {
      * @param {number[]} episodeIds
      * @param {string} watchedAt
      * @param {number} platformId
-     * @returns {Promise<void>}
+     * @returns {Promise<{userId: string, count: number}[]>} one entry per linked viewing that
+     *   actually received at least one new episode row - a viewing that already had every one
+     *   of these episodes (e.g. from an earlier backfill) is left out entirely
      */
     #mirrorEpisodesToViewings = async (linked, episodeIds, watchedAt, platformId) => {
-        await Promise.all(linked.flatMap((viewing) => episodeIds.map((episodeId) =>
-            this._userEpisodeRepository.createIfMissing(viewing.userId, viewing.id, episodeId, watchedAt, platformId)
-        )));
+        const results = await Promise.all(linked.map(async (viewing) => {
+            const created = await Promise.all(episodeIds.map((episodeId) =>
+                this._userEpisodeRepository.createIfMissing(viewing.userId, viewing.id, episodeId, watchedAt, platformId)
+            ));
+            return {userId: viewing.userId, count: created.filter(Boolean).length};
+        }));
+        return results.filter((r) => r.count > 0);
+    }
+
+    /**
+     * Notifies each mirrored viewer's own friends about the episode(s) that just landed on
+     * their side of the sync - the only place this was previously silent. The rest of the
+     * group (the actor, and every other linked viewing) is excluded from that viewer's
+     * recipient list: they're the reason it happened, not an outside audience for it.
+     * @param {string} actorUserId
+     * @param {{id: number, userId: string}[]} linked
+     * @param {{userId: string, count: number}[]} mirrored
+     * @param {string} eventType
+     * @param {number} showId
+     * @param {(count: number) => Object} buildMetadata
+     * @returns {void}
+     */
+    #notifyMirroredViewers = (actorUserId, linked, mirrored, eventType, showId, buildMetadata) => {
+        if (!mirrored.length) return;
+        const groupUserIds = [actorUserId, ...linked.map((viewing) => viewing.userId)];
+
+        mirrored.forEach(({userId, count}) => {
+            eventBus.emit(eventType, {
+                actorUserId: userId,
+                showId,
+                metadata: buildMetadata(count),
+                excludeUserIds: groupUserIds.filter((id) => id !== userId),
+            });
+        });
     }
 
     /**
@@ -178,7 +213,9 @@ export default class EpisodeService {
             showId: season.showId,
             metadata: {seasonNumber: season.number, episodeCode: episode.code, episodeTitle: episode.title},
         });
-        await this.#mirrorToLinkedViewings(userSeasonId, episodeId, watchedAt, season.platformId);
+        const {linked, mirrored} = await this.#mirrorToLinkedViewings(userSeasonId, episodeId, watchedAt, season.platformId);
+        this.#notifyMirroredViewers(userId, linked, mirrored, "episode.watched", season.showId,
+            () => ({seasonNumber: season.number, episodeCode: episode.code, episodeTitle: episode.title}));
     }
 
     /**
@@ -210,9 +247,11 @@ export default class EpisodeService {
                 showId: season.showId,
                 metadata: {seasonNumber: season.number, count: newlyWatched.length},
             });
-            await this.#mirrorManyToLinkedViewings(
+            const {linked, mirrored} = await this.#mirrorManyToLinkedViewings(
                 userSeasonId, newlyWatched.map((episode) => episode.id), watchedAt, season.platformId
             );
+            this.#notifyMirroredViewers(userId, linked, mirrored, "episode.bulk_watched", season.showId,
+                (count) => ({seasonNumber: season.number, count}));
         }
     }
 
