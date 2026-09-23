@@ -64,6 +64,13 @@ describe("FriendService.sendFriendRequest", () => {
         expect(friendRepoMocks.checkIfRelationExists).not.toHaveBeenCalled();
     });
 
+    it("rejects with a 400 when a user targets themselves", async () => {
+        await expect(friendService.sendFriendRequest("user-1", "user-1")).rejects.toThrow(
+            "Vous ne pouvez pas vous ajouter vous-même en ami"
+        );
+        expect(friendRepoMocks.checkIfRelationExists).not.toHaveBeenCalled();
+    });
+
     it("rejects with a 409 when a relation already exists (pending or accepted)", async () => {
         friendRepoMocks.checkIfRelationExists.mockResolvedValue(true);
 

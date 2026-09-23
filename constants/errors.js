@@ -22,6 +22,8 @@ export const ERROR_NOT_FRIEND = "Vous n'êtes pas en relation avec cette personn
 
 export const ERROR_ALREADY_FRIEND = "Vous êtes déjà en relation avec cet utilisateur";
 
+export const ERROR_SELF_FRIEND_REQUEST = "Vous ne pouvez pas vous ajouter vous-même en ami";
+
 export const ERROR_VIEWING_NOT_IN_COLLECTION = "Ce visionnage n'est pas dans votre collection";
 
 export const ERROR_ACTOR_ALREADY_FAVORITE = "Cet acteur est déjà dans vos favoris";

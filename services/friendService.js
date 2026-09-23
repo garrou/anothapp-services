@@ -4,7 +4,9 @@ import PlaylistCollaboratorRepository from "../repositories/playlistCollaborator
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
 import WatchTogetherRepository from "../repositories/watchTogetherRepository.js";
 import ServiceError from "../helpers/serviceError.js";
-import {DUPLICATE_ERROR_CODE, ERROR_ALREADY_FRIEND, ERROR_INVALID_REQUEST} from "../constants/errors.js";
+import {
+    DUPLICATE_ERROR_CODE, ERROR_ALREADY_FRIEND, ERROR_INVALID_REQUEST, ERROR_SELF_FRIEND_REQUEST
+} from "../constants/errors.js";
 import eventBus from "../helpers/eventBus.js";
 
 export default class FriendService {
@@ -24,6 +26,9 @@ export default class FriendService {
     sendFriendRequest = async (currentUserId, userId) => {
         if (!userId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        if (userId === currentUserId) {
+            throw new ServiceError(400, ERROR_SELF_FRIEND_REQUEST);
         }
         const exists = await this._friendRepository.checkIfRelationExists(currentUserId, userId);
 
