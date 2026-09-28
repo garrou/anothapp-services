@@ -90,6 +90,49 @@ describe("UserRepository.getUserWithAuthById", () => {
 
         expect(result).toBeNull();
     });
+
+    it("exposes the disabled notification groups from the aggregated subquery", async () => {
+        db.query.mockResolvedValue({
+            rowCount: 1,
+            rows: [{
+                ...validUserRow, user_id: "user-1", email: "a@b.com", password_hash: "hash",
+                email_verified: true, pending_email: null, disabled_notification_groups: ["invitations"],
+            }],
+        });
+
+        const result = await repo.getUserWithAuthById("user-1");
+
+        expect(result.disabledNotificationGroups).toEqual(["invitations"]);
+    });
+});
+
+describe("UserRepository.updateNotificationSettings", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new UserRepository();
+    });
+
+    it("replaces the disabled groups within a transaction", async () => {
+        const client = {query: vi.fn()};
+        db.transaction.mockImplementation((callback) => callback(client));
+
+        await repo.updateNotificationSettings("user-1", ["invitations", "reminders"]);
+
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("DELETE FROM users_disabled_notifications"), ["user-1"]);
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO users_disabled_notifications"), ["user-1", ["invitations", "reminders"]]);
+    });
+
+    it("only deletes, without inserting, when re-enabling every group", async () => {
+        const client = {query: vi.fn()};
+        db.transaction.mockImplementation((callback) => callback(client));
+
+        await repo.updateNotificationSettings("user-1", []);
+
+        expect(client.query).toHaveBeenCalledTimes(1);
+        expect(client.query).toHaveBeenCalledWith(expect.stringContaining("DELETE FROM users_disabled_notifications"), ["user-1"]);
+    });
 });
 
 describe("UserRepository.getUserCount", () => {

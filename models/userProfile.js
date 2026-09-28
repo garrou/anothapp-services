@@ -16,6 +16,7 @@ export default class UserProfile {
             this.emailVerified = user.emailVerified;
             this.pendingEmail = user.pendingEmail;
             this.isAdmin = user.id === process.env.ADMIN_ID;
+            this.disabledNotificationGroups = user.disabledNotificationGroups ?? [];
         }
     }
 }

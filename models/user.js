@@ -9,6 +9,7 @@ export default class User {
         this.lastExport = user["last_export"];
         this.createdAt = user["created_at"];
         this.deletedAt = user["deleted_at"];
+        this.disabledNotificationGroups = user["disabled_notification_groups"] ?? [];
     }
 
     /**

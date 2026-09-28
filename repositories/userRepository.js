@@ -47,7 +47,9 @@ export default class UserRepository {
      */
     getUserWithAuthById = async (id) => {
         const res = await db.query(`
-            SELECT u.*, ua.user_id, ua.email, ua.password_hash, ua.email_verified, ua.pending_email
+            SELECT u.*, ua.user_id, ua.email, ua.password_hash, ua.email_verified, ua.pending_email,
+                (SELECT COALESCE(array_agg(group_id), '{}') FROM users_disabled_notifications WHERE user_id = u.id)
+                    AS disabled_notification_groups
             FROM users u
             JOIN users_auth ua ON ua.user_id = u.id
             WHERE u.id = $1
@@ -162,6 +164,24 @@ export default class UserRepository {
             WHERE u.id = $1 AND ua.user_id = u.id AND u.deleted_at IS NOT NULL AND ua.email NOT LIKE '%@anothapp.invalid'
         `, [id]);
         return res.rowCount === 1;
+    }
+
+    /**
+     * @param {string} id
+     * @param {string[]} groupIds
+     * @returns {Promise<void>}
+     */
+    updateNotificationSettings = async (id, groupIds) => {
+        await db.transaction(async (client) => {
+            await client.query(`DELETE FROM users_disabled_notifications WHERE user_id = $1`, [id]);
+
+            if (groupIds.length) {
+                await client.query(`
+                    INSERT INTO users_disabled_notifications (user_id, group_id)
+                    SELECT $1, unnest($2::text[])
+                `, [id, groupIds]);
+            }
+        });
     }
 
     /**
