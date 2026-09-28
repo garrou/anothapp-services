@@ -158,7 +158,7 @@ export default class UserService {
         if (groupIds.some((groupId) => !NOTIFICATION_GROUP_IDS.includes(groupId))) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        await this._userRepository.updateNotificationSettings(currentUserId, groupIds);
+        await this._userRepository.updateNotificationSettings(currentUserId, [...new Set(groupIds)]);
     }
 
     /**

@@ -304,6 +304,14 @@ describe("UserService.updateUser - notification settings", () => {
 
         expect(userRepoMocks.updateNotificationSettings).not.toHaveBeenCalled();
     });
+
+    it("deduplicates repeated group ids before persisting, to avoid a unique-violation on insert", async () => {
+        await userService.updateUser(
+            "user-1", new UserUpdate({ disabledNotificationGroups: ["invitations", "invitations", "reminders"] })
+        );
+
+        expect(userRepoMocks.updateNotificationSettings).toHaveBeenCalledWith("user-1", ["invitations", "reminders"]);
+    });
 });
 
 describe("UserService.getProfile", () => {
