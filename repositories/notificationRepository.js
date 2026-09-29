@@ -1,5 +1,6 @@
 import db from "../config/db.js";
 import Notification from "../models/notification.js";
+import { NOTIFICATION_GROUPS } from "../constants/notifications.js";
 
 export default class NotificationRepository {
 
@@ -14,8 +15,11 @@ export default class NotificationRepository {
     create = async (recipientUserId, actorUserId, type, showId, metadata) => {
         const res = await db.query(`
             INSERT INTO notifications (recipient_user_id, actor_user_id, type, show_id, metadata)
-            VALUES ($1, $2, $3, $4, $5)
-        `, [recipientUserId, actorUserId ?? null, type, showId ?? null, metadata ? JSON.stringify(metadata) : null]);
+            SELECT $1, $2, $3, $4, $5
+            WHERE NOT EXISTS (
+                SELECT 1 FROM users_disabled_notifications WHERE user_id = $1 AND group_id = $6
+            )
+        `, [recipientUserId, actorUserId ?? null, type, showId ?? null, metadata ? JSON.stringify(metadata) : null, NOTIFICATION_GROUPS[type]]);
         return res.rowCount === 1;
     }
 
@@ -75,6 +79,9 @@ export default class NotificationRepository {
                 SELECT 1 FROM notifications n
                 WHERE n.recipient_user_id = us.user_id AND n.show_id = s.id
                 AND n.type = 'episode_upcoming' AND n.metadata ->> 'date' = s.next_episode
+            ) AND NOT EXISTS (
+                SELECT 1 FROM users_disabled_notifications d
+                WHERE d.user_id = us.user_id AND d.group_id = 'reminders'
             )
         `, [date]);
         return res.rowCount;

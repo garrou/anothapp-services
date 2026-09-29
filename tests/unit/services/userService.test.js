@@ -9,6 +9,7 @@ const userRepoMocks = vi.hoisted(() => ({
     getUserWithAuthById: vi.fn(),
     getUsersByUsername: vi.fn(),
     requestDeletion: vi.fn(),
+    updateNotificationSettings: vi.fn(),
 }));
 const userAuthRepoMocks = vi.hoisted(() => ({
     getByUserId: vi.fn(),
@@ -273,6 +274,46 @@ describe("UserService.updateUser - username change", () => {
     });
 });
 
+describe("UserService.updateUser - notification settings", () => {
+    let userService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        userService = new UserService();
+    });
+
+    it("stores the disabled groups", async () => {
+        const message = await userService.updateUser(
+            "user-1", new UserUpdate({ disabledNotificationGroups: ["invitations", "reminders"] })
+        );
+
+        expect(userRepoMocks.updateNotificationSettings).toHaveBeenCalledWith("user-1", ["invitations", "reminders"]);
+        expect(message).toBe("Préférences de notifications mises à jour");
+    });
+
+    it("accepts an empty array to re-enable every group", async () => {
+        await userService.updateUser("user-1", new UserUpdate({ disabledNotificationGroups: [] }));
+
+        expect(userRepoMocks.updateNotificationSettings).toHaveBeenCalledWith("user-1", []);
+    });
+
+    it("rejects an unknown group id, without persisting anything", async () => {
+        await expect(userService.updateUser(
+            "user-1", new UserUpdate({ disabledNotificationGroups: ["not-a-real-group"] })
+        )).rejects.toMatchObject({ status: 400 });
+
+        expect(userRepoMocks.updateNotificationSettings).not.toHaveBeenCalled();
+    });
+
+    it("deduplicates repeated group ids before persisting, to avoid a unique-violation on insert", async () => {
+        await userService.updateUser(
+            "user-1", new UserUpdate({ disabledNotificationGroups: ["invitations", "invitations", "reminders"] })
+        );
+
+        expect(userRepoMocks.updateNotificationSettings).toHaveBeenCalledWith("user-1", ["invitations", "reminders"]);
+    });
+});
+
 describe("UserService.getProfile", () => {
     let userService;
 
@@ -296,6 +337,19 @@ describe("UserService.getProfile", () => {
         const profile = await userService.getProfile("user-2", true);
 
         expect(profile.email).toBe("user2@test.fr");
+    });
+
+    it("includes the disabled notification groups only for the profile owner", async () => {
+        userRepoMocks.getUserWithAuthById.mockResolvedValue({
+            id: "user-2", username: "user2", picture: null,
+            disabledNotificationGroups: ["invitations"],
+        });
+
+        const owner = await userService.getProfile("user-2", true);
+        expect(owner.disabledNotificationGroups).toEqual(["invitations"]);
+
+        const other = await userService.getProfile("user-2", false);
+        expect(other.disabledNotificationGroups).toBeUndefined();
     });
 
     it("includes createdAt for the profile owner", async () => {

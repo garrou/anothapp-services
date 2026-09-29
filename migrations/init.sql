@@ -375,6 +375,28 @@ CREATE TABLE notifications (
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
 );
 
+CREATE TABLE notification_groups (
+    id VARCHAR(20),
+    name VARCHAR(30) NOT NULL,
+    PRIMARY KEY(id)
+);
+
+INSERT INTO notification_groups (id, name) VALUES
+('invitations', 'Invitations'),
+('responses', 'Réponses'),
+('activity', 'Activité des amis'),
+('achievements', 'Succès'),
+('reminders', 'Rappels');
+
+-- Presence of a row means the group is disabled for that user; absence means enabled (the default)
+CREATE TABLE users_disabled_notifications (
+    user_id UUID NOT NULL,
+    group_id VARCHAR(20) NOT NULL,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(group_id) REFERENCES notification_groups(id),
+    PRIMARY KEY(user_id, group_id)
+);
+
 CREATE TABLE achievement_tiers (
     code VARCHAR(50) NOT NULL,
     league SMALLINT NOT NULL,

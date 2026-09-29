@@ -19,7 +19,7 @@ describe("NotificationRepository.create", () => {
 
         const result = await repo.create("user-1", "user-2", "friend_request", 10, {foo: "bar"});
 
-        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO notifications"), ["user-1", "user-2", "friend_request", 10, JSON.stringify({foo: "bar"})]);
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO notifications"), ["user-1", "user-2", "friend_request", 10, JSON.stringify({foo: "bar"}), "invitations"]);
         expect(result).toBe(true);
     });
 
@@ -28,7 +28,23 @@ describe("NotificationRepository.create", () => {
 
         await repo.create("user-1", null, "system", null, null);
 
-        expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", null, "system", null, null]);
+        expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", null, "system", null, null, undefined]);
+    });
+
+    it("resolves the notification's group from its type for the disabled-groups guard", async () => {
+        db.query.mockResolvedValue({rowCount: 1});
+
+        await repo.create("user-1", null, "episode_upcoming", null, null);
+
+        expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", null, "episode_upcoming", null, null, "reminders"]);
+    });
+
+    it("returns false when the recipient has disabled the notification's group", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        const result = await repo.create("user-1", "user-2", "friend_request", null, null);
+
+        expect(result).toBe(false);
     });
 });
 
@@ -122,6 +138,14 @@ describe("NotificationRepository.createUpcomingEpisodeReminders", () => {
 
         expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO notifications"), ["2024-01-01"]);
         expect(result).toBe(3);
+    });
+
+    it("excludes users who disabled the reminders group", async () => {
+        db.query.mockResolvedValue({rowCount: 0});
+
+        await repo.createUpcomingEpisodeReminders("2024-01-01");
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("users_disabled_notifications"), ["2024-01-01"]);
     });
 });
 

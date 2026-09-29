@@ -13,6 +13,7 @@ export default class UserUpdate {
         this.confirmUsername = obj.confirmUsername;
         this.image = obj.image;
         this.lastExport = obj.lastExport;
+        this.disabledNotificationGroups = obj.disabledNotificationGroups;
     }
 
     /**
@@ -34,5 +35,12 @@ export default class UserUpdate {
      */
     isUsernameUpdate() {
         return !!this.newUsername && !!this.confirmUsername;
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    isNotificationSettingsUpdate() {
+        return Array.isArray(this.disabledNotificationGroups);
     }
 }

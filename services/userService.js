@@ -7,6 +7,7 @@ import ServiceError from "../helpers/serviceError.js";
 import SecurityHelper from "../helpers/security.js";
 import Validator from "../helpers/validator.js";
 import { DUPLICATE_ERROR_CODE, ERROR_BAD_PASSWORD, ERROR_INVALID_REQUEST, ERROR_UNKNOWN_USER } from "../constants/errors.js";
+import { NOTIFICATION_GROUP_IDS } from "../constants/notifications.js";
 import { sanitizeErrorForLog } from "../helpers/utils.js";
 import db from "../config/db.js";
 
@@ -86,6 +87,9 @@ export default class UserService {
         } else if (userUpdate.lastExport) {
             await this.#changeLastExport(currentUserId, userUpdate.lastExport);
             return "Date de dernier export modifiée";
+        } else if (userUpdate.isNotificationSettingsUpdate()) {
+            await this.#changeNotificationSettings(currentUserId, userUpdate.disabledNotificationGroups);
+            return "Préférences de notifications mises à jour";
         }
         throw new ServiceError(400, ERROR_INVALID_REQUEST);
     }
@@ -143,6 +147,18 @@ export default class UserService {
         if (!updated) {
             throw new ServiceError(500, "Impossible de modifier l'image");
         }
+    }
+
+    /**
+     * @param {string} currentUserId
+     * @param {string[]} groupIds
+     * @returns {Promise<void>}
+     */
+    #changeNotificationSettings = async (currentUserId, groupIds) => {
+        if (groupIds.some((groupId) => !NOTIFICATION_GROUP_IDS.includes(groupId))) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        await this._userRepository.updateNotificationSettings(currentUserId, [...new Set(groupIds)]);
     }
 
     /**
