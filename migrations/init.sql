@@ -388,8 +388,7 @@ INSERT INTO notification_groups (id, name) VALUES
 ('achievements', 'Succès'),
 ('reminders', 'Rappels');
 
--- Presence of a row means the group is disabled for that user; absence means enabled
--- (the default), so a new group added later is automatically on for everyone with no backfill.
+-- Presence of a row means the group is disabled for that user; absence means enabled (the default)
 CREATE TABLE users_disabled_notifications (
     user_id UUID NOT NULL,
     group_id VARCHAR(20) NOT NULL,
