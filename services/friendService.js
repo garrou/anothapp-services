@@ -60,7 +60,7 @@ export default class FriendService {
         if (!bodyUserId || bodyUserId !== paramUserId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        const accepted = await this._friendRepository.acceptFriend(bodyUserId, currentUserId);
+        const accepted = await this._friendRepository.acceptFriend(currentUserId, bodyUserId);
 
         if (!accepted) {
             throw new ServiceError(500, "Impossible d'accepter cette demande");

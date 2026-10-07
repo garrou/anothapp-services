@@ -34,7 +34,7 @@ describe("FriendRepository (real Postgres)", () => {
     });
 
     describe("acceptFriend", () => {
-        it("accepts a pending request regardless of direction", async () => {
+        it("accepts a pending request when the original recipient accepts it", async () => {
             const userId = await insertUser();
             const otherId = await insertUser();
             await repo.sendFriendRequest(userId, otherId);
@@ -53,6 +53,20 @@ describe("FriendRepository (real Postgres)", () => {
 
             expect(result).toBe(false);
         });
+
+        // Regression test for a real production bug: the original query was symmetric
+        // (fst/sec in either order), so the requester could accept their own outgoing
+        // request with no action from the actual recipient.
+        it("does not let the requester accept their own outgoing request", async () => {
+            const userId = await insertUser();
+            const otherId = await insertUser();
+            await repo.sendFriendRequest(userId, otherId);
+
+            const result = await repo.acceptFriend(userId, otherId);
+
+            expect(result).toBe(false);
+            expect(await repo.checkIfAlreadyFriend(userId, otherId)).toBe(false);
+        });
     });
 
     describe("getFriends", () => {
@@ -61,9 +75,9 @@ describe("FriendRepository (real Postgres)", () => {
             const friendA = await insertUser({ username: "FriendA" });
             const friendB = await insertUser({ username: "FriendB" });
             await repo.sendFriendRequest(userId, friendA);
-            await repo.acceptFriend(userId, friendA);
+            await repo.acceptFriend(friendA, userId);
             await repo.sendFriendRequest(friendB, userId);
-            await repo.acceptFriend(friendB, userId);
+            await repo.acceptFriend(userId, friendB);
 
             const result = await repo.getFriends(userId);
 
@@ -103,7 +117,7 @@ describe("FriendRepository (real Postgres)", () => {
             const friendId = await insertUser({ username: "WatchesToo" });
             const nonFriendId = await insertUser({ username: "NotAFriend" });
             await repo.sendFriendRequest(userId, friendId);
-            await repo.acceptFriend(userId, friendId);
+            await repo.acceptFriend(friendId, userId);
             await repo.sendFriendRequest(userId, nonFriendId);
 
             const showId = await insertShow();
@@ -121,7 +135,7 @@ describe("FriendRepository (real Postgres)", () => {
             const userId = await insertUser();
             const otherId = await insertUser();
             await repo.sendFriendRequest(userId, otherId);
-            await repo.acceptFriend(userId, otherId);
+            await repo.acceptFriend(otherId, userId);
 
             const result = await repo.deleteFriend(userId, otherId);
 

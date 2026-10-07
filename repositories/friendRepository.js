@@ -32,16 +32,16 @@ export default class FriendRepository {
     }
 
     /**
-     * @param userId
-     * @param otherId
+     * @param {string} accepterId the user accepting the request - must be the original recipient
+     * @param {string} requesterId the user who sent the pending request
      * @returns {Promise<boolean>}
      */
-    acceptFriend = async (userId, otherId) => {
+    acceptFriend = async (accepterId, requesterId) => {
         const res = await db.query(`
             UPDATE friends
             SET accepted = TRUE
-            WHERE (fst_user_id = $1 AND sec_user_id = $2) OR (fst_user_id = $2 AND sec_user_id = $1)
-        `, [userId, otherId]);
+            WHERE fst_user_id = $2 AND sec_user_id = $1
+        `, [accepterId, requesterId]);
         return res.rowCount === 1;
     }
 

@@ -128,13 +128,20 @@ export default class UserShowRepository {
         const res = await db.query(`
             SELECT COUNT(*) AS total
             FROM (
-                SELECT us.show_id
+                SELECT us.show_id,
+                    s.seasons - COUNT(DISTINCT us.number) AS missing_seasons,
+                    (SELECT COALESCE(SUM(seasons.episodes), 0) FROM seasons WHERE seasons.show_id = s.id) - (
+                        SELECT COUNT(DISTINCT ue.episode_id)
+                        FROM users_episodes ue
+                        JOIN users_seasons uss ON uss.id = ue.users_seasons_id
+                        WHERE uss.user_id = $1 AND uss.show_id = s.id
+                    ) AS missing_episodes
                 FROM users_seasons us
                 JOIN shows s ON s.id = us.show_id
                 WHERE us.user_id = $1
-                GROUP BY us.show_id, s.seasons
-                HAVING COUNT(DISTINCT us.number) >= s.seasons
+                GROUP BY us.show_id, s.id, s.seasons
             ) completed
+            WHERE missing_seasons <= 0 AND missing_episodes <= 0
         `, [userId]);
         return parseInt(res.rows[0]["total"] ?? 0);
     }

@@ -126,7 +126,7 @@ describe("FriendService.acceptFriend", () => {
         friendRepoMocks.acceptFriend.mockResolvedValue(true);
 
         await expect(friendService.acceptFriend("user-1", "user-2", "user-2")).resolves.toBeUndefined();
-        expect(friendRepoMocks.acceptFriend).toHaveBeenCalledWith("user-2", "user-1");
+        expect(friendRepoMocks.acceptFriend).toHaveBeenCalledWith("user-1", "user-2");
         expect(eventBusMocks.emit).toHaveBeenCalledWith("friend.accepted", {
             recipientUserId: "user-2", actorUserId: "user-1",
         });

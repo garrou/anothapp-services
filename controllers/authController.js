@@ -37,10 +37,6 @@ export default class AuthController {
             const { token, refreshToken, user } = await this._authService.confirmLogin(approvalToken, code);
 
             this.#setAuthCookies(res, token, refreshToken);
-
-            if (this.#isNativeClient(req)) {
-                return res.status(200).json({ token, refreshToken, ...user });
-            }
             res.status(200).json(user);
         } catch (e) {
             next(e);
@@ -56,10 +52,6 @@ export default class AuthController {
             const { token, refreshToken, user } = await this._authService.cancelDeletion(cancellationToken);
 
             this.#setAuthCookies(res, token, refreshToken);
-
-            if (this.#isNativeClient(req)) {
-                return res.status(200).json({ token, refreshToken, ...user });
-            }
             res.status(200).json(user);
         } catch (e) {
             next(e);
@@ -96,10 +88,6 @@ export default class AuthController {
             const { accessToken, refreshToken: newRefreshToken } = await this._authService.refreshToken(refreshToken);
 
             this.#setAuthCookies(res, accessToken, newRefreshToken);
-
-            if (this.#isNativeClient(req)) {
-                return res.status(200).json({ token: accessToken, refreshToken: newRefreshToken });
-            }
             res.sendStatus(204);
         } catch (e) {
             next(e);
@@ -183,6 +171,4 @@ export default class AuthController {
         res.clearCookie("access_token", { httpOnly: true, secure: isProdMode(), sameSite, path: "/" });
         res.clearCookie("refresh_token", { httpOnly: true, secure: isProdMode(), sameSite, path: SecurityHelper.refreshPath });
     }
-
-    #isNativeClient = (req) => req.headers["x-client-type"] === "ios";
 }

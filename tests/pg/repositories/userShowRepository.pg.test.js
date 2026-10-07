@@ -184,12 +184,14 @@ describe("UserShowRepository (real Postgres)", () => {
     });
 
     describe("getTotalCompletedShowsByUserId", () => {
-        it("counts shows where every season has been watched", async () => {
+        it("counts shows where every season has been added and every episode watched", async () => {
             const userId = await insertUser();
             const completeShow = await insertShow({ seasons: 1 });
-            await insertSeason(completeShow, 1);
+            await insertSeason(completeShow, 1, { episodes: 1 });
             await insertUserShow(userId, completeShow);
-            await insertUserSeason(userId, completeShow, 1);
+            const completeUserSeasonId = await insertUserSeason(userId, completeShow, 1);
+            const completeEpisodeId = await insertEpisode(completeShow, 1);
+            await insertUserEpisode(userId, completeUserSeasonId, completeEpisodeId);
 
             const incompleteShow = await insertShow({ seasons: 2 });
             await insertSeason(incompleteShow, 1);
@@ -198,6 +200,18 @@ describe("UserShowRepository (real Postgres)", () => {
             await insertUserSeason(userId, incompleteShow, 1);
 
             expect(await repo.getTotalCompletedShowsByUserId(userId)).toBe(1);
+        });
+
+        // Regression test for a real production bug: every season was being counted as
+        // "completed" the moment it was added, even with zero episodes actually watched.
+        it("does not count a show as completed when every season is added but no episode is watched", async () => {
+            const userId = await insertUser();
+            const show = await insertShow({ seasons: 1 });
+            await insertSeason(show, 1, { episodes: 3 });
+            await insertUserShow(userId, show);
+            await insertUserSeason(userId, show, 1);
+
+            expect(await repo.getTotalCompletedShowsByUserId(userId)).toBe(0);
         });
     });
 
