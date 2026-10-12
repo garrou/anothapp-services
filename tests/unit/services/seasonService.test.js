@@ -23,6 +23,9 @@ const watchTogetherRepoMocks = vi.hoisted(() => ({
     hasConflictingLink: vi.fn(),
     getActiveForUser: vi.fn(),
 }));
+const watchTogetherAutoAcceptRepoMocks = vi.hoisted(() => ({
+    checkEnabled: vi.fn(),
+}));
 const dbMocks = vi.hoisted(() => ({
     transaction: vi.fn(),
 }));
@@ -58,6 +61,9 @@ vi.mock("../../../repositories/userSeasonFriendRepository.js", () => ({
 }));
 vi.mock("../../../repositories/watchTogetherRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return watchTogetherRepoMocks; }),
+}));
+vi.mock("../../../repositories/watchTogetherAutoAcceptRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return watchTogetherAutoAcceptRepoMocks; }),
 }));
 vi.mock("../../../repositories/friendRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return friendRepoMocks; }),
@@ -194,6 +200,7 @@ describe("SeasonService.updateWatchedWith", () => {
         seasonService = new SeasonService();
         userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({showId: 42, number: 1, platformId: 999});
         friendRepoMocks.getFriends.mockResolvedValue([{id: "friend-1"}, {id: "friend-2"}]);
+        watchTogetherAutoAcceptRepoMocks.checkEnabled.mockResolvedValue(false);
     });
 
     it("rejects with a 400 when seasonId is missing", async () => {
@@ -272,6 +279,78 @@ describe("SeasonService.updateWatchedWith", () => {
         await seasonService.updateWatchedWith("user-1", 7, []);
 
         expect(watchTogetherRepoMocks.remove).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+    });
+
+    it("does not check auto-accept for a friend who was already tagged and unaffected by the update", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: [], revoked: []});
+
+        await seasonService.updateWatchedWith("user-1", 7, ["friend-1", "friend-2"]);
+
+        expect(watchTogetherAutoAcceptRepoMocks.checkEnabled).not.toHaveBeenCalled();
+    });
+
+    it("immediately accepts on behalf of a newly-invited friend who auto-accepts this user", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: ["friend-1"], revoked: []});
+        watchTogetherAutoAcceptRepoMocks.checkEnabled.mockImplementation(
+            async (userId, friendUserId) => userId === "friend-1" && friendUserId === "user-1"
+        );
+        showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
+        watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(false);
+        userSeasonFriendRepoMocks.accept.mockResolvedValue(true);
+        watchTogetherRepoMocks.create.mockResolvedValue(true);
+        episodeServiceMocks.backfillLinkedViewings.mockResolvedValue([]);
+
+        await seasonService.updateWatchedWith("user-1", 7, ["friend-1"]);
+
+        expect(watchTogetherAutoAcceptRepoMocks.checkEnabled).toHaveBeenCalledWith("friend-1", "user-1");
+        expect(showServiceMocks.ensureSeasonTracked).toHaveBeenCalledWith("friend-1", 42, 1, 999);
+        expect(userSeasonFriendRepoMocks.accept).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+        expect(watchTogetherRepoMocks.create).toHaveBeenCalledWith(7, 55, fakeClient);
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with.accepted", {
+            recipientUserId: "user-1", actorUserId: "friend-1", showId: 42, metadata: {seasonNumber: 1},
+        });
+    });
+
+    it("only auto-accepts for a newly-invited friend who has enabled it, not every invited friend", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: ["friend-1", "friend-2"], revoked: []});
+        watchTogetherAutoAcceptRepoMocks.checkEnabled.mockImplementation(
+            async (userId) => userId === "friend-1"
+        );
+        showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
+        watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(false);
+        userSeasonFriendRepoMocks.accept.mockResolvedValue(true);
+        watchTogetherRepoMocks.create.mockResolvedValue(true);
+        episodeServiceMocks.backfillLinkedViewings.mockResolvedValue([]);
+
+        await seasonService.updateWatchedWith("user-1", 7, ["friend-1", "friend-2"]);
+
+        expect(userSeasonFriendRepoMocks.accept).toHaveBeenCalledTimes(1);
+        expect(userSeasonFriendRepoMocks.accept).toHaveBeenCalledWith(7, "friend-1", fakeClient);
+    });
+
+    it("leaves the invite pending when auto-accept is enabled but the friend's season already has a conflicting link", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: ["friend-1"], revoked: []});
+        watchTogetherAutoAcceptRepoMocks.checkEnabled.mockResolvedValue(true);
+        showServiceMocks.ensureSeasonTracked.mockResolvedValue(55);
+        watchTogetherRepoMocks.hasConflictingLink.mockResolvedValue(true);
+
+        await expect(seasonService.updateWatchedWith("user-1", 7, ["friend-1"])).resolves.toBeUndefined();
+
+        expect(userSeasonFriendRepoMocks.accept).not.toHaveBeenCalled();
+        expect(watchTogetherRepoMocks.create).not.toHaveBeenCalled();
+        expect(eventBusMocks.emit).not.toHaveBeenCalledWith("season.watched_with.accepted", expect.anything());
+        // the invitation notification itself still fires - only the auto-accept attempt was swallowed
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with", expect.anything());
+    });
+
+    it("leaves the invite pending when auto-accept is enabled but accepting fails for any other reason", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: ["friend-1"], revoked: []});
+        watchTogetherAutoAcceptRepoMocks.checkEnabled.mockResolvedValue(true);
+        showServiceMocks.ensureSeasonTracked.mockRejectedValue(new Error("BetaSeries is down"));
+
+        await expect(seasonService.updateWatchedWith("user-1", 7, ["friend-1"])).resolves.toBeUndefined();
+
+        expect(eventBusMocks.emit).not.toHaveBeenCalledWith("season.watched_with.accepted", expect.anything());
     });
 });
 

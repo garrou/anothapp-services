@@ -136,6 +136,56 @@ describe("FriendService (real Postgres)", () => {
             const friends = await db.query(`SELECT * FROM friends WHERE fst_user_id = $1 OR sec_user_id = $1`, [userId]);
             expect(friends.rowCount).toBe(1);
         });
+
+        it("clears the auto-accept preference in both directions, so a later re-friend starts clean", async () => {
+            const userId = await insertUser();
+            const otherId = await insertUser();
+            await service.sendFriendRequest(userId, otherId);
+            await service.acceptFriend(otherId, userId, userId);
+            await db.query(`INSERT INTO users_auto_accept_watch_together (user_id, friend_user_id) VALUES ($1, $2)`, [userId, otherId]);
+            await db.query(`INSERT INTO users_auto_accept_watch_together (user_id, friend_user_id) VALUES ($1, $2)`, [otherId, userId]);
+
+            await service.deleteFriend(userId, otherId);
+
+            const rows = await db.query(`SELECT * FROM users_auto_accept_watch_together WHERE user_id IN ($1, $2)`, [userId, otherId]);
+            expect(rows.rowCount).toBe(0);
+        });
+    });
+
+    describe("getAutoAcceptWatchTogether / setAutoAcceptWatchTogether", () => {
+        it("defaults to disabled and can be turned on and off", async () => {
+            const userId = await insertUser();
+            const otherId = await insertUser();
+            await service.sendFriendRequest(userId, otherId);
+            await service.acceptFriend(otherId, userId, userId);
+
+            expect(await service.getAutoAcceptWatchTogether(userId, otherId)).toBe(false);
+
+            await service.setAutoAcceptWatchTogether(userId, otherId, true);
+            expect(await service.getAutoAcceptWatchTogether(userId, otherId)).toBe(true);
+
+            await service.setAutoAcceptWatchTogether(userId, otherId, false);
+            expect(await service.getAutoAcceptWatchTogether(userId, otherId)).toBe(false);
+        });
+
+        it("is one-sided - enabling it for a friend does not enable it in the other direction", async () => {
+            const userId = await insertUser();
+            const otherId = await insertUser();
+            await service.sendFriendRequest(userId, otherId);
+            await service.acceptFriend(otherId, userId, userId);
+
+            await service.setAutoAcceptWatchTogether(userId, otherId, true);
+
+            expect(await service.getAutoAcceptWatchTogether(otherId, userId)).toBe(false);
+        });
+
+        it("rejects when the two users aren't friends", async () => {
+            const userId = await insertUser();
+            const strangerId = await insertUser();
+
+            await expect(service.getAutoAcceptWatchTogether(userId, strangerId)).rejects.toMatchObject({ status: 400 });
+            await expect(service.setAutoAcceptWatchTogether(userId, strangerId, true)).rejects.toMatchObject({ status: 400 });
+        });
     });
 
     describe("getFriends", () => {

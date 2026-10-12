@@ -3,6 +3,7 @@ import FriendService from "../../../services/friendService.js";
 
 const friendRepoMocks = vi.hoisted(() => ({
     checkIfRelationExists: vi.fn(),
+    checkIfAlreadyFriend: vi.fn(),
     acceptFriend: vi.fn(),
     getFriends: vi.fn(),
     getFriendsRequestsSend: vi.fn(),
@@ -18,6 +19,12 @@ const userSeasonFriendRepoMocks = vi.hoisted(() => ({
     declineAllBetweenUsers: vi.fn(),
 }));
 const watchTogetherRepoMocks = vi.hoisted(() => ({
+    removeAllBetweenUsers: vi.fn(),
+}));
+const watchTogetherAutoAcceptRepoMocks = vi.hoisted(() => ({
+    checkEnabled: vi.fn(),
+    enable: vi.fn(),
+    disable: vi.fn(),
     removeAllBetweenUsers: vi.fn(),
 }));
 const eventBusMocks = vi.hoisted(() => ({
@@ -42,6 +49,9 @@ vi.mock("../../../repositories/userSeasonFriendRepository.js", () => ({
 }));
 vi.mock("../../../repositories/watchTogetherRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return watchTogetherRepoMocks; }),
+}));
+vi.mock("../../../repositories/watchTogetherAutoAcceptRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return watchTogetherAutoAcceptRepoMocks; }),
 }));
 vi.mock("../../../helpers/eventBus.js", () => ({
     default: eventBusMocks,
@@ -203,6 +213,13 @@ describe("FriendService.deleteFriend", () => {
         expect(watchTogetherRepoMocks.removeAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2", fakeClient);
     });
 
+    it("clears any auto-accept preference between the two users, in either direction", async () => {
+        friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
+
+        await expect(friendService.deleteFriend("user-1", "user-2")).resolves.toBeUndefined();
+        expect(watchTogetherAutoAcceptRepoMocks.removeAllBetweenUsers).toHaveBeenCalledWith("user-1", "user-2", fakeClient);
+    });
+
     it("deletes the friendship itself in the same transaction as the playlist/watch-together revokes, not as a separate prior step", async () => {
         friendRepoMocks.deleteFriend.mockResolvedValue({requesterId: "user-2", wasAccepted: true});
 
@@ -273,5 +290,76 @@ describe("FriendService.getFriends", () => {
             received: ["received-friend"],
             friends: ["confirmed-friend"],
         });
+    });
+});
+
+describe("FriendService.getAutoAcceptWatchTogether", () => {
+    let friendService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        friendService = new FriendService();
+    });
+
+    it("rejects with a 400 when the two users aren't friends", async () => {
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
+
+        await expect(friendService.getAutoAcceptWatchTogether("user-1", "user-2")).rejects.toThrow(
+            "Vous n'êtes pas en relation avec cette personne"
+        );
+        expect(watchTogetherAutoAcceptRepoMocks.checkEnabled).not.toHaveBeenCalled();
+    });
+
+    it("returns the current setting for a confirmed friend", async () => {
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+        watchTogetherAutoAcceptRepoMocks.checkEnabled.mockResolvedValue(true);
+
+        const result = await friendService.getAutoAcceptWatchTogether("user-1", "user-2");
+
+        expect(result).toBe(true);
+        expect(watchTogetherAutoAcceptRepoMocks.checkEnabled).toHaveBeenCalledWith("user-1", "user-2");
+    });
+});
+
+describe("FriendService.setAutoAcceptWatchTogether", () => {
+    let friendService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        friendService = new FriendService();
+    });
+
+    it("rejects with a 400 when enabled isn't a boolean", async () => {
+        await expect(friendService.setAutoAcceptWatchTogether("user-1", "user-2", "yes")).rejects.toThrow(
+            "Requête invalide"
+        );
+        expect(friendRepoMocks.checkIfAlreadyFriend).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a 400 when the two users aren't friends", async () => {
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
+
+        await expect(friendService.setAutoAcceptWatchTogether("user-1", "user-2", true)).rejects.toThrow(
+            "Vous n'êtes pas en relation avec cette personne"
+        );
+        expect(watchTogetherAutoAcceptRepoMocks.enable).not.toHaveBeenCalled();
+    });
+
+    it("enables the setting", async () => {
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+
+        await friendService.setAutoAcceptWatchTogether("user-1", "user-2", true);
+
+        expect(watchTogetherAutoAcceptRepoMocks.enable).toHaveBeenCalledWith("user-1", "user-2");
+        expect(watchTogetherAutoAcceptRepoMocks.disable).not.toHaveBeenCalled();
+    });
+
+    it("disables the setting", async () => {
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
+
+        await friendService.setAutoAcceptWatchTogether("user-1", "user-2", false);
+
+        expect(watchTogetherAutoAcceptRepoMocks.disable).toHaveBeenCalledWith("user-1", "user-2");
+        expect(watchTogetherAutoAcceptRepoMocks.enable).not.toHaveBeenCalled();
     });
 });

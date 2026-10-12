@@ -3,9 +3,11 @@ import FriendRepository from "../repositories/friendRepository.js";
 import PlaylistCollaboratorRepository from "../repositories/playlistCollaboratorRepository.js";
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
 import WatchTogetherRepository from "../repositories/watchTogetherRepository.js";
+import WatchTogetherAutoAcceptRepository from "../repositories/watchTogetherAutoAcceptRepository.js";
 import ServiceError from "../helpers/serviceError.js";
+import Validator from "../helpers/validator.js";
 import {
-    DUPLICATE_ERROR_CODE, ERROR_ALREADY_FRIEND, ERROR_INVALID_REQUEST, ERROR_SELF_FRIEND_REQUEST
+    DUPLICATE_ERROR_CODE, ERROR_ALREADY_FRIEND, ERROR_INVALID_REQUEST, ERROR_NOT_FRIEND, ERROR_SELF_FRIEND_REQUEST
 } from "../constants/errors.js";
 import eventBus from "../helpers/eventBus.js";
 
@@ -16,6 +18,7 @@ export default class FriendService {
         this._playlistCollaboratorRepository = new PlaylistCollaboratorRepository();
         this._userSeasonFriendRepository = new UserSeasonFriendRepository();
         this._watchTogetherRepository = new WatchTogetherRepository();
+        this._watchTogetherAutoAcceptRepository = new WatchTogetherAutoAcceptRepository();
     }
 
     /**
@@ -77,12 +80,13 @@ export default class FriendService {
         if (!userId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
-        // The friendship itself, playlist collaboration and watch-together are all revoked in one
-        // transaction: playlist access and watch-together were both granted on the strength of the
-        // friendship, so a failure partway through (crash, dropped connection) must never leave the
-        // friendship gone while either still outlives it. Like every other revoke path, this never
-        // touches episodes already synced, and it keeps the historical tag (declined/revoked), only
-        // the live relation is removed.
+        // The friendship itself, playlist collaboration, watch-together and the auto-accept
+        // preference are all revoked in one transaction: all three were only granted/set on the
+        // strength of the friendship, so a failure partway through (crash, dropped connection)
+        // must never leave the friendship gone while any of them still outlives it - and a later
+        // re-friend must never silently resurrect a stale auto-accept setting either. Like every
+        // other revoke path, this never touches episodes already synced, and it keeps the
+        // historical watch-together tag (declined/revoked), only the live relation is removed.
         const deleted = await db.transaction(async (client) => {
             const result = await this._friendRepository.deleteFriend(currentUserId, userId, client);
 
@@ -90,6 +94,7 @@ export default class FriendService {
                 await this._playlistCollaboratorRepository.removeAllBetween(currentUserId, userId, client);
                 await this._userSeasonFriendRepository.declineAllBetweenUsers(currentUserId, userId, client);
                 await this._watchTogetherRepository.removeAllBetweenUsers(currentUserId, userId, client);
+                await this._watchTogetherAutoAcceptRepository.removeAllBetweenUsers(currentUserId, userId, client);
             }
             return result;
         });
@@ -100,6 +105,38 @@ export default class FriendService {
 
         if (!deleted.wasAccepted && deleted.requesterId !== currentUserId) {
             eventBus.emit("friend.declined", {recipientUserId: deleted.requesterId, actorUserId: currentUserId});
+        }
+    }
+
+    /**
+     * @param {string} currentUserId the prospective accepter
+     * @param {string} friendUserId the prospective inviter
+     * @returns {Promise<boolean>}
+     */
+    getAutoAcceptWatchTogether = async (currentUserId, friendUserId) => {
+        if (!await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendUserId)) {
+            throw new ServiceError(400, ERROR_NOT_FRIEND);
+        }
+        return this._watchTogetherAutoAcceptRepository.checkEnabled(currentUserId, friendUserId);
+    }
+
+    /**
+     * @param {string} currentUserId the prospective accepter
+     * @param {string} friendUserId the prospective inviter
+     * @param {boolean} enabled
+     * @returns {Promise<void>}
+     */
+    setAutoAcceptWatchTogether = async (currentUserId, friendUserId, enabled) => {
+        if (!Validator.isBoolean(enabled)) {
+            throw new ServiceError(400, ERROR_INVALID_REQUEST);
+        }
+        if (!await this._friendRepository.checkIfAlreadyFriend(currentUserId, friendUserId)) {
+            throw new ServiceError(400, ERROR_NOT_FRIEND);
+        }
+        if (enabled) {
+            await this._watchTogetherAutoAcceptRepository.enable(currentUserId, friendUserId);
+        } else {
+            await this._watchTogetherAutoAcceptRepository.disable(currentUserId, friendUserId);
         }
     }
 

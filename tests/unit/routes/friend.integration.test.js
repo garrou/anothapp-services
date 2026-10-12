@@ -8,6 +8,8 @@ const friendServiceMocks = vi.hoisted(() => ({
     sendFriendRequest: vi.fn(),
     acceptFriend: vi.fn(),
     deleteFriend: vi.fn(),
+    getAutoAcceptWatchTogether: vi.fn(),
+    setAutoAcceptWatchTogether: vi.fn(),
 }));
 
 vi.mock("../../../services/friendService.js", () => ({
@@ -91,6 +93,38 @@ describe("DELETE /friends/:userId", () => {
         const res = await request(app).delete("/friends/user-2").set("Cookie", cookie);
 
         expect(friendServiceMocks.deleteFriend).toHaveBeenCalledWith("user-1", "user-2");
+        expect(res.status).toBe(204);
+    });
+});
+
+describe("GET /friends/:userId/auto-accept-watch-together", () => {
+    it("returns the current setting", async () => {
+        friendServiceMocks.getAutoAcceptWatchTogether.mockResolvedValue(true);
+
+        const res = await request(app).get("/friends/user-2/auto-accept-watch-together").set("Cookie", cookie);
+
+        expect(friendServiceMocks.getAutoAcceptWatchTogether).toHaveBeenCalledWith("user-1", "user-2");
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({enabled: true});
+    });
+
+    it("returns 400 when the two users aren't friends", async () => {
+        friendServiceMocks.getAutoAcceptWatchTogether.mockRejectedValue(new ServiceError(400, "Pas ami"));
+
+        const res = await request(app).get("/friends/user-2/auto-accept-watch-together").set("Cookie", cookie);
+
+        expect(res.status).toBe(400);
+    });
+});
+
+describe("PATCH /friends/:userId/auto-accept-watch-together", () => {
+    it("returns 204 on success", async () => {
+        friendServiceMocks.setAutoAcceptWatchTogether.mockResolvedValue(undefined);
+
+        const res = await request(app).patch("/friends/user-2/auto-accept-watch-together")
+            .set("Cookie", cookie).send({enabled: true});
+
+        expect(friendServiceMocks.setAutoAcceptWatchTogether).toHaveBeenCalledWith("user-1", "user-2", true);
         expect(res.status).toBe(204);
     });
 });

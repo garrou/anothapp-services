@@ -12,4 +12,8 @@ router.patch("/:userId", friendController.acceptFriend);
 
 router.delete("/:userId", friendController.deleteFriend);
 
+router.get("/:userId/auto-accept-watch-together", friendController.getAutoAcceptWatchTogether);
+
+router.patch("/:userId/auto-accept-watch-together", friendController.setAutoAcceptWatchTogether);
+
 export default router;
