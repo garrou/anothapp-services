@@ -256,6 +256,18 @@ CREATE TABLE watch_together (
     UNIQUE(friend_users_season_id)
 );
 
+-- A row (user_id, friend_user_id) means user_id auto-accepts watch-together invites sent by
+-- friend_user_id - one-sided by design, so a couple only gets fully hands-free once both sides
+-- have set it for each other. Checked when the invite is created (updateWatchedWith), not when
+-- it's responded to, so a manual accept/decline is still always possible either way.
+CREATE TABLE users_auto_accept_watch_together (
+    user_id UUID NOT NULL,
+    friend_user_id UUID NOT NULL,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY(user_id, friend_user_id)
+);
+
 CREATE TABLE episodes (
     id INTEGER,
     show_id INTEGER NOT NULL,

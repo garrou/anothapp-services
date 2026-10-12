@@ -55,4 +55,29 @@ export default class FriendController {
             next(e);
         }
     }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    getAutoAcceptWatchTogether = async (req, res, next) => {
+        try {
+            const enabled = await this._friendService.getAutoAcceptWatchTogether(req.userId, req.params.userId);
+            res.status(200).json({enabled});
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    /**
+     * @returns {Promise<void>}
+     */
+    setAutoAcceptWatchTogether = async (req, res, next) => {
+        try {
+            const {enabled} = req.body;
+            await this._friendService.setAutoAcceptWatchTogether(req.userId, req.params.userId, enabled);
+            res.sendStatus(204);
+        } catch (e) {
+            next(e);
+        }
+    }
 }

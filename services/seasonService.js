@@ -3,6 +3,7 @@ import SeasonRepository from "../repositories/seasonRepository.js";
 import UserSeasonRepository from "../repositories/userSeasonRepository.js";
 import UserSeasonFriendRepository from "../repositories/userSeasonFriendRepository.js";
 import WatchTogetherRepository from "../repositories/watchTogetherRepository.js";
+import WatchTogetherAutoAcceptRepository from "../repositories/watchTogetherAutoAcceptRepository.js";
 import FriendRepository from "../repositories/friendRepository.js";
 import EpisodeService from "./episodeService.js";
 import ShowService from "./showService.js";
@@ -19,6 +20,7 @@ export default class SeasonService {
         this._userSeasonRepository = new UserSeasonRepository();
         this._userSeasonFriendRepository = new UserSeasonFriendRepository();
         this._watchTogetherRepository = new WatchTogetherRepository();
+        this._watchTogetherAutoAcceptRepository = new WatchTogetherAutoAcceptRepository();
         this._friendRepository = new FriendRepository();
         this._episodeService = new EpisodeService();
         this._showService = new ShowService();
@@ -132,6 +134,35 @@ export default class SeasonService {
                 showId: owned.showId,
                 metadata: {seasonNumber: owned.number}
             });
+            for (const friendId of invited) {
+                await this.#tryAutoAccept(seasonId, friendId, {userId: currentUserId, ...owned});
+            }
+        }
+    }
+
+    /**
+     * Checking enablement, re-checking friendship and accepting are all inside the same try -
+     * any failure anywhere in here (the auto-accept setting lookup, a stale/ended friendship, a
+     * conflicting link, or anything else - a transient issue with the friend's own season/show
+     * tracking, say) just leaves the invite pending, exactly as if auto-accept weren't enabled.
+     * The friend can still resolve it by hand, and the tag/invite created by updateWatchedWith
+     * above has already succeeded regardless.
+     * @param {number} userSeasonId
+     * @param {string} friendUserId
+     * @param {{userId: string, showId: number, number: number, platformId: number}} owned
+     * @returns {Promise<void>}
+     */
+    #tryAutoAccept = async (userSeasonId, friendUserId, owned) => {
+        try {
+            if (!await this._watchTogetherAutoAcceptRepository.checkEnabled(friendUserId, owned.userId)) {
+                return;
+            }
+            if (!await this._friendRepository.checkIfAlreadyFriend(owned.userId, friendUserId)) {
+                return;
+            }
+            await this.#acceptInvite(friendUserId, userSeasonId, owned);
+        } catch {
+            // left pending
         }
     }
 
@@ -203,8 +234,23 @@ export default class SeasonService {
         if (!stillFriends) {
             throw new ServiceError(400, ERROR_NOT_FRIEND);
         }
+        await this.#acceptInvite(currentUserId, userSeasonId, owned);
+    }
+
+    /**
+     * Shared by respondToWatchedWith's manual accept and updateWatchedWith's auto-accept path.
+     * Callers are responsible for confirming the two users are still friends beforehand.
+     * @param {string} accepterId
+     * @param {number} userSeasonId
+     * @param {{userId: string, showId: number, number: number, platformId: number}} owned the
+     *   original season owner's viewing
+     * @returns {Promise<void>}
+     * @throws {ServiceError} 409 if the accepter's season already belongs to another active link,
+     *   500 if the link itself fails to create
+     */
+    #acceptInvite = async (accepterId, userSeasonId, owned) => {
         const friendUsersSeasonId = await this._showService.ensureSeasonTracked(
-            currentUserId, owned.showId, owned.number, owned.platformId
+            accepterId, owned.showId, owned.number, owned.platformId
         );
         // The conflict check and the two writes below all run under one advisory lock on both
         // seasons, in the same transaction, so two concurrent accepts touching either season can
@@ -217,7 +263,7 @@ export default class SeasonService {
             if (conflict) {
                 throw new ServiceError(409, "Ce visionnage participe déjà à un autre visionnage partagé");
             }
-            await this._userSeasonFriendRepository.accept(userSeasonId, currentUserId, client);
+            await this._userSeasonFriendRepository.accept(userSeasonId, accepterId, client);
             const created = await this._watchTogetherRepository.create(userSeasonId, friendUsersSeasonId, client);
             const backfilledUserIds = created
                 ? await this._episodeService.backfillLinkedViewings(userSeasonId, owned.userId, client)
@@ -234,7 +280,7 @@ export default class SeasonService {
         // those events also trigger (a historical merge from joining isn't something to notify about).
         backfilledUserIds.forEach((userId) => eventBus.emit("episode.backfilled", {actorUserId: userId}));
         eventBus.emit("season.watched_with.accepted", {
-            recipientUserId: owned.userId, actorUserId: currentUserId,
+            recipientUserId: owned.userId, actorUserId: accepterId,
             showId: owned.showId, metadata: {seasonNumber: owned.number},
         });
     }
