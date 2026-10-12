@@ -455,26 +455,53 @@ export default class UserShowRepository {
     }
 
     /**
+     * Hybrid recommendation: a show qualifies either because accepted friends rated it highly,
+     * or because its genres match genres the user themselves tends to rate highly - whichever
+     * signal(s) apply are combined into one score. The genre path covers users with few or no
+     * friends (the friends-only version had no fallback for them), while the friend path alone
+     * still works for a user with no ratings of their own.
      * @param {string} userId
      * @param {number} limit
      * @returns {Promise<Recommendation[]>}
      */
     getRecommendationsByUserId = async (userId, limit = 10) => {
         const res = await db.query(`
-            SELECT s.*, COUNT(DISTINCT us.user_id) AS nb_friends, AVG(us.note_id) AS avg_note,
-                json_agg(json_build_object('id', u.id, 'username', u.username, 'picture', u.picture)) AS friends,
-                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names
-            FROM users_shows us
-            JOIN shows s ON s.id = us.show_id
-            JOIN users u ON u.id = us.user_id
-            JOIN friends f ON (f.fst_user_id = $1 AND f.sec_user_id = us.user_id)
-                OR (f.sec_user_id = $1 AND f.fst_user_id = us.user_id)
-            WHERE f.accepted = TRUE
-                AND us.note_id > 3
-                AND us.show_id NOT IN (SELECT show_id FROM users_shows WHERE user_id = $1)
-                AND us.show_id NOT IN (SELECT show_id FROM users_list WHERE user_id = $1)
-            GROUP BY s.id
-            ORDER BY nb_friends DESC, avg_note DESC
+            WITH user_genre_profile AS (
+                SELECT sk.kind_id, AVG(us.note_id) AS avg_note
+                FROM users_shows us
+                JOIN shows_kinds sk ON sk.show_id = us.show_id
+                WHERE us.user_id = $1 AND us.note_id IS NOT NULL
+                GROUP BY sk.kind_id
+                HAVING AVG(us.note_id) > 3
+            ), friend_signal AS (
+                SELECT us.show_id, COUNT(DISTINCT us.user_id) AS nb_friends, AVG(us.note_id) AS avg_note,
+                    json_agg(json_build_object('id', u.id, 'username', u.username, 'picture', u.picture)) AS friends
+                FROM users_shows us
+                JOIN users u ON u.id = us.user_id
+                JOIN friends f ON (f.fst_user_id = $1 AND f.sec_user_id = us.user_id)
+                    OR (f.sec_user_id = $1 AND f.fst_user_id = us.user_id)
+                WHERE f.accepted = TRUE AND us.note_id > 3
+                GROUP BY us.show_id
+            ), genre_signal AS (
+                SELECT sk.show_id, AVG(ugp.avg_note) AS genre_score
+                FROM shows_kinds sk
+                JOIN user_genre_profile ugp ON ugp.kind_id = sk.kind_id
+                GROUP BY sk.show_id
+            )
+            SELECT s.*,
+                COALESCE(fs.nb_friends, 0) AS nb_friends,
+                COALESCE(fs.avg_note, 0) AS avg_note,
+                COALESCE(fs.friends, '[]'::json) AS friends,
+                COALESCE(gs.genre_score, 0) AS genre_score,
+                (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names,
+                (0.6 * LEAST(COALESCE(fs.nb_friends, 0)::NUMERIC / 3, 1) + 0.4 * (COALESCE(gs.genre_score, 0) / 5.0)) AS score
+            FROM shows s
+            LEFT JOIN friend_signal fs ON fs.show_id = s.id
+            LEFT JOIN genre_signal gs ON gs.show_id = s.id
+            WHERE (fs.show_id IS NOT NULL OR gs.show_id IS NOT NULL)
+                AND s.id NOT IN (SELECT show_id FROM users_shows WHERE user_id = $1)
+                AND s.id NOT IN (SELECT show_id FROM users_list WHERE user_id = $1)
+            ORDER BY score DESC
             LIMIT $2
         `, [userId, limit]);
         return res.rows.map((row) => new Recommendation(row));

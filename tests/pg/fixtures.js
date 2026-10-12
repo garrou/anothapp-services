@@ -58,6 +58,19 @@ export const insertShow = async (overrides = {}) => {
 };
 
 /**
+ * Requires a prior insertShow. kindId must be one of the static kinds seeded by migrations
+ * (e.g. "Drama", "Comedy").
+ * @param {number} showId
+ * @param {string} kindId
+ * @returns {Promise<void>}
+ */
+export const insertShowKind = async (showId, kindId) => {
+    await db.query(`
+        INSERT INTO shows_kinds (show_id, kind_id) VALUES ($1, $2)
+    `, [showId, kindId]);
+};
+
+/**
  * @param {number} showId
  * @param {number} number
  * @param {Object} overrides

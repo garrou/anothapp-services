@@ -4,6 +4,7 @@ import UserShowRepository from "../../../repositories/userShowRepository.js";
 import { resetDb } from "../resetDb.js";
 import {
     insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason, insertEpisode, insertUserEpisode,
+    insertShowKind,
 } from "../fixtures.js";
 
 describe("UserShowRepository (real Postgres)", () => {
@@ -473,6 +474,53 @@ describe("UserShowRepository (real Postgres)", () => {
             await insertUserShow(friendId, showId, { noteId: 2 });
 
             expect(await repo.getRecommendationsByUserId(userId)).toEqual([]);
+        });
+
+        it("recommends a show matching the user's own genre taste, even with no friend signal", async () => {
+            const userId = await insertUser();
+            const likedShow = await insertShow({ title: "Liked Drama" });
+            await insertShowKind(likedShow, "Drama");
+            await insertUserShow(userId, likedShow, { noteId: 5 });
+            const candidate = await insertShow({ title: "Another Drama" });
+            await insertShowKind(candidate, "Drama");
+
+            const result = await repo.getRecommendationsByUserId(userId);
+
+            expect(result.map((r) => r.title)).toEqual(["Another Drama"]);
+            expect(result[0].nbFriends).toBe(0);
+            expect(result[0].genreScore).toBeGreaterThan(0);
+        });
+
+        it("does not boost shows in a genre the user has rated poorly", async () => {
+            const userId = await insertUser();
+            const dislikedShow = await insertShow({ title: "Disliked Comedy" });
+            await insertShowKind(dislikedShow, "Comedy");
+            await insertUserShow(userId, dislikedShow, { noteId: 1 });
+            const candidate = await insertShow({ title: "Another Comedy" });
+            await insertShowKind(candidate, "Comedy");
+
+            expect(await repo.getRecommendationsByUserId(userId)).toEqual([]);
+        });
+
+        it("ranks a show backed by both a friend's note and a genre match above a genre-only match", async () => {
+            const userId = await insertUser();
+            const friendId = await insertUser();
+            await db.query(`
+                INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)
+            `, [userId, friendId]);
+            const likedShow = await insertShow({ title: "Liked Drama" });
+            await insertShowKind(likedShow, "Drama");
+            await insertUserShow(userId, likedShow, { noteId: 5 });
+
+            const genreOnly = await insertShow({ title: "Genre Only" });
+            await insertShowKind(genreOnly, "Drama");
+            const both = await insertShow({ title: "Friend And Genre" });
+            await insertShowKind(both, "Drama");
+            await insertUserShow(friendId, both, { noteId: 5 });
+
+            const result = await repo.getRecommendationsByUserId(userId);
+
+            expect(result.map((r) => r.title)).toEqual(["Friend And Genre", "Genre Only"]);
         });
     });
 
