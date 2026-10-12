@@ -135,18 +135,18 @@ export default class SeasonService {
                 metadata: {seasonNumber: owned.number}
             });
             for (const friendId of invited) {
-                if (await this._watchTogetherAutoAcceptRepository.checkEnabled(friendId, currentUserId)) {
-                    await this.#tryAutoAccept(seasonId, friendId, {userId: currentUserId, ...owned});
-                }
+                await this.#tryAutoAccept(seasonId, friendId, {userId: currentUserId, ...owned});
             }
         }
     }
 
     /**
-     * Any failure (a conflicting link, or anything else - a transient issue with
-     * the friend's own season/show tracking, say) just leaves the invite pending, exactly as if
-     * auto-accept weren't enabled. The friend can still resolve it by hand, and the tag/invite
-     * created by updateWatchedWith above has already succeeded regardless.
+     * Checking enablement, re-checking friendship and accepting are all inside the same try -
+     * any failure anywhere in here (the auto-accept setting lookup, a stale/ended friendship, a
+     * conflicting link, or anything else - a transient issue with the friend's own season/show
+     * tracking, say) just leaves the invite pending, exactly as if auto-accept weren't enabled.
+     * The friend can still resolve it by hand, and the tag/invite created by updateWatchedWith
+     * above has already succeeded regardless.
      * @param {number} userSeasonId
      * @param {string} friendUserId
      * @param {{userId: string, showId: number, number: number, platformId: number}} owned
@@ -154,6 +154,12 @@ export default class SeasonService {
      */
     #tryAutoAccept = async (userSeasonId, friendUserId, owned) => {
         try {
+            if (!await this._watchTogetherAutoAcceptRepository.checkEnabled(friendUserId, owned.userId)) {
+                return;
+            }
+            if (!await this._friendRepository.checkIfAlreadyFriend(owned.userId, friendUserId)) {
+                return;
+            }
             await this.#acceptInvite(friendUserId, userSeasonId, owned);
         } catch {
             // left pending

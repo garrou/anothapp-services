@@ -151,6 +151,28 @@ describe("SeasonService (real Postgres)", () => {
                 expect(relation.rowCount).toBe(0);
             });
 
+            it("leaves the invite pending when the friendship ends in the window between the tag being created and the auto-accept attempt", async () => {
+                const userId = await insertUser();
+                const friendId = await insertUser();
+                await db.query(`INSERT INTO friends (fst_user_id, sec_user_id, accepted) VALUES ($1, $2, TRUE)`, [userId, friendId]);
+                await db.query(`INSERT INTO users_auto_accept_watch_together (user_id, friend_user_id) VALUES ($1, $2)`, [friendId, userId]);
+                const showId = await insertShow();
+                await insertSeason(showId, 1);
+                await insertUserShow(userId, showId);
+                const userSeasonId = await insertUserSeason(userId, showId, 1);
+                // simulates a concurrent unfriend landing between updateWatchedWith's own
+                // friendship check (via getFriends, untouched here) and the auto-accept path's
+                // re-check (via checkIfAlreadyFriend, the one this stubs out)
+                service._friendRepository.checkIfAlreadyFriend = async () => false;
+
+                await expect(service.updateWatchedWith(userId, userSeasonId, [friendId])).resolves.toBeUndefined();
+
+                const tag = await db.query(`SELECT status_id FROM users_seasons_friends WHERE users_season_id = $1 AND friend_user_id = $2`, [userSeasonId, friendId]);
+                expect(tag.rows[0]["status_id"]).toBe("pending");
+                const relation = await db.query(`SELECT * FROM watch_together WHERE users_season_id = $1`, [userSeasonId]);
+                expect(relation.rowCount).toBe(0);
+            });
+
             it("leaves the invite pending when the friend's season already belongs to another active link", async () => {
                 const userId = await insertUser();
                 const friendId = await insertUser();

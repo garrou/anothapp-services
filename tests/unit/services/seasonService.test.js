@@ -201,6 +201,7 @@ describe("SeasonService.updateWatchedWith", () => {
         userSeasonRepoMocks.getOwnedSeasonViewing.mockResolvedValue({showId: 42, number: 1, platformId: 999});
         friendRepoMocks.getFriends.mockResolvedValue([{id: "friend-1"}, {id: "friend-2"}]);
         watchTogetherAutoAcceptRepoMocks.checkEnabled.mockResolvedValue(false);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(true);
     });
 
     it("rejects with a 400 when seasonId is missing", async () => {
@@ -350,6 +351,38 @@ describe("SeasonService.updateWatchedWith", () => {
 
         await expect(seasonService.updateWatchedWith("user-1", 7, ["friend-1"])).resolves.toBeUndefined();
 
+        expect(eventBusMocks.emit).not.toHaveBeenCalledWith("season.watched_with.accepted", expect.anything());
+    });
+
+    // Regression test for a real bug: checkEnabled used to be called outside #tryAutoAccept's
+    // try/catch, so a transient failure there (unlike every other failure in the auto-accept
+    // path) propagated out of updateWatchedWith and failed the whole request - even though the
+    // tag/invite had already been committed successfully just before.
+    it("does not fail the request when checking the auto-accept setting itself fails", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: ["friend-1"], revoked: []});
+        watchTogetherAutoAcceptRepoMocks.checkEnabled.mockRejectedValue(new Error("connection pool exhausted"));
+
+        await expect(seasonService.updateWatchedWith("user-1", 7, ["friend-1"])).resolves.toBeUndefined();
+
+        expect(eventBusMocks.emit).toHaveBeenCalledWith("season.watched_with", expect.anything());
+        expect(eventBusMocks.emit).not.toHaveBeenCalledWith("season.watched_with.accepted", expect.anything());
+    });
+
+    // Regression test for a real bug: unlike the manual-accept path (respondToWatchedWith),
+    // the auto-accept path used to rely entirely on the friendship check already done earlier in
+    // updateWatchedWith, without re-checking it right before linking - a friendship ending in the
+    // window between (a concurrent unfriend) could still produce a live relation between two
+    // people no longer friends.
+    it("leaves the invite pending when auto-accept is enabled but the friendship ended since the tag was created", async () => {
+        userSeasonFriendRepoMocks.setForUserSeasonId.mockResolvedValue({invited: ["friend-1"], revoked: []});
+        watchTogetherAutoAcceptRepoMocks.checkEnabled.mockResolvedValue(true);
+        friendRepoMocks.checkIfAlreadyFriend.mockResolvedValue(false);
+
+        await expect(seasonService.updateWatchedWith("user-1", 7, ["friend-1"])).resolves.toBeUndefined();
+
+        expect(friendRepoMocks.checkIfAlreadyFriend).toHaveBeenCalledWith("user-1", "friend-1");
+        expect(showServiceMocks.ensureSeasonTracked).not.toHaveBeenCalled();
+        expect(userSeasonFriendRepoMocks.accept).not.toHaveBeenCalled();
         expect(eventBusMocks.emit).not.toHaveBeenCalledWith("season.watched_with.accepted", expect.anything());
     });
 });
