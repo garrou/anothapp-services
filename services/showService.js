@@ -1,6 +1,7 @@
 import db from "../config/db.js";
 import ShowRepository from "../repositories/showRepository.js";
 import UserShowRepository from "../repositories/userShowRepository.js";
+import ActorRepository from "../repositories/actorRepository.js";
 import SearchService from "./searchService.js";
 import EpisodeService from "./episodeService.js";
 import FriendRepository from "../repositories/friendRepository.js";
@@ -24,6 +25,7 @@ export default class ShowService {
         this._episodeService = new EpisodeService();
         this._friendRepository = new FriendRepository();
         this._seasonRepository = new SeasonRepository();
+        this._actorRepository = new ActorRepository();
     }
 
     /**
@@ -149,7 +151,7 @@ export default class ShowService {
     /**
      * @param {string} currentUserId
      * @param {number?} id
-     * @returns {Promise<{serie: UserShow, seasons: Season[], time: number, episodes: number, distinctEpisodes: number?}>}
+     * @returns {Promise<{serie: UserShow, seasons: Season[], time: number, episodes: number, distinctEpisodes: number?, favoriteActors: {id: number, name: string, picture: string?}[]}>}
      */
     getShowById = async (currentUserId, id) => {
         if (!id) {
@@ -162,6 +164,7 @@ export default class ShowService {
         }
         const seasons = await this._userSeasonRepository.getDistinctByUserIdByShowId(currentUserId, id);
         const [time, nbEpisodes, distinctEpisodes] = await this._episodeService.getWatchedTimeAndCountByShowId(currentUserId, id);
+        const favoriteActors = await this._actorRepository.getFavoritedActorsByShowId(currentUserId, id);
 
         return {
             "serie": show,
@@ -169,6 +172,7 @@ export default class ShowService {
             "time": isNaN(time) ? 0 : time,
             "episodes": isNaN(nbEpisodes) ? 0 : nbEpisodes,
             distinctEpisodes,
+            favoriteActors,
         };
     }
 

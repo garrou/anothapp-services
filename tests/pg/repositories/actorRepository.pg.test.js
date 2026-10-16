@@ -114,4 +114,44 @@ describe("ActorRepository (real Postgres)", () => {
             expect(res.rows).toHaveLength(1);
         });
     });
+
+    describe("getFavoritedActorsByShowId", () => {
+        it("returns actors linked to the show that this user favorited", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            const favorited = await insertActor({ name: "Favorited" });
+            const notFavorited = await insertActor({ name: "Not favorited" });
+            await repo.linkShows(favorited, [showId]);
+            await repo.linkShows(notFavorited, [showId]);
+            await new UserFavoriteActorRepository().create(userId, favorited);
+
+            const result = await repo.getFavoritedActorsByShowId(userId, showId);
+
+            expect(result.map((a) => a.name)).toEqual(["Favorited"]);
+        });
+
+        it("does not return an actor favorited by the user but not linked to this show", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            const favorited = await insertActor();
+            await new UserFavoriteActorRepository().create(userId, favorited);
+
+            const result = await repo.getFavoritedActorsByShowId(userId, showId);
+
+            expect(result).toEqual([]);
+        });
+
+        it("does not return a favorite belonging to another user", async () => {
+            const userId = await insertUser();
+            const otherUserId = await insertUser();
+            const showId = await insertShow();
+            const favorited = await insertActor();
+            await repo.linkShows(favorited, [showId]);
+            await new UserFavoriteActorRepository().create(otherUserId, favorited);
+
+            const result = await repo.getFavoritedActorsByShowId(userId, showId);
+
+            expect(result).toEqual([]);
+        });
+    });
 });

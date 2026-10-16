@@ -124,3 +124,21 @@ describe("ActorRepository.linkShows", () => {
         expect(db.query).not.toHaveBeenCalled();
     });
 });
+
+describe("ActorRepository.getFavoritedActorsByShowId", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new ActorRepository();
+    });
+
+    it("returns the rows as-is", async () => {
+        db.query.mockResolvedValue({rows: [{id: 34100, name: "Rami Malek", picture: "rami.jpg"}]});
+
+        const result = await repo.getFavoritedActorsByShowId("user-1", 42);
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("users_favorite_actors"), ["user-1", 42]);
+        expect(result).toEqual([{id: 34100, name: "Rami Malek", picture: "rami.jpg"}]);
+    });
+});

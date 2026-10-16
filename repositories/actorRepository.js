@@ -75,4 +75,20 @@ export default class ActorRepository {
             ON CONFLICT DO NOTHING
         `, [actorId, showIds]);
     }
+
+    /**
+     * @param {string} userId
+     * @param {number} showId
+     * @returns {Promise<{id: number, name: string, picture: string?}[]>}
+     */
+    getFavoritedActorsByShowId = async (userId, showId) => {
+        const res = await db.query(`
+            SELECT a.id, a.name, a.picture
+            FROM actors a
+            JOIN shows_actors sa ON sa.actor_id = a.id
+            JOIN users_favorite_actors ufa ON ufa.actor_id = a.id AND ufa.user_id = $1
+            WHERE sa.show_id = $2
+        `, [userId, showId]);
+        return res.rows;
+    }
 }
