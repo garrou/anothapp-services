@@ -229,19 +229,19 @@ describe("ShowRepository.needsCastSync", () => {
     });
 
     it("returns true when the show exists and has never been synced", async () => {
-        db.query.mockResolvedValue({rowCount: 1, rows: [{last_cast_sync_at: null}]});
+        db.query.mockResolvedValue({rows: [{exists: true}]});
 
         expect(await repo.needsCastSync(10)).toBe(true);
     });
 
     it("returns false when the show was already synced", async () => {
-        db.query.mockResolvedValue({rowCount: 1, rows: [{last_cast_sync_at: "2024-01-01T00:00:00.000Z"}]});
+        db.query.mockResolvedValue({rows: [{exists: false}]});
 
         expect(await repo.needsCastSync(10)).toBe(false);
     });
 
     it("returns false when the show doesn't exist in our catalog", async () => {
-        db.query.mockResolvedValue({rowCount: 0, rows: []});
+        db.query.mockResolvedValue({rows: [{exists: false}]});
 
         expect(await repo.needsCastSync(999)).toBe(false);
     });

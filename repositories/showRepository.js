@@ -26,9 +26,11 @@ export default class ShowRepository {
      */
     needsCastSync = async (id) => {
         const res = await db.query(`
-            SELECT last_cast_sync_at FROM shows WHERE id = $1
+            SELECT EXISTS(
+                SELECT 1 FROM shows WHERE id = $1 AND last_cast_sync_at IS NULL
+            ) AS exists
         `, [id]);
-        return res.rowCount === 1 && res.rows[0]["last_cast_sync_at"] === null;
+        return res.rows[0]["exists"];
     }
 
     /**
@@ -52,7 +54,19 @@ export default class ShowRepository {
      * @returns {Promise<void>}
      */
     setCast = async (showId, cast) => {
-        const top = cast.slice(0, MAX_CAST_SIZE);
+        // BetaSeries can list the same person twice for one show (e.g. a dual role) - dedupe
+        // before capping so the top MAX_CAST_SIZE slots hold distinct actors, and so the
+        // shows_actors insert below never tries to write the same (show_id, actor_id) pair
+        // twice, which has no ON CONFLICT and would abort the whole transaction.
+        const seenIds = new Set();
+        const deduped = cast.filter(({id}) => {
+            if (seenIds.has(id)) {
+                return false;
+            }
+            seenIds.add(id);
+            return true;
+        });
+        const top = deduped.slice(0, MAX_CAST_SIZE);
 
         return db.transaction(async (client) => {
             await client.query(`DELETE FROM shows_actors WHERE show_id = $1`, [showId]);

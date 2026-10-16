@@ -123,10 +123,49 @@ describe("ActorService.addFavorite", () => {
 
         expect(searchServiceMocks.getPersonById).toHaveBeenCalledWith(34100);
         expect(actorRepoMocks.createActor).not.toHaveBeenCalled();
-        expect(actorRepoMocks.updateActor).toHaveBeenCalledWith(34100, expect.objectContaining({
+        expect(actorRepoMocks.updateActor).toHaveBeenCalledWith(34100, {
             name: "Rami Malek", picture: "https://pictures.betaseries.com/persons/rami.jpg",
             birthday: "1981-05-12", deathday: null, nationality: "États-Unis", description: "Acteur américain.",
-        }));
+        });
+        expect(result).toEqual(storedActor);
+    });
+
+    it("falls back to the stub's existing fields when the search API returns an incomplete profile", async () => {
+        const stubActor = {id: 34100, name: "Rami Malek", picture: "https://pictures.betaseries.com/persons/rami.jpg", birthday: null, deathday: null, nationality: null, description: null};
+        userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
+        actorRepoMocks.getActorById.mockResolvedValue(stubActor);
+        searchServiceMocks.getPersonById.mockResolvedValue({
+            id: 34100, name: "Rami Malek", poster: undefined, birthday: "1981-05-12",
+            deathday: undefined, nationality: undefined, description: undefined,
+        });
+        userFavoriteActorRepoMocks.create.mockResolvedValue(true);
+
+        const result = await actorService.addFavorite("user-1", 34100);
+
+        expect(actorRepoMocks.updateActor).toHaveBeenCalledWith(34100, {
+            name: "Rami Malek", picture: "https://pictures.betaseries.com/persons/rami.jpg",
+            birthday: "1981-05-12", deathday: null, nationality: null, description: null,
+        });
+        expect(result.picture).toBe("https://pictures.betaseries.com/persons/rami.jpg");
+    });
+
+    it("re-enriches whatever a concurrent cast import left behind instead of reusing its stub", async () => {
+        const raceStub = {id: 34100, name: "Rami Malek", picture: null, birthday: null, deathday: null, nationality: null, description: null};
+        userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
+        actorRepoMocks.getActorById
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(raceStub);
+        searchServiceMocks.getPersonById.mockResolvedValue(validPerson);
+        actorRepoMocks.createActor.mockRejectedValue({code: "23505"});
+        userFavoriteActorRepoMocks.create.mockResolvedValue(true);
+
+        const result = await actorService.addFavorite("user-1", 34100);
+
+        expect(actorRepoMocks.getActorById).toHaveBeenCalledTimes(2);
+        expect(actorRepoMocks.updateActor).toHaveBeenCalledWith(34100, {
+            name: "Rami Malek", picture: "https://pictures.betaseries.com/persons/rami.jpg",
+            birthday: "1981-05-12", deathday: null, nationality: "États-Unis", description: "Acteur américain.",
+        });
         expect(result).toEqual(storedActor);
     });
 

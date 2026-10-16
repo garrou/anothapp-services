@@ -222,6 +222,19 @@ describe("ShowRepository (real Postgres)", () => {
             expect(res.rows.map((r) => r.actor_id)).toEqual([999002]);
         });
 
+        it("does not fail when the same actor is listed twice for a show (e.g. a dual role)", async () => {
+            const showId = await insertShow();
+
+            await repo.setCast(showId, [
+                { id: 999003, actor: "Dual Role Actor", picture: "a.jpg" },
+                { id: 999003, actor: "Dual Role Actor", picture: "a.jpg" },
+            ]);
+
+            const res = await db.query(`SELECT actor_id FROM shows_actors WHERE show_id = $1`, [showId]);
+            expect(res.rows.map((r) => r.actor_id)).toEqual([999003]);
+            expect(await repo.needsCastSync(showId)).toBe(false);
+        });
+
         it("still marks the show as synced when the cast is empty", async () => {
             const showId = await insertShow();
 

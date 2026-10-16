@@ -61,7 +61,9 @@ const fetchPlatforms = async () => {
  */
 const fetchCharacters = async (id) => {
     const data = await client.get(`/shows/characters?id=${id}`);
-    return (data.characters ?? []).map((c) => ({id: parseInt(c["person_id"]), actor: c.actor, picture: c.picture}));
+    return (data.characters ?? [])
+        .map((c) => ({id: parseInt(c["person_id"]), actor: c.actor, picture: c.picture}))
+        .filter((c) => !Number.isNaN(c.id));
 };
 
 /**

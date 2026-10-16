@@ -46,6 +46,19 @@ describe("ActorService (real Postgres)", () => {
             expect(res.rows[0]).toEqual({ name: "Fetched Actor", nationality: "American" });
         });
 
+        it("keeps a stub's existing picture when the search API's profile doesn't have one", async () => {
+            const userId = await insertUser();
+            const actorId = await insertActor({ name: "Cast Only", picture: "from-cast-import.jpg" });
+            service._searchService.getPersonById = async (id) => ({
+                id, name: "Fetched Actor", poster: undefined, birthday: null, deathday: null,
+                nationality: "American", description: "desc",
+            });
+
+            const actor = await service.addFavorite(userId, actorId);
+
+            expect(actor.picture).toBe("from-cast-import.jpg");
+        });
+
         it("fetches and creates the actor when it is not known locally yet", async () => {
             const userId = await insertUser();
 
