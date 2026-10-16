@@ -4,6 +4,7 @@ import ActorService from "../../../services/actorService.js";
 const actorRepoMocks = vi.hoisted(() => ({
     getActorById: vi.fn(),
     createActor: vi.fn(),
+    updateActor: vi.fn(),
 }));
 const userFavoriteActorRepoMocks = vi.hoisted(() => ({
     checkFavoriteExists: vi.fn(),
@@ -108,6 +109,24 @@ describe("ActorService.addFavorite", () => {
             "1981-05-12", null, "États-Unis", "Acteur américain."
         );
         expect(actorRepoMocks.getActorById).toHaveBeenCalledOnce();
+        expect(result).toEqual(storedActor);
+    });
+
+    it("enriches a stub actor (created by the shows_actors cast import) instead of reusing its incomplete data", async () => {
+        const stubActor = {id: 34100, name: "Rami Malek", picture: "https://pictures.betaseries.com/persons/rami.jpg", birthday: null, deathday: null, nationality: null, description: null};
+        userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
+        actorRepoMocks.getActorById.mockResolvedValue(stubActor);
+        searchServiceMocks.getPersonById.mockResolvedValue(validPerson);
+        userFavoriteActorRepoMocks.create.mockResolvedValue(true);
+
+        const result = await actorService.addFavorite("user-1", 34100);
+
+        expect(searchServiceMocks.getPersonById).toHaveBeenCalledWith(34100);
+        expect(actorRepoMocks.createActor).not.toHaveBeenCalled();
+        expect(actorRepoMocks.updateActor).toHaveBeenCalledWith(34100, expect.objectContaining({
+            name: "Rami Malek", picture: "https://pictures.betaseries.com/persons/rami.jpg",
+            birthday: "1981-05-12", deathday: null, nationality: "États-Unis", description: "Acteur américain.",
+        }));
         expect(result).toEqual(storedActor);
     });
 

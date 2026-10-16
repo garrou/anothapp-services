@@ -57,6 +57,15 @@ const fetchPlatforms = async () => {
 
 /**
  * @param {number} id
+ * @returns {Promise<{id: number, actor: string, picture: string?}[]>}
+ */
+const fetchCharacters = async (id) => {
+    const data = await client.get(`/shows/characters?id=${id}`);
+    return (data.characters ?? []).map((c) => ({id: parseInt(c["person_id"]), actor: c.actor, picture: c.picture}));
+};
+
+/**
+ * @param {number} id
  * @returns {Promise<Object|null>} null when the person no longer exists on BetaSeries
  */
 const fetchPerson = async (id) => {
@@ -78,6 +87,7 @@ export default {
     fetchEpisodes,
     fetchNextEpisodeDate,
     fetchPlatforms,
+    fetchCharacters,
     fetchPerson,
     fetchGenres,
 };

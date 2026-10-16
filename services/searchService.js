@@ -11,6 +11,7 @@ import ServiceError from "../helpers/serviceError.js";
 import {ERROR_INVALID_REQUEST} from "../constants/errors.js";
 import NoteRepository from "../repositories/noteRepository.js";
 import KindRepository from "../repositories/kindRepository.js";
+import ShowRepository from "../repositories/showRepository.js";
 import BetaseriesClient from "../helpers/betaseriesClient.js";
 
 export default class SearchService {
@@ -19,6 +20,7 @@ export default class SearchService {
         this._platformRepository = new PlatformRepository();
         this._noteRepository = new NoteRepository();
         this._kindRepository = new KindRepository();
+        this._showRepository = new ShowRepository();
         this._client = new BetaseriesClient();
     }
 
@@ -106,7 +108,17 @@ export default class SearchService {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
         const {characters} = await this._client.get(`/shows/characters?id=${id}`);
-        return characters.map(character => new ApiCharacter(character));
+        const mapped = characters.map(character => new ApiCharacter(character));
+
+        if (await this._showRepository.needsCastSync(id)) {
+            try {
+                await this._showRepository.setCast(id, mapped.map(({id, actor, picture}) => ({id, actor, picture})));
+            } catch {
+                // Best-effort: this is a side effect of a read, so a failure here must never
+                // break the cast display - the backfill job will pick this show up later.
+            }
+        }
+        return mapped;
     }
 
     /**

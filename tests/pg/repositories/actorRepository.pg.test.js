@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import ActorRepository from "../../../repositories/actorRepository.js";
+import UserFavoriteActorRepository from "../../../repositories/userFavoriteActorRepository.js";
 import { resetDb } from "../resetDb.js";
-import { insertActor } from "../fixtures.js";
+import { insertActor, insertUser } from "../fixtures.js";
 
 describe("ActorRepository (real Postgres)", () => {
     /** @type {ActorRepository} */
@@ -39,6 +40,32 @@ describe("ActorRepository (real Postgres)", () => {
             const result = await repo.getAllActors();
 
             expect(result.map((a) => a.name).sort()).toEqual(["Actor A", "Actor B"]);
+        });
+    });
+
+    describe("getFavoritedActors", () => {
+        it("returns only actors favorited by at least one user", async () => {
+            const favorited = await insertActor({ id: 1, name: "Favorited" });
+            await insertActor({ id: 2, name: "Never favorited" });
+            const userId = await insertUser();
+            await new UserFavoriteActorRepository().create(userId, favorited);
+
+            const result = await repo.getFavoritedActors();
+
+            expect(result.map((a) => a.name)).toEqual(["Favorited"]);
+        });
+
+        it("returns each favorited actor only once even when several users favorited it", async () => {
+            const favorited = await insertActor({ id: 1, name: "Favorited" });
+            const userA = await insertUser();
+            const userB = await insertUser();
+            const favRepo = new UserFavoriteActorRepository();
+            await favRepo.create(userA, favorited);
+            await favRepo.create(userB, favorited);
+
+            const result = await repo.getFavoritedActors();
+
+            expect(result).toHaveLength(1);
         });
     });
 

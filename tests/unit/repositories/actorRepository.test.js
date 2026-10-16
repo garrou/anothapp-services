@@ -77,6 +77,24 @@ describe("ActorRepository.getAllActors", () => {
     });
 });
 
+describe("ActorRepository.getFavoritedActors", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new ActorRepository();
+    });
+
+    it("maps rows to Actor instances", async () => {
+        db.query.mockResolvedValue({rows: [{id: 1, name: "Actor", picture: null, birthday: null, deathday: null, nationality: null, description: null}]});
+
+        const result = await repo.getFavoritedActors();
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("users_favorite_actors"));
+        expect(result).toEqual([{id: 1, name: "Actor", picture: null, birthday: null, deathday: null, nationality: null, description: null}]);
+    });
+});
+
 describe("ActorRepository.updateActor", () => {
     let repo;
 

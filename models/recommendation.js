@@ -14,6 +14,7 @@ export default class Recommendation {
         this.nbFriends = parseInt(obj["nb_friends"]);
         this.avgNote = parseFloat(obj["avg_note"]);
         this.genreScore = parseFloat(obj["genre_score"] ?? 0);
+        this.nbFavoriteActors = parseInt(obj["nb_favorite_actors"] ?? 0);
         this.friends = obj.friends;
     }
 }

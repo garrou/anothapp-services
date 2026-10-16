@@ -310,12 +310,12 @@ describe("UserShowRepository", () => {
 
     describe("getRecommendationsByUserId", () => {
         it("maps rows to Recommendation instances", async () => {
-            db.query.mockResolvedValue({rows: [{id: 10, title: "Show", poster: "poster.png", kind_names: ["Drame"], duration: 42, seasons: 1, country: "FR", nb_friends: "2", avg_note: "4.5", genre_score: "3.5", friends: [{id: "user-2", username: "bob", picture: null}]}]});
+            db.query.mockResolvedValue({rows: [{id: 10, title: "Show", poster: "poster.png", kind_names: ["Drame"], duration: 42, seasons: 1, country: "FR", nb_friends: "2", avg_note: "4.5", genre_score: "3.5", nb_favorite_actors: "1", friends: [{id: "user-2", username: "bob", picture: null}]}]});
 
             const result = await repo.getRecommendationsByUserId("user-1");
 
             expect(db.query).toHaveBeenCalledWith(expect.any(String), ["user-1", 10]);
-            expect(result).toEqual([{id: 10, title: "Show", poster: "poster.png", kinds: ["Drame"], duration: 42, seasons: 1, country: "FR", nbFriends: 2, avgNote: 4.5, genreScore: 3.5, friends: [{id: "user-2", username: "bob", picture: null}]}]);
+            expect(result).toEqual([{id: 10, title: "Show", poster: "poster.png", kinds: ["Drame"], duration: 42, seasons: 1, country: "FR", nbFriends: 2, avgNote: 4.5, genreScore: 3.5, nbFavoriteActors: 1, friends: [{id: "user-2", username: "bob", picture: null}]}]);
         });
     });
 

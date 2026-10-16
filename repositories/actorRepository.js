@@ -46,6 +46,21 @@ export default class ActorRepository {
     }
 
     /**
+     * Actors favorited by at least one user - the only ones whose profile freshness (picture,
+     * bio...) is actually shown to anyone, as opposed to a shows_actors cast-import row that
+     * exists purely as a recommendation signal.
+     * @returns {Promise<Actor[]>}
+     */
+    getFavoritedActors = async () => {
+        const res = await db.query(`
+            SELECT DISTINCT a.id, a.name, a.picture, a.birthday, a.deathday, a.nationality, a.description
+            FROM actors a
+            JOIN users_favorite_actors ufa ON ufa.actor_id = a.id
+        `);
+        return res.rows.map((row) => new Actor(row));
+    }
+
+    /**
      * @param {number} id
      * @param {{name: string, picture: string?, birthday: string?, deathday: string?, nationality: string?, description: string?}} fields
      * @returns {Promise<boolean>}

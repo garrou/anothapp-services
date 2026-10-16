@@ -21,7 +21,9 @@ describe("ActorService (real Postgres)", () => {
     describe("addFavorite", () => {
         it("favorites an actor already known locally, without calling the external API", async () => {
             const userId = await insertUser();
-            const actorId = await insertActor({ name: "Local Actor" });
+            // A full profile, not a shows_actors cast-import stub - otherwise addFavorite would
+            // (correctly) try to enrich it, which is exactly what the next test covers.
+            const actorId = await insertActor({ name: "Local Actor", nationality: "French" });
             service._searchService.getPersonById = async () => { throw new Error("should not be called"); };
 
             const actor = await service.addFavorite(userId, actorId);
@@ -29,6 +31,19 @@ describe("ActorService (real Postgres)", () => {
             expect(actor.name).toBe("Local Actor");
             const favorites = await service.getFavorites(userId);
             expect(favorites.map((a) => a.id)).toEqual([actorId]);
+        });
+
+        it("enriches a stub actor row (created by the shows_actors cast import) instead of reusing its incomplete data", async () => {
+            const userId = await insertUser();
+            // No birthday/nationality/description - exactly what ShowRepository#setCast stores.
+            const actorId = await insertActor({ name: "Cast Only" });
+
+            const actor = await service.addFavorite(userId, actorId);
+
+            expect(actor.name).toBe("Fetched Actor");
+            expect(actor.nationality).toBe("American");
+            const res = await db.query(`SELECT name, nationality FROM actors WHERE id = $1`, [actorId]);
+            expect(res.rows[0]).toEqual({ name: "Fetched Actor", nationality: "American" });
         });
 
         it("fetches and creates the actor when it is not known locally yet", async () => {

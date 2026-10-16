@@ -1,5 +1,6 @@
 import db from "../config/db.js";
 import Show from "../models/show.js";
+import {MAX_CAST_SIZE} from "../constants/actors.js";
 
 export default class ShowRepository {
 
@@ -14,6 +15,66 @@ export default class ShowRepository {
             WHERE id = $1
         `, [id]);
         return parseInt(res.rows[0]["total"]) === 0;
+    }
+
+    /**
+     * False both when the show has already had its cast imported and when it doesn't exist in
+     * our catalog yet (e.g. a show only being previewed from Discover, not added by anyone) -
+     * shows_actors' FK means we can only persist a cast for a show we actually have.
+     * @param {number} id
+     * @returns {Promise<boolean>}
+     */
+    needsCastSync = async (id) => {
+        const res = await db.query(`
+            SELECT last_cast_sync_at FROM shows WHERE id = $1
+        `, [id]);
+        return res.rowCount === 1 && res.rows[0]["last_cast_sync_at"] === null;
+    }
+
+    /**
+     * @param {number} limit
+     * @returns {Promise<number[]>}
+     */
+    getShowIdsNeedingCastSync = async (limit) => {
+        const res = await db.query(`
+            SELECT id FROM shows WHERE last_cast_sync_at IS NULL ORDER BY id LIMIT $1
+        `, [limit]);
+        return res.rows.map((row) => row.id);
+    }
+
+    /**
+     * Replaces a show's cast and marks it as synced. Any cast member not already in `actors`
+     * is created with the minimal fields BetaSeries' characters endpoint gives us (no birthday/
+     * nationality/bio - actorService.addFavorite enriches a stub row once a user favorites it,
+     * which is the only place that profile data is actually shown to anyone).
+     * @param {number} showId
+     * @param {{id: number, actor: string, picture: string?}[]} cast
+     * @returns {Promise<void>}
+     */
+    setCast = async (showId, cast) => {
+        const top = cast.slice(0, MAX_CAST_SIZE);
+
+        return db.transaction(async (client) => {
+            await client.query(`DELETE FROM shows_actors WHERE show_id = $1`, [showId]);
+
+            if (top.length) {
+                // Sorted by id for the same reason as #syncKinds below: concurrent shows
+                // sharing cast members must always lock those actor rows in the same order,
+                // or they can deadlock against each other under CONCURRENCY > 1.
+                const sorted = [...top].sort((a, b) => a.id - b.id);
+                const actorValues = sorted.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(", ");
+                await client.query(
+                    `INSERT INTO actors (id, name, picture) VALUES ${actorValues} ON CONFLICT (id) DO NOTHING`,
+                    sorted.flatMap(({id, actor, picture}) => [id, actor, picture])
+                );
+                const linkValues = sorted.map((_, i) => `($1, $${i + 2})`).join(", ");
+                await client.query(
+                    `INSERT INTO shows_actors (show_id, actor_id) VALUES ${linkValues}`,
+                    [showId, ...sorted.map(({id}) => id)]
+                );
+            }
+            await client.query(`UPDATE shows SET last_cast_sync_at = NOW() WHERE id = $1`, [showId]);
+        });
     }
 
     /**

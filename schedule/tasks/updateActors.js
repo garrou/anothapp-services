@@ -35,7 +35,10 @@ const updateActors = async () => {
         return {skipped: true, updated: 0, toDelete: [], failed: []};
     }
     const actorRepository = new ActorRepository();
-    const actors = await actorRepository.getAllActors();
+    // Cast-import-only actors (never favorited by anyone) aren't refreshed here - their profile
+    // isn't shown to any user, only used as a shows_actors recommendation signal, so there's no
+    // freshness to maintain and no reason for this job's cost to grow with the catalog size.
+    const actors = await actorRepository.getFavoritedActors();
     const results = await mapWithConcurrency(actors, CONCURRENCY, fetchActorUpdate);
 
     const failed = [];

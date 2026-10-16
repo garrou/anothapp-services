@@ -2,7 +2,7 @@ import {describe, it, expect, vi, beforeEach, afterEach} from "vitest";
 import updateActors from "../../../../schedule/tasks/updateActors.js";
 
 const actorRepoMocks = vi.hoisted(() => ({
-    getAllActors: vi.fn(),
+    getFavoritedActors: vi.fn(),
     updateActor: vi.fn(),
 }));
 const betaseriesMocks = vi.hoisted(() => ({
@@ -42,13 +42,13 @@ describe("updateActors", () => {
         const result = await updateActors();
 
         expect(result).toEqual({skipped: true, updated: 0, toDelete: [], failed: []});
-        expect(actorRepoMocks.getAllActors).not.toHaveBeenCalled();
+        expect(actorRepoMocks.getFavoritedActors).not.toHaveBeenCalled();
     });
 
-    it("syncs every actor unconditionally on the weekly sync day", async () => {
+    it("syncs every favorited actor unconditionally on the weekly sync day", async () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2024-01-07")); // a Sunday
-        actorRepoMocks.getAllActors.mockResolvedValue([dbActor]);
+        actorRepoMocks.getFavoritedActors.mockResolvedValue([dbActor]);
         betaseriesMocks.fetchPerson.mockResolvedValue(apiPerson);
 
         const result = await updateActors();
@@ -77,7 +77,7 @@ describe("updateActors", () => {
             nationality: "États-Unis",
             description: "Ancienne description.",
         };
-        actorRepoMocks.getAllActors.mockResolvedValue([dbActorWithMetadata]);
+        actorRepoMocks.getFavoritedActors.mockResolvedValue([dbActorWithMetadata]);
         betaseriesMocks.fetchPerson.mockResolvedValue({
             name: undefined,
             poster: undefined,
@@ -103,7 +103,7 @@ describe("updateActors", () => {
     it("flags an actor that no longer exists on BetaSeries instead of deleting it", async () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2024-01-07"));
-        actorRepoMocks.getAllActors.mockResolvedValue([dbActor]);
+        actorRepoMocks.getFavoritedActors.mockResolvedValue([dbActor]);
         betaseriesMocks.fetchPerson.mockResolvedValue(null);
 
         const result = await updateActors();
@@ -116,7 +116,7 @@ describe("updateActors", () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2024-01-07"));
         const otherActor = {id: 99, name: "Other Actor"};
-        actorRepoMocks.getAllActors.mockResolvedValue([dbActor, otherActor]);
+        actorRepoMocks.getFavoritedActors.mockResolvedValue([dbActor, otherActor]);
         betaseriesMocks.fetchPerson.mockImplementation(async (id) => {
             if (id === 34100) throw new Error("network down");
             return apiPerson;
