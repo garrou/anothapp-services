@@ -37,20 +37,6 @@ export default class ActorRepository {
     /**
      * @returns {Promise<Actor[]>}
      */
-    getAllActors = async () => {
-        const res = await db.query(`
-            SELECT id, name, picture, birthday, deathday, nationality, description
-            FROM actors
-        `);
-        return res.rows.map((row) => new Actor(row));
-    }
-
-    /**
-     * Actors favorited by at least one user - the only ones whose profile freshness (picture,
-     * bio...) is actually shown to anyone, as opposed to a shows_actors cast-import row that
-     * exists purely as a recommendation signal.
-     * @returns {Promise<Actor[]>}
-     */
     getFavoritedActors = async () => {
         const res = await db.query(`
             SELECT DISTINCT a.id, a.name, a.picture, a.birthday, a.deathday, a.nationality, a.description
@@ -72,5 +58,21 @@ export default class ActorRepository {
             WHERE id = $1
         `, [id, name, picture, birthday || null, deathday || null, nationality, description]);
         return res.rowCount === 1;
+    }
+
+    /**
+     * @param {number} actorId
+     * @param {number[]} showIds
+     * @returns {Promise<void>}
+     */
+    linkShows = async (actorId, showIds) => {
+        if (!showIds.length) {
+            return;
+        }
+        await db.query(`
+            INSERT INTO shows_actors (show_id, actor_id)
+            SELECT s.id, $1 FROM shows s WHERE s.id = ANY($2::int[])
+            ON CONFLICT DO NOTHING
+        `, [actorId, showIds]);
     }
 }

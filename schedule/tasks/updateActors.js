@@ -8,7 +8,7 @@ const ACTORS_SYNC_DAY = 0;
 
 /**
  * @param {Actor} actor a row from the `actors` table
- * @returns {Promise<{deleted: true}|{deleted: false, name: string, picture: string?, birthday: string?, deathday: string?, nationality: string?, description: string?}>}
+ * @returns {Promise<{deleted: true}|{deleted: false, seriesIds: number[], name: string, picture: string?, birthday: string?, deathday: string?, nationality: string?, description: string?}>}
  */
 const fetchActorUpdate = async (actor) => {
     const current = await betaseries.fetchPerson(actor.id);
@@ -18,6 +18,7 @@ const fetchActorUpdate = async (actor) => {
     }
     return {
         deleted: false,
+        seriesIds: (current.shows ?? []).map((s) => parseInt(s.show?.id)).filter((id) => !Number.isNaN(id)),
         name: current.name || actor.name,
         picture: current.poster ?? actor.picture ?? null,
         birthday: current.birthday ?? actor.birthday ?? null,
@@ -35,9 +36,6 @@ const updateActors = async () => {
         return {skipped: true, updated: 0, toDelete: [], failed: []};
     }
     const actorRepository = new ActorRepository();
-    // Cast-import-only actors (never favorited by anyone) aren't refreshed here - their profile
-    // isn't shown to any user, only used as a shows_actors recommendation signal, so there's no
-    // freshness to maintain and no reason for this job's cost to grow with the catalog size.
     const actors = await actorRepository.getFavoritedActors();
     const results = await mapWithConcurrency(actors, CONCURRENCY, fetchActorUpdate);
 
@@ -71,6 +69,23 @@ const updateActors = async () => {
             failed.push({id: actor.id, name: actor.name, error: result.reason?.message ?? String(result.reason)});
         } else {
             updated += 1;
+        }
+    }
+
+    // Independent of the profile update above: links this actor to every show already in our
+    // catalog that their filmography mentions, so a favorite keeps feeding the actor-based
+    // recommendation signal (userShowRepository#getRecommendationsByUserId) even when nothing
+    // about their profile itself changed this week.
+    const linked = await mapWithConcurrency(toUpdate, CONCURRENCY, ({actor, changes}) =>
+        actorRepository.linkShows(actor.id, changes.seriesIds)
+    );
+
+    for (let i = 0; i < toUpdate.length; i += 1) {
+        const {actor} = toUpdate[i];
+        const result = linked[i];
+
+        if (result.status === "rejected") {
+            failed.push({id: actor.id, name: actor.name, error: result.reason?.message ?? String(result.reason)});
         }
     }
     return {skipped: false, updated, toDelete, failed};

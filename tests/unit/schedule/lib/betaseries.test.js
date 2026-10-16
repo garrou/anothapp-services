@@ -38,29 +38,6 @@ describe("fetchSeasons caching", () => {
     });
 });
 
-describe("fetchCharacters", () => {
-    beforeEach(() => {
-        clientMocks.get.mockReset();
-    });
-
-    it("maps characters to {id, actor, picture}", async () => {
-        clientMocks.get.mockResolvedValue({characters: [{person_id: "34100", name: "Elliot Alderson", actor: "Rami Malek", picture: "rami.jpg"}]});
-
-        const characters = await betaseries.fetchCharacters(1);
-
-        expect(characters).toEqual([{id: 34100, actor: "Rami Malek", picture: "rami.jpg"}]);
-        expect(clientMocks.get).toHaveBeenCalledWith("/shows/characters?id=1");
-    });
-
-    it("returns an empty list when BetaSeries returns no characters", async () => {
-        clientMocks.get.mockResolvedValue({});
-
-        const characters = await betaseries.fetchCharacters(1);
-
-        expect(characters).toEqual([]);
-    });
-});
-
 describe("fetchPerson", () => {
     beforeEach(() => {
         clientMocks.get.mockReset();

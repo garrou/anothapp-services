@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import db from "../../../config/db.js";
 import ActorRepository from "../../../repositories/actorRepository.js";
 import UserFavoriteActorRepository from "../../../repositories/userFavoriteActorRepository.js";
 import { resetDb } from "../resetDb.js";
-import { insertActor, insertUser } from "../fixtures.js";
+import { insertActor, insertShow, insertUser } from "../fixtures.js";
 
 describe("ActorRepository (real Postgres)", () => {
     /** @type {ActorRepository} */
@@ -29,17 +30,6 @@ describe("ActorRepository (real Postgres)", () => {
             const result = await repo.getActorById(9999);
 
             expect(result).toBeNull();
-        });
-    });
-
-    describe("getAllActors", () => {
-        it("returns every actor", async () => {
-            await insertActor({ id: 1, name: "Actor A" });
-            await insertActor({ id: 2, name: "Actor B" });
-
-            const result = await repo.getAllActors();
-
-            expect(result.map((a) => a.name).sort()).toEqual(["Actor A", "Actor B"]);
         });
     });
 
@@ -90,6 +80,38 @@ describe("ActorRepository (real Postgres)", () => {
             });
 
             expect(result).toBe(false);
+        });
+    });
+
+    describe("linkShows", () => {
+        it("links the actor to every given show that's already in our catalog", async () => {
+            const actorId = await insertActor();
+            const showId = await insertShow();
+
+            await repo.linkShows(actorId, [showId, 999999]);
+
+            const res = await db.query(`SELECT show_id FROM shows_actors WHERE actor_id = $1`, [actorId]);
+            expect(res.rows.map((r) => r.show_id)).toEqual([showId]);
+        });
+
+        it("does nothing when there are no show ids", async () => {
+            const actorId = await insertActor();
+
+            await repo.linkShows(actorId, []);
+
+            const res = await db.query(`SELECT show_id FROM shows_actors WHERE actor_id = $1`, [actorId]);
+            expect(res.rows).toEqual([]);
+        });
+
+        it("does not fail when the link already exists", async () => {
+            const actorId = await insertActor();
+            const showId = await insertShow();
+            await repo.linkShows(actorId, [showId]);
+
+            await repo.linkShows(actorId, [showId]);
+
+            const res = await db.query(`SELECT show_id FROM shows_actors WHERE actor_id = $1`, [actorId]);
+            expect(res.rows).toHaveLength(1);
         });
     });
 });

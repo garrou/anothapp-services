@@ -5,7 +5,6 @@ import updateShows from "./tasks/updateShows.js";
 import updateSeasons from "./tasks/updateSeasons.js";
 import updateEpisodes from "./tasks/updateEpisodes.js";
 import updateActors from "./tasks/updateActors.js";
-import updateShowsActors from "./tasks/updateShowsActors.js";
 import remindUpcomingEpisodes from "./tasks/remindUpcomingEpisodes.js";
 import cleanupRefreshTokens from "./tasks/cleanupRefreshTokens.js";
 import cleanupLoginChallenges from "./tasks/cleanupLoginChallenges.js";
@@ -29,7 +28,6 @@ const TASKS = {
     seasons: updateSeasons,
     episodes: updateEpisodes,
     actors: updateActors,
-    showsActors: updateShowsActors,
     reminders: remindUpcomingEpisodes,
     tokens: cleanupRefreshTokens,
     loginChallenges: cleanupLoginChallenges,

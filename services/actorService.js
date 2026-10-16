@@ -31,9 +31,10 @@ export default class ActorService {
             throw new ServiceError(409, ERROR_ACTOR_ALREADY_FAVORITE);
         }
         let actor = await this._actorRepository.getActorById(actorId);
+        let person = null;
 
         if (!actor || this.#isStubActor(actor)) {
-            const person = await this._searchService.getPersonById(actorId);
+            person = await this._searchService.getPersonById(actorId);
 
             if (!person.id || !person.name) {
                 throw new ServiceError(400, "Acteur invalide");
@@ -51,6 +52,17 @@ export default class ActorService {
         }
         if (!added) {
             throw new ServiceError(500, "Impossible d'ajouter l'acteur aux favoris");
+        }
+        if (person) {
+            // Only when we already fetched the full profile above (new or stub actor) - the
+            // filmography comes for free in that response. When the actor was already fully
+            // known, skip it rather than spend an extra API call just for this: the weekly
+            // updateActors job re-links every favorited actor's shows anyway.
+            try {
+                await this._actorRepository.linkShows(actorId, person.series.map(({id}) => id));
+            } catch {
+                // Best-effort - must never block favoriting, the weekly job will catch up.
+            }
         }
         eventBus.emit("actor.favorited", {
             actorUserId: currentUserId,
@@ -88,9 +100,9 @@ export default class ActorService {
     }
 
     /**
-     * A row created by the shows_actors cast import only has id/name/picture - no birthday,
-     * nationality or bio, since fetching a full profile for every cast member would cost far
-     * more BetaSeries calls than the cast import is meant to spend.
+     * A row with only id/name/picture and nothing else - a leftover from before actors were
+     * only ever created with a full profile fetched up front. Kept so any such row still around
+     * gets enriched the next time someone favorites it, instead of staying incomplete forever.
      * @param {Actor} actor
      * @returns {boolean}
      */
@@ -100,7 +112,7 @@ export default class ActorService {
      * Creates or enriches an actor row from a full profile fetched from the search API, falling
      * back to `existing`'s fields for anything the API doesn't return - same pattern as
      * schedule/tasks/updateActors.js's fetchActorUpdate, so a sparse response never wipes out a
-     * value a shows_actors cast-import stub (or a prior profile) already had.
+     * value a prior profile already had.
      * @param {number} actorId
      * @param {{name: string, poster: string?, birthday: string?, deathday: string?, nationality: string?, description: string?}} person
      * @param {Actor|null} existing
@@ -134,9 +146,9 @@ export default class ActorService {
             if (err.code !== DUPLICATE_ERROR_CODE) {
                 throw err;
             }
-            // Another process (e.g. the shows_actors cast import) created this actor between
-            // our lookup and this insert - enrich whatever it left behind instead of discarding
-            // the profile we already fetched.
+            // Another concurrent favorite of the same new actor created it between our lookup
+            // and this insert - enrich whatever it left behind instead of discarding the
+            // profile we already fetched.
             const race = await this._actorRepository.getActorById(actorId);
             return this.#isStubActor(race) ? this.#saveFullProfile(actorId, person, race) : race;
         }

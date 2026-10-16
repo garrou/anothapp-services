@@ -4,6 +4,7 @@ import updateActors from "../../../../schedule/tasks/updateActors.js";
 const actorRepoMocks = vi.hoisted(() => ({
     getFavoritedActors: vi.fn(),
     updateActor: vi.fn(),
+    linkShows: vi.fn(),
 }));
 const betaseriesMocks = vi.hoisted(() => ({
     fetchPerson: vi.fn(),
@@ -23,12 +24,14 @@ const apiPerson = {
     deathday: null,
     nationality: "États-Unis",
     description: "Acteur américain.",
+    shows: [{show: {id: 1}}],
 };
 
 describe("updateActors", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         actorRepoMocks.updateActor.mockResolvedValue(true);
+        actorRepoMocks.linkShows.mockResolvedValue();
     });
 
     afterEach(() => {
@@ -55,6 +58,7 @@ describe("updateActors", () => {
 
         expect(actorRepoMocks.updateActor).toHaveBeenCalledWith(34100, {
             deleted: false,
+            seriesIds: [1],
             name: "Rami Malek",
             picture: "https://pictures.betaseries.com/persons/rami.jpg",
             birthday: "1981-05-12",
@@ -62,6 +66,7 @@ describe("updateActors", () => {
             nationality: "États-Unis",
             description: "Acteur américain.",
         });
+        expect(actorRepoMocks.linkShows).toHaveBeenCalledWith(34100, [1]);
         expect(result).toEqual({skipped: false, updated: 1, toDelete: [], failed: []});
     });
 
@@ -91,6 +96,7 @@ describe("updateActors", () => {
 
         expect(actorRepoMocks.updateActor).toHaveBeenCalledWith(34100, {
             deleted: false,
+            seriesIds: [],
             name: "Rami Malek",
             picture: "https://pictures.betaseries.com/persons/old.jpg",
             birthday: "1981-05-12",
@@ -126,5 +132,18 @@ describe("updateActors", () => {
 
         expect(result.failed).toEqual([{id: 34100, name: "Rami Malek", error: "network down"}]);
         expect(result.updated).toEqual(1);
+    });
+
+    it("reports a shows_actors linking failure without losing the profile update", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2024-01-07"));
+        actorRepoMocks.getFavoritedActors.mockResolvedValue([dbActor]);
+        betaseriesMocks.fetchPerson.mockResolvedValue(apiPerson);
+        actorRepoMocks.linkShows.mockRejectedValue(new Error("db down"));
+
+        const result = await updateActors();
+
+        expect(result.updated).toEqual(1);
+        expect(result.failed).toEqual([{id: 34100, name: "Rami Malek", error: "db down"}]);
     });
 });

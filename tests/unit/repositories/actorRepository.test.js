@@ -60,23 +60,6 @@ describe("ActorRepository.createActor", () => {
     });
 });
 
-describe("ActorRepository.getAllActors", () => {
-    let repo;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        repo = new ActorRepository();
-    });
-
-    it("maps rows to Actor instances", async () => {
-        db.query.mockResolvedValue({rows: [{id: 1, name: "Actor", picture: null, birthday: null, deathday: null, nationality: null, description: null}]});
-
-        const result = await repo.getAllActors();
-
-        expect(result).toEqual([{id: 1, name: "Actor", picture: null, birthday: null, deathday: null, nationality: null, description: null}]);
-    });
-});
-
 describe("ActorRepository.getFavoritedActors", () => {
     let repo;
 
@@ -118,5 +101,26 @@ describe("ActorRepository.updateActor", () => {
         const result = await repo.updateActor(999, {name: "Actor", picture: null, birthday: null, deathday: null, nationality: null, description: null});
 
         expect(result).toBe(false);
+    });
+});
+
+describe("ActorRepository.linkShows", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new ActorRepository();
+    });
+
+    it("inserts a link per show id, scoped to shows already in our catalog", async () => {
+        await repo.linkShows(34100, [1, 2]);
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO shows_actors"), [34100, [1, 2]]);
+    });
+
+    it("does nothing when there are no show ids", async () => {
+        await repo.linkShows(34100, []);
+
+        expect(db.query).not.toHaveBeenCalled();
     });
 });

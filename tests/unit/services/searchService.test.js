@@ -7,7 +7,6 @@ vi.mock("../../../helpers/httpClient.js", () => ({default: {get: vi.fn()}}));
 const platformRepoMocks = vi.hoisted(() => ({getPlatforms: vi.fn()}));
 const noteRepoMocks = vi.hoisted(() => ({getNotes: vi.fn()}));
 const kindRepoMocks = vi.hoisted(() => ({getKinds: vi.fn()}));
-const showRepoMocks = vi.hoisted(() => ({needsCastSync: vi.fn(), setCast: vi.fn()}));
 
 vi.mock("../../../repositories/platformRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return platformRepoMocks; }),
@@ -18,16 +17,12 @@ vi.mock("../../../repositories/noteRepository.js", () => ({
 vi.mock("../../../repositories/kindRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return kindRepoMocks; }),
 }));
-vi.mock("../../../repositories/showRepository.js", () => ({
-    default: vi.fn().mockImplementation(function () { return showRepoMocks; }),
-}));
 
 describe("SearchService", () => {
     let service;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        showRepoMocks.needsCastSync.mockResolvedValue(false);
         service = new SearchService();
     });
 
@@ -143,34 +138,6 @@ describe("SearchService", () => {
 
         it("maps characters to ApiCharacter instances", async () => {
             HttpClient.get.mockResolvedValue({characters: [{person_id: "5", name: "Character", actor: "Actor", picture: "pic.png"}]});
-
-            const result = await service.getCharactersByShowId(10);
-
-            expect(result).toEqual([{id: 5, name: "Character", actor: "Actor", picture: "pic.png"}]);
-        });
-
-        it("persists the cast as a side effect when the show has never been synced", async () => {
-            HttpClient.get.mockResolvedValue({characters: [{person_id: "5", name: "Character", actor: "Actor", picture: "pic.png"}]});
-            showRepoMocks.needsCastSync.mockResolvedValue(true);
-
-            await service.getCharactersByShowId(10);
-
-            expect(showRepoMocks.setCast).toHaveBeenCalledWith(10, [{id: 5, actor: "Actor", picture: "pic.png"}]);
-        });
-
-        it("does not persist the cast again once the show has already been synced", async () => {
-            HttpClient.get.mockResolvedValue({characters: [{person_id: "5", name: "Character", actor: "Actor", picture: "pic.png"}]});
-            showRepoMocks.needsCastSync.mockResolvedValue(false);
-
-            await service.getCharactersByShowId(10);
-
-            expect(showRepoMocks.setCast).not.toHaveBeenCalled();
-        });
-
-        it("still returns the cast when persisting it fails", async () => {
-            HttpClient.get.mockResolvedValue({characters: [{person_id: "5", name: "Character", actor: "Actor", picture: "pic.png"}]});
-            showRepoMocks.needsCastSync.mockResolvedValue(true);
-            showRepoMocks.setCast.mockRejectedValue(new Error("db down"));
 
             const result = await service.getCharactersByShowId(10);
 

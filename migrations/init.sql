@@ -167,7 +167,6 @@ CREATE TABLE shows (
     network VARCHAR(100),
     language VARCHAR(10),
     episodes INTEGER,
-    last_cast_sync_at TIMESTAMPTZ,
     PRIMARY KEY(id)
 );
 
@@ -374,9 +373,6 @@ CREATE TABLE users_favorite_actors (
     PRIMARY KEY(user_id, actor_id)
 );
 
--- Top-30 billed cast per show (see MAX_CAST_SIZE), filled on demand when a show's cast is
--- consulted or by the updateShowsActors backfill job - never the full cast BetaSeries returns,
--- which can run into the hundreds of one-line/uncredited roles for a single show.
 CREATE TABLE shows_actors (
     show_id INTEGER,
     actor_id INTEGER,

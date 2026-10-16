@@ -5,6 +5,7 @@ const actorRepoMocks = vi.hoisted(() => ({
     getActorById: vi.fn(),
     createActor: vi.fn(),
     updateActor: vi.fn(),
+    linkShows: vi.fn(),
 }));
 const userFavoriteActorRepoMocks = vi.hoisted(() => ({
     checkFavoriteExists: vi.fn(),
@@ -55,6 +56,7 @@ const validPerson = {
     deathday: null,
     nationality: "États-Unis",
     description: "Acteur américain.",
+    series: [{id: 43578}, {id: 17309}],
 };
 
 describe("ActorService.addFavorite", () => {
@@ -88,6 +90,9 @@ describe("ActorService.addFavorite", () => {
         expect(result).toEqual(storedActor);
         expect(searchServiceMocks.getPersonById).not.toHaveBeenCalled();
         expect(actorRepoMocks.createActor).not.toHaveBeenCalled();
+        // The actor's profile was already known - no extra API call just to link shows_actors,
+        // the weekly updateActors job covers it instead.
+        expect(actorRepoMocks.linkShows).not.toHaveBeenCalled();
         expect(eventBusMocks.emit).toHaveBeenCalledWith("actor.favorited", {
             actorUserId: "user-1",
             metadata: {actorId: 34100, actorName: "Rami Malek", actorPicture: storedActor.picture},
@@ -109,10 +114,11 @@ describe("ActorService.addFavorite", () => {
             "1981-05-12", null, "États-Unis", "Acteur américain."
         );
         expect(actorRepoMocks.getActorById).toHaveBeenCalledOnce();
+        expect(actorRepoMocks.linkShows).toHaveBeenCalledWith(34100, [43578, 17309]);
         expect(result).toEqual(storedActor);
     });
 
-    it("enriches a stub actor (created by the shows_actors cast import) instead of reusing its incomplete data", async () => {
+    it("enriches a stub actor (a leftover row with no profile data) instead of reusing its incomplete data", async () => {
         const stubActor = {id: 34100, name: "Rami Malek", picture: "https://pictures.betaseries.com/persons/rami.jpg", birthday: null, deathday: null, nationality: null, description: null};
         userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
         actorRepoMocks.getActorById.mockResolvedValue(stubActor);
@@ -136,7 +142,7 @@ describe("ActorService.addFavorite", () => {
         actorRepoMocks.getActorById.mockResolvedValue(stubActor);
         searchServiceMocks.getPersonById.mockResolvedValue({
             id: 34100, name: "Rami Malek", poster: undefined, birthday: "1981-05-12",
-            deathday: undefined, nationality: undefined, description: undefined,
+            deathday: undefined, nationality: undefined, description: undefined, series: [],
         });
         userFavoriteActorRepoMocks.create.mockResolvedValue(true);
 
@@ -149,7 +155,7 @@ describe("ActorService.addFavorite", () => {
         expect(result.picture).toBe("https://pictures.betaseries.com/persons/rami.jpg");
     });
 
-    it("re-enriches whatever a concurrent cast import left behind instead of reusing its stub", async () => {
+    it("re-enriches whatever a concurrent favorite left behind instead of reusing its stub", async () => {
         const raceStub = {id: 34100, name: "Rami Malek", picture: null, birthday: null, deathday: null, nationality: null, description: null};
         userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
         actorRepoMocks.getActorById
