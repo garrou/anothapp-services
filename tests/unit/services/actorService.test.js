@@ -155,12 +155,12 @@ describe("ActorService.addFavorite", () => {
         expect(result.picture).toBe("https://pictures.betaseries.com/persons/rami.jpg");
     });
 
-    it("re-enriches whatever a concurrent favorite left behind instead of reusing its stub", async () => {
-        const raceStub = {id: 34100, name: "Rami Malek", picture: null, birthday: null, deathday: null, nationality: null, description: null};
+    it("uses whatever a concurrent favorite of the same new actor already saved, without re-enriching it", async () => {
+        const raceWinner = {id: 34100, name: "Rami Malek", picture: "https://pictures.betaseries.com/persons/rami.jpg", birthday: "1981-05-12", deathday: null, nationality: "États-Unis", description: "Acteur américain."};
         userFavoriteActorRepoMocks.checkFavoriteExists.mockResolvedValue(false);
         actorRepoMocks.getActorById
             .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce(raceStub);
+            .mockResolvedValueOnce(raceWinner);
         searchServiceMocks.getPersonById.mockResolvedValue(validPerson);
         actorRepoMocks.createActor.mockRejectedValue({code: "23505"});
         userFavoriteActorRepoMocks.create.mockResolvedValue(true);
@@ -168,11 +168,8 @@ describe("ActorService.addFavorite", () => {
         const result = await actorService.addFavorite("user-1", 34100);
 
         expect(actorRepoMocks.getActorById).toHaveBeenCalledTimes(2);
-        expect(actorRepoMocks.updateActor).toHaveBeenCalledWith(34100, {
-            name: "Rami Malek", picture: "https://pictures.betaseries.com/persons/rami.jpg",
-            birthday: "1981-05-12", deathday: null, nationality: "États-Unis", description: "Acteur américain.",
-        });
-        expect(result).toEqual(storedActor);
+        expect(actorRepoMocks.updateActor).not.toHaveBeenCalled();
+        expect(result).toEqual(raceWinner);
     });
 
     it("rejects with a 400 when the person fetched from the search API is incomplete", async () => {

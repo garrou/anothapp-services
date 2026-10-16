@@ -72,10 +72,6 @@ const updateActors = async () => {
         }
     }
 
-    // Independent of the profile update above: links this actor to every show already in our
-    // catalog that their filmography mentions, so a favorite keeps feeding the actor-based
-    // recommendation signal (userShowRepository#getRecommendationsByUserId) even when nothing
-    // about their profile itself changed this week.
     const linked = await mapWithConcurrency(toUpdate, CONCURRENCY, ({actor, changes}) =>
         actorRepository.linkShows(actor.id, changes.seriesIds)
     );

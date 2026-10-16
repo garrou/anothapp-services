@@ -54,7 +54,6 @@ export default class ActorService {
             throw new ServiceError(500, "Impossible d'ajouter l'acteur aux favoris");
         }
         if (person) {
-            // Only when we already fetched the full profile above 
             try {
                 await this._actorRepository.linkShows(actorId, person.series.map(({id}) => id));
             } catch {
