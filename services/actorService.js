@@ -54,14 +54,10 @@ export default class ActorService {
             throw new ServiceError(500, "Impossible d'ajouter l'acteur aux favoris");
         }
         if (person) {
-            // Only when we already fetched the full profile above (new or stub actor) - the
-            // filmography comes for free in that response. When the actor was already fully
-            // known, skip it rather than spend an extra API call just for this: the weekly
-            // updateActors job re-links every favorited actor's shows anyway.
+            // Only when we already fetched the full profile above 
             try {
                 await this._actorRepository.linkShows(actorId, person.series.map(({id}) => id));
             } catch {
-                // Best-effort - must never block favoriting, the weekly job will catch up.
             }
         }
         eventBus.emit("actor.favorited", {
@@ -100,19 +96,12 @@ export default class ActorService {
     }
 
     /**
-     * A row with only id/name/picture and nothing else - a leftover from before actors were
-     * only ever created with a full profile fetched up front. Kept so any such row still around
-     * gets enriched the next time someone favorites it, instead of staying incomplete forever.
      * @param {Actor} actor
      * @returns {boolean}
      */
     #isStubActor = (actor) => !actor.birthday && !actor.deathday && !actor.nationality && !actor.description;
 
     /**
-     * Creates or enriches an actor row from a full profile fetched from the search API, falling
-     * back to `existing`'s fields for anything the API doesn't return - same pattern as
-     * schedule/tasks/updateActors.js's fetchActorUpdate, so a sparse response never wipes out a
-     * value a prior profile already had.
      * @param {number} actorId
      * @param {{name: string, poster: string?, birthday: string?, deathday: string?, nationality: string?, description: string?}} person
      * @param {Actor|null} existing
@@ -146,11 +135,7 @@ export default class ActorService {
             if (err.code !== DUPLICATE_ERROR_CODE) {
                 throw err;
             }
-            // Another concurrent favorite of the same new actor created it between our lookup
-            // and this insert - enrich whatever it left behind instead of discarding the
-            // profile we already fetched.
-            const race = await this._actorRepository.getActorById(actorId);
-            return this.#isStubActor(race) ? this.#saveFullProfile(actorId, person, race) : race;
+            return await this._actorRepository.getActorById(actorId);
         }
     }
 }
