@@ -19,9 +19,11 @@ export default class ActorService {
     /**
      * @param {string} currentUserId
      * @param {number?} actorId
+     * @param {number?} showId the show whose cast the user was browsing when they favorited this
+     * actor, if any (e.g. favoriting from an actor's own profile page has none)
      * @returns {Promise<Actor>}
      */
-    addFavorite = async (currentUserId, actorId) => {
+    addFavorite = async (currentUserId, actorId, showId) => {
         if (!actorId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
@@ -31,10 +33,9 @@ export default class ActorService {
             throw new ServiceError(409, ERROR_ACTOR_ALREADY_FAVORITE);
         }
         let actor = await this._actorRepository.getActorById(actorId);
-        let person = null;
 
         if (!actor || this.#isStubActor(actor)) {
-            person = await this._searchService.getPersonById(actorId);
+            const person = await this._searchService.getPersonById(actorId);
 
             if (!person.id || !person.name) {
                 throw new ServiceError(400, "Acteur invalide");
@@ -53,9 +54,9 @@ export default class ActorService {
         if (!added) {
             throw new ServiceError(500, "Impossible d'ajouter l'acteur aux favoris");
         }
-        if (person) {
+        if (showId) {
             try {
-                await this._actorRepository.linkShows(actorId, person.series.map(({id}) => id));
+                await this._actorRepository.linkShows(actorId, [showId]);
             } catch {
             }
         }

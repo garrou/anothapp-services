@@ -14,7 +14,7 @@ describe("ActorService (real Postgres)", () => {
         // getPersonById hits the real Betaseries API - stub it out so only the DB paths are real.
         service._searchService.getPersonById = async (id) => ({
             id, name: "Fetched Actor", poster: "pic.jpg", birthday: null, deathday: null,
-            nationality: "American", description: "desc", series: [],
+            nationality: "American", description: "desc",
         });
     });
 
@@ -51,7 +51,7 @@ describe("ActorService (real Postgres)", () => {
             const actorId = await insertActor({ name: "Cast Only", picture: "from-cast-import.jpg" });
             service._searchService.getPersonById = async (id) => ({
                 id, name: "Fetched Actor", poster: undefined, birthday: null, deathday: null,
-                nationality: "American", description: "desc", series: [],
+                nationality: "American", description: "desc",
             });
 
             const actor = await service.addFavorite(userId, actorId);
@@ -59,21 +59,29 @@ describe("ActorService (real Postgres)", () => {
             expect(actor.picture).toBe("from-cast-import.jpg");
         });
 
-        it("links the newly favorited actor to their shows already in our catalog", async () => {
+        it("links the show the user favorited this actor from, even when the actor was already fully known", async () => {
             const userId = await insertUser();
-            const ownedShowId = await insertShow();
-            service._searchService.getPersonById = async (id) => ({
-                id, name: "Fetched Actor", poster: "pic.jpg", birthday: null, deathday: null,
-                nationality: "American", description: "desc", series: [{id: ownedShowId}, {id: 999999}],
-            });
+            const actorId = await insertActor({ name: "Local Actor", nationality: "French" });
+            const showId = await insertShow();
+            service._searchService.getPersonById = async () => { throw new Error("should not be called"); };
 
-            await service.addFavorite(userId, 34100);
+            await service.addFavorite(userId, actorId, showId);
 
-            const res = await db.query(`SELECT show_id FROM shows_actors WHERE actor_id = 34100`);
-            expect(res.rows.map((r) => r.show_id)).toEqual([ownedShowId]);
+            const res = await db.query(`SELECT show_id FROM shows_actors WHERE actor_id = $1`, [actorId]);
+            expect(res.rows.map((r) => r.show_id)).toEqual([showId]);
         });
 
-        it("does not call the search API again, nor link any shows, when the actor is already fully known", async () => {
+        it("links the show even for a brand-new actor whose profile also needed fetching", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+
+            await service.addFavorite(userId, 34100, showId);
+
+            const res = await db.query(`SELECT show_id FROM shows_actors WHERE actor_id = 34100`);
+            expect(res.rows.map((r) => r.show_id)).toEqual([showId]);
+        });
+
+        it("does not link any show when none is given", async () => {
             const userId = await insertUser();
             const actorId = await insertActor({ name: "Local Actor", nationality: "French" });
             service._searchService.getPersonById = async () => { throw new Error("should not be called"); };
@@ -82,6 +90,13 @@ describe("ActorService (real Postgres)", () => {
 
             const res = await db.query(`SELECT show_id FROM shows_actors WHERE actor_id = $1`, [actorId]);
             expect(res.rows).toEqual([]);
+        });
+
+        it("does not fail when the given show isn't in our catalog", async () => {
+            const userId = await insertUser();
+            const actorId = await insertActor();
+
+            await expect(service.addFavorite(userId, actorId, 999999)).resolves.toBeDefined();
         });
 
         it("fetches and creates the actor when it is not known locally yet", async () => {

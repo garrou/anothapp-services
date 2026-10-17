@@ -11,7 +11,8 @@ export default class ActorController {
      */
     addFavorite = async (req, res, next) => {
         try {
-            const actor = await this._actorService.addFavorite(req.userId, parseInt(req.params.id));
+            const {actorId, showId} = req.body;
+            const actor = await this._actorService.addFavorite(req.userId, actorId, showId);
             res.status(200).json(actor);
         } catch (e) {
             next(e);
