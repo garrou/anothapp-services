@@ -37,10 +37,11 @@ export default class ActorRepository {
     /**
      * @returns {Promise<Actor[]>}
      */
-    getAllActors = async () => {
+    getFavoritedActors = async () => {
         const res = await db.query(`
-            SELECT id, name, picture, birthday, deathday, nationality, description
-            FROM actors
+            SELECT DISTINCT a.id, a.name, a.picture, a.birthday, a.deathday, a.nationality, a.description
+            FROM actors a
+            JOIN users_favorite_actors ufa ON ufa.actor_id = a.id
         `);
         return res.rows.map((row) => new Actor(row));
     }
@@ -57,5 +58,37 @@ export default class ActorRepository {
             WHERE id = $1
         `, [id, name, picture, birthday || null, deathday || null, nationality, description]);
         return res.rowCount === 1;
+    }
+
+    /**
+     * @param {number} actorId
+     * @param {number[]} showIds
+     * @returns {Promise<void>}
+     */
+    linkShows = async (actorId, showIds) => {
+        if (!showIds.length) {
+            return;
+        }
+        await db.query(`
+            INSERT INTO shows_actors (show_id, actor_id)
+            SELECT s.id, $1 FROM shows s WHERE s.id = ANY($2::int[])
+            ON CONFLICT DO NOTHING
+        `, [actorId, showIds]);
+    }
+
+    /**
+     * @param {string} userId
+     * @param {number} showId
+     * @returns {Promise<{id: number, name: string, picture: string?}[]>}
+     */
+    getFavoritedActorsByShowId = async (userId, showId) => {
+        const res = await db.query(`
+            SELECT a.id, a.name, a.picture
+            FROM actors a
+            JOIN shows_actors sa ON sa.actor_id = a.id
+            JOIN users_favorite_actors ufa ON ufa.actor_id = a.id AND ufa.user_id = $1
+            WHERE sa.show_id = $2
+        `, [userId, showId]);
+        return res.rows;
     }
 }

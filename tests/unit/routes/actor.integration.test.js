@@ -43,15 +43,24 @@ describe("GET /actors/favorites", () => {
     });
 });
 
-describe("POST /actors/:id/favorite", () => {
+describe("POST /actors/favorites", () => {
     it("returns 200 with the actor", async () => {
         actorServiceMocks.addFavorite.mockResolvedValue({id: 1, name: "Actor"});
 
-        const res = await request(app).post("/actors/1/favorite").set("Cookie", cookie);
+        const res = await request(app).post("/actors/favorites").set("Cookie", cookie).send({actorId: 1, showId: 42});
 
-        expect(actorServiceMocks.addFavorite).toHaveBeenCalledWith("user-1", 1);
+        expect(actorServiceMocks.addFavorite).toHaveBeenCalledWith("user-1", 1, 42);
         expect(res.status).toBe(200);
         expect(res.body).toEqual({id: 1, name: "Actor"});
+    });
+
+    it("works without a showId", async () => {
+        actorServiceMocks.addFavorite.mockResolvedValue({id: 1, name: "Actor"});
+
+        const res = await request(app).post("/actors/favorites").set("Cookie", cookie).send({actorId: 1});
+
+        expect(actorServiceMocks.addFavorite).toHaveBeenCalledWith("user-1", 1, undefined);
+        expect(res.status).toBe(200);
     });
 });
 

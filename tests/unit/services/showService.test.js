@@ -43,6 +43,9 @@ const userSeasonRepoMocks = vi.hoisted(() => ({
     findAnyByUserIdShowIdNumber: vi.fn(),
     lockSeasonSlot: vi.fn(),
 }));
+const actorRepoMocks = vi.hoisted(() => ({
+    getFavoritedActorsByShowId: vi.fn(),
+}));
 const seasonRepoMocks = vi.hoisted(() => ({
     getSeasonByShowIdByNumber: vi.fn(),
     createSeason: vi.fn(),
@@ -88,6 +91,9 @@ vi.mock("../../../repositories/userSeasonRepository.js", () => ({
 }));
 vi.mock("../../../repositories/seasonRepository.js", () => ({
     default: vi.fn().mockImplementation(function () { return seasonRepoMocks; }),
+}));
+vi.mock("../../../repositories/actorRepository.js", () => ({
+    default: vi.fn().mockImplementation(function () { return actorRepoMocks; }),
 }));
 
 dbMocks.transaction.mockImplementation((callback) => callback(fakeClient));
@@ -593,6 +599,7 @@ describe("ShowService.getShowById", () => {
         showService = new ShowService();
         userShowRepoMocks.getShowByUserIdByShowId.mockResolvedValue(storedShow);
         userSeasonRepoMocks.getDistinctByUserIdByShowId.mockResolvedValue(["season"]);
+        actorRepoMocks.getFavoritedActorsByShowId.mockResolvedValue([]);
     });
 
     it("rejects with a 400 when no id is given", async () => {
@@ -611,8 +618,19 @@ describe("ShowService.getShowById", () => {
 
         const result = await showService.getShowById("user-1", 42);
 
-        expect(result).toEqual({serie: storedShow, seasons: ["season"], time: 135, episodes: 3, distinctEpisodes: 2});
+        expect(result).toEqual({serie: storedShow, seasons: ["season"], time: 135, episodes: 3, distinctEpisodes: 2, favoriteActors: []});
         expect(episodeServiceMocks.getWatchedTimeAndCountByShowId).toHaveBeenCalledWith("user-1", 42);
+    });
+
+    it("includes the user's favorite actors linked to this show", async () => {
+        episodeServiceMocks.getWatchedTimeAndCountByShowId.mockResolvedValue([135, 3, 2]);
+        const favoriteActors = [{id: 34100, name: "Rami Malek", picture: "rami.jpg"}];
+        actorRepoMocks.getFavoritedActorsByShowId.mockResolvedValue(favoriteActors);
+
+        const result = await showService.getShowById("user-1", 42);
+
+        expect(actorRepoMocks.getFavoritedActorsByShowId).toHaveBeenCalledWith("user-1", 42);
+        expect(result.favoriteActors).toEqual(favoriteActors);
     });
 });
 

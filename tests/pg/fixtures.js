@@ -182,6 +182,18 @@ export const insertActor = async (overrides = {}) => {
 };
 
 /**
+ * Requires a prior insertShow and insertActor.
+ * @param {number} showId
+ * @param {number} actorId
+ * @returns {Promise<void>}
+ */
+export const insertShowActor = async (showId, actorId) => {
+    await db.query(`
+        INSERT INTO shows_actors (show_id, actor_id) VALUES ($1, $2)
+    `, [showId, actorId]);
+};
+
+/**
  * Requires a prior insertShow/insertSeason/insertUserShow for the same (userId, showId, number).
  * @param {string} userId
  * @param {number} showId

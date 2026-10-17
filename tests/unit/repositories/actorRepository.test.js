@@ -60,7 +60,7 @@ describe("ActorRepository.createActor", () => {
     });
 });
 
-describe("ActorRepository.getAllActors", () => {
+describe("ActorRepository.getFavoritedActors", () => {
     let repo;
 
     beforeEach(() => {
@@ -71,8 +71,9 @@ describe("ActorRepository.getAllActors", () => {
     it("maps rows to Actor instances", async () => {
         db.query.mockResolvedValue({rows: [{id: 1, name: "Actor", picture: null, birthday: null, deathday: null, nationality: null, description: null}]});
 
-        const result = await repo.getAllActors();
+        const result = await repo.getFavoritedActors();
 
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("users_favorite_actors"));
         expect(result).toEqual([{id: 1, name: "Actor", picture: null, birthday: null, deathday: null, nationality: null, description: null}]);
     });
 });
@@ -100,5 +101,44 @@ describe("ActorRepository.updateActor", () => {
         const result = await repo.updateActor(999, {name: "Actor", picture: null, birthday: null, deathday: null, nationality: null, description: null});
 
         expect(result).toBe(false);
+    });
+});
+
+describe("ActorRepository.linkShows", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new ActorRepository();
+    });
+
+    it("inserts a link per show id, scoped to shows already in our catalog", async () => {
+        await repo.linkShows(34100, [1, 2]);
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO shows_actors"), [34100, [1, 2]]);
+    });
+
+    it("does nothing when there are no show ids", async () => {
+        await repo.linkShows(34100, []);
+
+        expect(db.query).not.toHaveBeenCalled();
+    });
+});
+
+describe("ActorRepository.getFavoritedActorsByShowId", () => {
+    let repo;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        repo = new ActorRepository();
+    });
+
+    it("returns the rows as-is", async () => {
+        db.query.mockResolvedValue({rows: [{id: 34100, name: "Rami Malek", picture: "rami.jpg"}]});
+
+        const result = await repo.getFavoritedActorsByShowId("user-1", 42);
+
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining("users_favorite_actors"), ["user-1", 42]);
+        expect(result).toEqual([{id: 34100, name: "Rami Malek", picture: "rami.jpg"}]);
     });
 });

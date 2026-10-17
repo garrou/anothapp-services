@@ -3,7 +3,9 @@ import db from "../../../config/db.js";
 import ShowService from "../../../services/showService.js";
 import SeasonService from "../../../services/seasonService.js";
 import { resetDb } from "../resetDb.js";
-import { insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason } from "../fixtures.js";
+import { insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason, insertActor } from "../fixtures.js";
+import UserFavoriteActorRepository from "../../../repositories/userFavoriteActorRepository.js";
+import ActorRepository from "../../../repositories/actorRepository.js";
 
 describe("ShowService (real Postgres)", () => {
     /** @type {ShowService} */
@@ -135,6 +137,7 @@ describe("ShowService (real Postgres)", () => {
             expect(result.serie.id).toBe(showId);
             expect(result.time).toBe(0);
             expect(result.distinctEpisodes).toBe(0);
+            expect(result.favoriteActors).toEqual([]);
         });
 
         it("throws 404 when the show is not in the user's collection", async () => {
@@ -142,6 +145,19 @@ describe("ShowService (real Postgres)", () => {
             const showId = await insertShow();
 
             await expect(service.getShowById(userId, showId)).rejects.toMatchObject({ status: 404 });
+        });
+
+        it("includes the user's favorite actors linked to this show", async () => {
+            const userId = await insertUser();
+            const showId = await insertShow();
+            await insertUserShow(userId, showId);
+            const actorId = await insertActor({ name: "Rami Malek" });
+            await new ActorRepository().linkShows(actorId, [showId]);
+            await new UserFavoriteActorRepository().create(userId, actorId);
+
+            const result = await service.getShowById(userId, showId);
+
+            expect(result.favoriteActors).toEqual([{ id: actorId, name: "Rami Malek", picture: null }]);
         });
     });
 

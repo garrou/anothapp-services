@@ -6,7 +6,7 @@ const actorController = new ActorController();
 
 router.get("/favorites", actorController.getFavorites);
 
-router.post("/:id/favorite", actorController.addFavorite);
+router.post("/favorites", actorController.addFavorite);
 
 router.delete("/:id/favorite", actorController.removeFavorite);
 

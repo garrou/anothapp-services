@@ -455,11 +455,12 @@ export default class UserShowRepository {
     }
 
     /**
-     * Hybrid recommendation: a show qualifies either because accepted friends rated it highly,
-     * or because its genres match genres the user themselves tends to rate highly - whichever
-     * signal(s) apply are combined into one score. The genre path covers users with few or no
-     * friends (the friends-only version had no fallback for them), while the friend path alone
-     * still works for a user with no ratings of their own.
+     * Hybrid recommendation: a show qualifies because accepted friends rated it highly, because
+     * its genres match genres the user themselves tends to rate highly, or because its cast
+     * includes one of the user's favorite actors - whichever signal(s) apply are combined into
+     * one score. The genre and actor paths cover users with few or no friends (the friends-only
+     * version had no fallback for them), while the friend path alone still works for a user with
+     * no ratings or favorite actors of their own.
      * @param {string} userId
      * @param {number} limit
      * @returns {Promise<Recommendation[]>}
@@ -487,18 +488,29 @@ export default class UserShowRepository {
                 FROM shows_kinds sk
                 JOIN user_genre_profile ugp ON ugp.kind_id = sk.kind_id
                 GROUP BY sk.show_id
+            ), actor_signal AS (
+                SELECT sa.show_id, COUNT(DISTINCT sa.actor_id) AS nb_favorite_actors
+                FROM shows_actors sa
+                JOIN users_favorite_actors ufa ON ufa.actor_id = sa.actor_id AND ufa.user_id = $1
+                GROUP BY sa.show_id
             )
             SELECT s.*,
                 COALESCE(fs.nb_friends, 0) AS nb_friends,
                 COALESCE(fs.avg_note, 0) AS avg_note,
                 COALESCE(fs.friends, '[]'::json) AS friends,
                 COALESCE(gs.genre_score, 0) AS genre_score,
+                COALESCE(acs.nb_favorite_actors, 0) AS nb_favorite_actors,
                 (SELECT COALESCE(array_agg(k.name ORDER BY k.name), '{}') FROM shows_kinds sk JOIN kinds k ON k.id = sk.kind_id WHERE sk.show_id = s.id) AS kind_names,
-                (0.6 * LEAST(COALESCE(fs.nb_friends, 0)::NUMERIC / 3, 1) + 0.4 * (COALESCE(gs.genre_score, 0) / 5.0)) AS score
+                (
+                    0.5 * LEAST(COALESCE(fs.nb_friends, 0)::NUMERIC / 3, 1)
+                  + 0.3 * (COALESCE(gs.genre_score, 0) / 5.0)
+                  + 0.2 * LEAST(COALESCE(acs.nb_favorite_actors, 0)::NUMERIC / 2, 1)
+                ) AS score
             FROM shows s
             LEFT JOIN friend_signal fs ON fs.show_id = s.id
             LEFT JOIN genre_signal gs ON gs.show_id = s.id
-            WHERE (fs.show_id IS NOT NULL OR gs.show_id IS NOT NULL)
+            LEFT JOIN actor_signal acs ON acs.show_id = s.id
+            WHERE (fs.show_id IS NOT NULL OR gs.show_id IS NOT NULL OR acs.show_id IS NOT NULL)
                 AND s.id NOT IN (SELECT show_id FROM users_shows WHERE user_id = $1)
                 AND s.id NOT IN (SELECT show_id FROM users_list WHERE user_id = $1)
             ORDER BY score DESC

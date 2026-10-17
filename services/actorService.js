@@ -19,9 +19,11 @@ export default class ActorService {
     /**
      * @param {string} currentUserId
      * @param {number?} actorId
+     * @param {number?} showId the show whose cast the user was browsing when they favorited this
+     * actor, if any (e.g. favoriting from an actor's own profile page has none)
      * @returns {Promise<Actor>}
      */
-    addFavorite = async (currentUserId, actorId) => {
+    addFavorite = async (currentUserId, actorId, showId) => {
         if (!actorId) {
             throw new ServiceError(400, ERROR_INVALID_REQUEST);
         }
@@ -32,31 +34,13 @@ export default class ActorService {
         }
         let actor = await this._actorRepository.getActorById(actorId);
 
-        if (!actor) {
+        if (!actor || this.#isStubActor(actor)) {
             const person = await this._searchService.getPersonById(actorId);
 
             if (!person.id || !person.name) {
                 throw new ServiceError(400, "Acteur invalide");
             }
-            try {
-                const created = await this._actorRepository.createActor(
-                    person.id, person.name, person.poster, person.birthday, person.deathday,
-                    person.nationality, person.description
-                );
-
-                if (!created) {
-                    throw new ServiceError(500, "Impossible de créer l'acteur");
-                }
-                actor = new Actor({
-                    id: person.id, name: person.name, picture: person.poster, birthday: person.birthday,
-                    deathday: person.deathday, nationality: person.nationality, description: person.description
-                });
-            } catch (err) {
-                if (err.code !== DUPLICATE_ERROR_CODE) {
-                    throw err;
-                }
-                actor = await this._actorRepository.getActorById(actorId);
-            }
+            actor = await this.#saveFullProfile(actorId, person, actor);
         }
         let added;
         try {
@@ -69,6 +53,12 @@ export default class ActorService {
         }
         if (!added) {
             throw new ServiceError(500, "Impossible d'ajouter l'acteur aux favoris");
+        }
+        if (showId) {
+            try {
+                await this._actorRepository.linkShows(actorId, [showId]);
+            } catch {
+            }
         }
         eventBus.emit("actor.favorited", {
             actorUserId: currentUserId,
@@ -103,5 +93,49 @@ export default class ActorService {
             throw new ServiceError(400, ERROR_NOT_FRIEND);
         }
         return this._userFavoriteActorRepository.getFavoritesByUserId(friendId ?? currentUserId);
+    }
+
+    /**
+     * @param {Actor} actor
+     * @returns {boolean}
+     */
+    #isStubActor = (actor) => !actor.birthday && !actor.deathday && !actor.nationality && !actor.description;
+
+    /**
+     * @param {number} actorId
+     * @param {{name: string, poster: string?, birthday: string?, deathday: string?, nationality: string?, description: string?}} person
+     * @param {Actor|null} existing
+     * @returns {Promise<Actor>}
+     */
+    #saveFullProfile = async (actorId, person, existing) => {
+        const fields = {
+            name: person.name || existing?.name,
+            picture: person.poster ?? existing?.picture ?? null,
+            birthday: person.birthday ?? existing?.birthday ?? null,
+            deathday: person.deathday ?? existing?.deathday ?? null,
+            nationality: person.nationality ?? existing?.nationality ?? null,
+            description: person.description ?? existing?.description ?? null,
+        };
+
+        if (existing) {
+            await this._actorRepository.updateActor(actorId, fields);
+            return new Actor({id: actorId, ...fields});
+        }
+        try {
+            const created = await this._actorRepository.createActor(
+                actorId, fields.name, fields.picture, fields.birthday, fields.deathday,
+                fields.nationality, fields.description
+            );
+
+            if (!created) {
+                throw new ServiceError(500, "Impossible de créer l'acteur");
+            }
+            return new Actor({id: actorId, ...fields});
+        } catch (err) {
+            if (err.code !== DUPLICATE_ERROR_CODE) {
+                throw err;
+            }
+            return await this._actorRepository.getActorById(actorId);
+        }
     }
 }

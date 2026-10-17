@@ -2,9 +2,10 @@ import { describe, it, expect, beforeEach } from "vitest";
 import db from "../../../config/db.js";
 import UserShowRepository from "../../../repositories/userShowRepository.js";
 import { resetDb } from "../resetDb.js";
+import UserFavoriteActorRepository from "../../../repositories/userFavoriteActorRepository.js";
 import {
     insertUser, insertShow, insertSeason, insertUserShow, insertUserSeason, insertEpisode, insertUserEpisode,
-    insertShowKind,
+    insertShowKind, insertActor, insertShowActor,
 } from "../fixtures.js";
 
 describe("UserShowRepository (real Postgres)", () => {
@@ -521,6 +522,48 @@ describe("UserShowRepository (real Postgres)", () => {
             const result = await repo.getRecommendationsByUserId(userId);
 
             expect(result.map((r) => r.title)).toEqual(["Friend And Genre", "Genre Only"]);
+        });
+
+        it("recommends a show whose cast includes one of the user's favorite actors, even with no friend or genre signal", async () => {
+            const userId = await insertUser();
+            const actorId = await insertActor();
+            await new UserFavoriteActorRepository().create(userId, actorId);
+            const candidate = await insertShow({ title: "Has My Favorite Actor" });
+            await insertShowActor(candidate, actorId);
+
+            const result = await repo.getRecommendationsByUserId(userId);
+
+            expect(result.map((r) => r.title)).toEqual(["Has My Favorite Actor"]);
+            expect(result[0].nbFavoriteActors).toBe(1);
+            expect(result[0].nbFriends).toBe(0);
+        });
+
+        it("does not recommend a show whose cast only includes actors the user hasn't favorited", async () => {
+            const userId = await insertUser();
+            const actorId = await insertActor();
+            const candidate = await insertShow();
+            await insertShowActor(candidate, actorId);
+
+            expect(await repo.getRecommendationsByUserId(userId)).toEqual([]);
+        });
+
+        it("ranks a show matching two favorite actors above one matching a single favorite actor", async () => {
+            const userId = await insertUser();
+            const actorA = await insertActor();
+            const actorB = await insertActor();
+            const favRepo = new UserFavoriteActorRepository();
+            await favRepo.create(userId, actorA);
+            await favRepo.create(userId, actorB);
+
+            const twoMatches = await insertShow({ title: "Two Favorites" });
+            await insertShowActor(twoMatches, actorA);
+            await insertShowActor(twoMatches, actorB);
+            const oneMatch = await insertShow({ title: "One Favorite" });
+            await insertShowActor(oneMatch, actorA);
+
+            const result = await repo.getRecommendationsByUserId(userId);
+
+            expect(result.map((r) => r.title)).toEqual(["Two Favorites", "One Favorite"]);
         });
     });
 

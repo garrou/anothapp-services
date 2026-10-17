@@ -373,6 +373,14 @@ CREATE TABLE users_favorite_actors (
     PRIMARY KEY(user_id, actor_id)
 );
 
+CREATE TABLE shows_actors (
+    show_id INTEGER,
+    actor_id INTEGER,
+    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(actor_id) REFERENCES actors(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    PRIMARY KEY(show_id, actor_id)
+);
+
 CREATE TABLE notifications (
     id SERIAL PRIMARY KEY,
     recipient_user_id UUID NOT NULL,
